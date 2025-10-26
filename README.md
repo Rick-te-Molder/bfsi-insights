@@ -1,1 +1,1 @@
-# bfsi insghts
+# bfsi insights
