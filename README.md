@@ -1,1 +1,1 @@
-# BFSI AI Project
+# bfsi insghts
