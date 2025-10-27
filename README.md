@@ -1,8 +1,8 @@
 <<<<<<< HEAD
 
-# bfsi insights
+# BFSI Insights
 
-# agentic ai insights for executives and professionals in banking, financial services and insurance (bfsi)
+# Agentic AI insights for executives and professionals in banking, financial services and insurance (bfsi)
 
 # Astro Starter Kit: Minimal
 
