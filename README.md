@@ -1,4 +1,4 @@
 # bfsi insights
-this site explores agentic ai in banking, financial services and insurance (bfsi)
+agentic ai insigths for executives and professionals in banking, financial services and insurance (bfsi)
 
 www.bfsiinsights.com
