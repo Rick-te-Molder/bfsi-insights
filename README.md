@@ -1,9 +1,12 @@
 <<<<<<< HEAD
+
 # bfsi insights
-agentic ai insights for executives and professionals in banking, financial services and insurance (bfsi)
-=======
+
+# agentic ai insights for executives and professionals in banking, financial services and insurance (bfsi)
+
 # Astro Starter Kit: Minimal
->>>>>>> 32b0613 (Initial Astro scaffold)
+
+> > > > > > > 32b0613 (Initial Astro scaffold)
 
 ```sh
 npm create astro@latest -- --template minimal
