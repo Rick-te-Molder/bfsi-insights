@@ -1,4 +1,4 @@
 # bfsi insights
-keeping track of what happens in agentic ai for bfsi
+this site explores agentic ai in banking, financial services and insurance (bfsi)
 
 www.bfsiinsights.com
