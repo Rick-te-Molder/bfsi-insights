@@ -1,0 +1,12 @@
+---
+import '../styles/global.css';
+const { title = 'BFSI Insights' } = Astro.props;
+---
+<html lang="en">
+  <head><meta charset="utf-8" /><title>{title}</title></head>
+  <body class="min-h-screen bg-white">
+    <main class="mx-auto max-w-3xl p-6">
+      <slot />
+    </main>
+  </body>
+</html>
