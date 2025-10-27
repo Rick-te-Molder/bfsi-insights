@@ -6,6 +6,13 @@ const { title = 'BFSI Insights' } = Astro.props;
   <head>
     <meta charset="utf-8" />
     <title>{title}</title>
+    <!-- Cloudflare Web Analytics -->
+    <script
+      defer
+      src="https://static.cloudflareinsights.com/beacon.min.js"
+      data-cf-beacon='{"token": "3f08c06074c4478ca192b9572da84544"}'>
+    </script>
+    <!-- End Cloudflare Web Analytics -->
   </head>
   <body class="min-h-screen antialiased bg-white text-gray-900">
     <slot />
