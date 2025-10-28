@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "astro dev",
     "add:url": "node scripts/add-url.mjs",
-    "build": "npm run ingest && astro build",
+    "build": "astro build"
     "preview": "astro preview",
     "astro": "astro",
     "format": "prettier --write .",
