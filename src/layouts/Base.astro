@@ -1,20 +1,25 @@
 ---
-import '/src/styles/global.css';
-const { title = 'BFSI Insights' } = Astro.props;
+const { title = "BFSI Insights" } = Astro.props;
 ---
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="utf-8" />
     <title>{title}</title>
-    <!-- Cloudflare Web Analytics -->
-    <script
-      defer
-      src="https://static.cloudflareinsights.com/beacon.min.js"
-      data-cf-beacon='{"token": "3f08c06074c4478ca192b9572da84544"}'>
-    </script>
-    <!-- End Cloudflare Web Analytics -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
   </head>
-  <body class="min-h-screen antialiased bg-white text-gray-900">
-    <slot />
+  <body class="min-h-screen bg-neutral-950 text-neutral-200 antialiased">
+    <header class="border-b border-neutral-800">
+      <div class="mx-auto max-w-5xl px-4 py-4">
+        <h1 class="text-lg font-semibold tracking-tight">{title}</h1>
+      </div>
+    </header>
+    <main class="mx-auto max-w-5xl px-4 py-8">
+      <slot />
+    </main>
+    <footer class="border-t border-neutral-800">
+      <div class="mx-auto max-w-5xl px-4 py-6 text-sm text-neutral-400">
+        © {new Date().getFullYear()} BFSI Insights
+      </div>
+    </footer>
   </body>
 </html>

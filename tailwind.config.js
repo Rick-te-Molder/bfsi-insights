@@ -1,5 +1,6 @@
 export default {
-  content: ['./src/**/*.{astro,html,js,jsx,ts,tsx,md,mdx}'],
+  content: ["./src/**/*.{astro,html,js,jsx,ts,tsx,md,mdx}"],
+  darkMode: "class",
   theme: { extend: {} },
   plugins: [],
 };
