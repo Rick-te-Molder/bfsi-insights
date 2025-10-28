@@ -8,11 +8,13 @@
     "build": "astro build",
     "preview": "astro preview",
     "format": "prettier --write .",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "lint:items": "node scripts/lint-items-no-time.mjs",
+    "build:resources": "node scripts/build-resources.mjs"
   },
   "dependencies": {
-    "astro": "^5.15.1",
     "@astrojs/tailwind": "^6.0.2",
+    "astro": "^5.15.1",
     "tailwindcss": "^3.4.15"
   },
   "devDependencies": {
