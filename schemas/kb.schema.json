@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bfsiinsights.com/schemas/kb.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "title": { "type": "string" },
+    "url": { "type": "string", "format": "uri" },
+    "source": { "type": "string" },
+    "date": { "type": "string" },
+    "time": { "$ref": "#/$defs/time" },
+    "role": { "$ref": "#/$defs/role" },
+    "industry": { "$ref": "#/$defs/industry" },
+    "topic": { "$ref": "#/$defs/topic" },
+    "use_cases": { "$ref": "#/$defs/use_cases" },
+    "agentic_capabilities": { "$ref": "#/$defs/agentic_capabilities" },
+    "content_type": { "$ref": "#/$defs/content_type" },
+    "jurisdiction": { "$ref": "#/$defs/jurisdiction" },
+    "note": { "type": "string" }
+  },
+  "required": ["url", "role", "industry", "topic", "use_cases", "agentic_capabilities", "content_type", "jurisdiction"],
+  "$defs": {
+    "time": {
+      "type": "string",
+      "enum": ["newest", "last-7-days", "last-30-days", "last-12-months", "all"]
+    },
+    "role": {
+      "type": "string",
+      "enum": ["executive", "professional", "academic"]
+    },
+    "industry": {
+      "type": "string",
+      "enum": [
+        "banking",
+        "banking-retail-banking",
+        "banking-corporate-banking",
+        "banking-lending",
+        "banking-payments",
+        "banking-deposits",
+        "banking-treasury",
+        "banking-capital-markets",
+        "banking-digital-banking",
+        "financial-services",
+        "financial-services-financial-advice",
+        "financial-services-wealth-management",
+        "financial-services-asset-management",
+        "financial-services-leasing",
+        "financial-services-factoring",
+        "financial-services-pension-funds",
+        "financial-services-insurance-brokerage",
+        "insurance",
+        "insurance-health-insurance",
+        "insurance-life-insurance",
+        "insurance-pension-insurance",
+        "insurance-property-and-casualty",
+        "cross-bfsi",
+        "cross-bfsi-infrastructure",
+        "cross-bfsi-shared-services",
+        "cross-bfsi-b2b-platforms"
+      ]
+    },
+    "topic": {
+      "type": "string",
+      "enum": [
+        "strategy-and-management",
+        "strategy-and-management-strategy",
+        "strategy-and-management-operating-models",
+        "strategy-and-management-transformation",
+        "strategy-and-management-case-studies",
+        "ecosystem",
+        "ecosystem-vendors",
+        "ecosystem-institutions",
+        "ecosystem-bfsi-sector",
+        "ecosystem-ai-industry",
+        "governance-and-control",
+        "governance-and-control-governance",
+        "governance-and-control-risk-management",
+        "governance-and-control-compliance",
+        "governance-and-control-financial-crime-prevention",
+        "governance-and-control-financial-crime-prevention-kyc",
+        "governance-and-control-financial-crime-prevention-cdd",
+        "governance-and-control-financial-crime-prevention-aml",
+        "governance-and-control-financial-crime-prevention-fraud-detection",
+        "governance-and-control-financial-crime-prevention-sanctions-screening",
+        "governance-and-control-auditing",
+        "governance-and-control-internal-controls",
+        "regulatory-and-standards",
+        "regulatory-and-standards-regulation",
+        "regulatory-and-standards-standards",
+        "regulatory-and-standards-policy",
+        "regulatory-and-standards-guidance",
+        "technology-and-data",
+        "technology-and-data-ai",
+        "technology-and-data-agentic-engineering",
+        "technology-and-data-rag",
+        "technology-and-data-orchestration",
+        "technology-and-data-data-management",
+        "technology-and-data-infrastructure",
+        "technology-and-data-cybersecurity",
+        "technology-and-data-monitoring",
+        "methods-and-approaches",
+        "methods-and-approaches-methodology",
+        "methods-and-approaches-models",
+        "methods-and-approaches-best-practices"
+      ]
+    },
+    "use_cases": {
+      "type": "string",
+      "enum": [
+        "customer-onboarding",
+        "identity-verification",
+        "document-processing",
+        "transaction-monitoring",
+        "credit-assessment",
+        "fraud-detection",
+        "claims-handling",
+        "portfolio-analytics",
+        "regulatory-reporting",
+        "audit-support"
+      ]
+    },
+    "agentic_capabilities": {
+      "type": "string",
+      "enum": [
+        "reasoning",
+        "planning",
+        "memory",
+        "tool-use",
+        "collaboration",
+        "autonomy",
+        "evaluation",
+        "monitoring"
+      ]
+    },
+    "content_type": {
+      "type": "string",
+      "enum": [
+        "report",
+        "white-paper",
+        "peer-reviewed-paper",
+        "article",
+        "presentation",
+        "webinar",
+        "dataset",
+        "website",
+        "policy-document"
+      ]
+    },
+    "jurisdiction": {
+      "type": "string",
+      "enum": ["eu", "uk", "us", "nl", "global", "other"]
+    }
+  }
+}
