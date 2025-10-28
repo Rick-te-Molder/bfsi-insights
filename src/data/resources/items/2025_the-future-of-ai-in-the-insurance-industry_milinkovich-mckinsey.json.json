@@ -1,0 +1,20 @@
+{
+  "url": "https://www.mckinsey.com/industries/financial-services/our-insights/the-future-of-ai-in-the-insurance-industry",
+  "title": "The future of AI in the insurance industry",
+  "slug": "the-future-of-ai-in-the-insurance-industry",
+  "authors": ["Nick Milinkovich", "Sid Kamath", "Tanguy Catlin", "Violet Chung", "Pranav Jain", "Ramzi Elias"],
+  "source_name": "McKinsey",
+  "source_domain": "mckinsey.com",
+  "date_published": "2025-07-15",
+  "date_added": "2025-10-28T19:00:00+01:00",
+  "last_edited": "2025-10-28T19:00:00+01:00",
+  "role": "professional",
+  "industry": "insurance",
+  "topic": "technology-and-data-ai",
+  "use_cases": "claims-handling",
+  "agentic_capabilities": "tool-use",
+  "content_type": "report",
+  "jurisdiction": "global",
+  "note": "McKinsey report on how insurers must integrate AI enterprise-wide to achieve competitive advantage.  [oai_citation:0‡mckinsey.com](https://www.mckinsey.com/industries/financial-services/our-insights/the-future-of-ai-in-the-insurance-industry?utm_source=chatgpt.com)",
+  "id": "e5a8bf6e4bf68a8a4c3d68b1f4ce88bb5af8c5d2"
+}

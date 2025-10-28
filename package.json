@@ -2,16 +2,19 @@
   "name": "current-directory",
   "type": "module",
   "version": "0.0.1",
-  "engines": { "node": "20.x" },
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "astro dev",
     "add:url": "node scripts/add-url.mjs",
-    "ingest": "node scripts/ingest.mjs",
     "build": "npm run ingest && astro build",
     "preview": "astro preview",
     "astro": "astro",
     "format": "prettier --write .",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "build:resources": "node scripts/build-resources.mjs",
+    "lint:items": "node scripts/lint-items-no-time.mjs"
   },
   "dependencies": {
     "astro": "^5.15.1"

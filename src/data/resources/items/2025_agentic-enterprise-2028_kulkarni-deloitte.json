@@ -1,0 +1,20 @@
+{
+  "url": "https://www.deloitte.com/content/dam/assets-zone3/us/en/docs/services/consulting/2025/agentic-ai-enterprise-2028.pdf",
+  "title": "Agentic Enterprise 2028: A Blueprint for Cost Savings, Job Creation, and Faster Growth Through Agentic AI",
+  "slug": "agentic-enterprise-2028",
+  "authors": ["Vivek Kulkarni", "Greg Vert", "Caroline Ritter", "Prakul Sharma", "Beena Ammanath", "Jim Rowan", "Scott Holcomb"],
+  "source_name": "Deloitte",
+  "source_domain": "deloitte.com",
+  "date_published": "2025-09-01",
+  "date_added": "2025-10-28T19:00:00+01:00",
+  "last_edited": "2025-10-28T19:00:00+01:00",
+  "role": "executive",
+  "industry": "cross-bfsi",
+  "topic": "technology-and-data-agentic-engineering",
+  "use_cases": "audit-support",
+  "agentic_capabilities": "planning",
+  "content_type": "report",
+  "jurisdiction": "global",
+  "note": "Deloitte AI Institute report outlining a six-pillar framework for scaling agentic AI systems toward enterprise autonomy by 2028.",
+  "id": "8fdce7807f0bb62c34a05e28253a730f3c423eb9"
+}
