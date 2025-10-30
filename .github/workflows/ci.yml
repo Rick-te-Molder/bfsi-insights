@@ -32,9 +32,6 @@ jobs:
       - name: Validate items (no forbidden keys)
         run: npm run lint:items
 
-      - name: Build resources
-        run: npm run build:resources
-
       - name: Build Astro site
         run: npm run build
 
