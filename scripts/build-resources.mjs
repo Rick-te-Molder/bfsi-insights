@@ -12,11 +12,9 @@ const OUT_FILE = 'src/data/resources/resources.json';
 const schemaRaw = await fs.readFile(SCHEMA_PATH, 'utf8');
 const SCHEMA = JSON.parse(schemaRaw);
 
+// Use full format validation and rely on ajv-formats defaults (uri, date, date-time)
 const ajv = new Ajv({ strict: false, allErrors: true, validateFormats: 'full' });
 addFormats(ajv);
-ajv.addFormat('uri', true);
-ajv.addFormat('date', true);
-ajv.addFormat('date-time', true);
 
 const validate = ajv.compile(SCHEMA);
 
