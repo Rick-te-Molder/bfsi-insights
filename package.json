@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "npm run build:resources && astro build",
     "preview": "astro preview",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "eslint .",
     "lint:items": "node scripts/lint-items-no-time.mjs",
     "build:resources": "node scripts/build-resources.mjs"
