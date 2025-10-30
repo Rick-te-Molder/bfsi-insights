@@ -1,0 +1,142 @@
+---
+import Base from '../layouts/Base.astro';
+import resources from '../data/resources/resources.json';
+
+const fmt = (iso) =>
+  iso
+    ? new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })
+    : '';
+
+const values = {
+  role: Array.from(new Set(resources.map((r) => r.role).filter(Boolean))).sort(),
+  industry: Array.from(new Set(resources.map((r) => r.industry).filter(Boolean))).sort(),
+  topic: Array.from(new Set(resources.map((r) => r.topic).filter(Boolean))).sort(),
+  content_type: Array.from(new Set(resources.map((r) => r.content_type).filter(Boolean))).sort(),
+  jurisdiction: Array.from(new Set(resources.map((r) => r.jurisdiction).filter(Boolean))).sort(),
+};
+---
+
+<Base title="Resources · BFSI Insights">
+  <section class="mb-6">
+    <div class="flex items-center justify-between">
+      <h2 class="text-2xl font-semibold tracking-tight">Resources</h2>
+      <a
+        href="/"
+        class="text-sm font-medium text-sky-400 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-sky-500"
+        >Home</a
+      >
+    </div>
+    <p class="mt-1 text-sm text-neutral-400">Filter by attributes to find relevant items.</p>
+  </section>
+
+  <section class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <label class="flex flex-col gap-1 text-sm">
+      <span class="text-neutral-400">Role</span>
+      <select id="f-role" class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1">
+        <option value="">All</option>
+        {values.role.map((v) => <option value={v}>{v}</option>)}
+      </select>
+    </label>
+    <label class="flex flex-col gap-1 text-sm">
+      <span class="text-neutral-400">Industry</span>
+      <select id="f-industry" class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1">
+        <option value="">All</option>
+        {values.industry.map((v) => <option value={v}>{v}</option>)}
+      </select>
+    </label>
+    <label class="flex flex-col gap-1 text-sm">
+      <span class="text-neutral-400">Topic</span>
+      <select id="f-topic" class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1">
+        <option value="">All</option>
+        {values.topic.map((v) => <option value={v}>{v}</option>)}
+      </select>
+    </label>
+    <label class="flex flex-col gap-1 text-sm">
+      <span class="text-neutral-400">Content type</span>
+      <select
+        id="f-content_type"
+        class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1"
+      >
+        <option value="">All</option>
+        {values.content_type.map((v) => <option value={v}>{v}</option>)}
+      </select>
+    </label>
+    <label class="flex flex-col gap-1 text-sm">
+      <span class="text-neutral-400">Jurisdiction</span>
+      <select
+        id="f-jurisdiction"
+        class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1"
+      >
+        <option value="">All</option>
+        {values.jurisdiction.map((v) => <option value={v}>{v}</option>)}
+      </select>
+    </label>
+  </section>
+
+  <section>
+    <ul id="list" class="grid gap-4 sm:grid-cols-2">
+      {
+        resources.map((item) => {
+          const role = item.role || '';
+          const industry = item.industry || '';
+          const topic = item.topic || '';
+          const content_type = item.content_type || '';
+          const jurisdiction = item.jurisdiction || '';
+          return (
+            <li
+              class="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4 shadow-sm"
+              data-role={role}
+              data-industry={industry}
+              data-topic={topic}
+              data-content_type={content_type}
+              data-jurisdiction={jurisdiction}
+            >
+              <a
+                href={item.url}
+                class="text-base font-medium text-sky-400 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-sky-500"
+              >
+                {item.title}
+              </a>
+              <div class="mt-1 text-sm text-neutral-400">
+                {item.date_published && <span>{fmt(item.date_published)}</span>}
+                {item.source_name && <span> · {item.source_name}</span>}
+                {item.authors?.length && <span> · {item.authors[0]}</span>}
+              </div>
+              <div class="mt-2 text-xs text-neutral-400">
+                <span>{role}</span>
+                {industry && <span> · {industry}</span>}
+                {topic && <span> · {topic}</span>}
+                {content_type && <span> · {content_type}</span>}
+                {jurisdiction && <span> · {jurisdiction}</span>}
+              </div>
+            </li>
+          );
+        })
+      }
+    </ul>
+  </section>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const list = document.getElementById('list');
+    const filters = ['role', 'industry', 'topic', 'content_type', 'jurisdiction'].map((f) => ({
+      key: f,
+      el: $(`f-${f}`),
+    }));
+    function apply() {
+      const vals = Object.fromEntries(filters.map(({ key, el }) => [key, el.value]));
+      for (const li of list.children) {
+        let ok = true;
+        for (const k of Object.keys(vals)) {
+          const v = vals[k];
+          if (v && li.getAttribute(`data-${k}`) !== v) {
+            ok = false;
+            break;
+          }
+        }
+        li.classList.toggle('hidden', !ok);
+      }
+    }
+    filters.forEach(({ el }) => el.addEventListener('change', apply));
+  </script>
+</Base>
