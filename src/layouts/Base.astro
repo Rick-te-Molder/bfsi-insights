@@ -1,5 +1,10 @@
 ---
-const { title = 'BFSI Insights' } = Astro.props;
+const {
+  title = 'BFSI Insights',
+  description = 'Agentic AI insights for executives and professionals in banking, financial services and insurance.',
+} = Astro.props;
+const origin = Astro.site?.origin ?? '';
+const canonical = origin + Astro.url.pathname;
 ---
 
 <html lang="en" class="dark">
@@ -7,11 +12,27 @@ const { title = 'BFSI Insights' } = Astro.props;
     <meta charset="utf-8" />
     <title>{title}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
   </head>
   <body class="min-h-screen bg-neutral-950 text-neutral-200 antialiased">
     <header class="border-b border-neutral-800">
-      <div class="mx-auto max-w-5xl px-4 py-4">
-        <h1 class="text-lg font-semibold tracking-tight">{title}</h1>
+      <div class="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between">
+        <a href="/" class="text-lg font-semibold tracking-tight hover:underline">BFSI Insights</a>
+        <nav class="text-sm">
+          <a href="/" class="text-neutral-300 hover:text-white hover:underline">Home</a>
+          <span class="mx-2 text-neutral-600">·</span>
+          <a href="/resources" class="text-neutral-300 hover:text-white hover:underline"
+            >Resources</a
+          >
+        </nav>
       </div>
     </header>
     <main class="mx-auto max-w-5xl px-4 py-8">
