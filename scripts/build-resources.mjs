@@ -18,6 +18,33 @@ addFormats(ajv);
 
 const validate = ajv.compile(SCHEMA);
 
+// map legacy keys -> canonical schema keys
+function normalizeKeys(input) {
+  const legacyMap = {
+    usecases: 'use_cases',
+    usecase: 'use_cases',
+    agentic_capability: 'agentic_capabilities',
+    type: 'content_type',
+    region: 'jurisdiction',
+  };
+  const out = { ...input };
+  for (const [legacy, canonical] of Object.entries(legacyMap)) {
+    if (out[legacy] != null && out[canonical] == null) out[canonical] = out[legacy];
+    delete out[legacy];
+  }
+  return out;
+}
+
+// keep only schema-allowed keys (after normalization)
+const allowedKeys = new Set(Object.keys(SCHEMA.properties || {}));
+function toCanonicalShape(input) {
+  const out = {};
+  for (const k of Object.keys(input)) {
+    if (allowedKeys.has(k)) out[k] = input[k];
+  }
+  return out;
+}
+
 const files = (await fs.readdir(ITEMS_DIR)).filter((f) => f.endsWith('.json')).sort();
 const items = [];
 
@@ -32,18 +59,20 @@ for (const f of files) {
     process.exit(1);
   }
 
-  if (!validate(obj)) {
+  // normalize and strip extras before validation
+  const normalized = normalizeKeys(obj);
+  const canonical = toCanonicalShape(normalized);
+
+  if (!validate(canonical)) {
     const details = ajv.errorsText(validate.errors, { separator: '\n' });
-    // extra keys hint (only meaningful if additionalProperties=false)
-    const allowed = SCHEMA?.properties ? new Set(Object.keys(SCHEMA.properties)) : null;
-    const extra = allowed ? Object.keys(obj).filter((k) => !allowed.has(k)) : [];
+    const extra = Object.keys(normalized).filter((k) => !allowedKeys.has(k));
     console.error(
       `Invalid: ${f}\n${details}${extra.length ? `\nExtra keys: ${extra.join(', ')}` : ''}`,
     );
     process.exit(1);
   }
 
-  items.push(obj);
+  items.push(canonical);
 }
 
 await fs.mkdir(path.dirname(OUT_FILE), { recursive: true });

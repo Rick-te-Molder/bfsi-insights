@@ -32,10 +32,10 @@ const asArr = (v) => (Array.isArray(v) ? v : v ? [v] : []);
           const role = asArr(item.role);
           const industry = asArr(item.industry);
           const topic = asArr(item.topic);
-          const use_cases = asArr(item.use_cases || item.usecases || item.usecase);
-          const agentic = asArr(item.agentic_capabilities || item.agentic_capability);
-          const content_type = asArr(item.content_type || item.type);
-          const jurisdiction = asArr(item.jurisdiction || item.region);
+          const use_cases = asArr(item.use_cases);
+          const agentic = asArr(item.agentic_capabilities);
+          const content_type = asArr(item.content_type);
+          const jurisdiction = asArr(item.jurisdiction);
           return (
             <li class="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4 shadow-sm transition hover:border-neutral-700">
               <a
