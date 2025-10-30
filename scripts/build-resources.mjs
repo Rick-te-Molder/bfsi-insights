@@ -45,6 +45,54 @@ function toCanonicalShape(input) {
   return out;
 }
 
+// value normalization helpers
+const ENUM_FIELDS = [
+  'role',
+  'industry',
+  'topic',
+  'use_cases',
+  'agentic_capabilities',
+  'content_type',
+  'jurisdiction',
+];
+const ENUMS = Object.fromEntries(
+  ENUM_FIELDS.map((f) => [f, new Set(SCHEMA.properties?.[f]?.enum || [])]),
+);
+function asString(v) {
+  if (v == null) return v;
+  if (Array.isArray(v)) return v.length ? String(v[0]) : undefined;
+  return typeof v === 'string' ? v : String(v);
+}
+function normalizeEnumField(field, val) {
+  const raw = asString(val);
+  if (raw == null) return raw;
+  const lc = raw.toLowerCase().trim();
+  // if lowercased value is allowed, use it; otherwise keep original to fail validation
+  return ENUMS[field].has(lc) ? lc : raw;
+}
+function normalizeAuthors(val) {
+  if (Array.isArray(val)) return val.map((x) => String(x).trim()).filter(Boolean);
+  if (val == null) return val;
+  return [String(val).trim()].filter(Boolean);
+}
+function trimStringFields(obj) {
+  const out = { ...obj };
+  for (const k of Object.keys(out)) {
+    if (typeof out[k] === 'string') out[k] = out[k].trim();
+  }
+  return out;
+}
+function normalizeValues(input) {
+  let out = trimStringFields(input);
+  // enums as single, canonical strings
+  for (const f of ENUM_FIELDS) {
+    if (f in out) out[f] = normalizeEnumField(f, out[f]);
+  }
+  // authors must be array of strings
+  if ('authors' in out) out.authors = normalizeAuthors(out.authors);
+  return out;
+}
+
 const files = (await fs.readdir(ITEMS_DIR)).filter((f) => f.endsWith('.json')).sort();
 const items = [];
 
@@ -59,13 +107,14 @@ for (const f of files) {
     process.exit(1);
   }
 
-  // normalize and strip extras before validation
+  // normalize values and strip extras before validation
   const normalized = normalizeKeys(obj);
-  const canonical = toCanonicalShape(normalized);
+  const withValues = normalizeValues(normalized);
+  const canonical = toCanonicalShape(withValues);
 
   if (!validate(canonical)) {
     const details = ajv.errorsText(validate.errors, { separator: '\n' });
-    const extra = Object.keys(normalized).filter((k) => !allowedKeys.has(k));
+    const extra = Object.keys(withValues).filter((k) => !allowedKeys.has(k));
     console.error(
       `Invalid: ${f}\n${details}${extra.length ? `\nExtra keys: ${extra.join(', ')}` : ''}`,
     );
