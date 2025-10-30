@@ -25,7 +25,14 @@ const asArr = (v) => (Array.isArray(v) ? v : v ? [v] : []);
   </section>
 
   <section>
-    <h3 class="mb-4 text-xl font-semibold">Latest</h3>
+    <div class="mb-4 flex items-center justify-between">
+      <h3 class="text-xl font-semibold">Latest</h3>
+      <a
+        href="/resources"
+        class="text-sm font-medium text-sky-400 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-sky-500"
+        >Browse all resources →</a
+      >
+    </div>
     <ul class="grid gap-4 sm:grid-cols-2">
       {
         latest.map((item) => {
