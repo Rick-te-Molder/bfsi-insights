@@ -2,7 +2,14 @@
   "url": "https://www.mckinsey.com/industries/financial-services/our-insights/the-future-of-ai-in-the-insurance-industry",
   "title": "The future of AI in the insurance industry",
   "slug": "the-future-of-ai-in-the-insurance-industry",
-  "authors": ["Nick Milinkovich", "Sid Kamath", "Tanguy Catlin", "Violet Chung", "Pranav Jain", "Ramzi Elias"],
+  "authors": [
+    "Nick Milinkovich",
+    "Sid Kamath",
+    "Tanguy Catlin",
+    "Violet Chung",
+    "Pranav Jain",
+    "Ramzi Elias"
+  ],
   "source_name": "McKinsey",
   "source_domain": "mckinsey.com",
   "date_published": "2025-07-15",

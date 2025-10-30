@@ -2,7 +2,15 @@
   "url": "https://www.deloitte.com/content/dam/assets-zone3/us/en/docs/services/consulting/2025/agentic-ai-enterprise-2028.pdf",
   "title": "Agentic Enterprise 2028: A Blueprint for Cost Savings, Job Creation, and Faster Growth Through Agentic AI",
   "slug": "agentic-enterprise-2028",
-  "authors": ["Vivek Kulkarni", "Greg Vert", "Caroline Ritter", "Prakul Sharma", "Beena Ammanath", "Jim Rowan", "Scott Holcomb"],
+  "authors": [
+    "Vivek Kulkarni",
+    "Greg Vert",
+    "Caroline Ritter",
+    "Prakul Sharma",
+    "Beena Ammanath",
+    "Jim Rowan",
+    "Scott Holcomb"
+  ],
   "source_name": "Deloitte",
   "source_domain": "deloitte.com",
   "date_published": "2025-09-01",

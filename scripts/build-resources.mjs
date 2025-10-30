@@ -1,31 +1,31 @@
 #!/usr/bin/env node
-import fs from "node:fs/promises";
-import path from "node:path";
-import Ajv from "ajv/dist/2020.js";
-import addFormats from "ajv-formats";
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import Ajv from 'ajv/dist/2020.js';
+import addFormats from 'ajv-formats';
 
-const SCHEMA_PATH = "schemas/kb.schema.json";
-const ITEMS_DIR = "src/data/resources/items";
-const OUT_FILE = "src/data/resources/resources.json";
+const SCHEMA_PATH = 'schemas/kb.schema.json';
+const ITEMS_DIR = 'src/data/resources/items';
+const OUT_FILE = 'src/data/resources/resources.json';
 
 // load canonical schema
-const schemaRaw = await fs.readFile(SCHEMA_PATH, "utf8");
+const schemaRaw = await fs.readFile(SCHEMA_PATH, 'utf8');
 const SCHEMA = JSON.parse(schemaRaw);
 
-const ajv = new Ajv({ strict: false, allErrors: true, validateFormats: "full" });
+const ajv = new Ajv({ strict: false, allErrors: true, validateFormats: 'full' });
 addFormats(ajv);
-ajv.addFormat("uri", true);
-ajv.addFormat("date", true);
-ajv.addFormat("date-time", true);
+ajv.addFormat('uri', true);
+ajv.addFormat('date', true);
+ajv.addFormat('date-time', true);
 
 const validate = ajv.compile(SCHEMA);
 
-const files = (await fs.readdir(ITEMS_DIR)).filter(f => f.endsWith(".json")).sort();
+const files = (await fs.readdir(ITEMS_DIR)).filter((f) => f.endsWith('.json')).sort();
 const items = [];
 
 for (const f of files) {
   const p = path.join(ITEMS_DIR, f);
-  const raw = await fs.readFile(p, "utf8");
+  const raw = await fs.readFile(p, 'utf8');
   let obj;
   try {
     obj = JSON.parse(raw);
@@ -35,11 +35,13 @@ for (const f of files) {
   }
 
   if (!validate(obj)) {
-    const details = ajv.errorsText(validate.errors, { separator: "\n" });
+    const details = ajv.errorsText(validate.errors, { separator: '\n' });
     // extra keys hint (only meaningful if additionalProperties=false)
     const allowed = SCHEMA?.properties ? new Set(Object.keys(SCHEMA.properties)) : null;
-    const extra = allowed ? Object.keys(obj).filter(k => !allowed.has(k)) : [];
-    console.error(`Invalid: ${f}\n${details}${extra.length ? `\nExtra keys: ${extra.join(", ")}` : ""}`);
+    const extra = allowed ? Object.keys(obj).filter((k) => !allowed.has(k)) : [];
+    console.error(
+      `Invalid: ${f}\n${details}${extra.length ? `\nExtra keys: ${extra.join(', ')}` : ''}`,
+    );
     process.exit(1);
   }
 
