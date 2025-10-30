@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro';
 import resources from '../data/resources/resources.json';
 
-const latest = resources.sort((a, b) => b.date_added.localeCompare(a.date_added)).slice(0, 6);
+const latest = [...resources].sort((a, b) => b.date_added.localeCompare(a.date_added)).slice(0, 6);
 
 const isNew = (item) => (Date.now() - new Date(item.date_added)) / 86400000 <= 7;
 const isUpdated = (item) => {
@@ -11,7 +11,9 @@ const isUpdated = (item) => {
   return d <= 7 && !isNew(item);
 };
 const fmt = (iso) =>
-  new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+  iso
+    ? new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })
+    : '';
 const asArr = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 ---
 
@@ -64,8 +66,8 @@ const asArr = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 
               <div class="mt-1 text-sm text-neutral-400">
                 <span>{fmt(item.date_added)}</span>
-                {item.author && <span> · {item.author}</span>}
-                {item.publisher && <span> · {item.publisher}</span>}
+                {item.authors?.length && <span> · {item.authors[0]}</span>}
+                {item.source_name && <span> · {item.source_name}</span>}
               </div>
 
               {item.note && <p class="mt-2 text-sm text-neutral-300">{item.note}</p>}
@@ -84,7 +86,10 @@ const asArr = (v) => (Array.isArray(v) ? v : v ? [v] : []);
                     <div class="flex flex-wrap items-center gap-2">
                       <span class="text-xs text-neutral-400">{label}:</span>
                       {values.map((t) => (
-                        <span class="rounded-md border border-neutral-700 px-2 py-0.5 text-xs text-neutral-200">
+                        <span
+                          key={`${label}:${t}`}
+                          class="rounded-md border border-neutral-700 px-2 py-0.5 text-xs text-neutral-200"
+                        >
                           {t}
                         </span>
                       ))}
