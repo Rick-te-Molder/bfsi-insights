@@ -27,6 +27,7 @@ const values = {
       >
     </div>
     <p class="mt-1 text-sm text-neutral-400">Filter by attributes to find relevant items.</p>
+    <p id="count" class="mt-1 text-xs text-neutral-500"></p>
   </section>
 
   <section class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -71,9 +72,22 @@ const values = {
         {values.jurisdiction.map((v) => <option value={v}>{v}</option>)}
       </select>
     </label>
+    <div class="sm:col-span-2 lg:col-span-5 flex justify-end">
+      <button
+        id="clear-filters"
+        class="rounded-md border border-neutral-700 px-3 py-1 text-sm text-neutral-200 hover:bg-neutral-800"
+        >Clear all</button
+      >
+    </div>
   </section>
 
   <section>
+    <div
+      id="empty"
+      class="hidden rounded-md border border-neutral-800 bg-neutral-900/60 p-4 text-sm text-neutral-400"
+    >
+      No results match the selected filters.
+    </div>
     <ul id="list" class="grid gap-4 sm:grid-cols-2">
       {
         resources.map((item) => {
@@ -116,15 +130,40 @@ const values = {
     </ul>
   </section>
 
-  <script>
+  <script is:inline>
     const $ = (id) => document.getElementById(id);
     const list = document.getElementById('list');
+    const empty = document.getElementById('empty');
+    const clearBtn = document.getElementById('clear-filters');
+    const countEl = document.getElementById('count');
     const filters = ['role', 'industry', 'topic', 'content_type', 'jurisdiction'].map((f) => ({
       key: f,
       el: $(`f-${f}`),
     }));
-    function apply() {
-      const vals = Object.fromEntries(filters.map(({ key, el }) => [key, el.value]));
+
+    function getVals() {
+      return Object.fromEntries(filters.map(({ key, el }) => [key, el.value]));
+    }
+    function setVals(vals) {
+      filters.forEach(({ key, el }) => {
+        el.value = vals[key] ?? '';
+      });
+    }
+    function updateQuery(vals) {
+      const params = new URLSearchParams();
+      for (const [k, v] of Object.entries(vals)) if (v) params.set(k, v);
+      const qs = params.toString();
+      const url = qs ? `${location.pathname}?${qs}` : location.pathname;
+      history.replaceState(null, '', url);
+    }
+    function readFromQuery() {
+      const params = new URLSearchParams(location.search);
+      const vals = Object.fromEntries(filters.map(({ key }) => [key, params.get(key) || '']));
+      setVals(vals);
+      return vals;
+    }
+    function apply(vals = getVals()) {
+      let visible = 0;
       for (const li of list.children) {
         let ok = true;
         for (const k of Object.keys(vals)) {
@@ -135,8 +174,27 @@ const values = {
           }
         }
         li.classList.toggle('hidden', !ok);
+        if (ok) visible++;
       }
+      empty.classList.toggle('hidden', visible !== 0);
+      if (countEl) countEl.textContent = `Showing ${visible} of ${list.children.length}`;
+      return visible;
     }
-    filters.forEach(({ el }) => el.addEventListener('change', apply));
+
+    // initialize from query, then apply and sync URL on change
+    const initVals = readFromQuery();
+    apply(initVals);
+    filters.forEach(({ el }) =>
+      el.addEventListener('change', () => {
+        const vals = getVals();
+        updateQuery(vals);
+        apply(vals);
+      }),
+    );
+    clearBtn?.addEventListener('click', () => {
+      setVals({ role: '', industry: '', topic: '', content_type: '', jurisdiction: '' });
+      updateQuery(getVals());
+      apply();
+    });
   </script>
 </Base>
