@@ -41,8 +41,8 @@ export default [
       'no-console': 'off',
     },
   },
-  // Ignore generated/build output
+  // Ignore generated/build output and types
   {
-    ignores: ['dist/**', 'node_modules/**'],
+    ignores: ['dist/**', 'node_modules/**', '.astro/**', '**/*.d.ts'],
   },
 ];

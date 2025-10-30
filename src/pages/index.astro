@@ -8,8 +8,8 @@ const latest = resources
 
 const isNew = (item) => (Date.now() - new Date(item.date_added)) / 86400000 <= 7;
 const isUpdated = (item) => {
-  if (!item.date_updated) return false;
-  const d = (Date.now() - new Date(item.date_updated)) / 86400000;
+  if (!item.last_edited) return false;
+  const d = (Date.now() - new Date(item.last_edited)) / 86400000;
   return d <= 7 && !isNew(item);
 };
 const fmt = (iso) => new Date(iso).toLocaleDateString('en-GB',{year:'numeric',month:'short',day:'numeric'});
