@@ -32,8 +32,21 @@ jobs:
       - name: Validate items (no forbidden keys)
         run: npm run lint:items
 
+      - name: Check external links
+        run: npm run check:links
+
       - name: Build Astro site
         run: npm run build
+
+      - name: Lighthouse CI
+        run: npm run lhci
+
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lhci-reports
+          path: reports/lhci
 
       - name: Upload build artifact
         if: always()
