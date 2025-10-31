@@ -13,25 +13,25 @@
     "lint:items": "node scripts/lint-items-no-time.mjs",
     "build:resources": "node scripts/build-resources.mjs",
     "check:links": "node scripts/check-links.mjs",
-    "lhci": "lhci autorun --config=.lighthouserc.json"
+    "lhci": "npx @lhci/cli@0.14.0 autorun --config=.lighthouserc.json"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.7",
     "@astrojs/tailwind": "^6.0.2",
     "astro": "^5.15.1",
+    "fuse.js": "^6.6.2",
     "tailwindcss": "^3.4.15"
   },
   "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "@typescript-eslint/parser": "^8.12.2",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
-    "eslint": "^9.38.0",
-    "@eslint/js": "^9.13.0",
-    "eslint-plugin-astro": "^1.0.2",
     "astro-eslint-parser": "^1.0.2",
-    "@typescript-eslint/parser": "^8.12.2",
+    "eslint": "^9.38.0",
+    "eslint-plugin-astro": "^1.0.2",
     "globals": "^14.0.0",
     "prettier": "^3.3.3",
-    "prettier-plugin-astro": "^0.14.1",
-    "@lhci/cli": "^0.13.0"
+    "prettier-plugin-astro": "^0.14.1"
   }
 }

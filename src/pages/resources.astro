@@ -31,6 +31,15 @@ const values = {
   </section>
 
   <section class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <label class="sm:col-span-2 lg:col-span-5 flex flex-col gap-1 text-sm">
+      <span class="text-neutral-300">Search</span>
+      <input
+        id="q"
+        type="search"
+        placeholder="Search title, note, source, authors"
+        class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1"
+      />
+    </label>
     <label class="flex flex-col gap-1 text-sm">
       <span class="text-neutral-300">Role</span>
       <select id="f-role" class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1">
@@ -106,6 +115,9 @@ const values = {
               data-topic={topic}
               data-content_type={content_type}
               data-jurisdiction={jurisdiction}
+              data-authors={
+                Array.isArray(item.authors) ? item.authors.join(', ') : item.authors || ''
+              }
             >
               <a
                 href={item.url}
@@ -132,60 +144,105 @@ const values = {
     </ul>
   </section>
 
-  <script is:inline>
+  <script type="module" is:inline>
+    import Fuse from 'https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.esm.min.js';
     const $ = (id) => document.getElementById(id);
     const list = document.getElementById('list');
     const empty = document.getElementById('empty');
     const clearBtn = document.getElementById('clear-filters');
     const countEl = document.getElementById('count');
+    const qEl = document.getElementById('q');
     const filters = ['role', 'industry', 'topic', 'content_type', 'jurisdiction'].map((f) => ({
       key: f,
       el: $(`f-${f}`),
     }));
 
+    // Build an index of items from the DOM data attributes
+    const data = Array.from(list.children).map((li) => ({
+      el: li,
+      title: li.querySelector('a')?.textContent?.trim() || '',
+      note: '',
+      source_name: li.querySelector('.mt-1')?.textContent || '',
+      authors: li.getAttribute('data-authors') || '',
+      role: li.getAttribute('data-role') || '',
+      industry: li.getAttribute('data-industry') || '',
+      topic: li.getAttribute('data-topic') || '',
+      content_type: li.getAttribute('data-content_type') || '',
+      jurisdiction: li.getAttribute('data-jurisdiction') || '',
+    }));
+
+    const fuse = new Fuse(data, {
+      includeScore: true,
+      threshold: 0.35,
+      keys: [
+        { name: 'title', weight: 0.6 },
+        { name: 'source_name', weight: 0.2 },
+        { name: 'authors', weight: 0.2 },
+      ],
+    });
+
     function getVals() {
-      return Object.fromEntries(filters.map(({ key, el }) => [key, el.value]));
+      const sel = Object.fromEntries(filters.map(({ key, el }) => [key, el.value]));
+      const q = qEl.value.trim();
+      return { ...sel, q };
     }
     function setVals(vals) {
       filters.forEach(({ key, el }) => {
         el.value = vals[key] ?? '';
       });
+      qEl.value = vals.q ?? '';
     }
     function updateQuery(vals) {
       const params = new URLSearchParams();
-      for (const [k, v] of Object.entries(vals)) if (v) params.set(k, v);
+      for (const [k, v] of Object.entries(vals)) if (v && k !== 'q') params.set(k, v);
+      if (vals.q) params.set('q', vals.q);
       const qs = params.toString();
       const url = qs ? `${location.pathname}?${qs}` : location.pathname;
       history.replaceState(null, '', url);
     }
     function readFromQuery() {
       const params = new URLSearchParams(location.search);
-      const vals = Object.fromEntries(filters.map(({ key }) => [key, params.get(key) || '']));
+      const vals = Object.fromEntries([
+        ...filters.map(({ key }) => [key, params.get(key) || '']),
+        ['q', params.get('q') || ''],
+      ]);
       setVals(vals);
       return vals;
     }
     function apply(vals = getVals()) {
       let visible = 0;
-      for (const li of list.children) {
-        let ok = true;
-        for (const k of Object.keys(vals)) {
-          const v = vals[k];
-          if (v && li.getAttribute(`data-${k}`) !== v) {
-            ok = false;
-            break;
-          }
-        }
-        li.classList.toggle('hidden', !ok);
-        if (ok) visible++;
+      let allowed = new Set(data.map((d, i) => i));
+      // dropdown filters
+      for (const { key } of filters) {
+        const v = vals[key];
+        if (!v) continue;
+        const next = new Set();
+        allowed.forEach((idx) => {
+          if (data[idx][key] === v) next.add(idx);
+        });
+        allowed = next;
       }
+      // text search
+      if (vals.q) {
+        const res = fuse.search(vals.q);
+        const ids = new Set(res.map((r) => r.refIndex));
+        allowed = new Set([...allowed].filter((i) => ids.has(i)));
+      }
+      // render
+      data.forEach((d, i) => {
+        const ok = allowed.has(i);
+        d.el.classList.toggle('hidden', !ok);
+        if (ok) visible++;
+      });
       empty.classList.toggle('hidden', visible !== 0);
       if (countEl) countEl.textContent = `Showing ${visible} of ${list.children.length}`;
       return visible;
     }
 
-    // initialize from query, then apply and sync URL on change
+    // init from query
     const initVals = readFromQuery();
     apply(initVals);
+    // events
     filters.forEach(({ el }) =>
       el.addEventListener('change', () => {
         const vals = getVals();
@@ -193,8 +250,22 @@ const values = {
         apply(vals);
       }),
     );
+    const debounced = (() => {
+      let t;
+      return (fn) => {
+        clearTimeout(t);
+        t = setTimeout(fn, 250);
+      };
+    })();
+    qEl.addEventListener('input', () =>
+      debounced(() => {
+        const vals = getVals();
+        updateQuery(vals);
+        apply(vals);
+      }),
+    );
     clearBtn?.addEventListener('click', () => {
-      setVals({ role: '', industry: '', topic: '', content_type: '', jurisdiction: '' });
+      setVals({ role: '', industry: '', topic: '', content_type: '', jurisdiction: '', q: '' });
       updateQuery(getVals());
       apply();
     });
