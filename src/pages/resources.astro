@@ -26,34 +26,34 @@ const values = {
         >Home</a
       >
     </div>
-    <p class="mt-1 text-sm text-neutral-400">Filter by attributes to find relevant items.</p>
-    <p id="count" class="mt-1 text-xs text-neutral-500"></p>
+    <p class="mt-1 text-sm text-neutral-300">Filter by attributes to find relevant items.</p>
+    <p id="count" class="mt-1 text-xs text-neutral-300" aria-live="polite"></p>
   </section>
 
   <section class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
     <label class="flex flex-col gap-1 text-sm">
-      <span class="text-neutral-400">Role</span>
+      <span class="text-neutral-300">Role</span>
       <select id="f-role" class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1">
         <option value="">All</option>
         {values.role.map((v) => <option value={v}>{v}</option>)}
       </select>
     </label>
     <label class="flex flex-col gap-1 text-sm">
-      <span class="text-neutral-400">Industry</span>
+      <span class="text-neutral-300">Industry</span>
       <select id="f-industry" class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1">
         <option value="">All</option>
         {values.industry.map((v) => <option value={v}>{v}</option>)}
       </select>
     </label>
     <label class="flex flex-col gap-1 text-sm">
-      <span class="text-neutral-400">Topic</span>
+      <span class="text-neutral-300">Topic</span>
       <select id="f-topic" class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1">
         <option value="">All</option>
         {values.topic.map((v) => <option value={v}>{v}</option>)}
       </select>
     </label>
     <label class="flex flex-col gap-1 text-sm">
-      <span class="text-neutral-400">Content type</span>
+      <span class="text-neutral-300">Content type</span>
       <select
         id="f-content_type"
         class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1"
@@ -63,7 +63,7 @@ const values = {
       </select>
     </label>
     <label class="flex flex-col gap-1 text-sm">
-      <span class="text-neutral-400">Jurisdiction</span>
+      <span class="text-neutral-300">Jurisdiction</span>
       <select
         id="f-jurisdiction"
         class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1"
@@ -84,7 +84,8 @@ const values = {
   <section>
     <div
       id="empty"
-      class="hidden rounded-md border border-neutral-800 bg-neutral-900/60 p-4 text-sm text-neutral-400"
+      class="hidden rounded-md border border-neutral-800 bg-neutral-900/60 p-4 text-sm text-neutral-300"
+      role="status" aria-live="polite"
     >
       No results match the selected filters.
     </div>
@@ -111,12 +112,12 @@ const values = {
               >
                 {item.title}
               </a>
-              <div class="mt-1 text-sm text-neutral-400">
+              <div class="mt-1 text-sm text-neutral-300">
                 {item.date_published && <span>{fmt(item.date_published)}</span>}
                 {item.source_name && <span> · {item.source_name}</span>}
                 {item.authors?.length && <span> · {item.authors[0]}</span>}
               </div>
-              <div class="mt-2 text-xs text-neutral-400">
+              <div class="mt-2 text-xs text-neutral-300">
                 <span>{role}</span>
                 {industry && <span> · {industry}</span>}
                 {topic && <span> · {topic}</span>}
