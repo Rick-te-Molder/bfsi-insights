@@ -40,7 +40,9 @@ const canonical = origin + Astro.url.pathname;
       <slot />
     </main>
     <footer class="border-t border-neutral-800">
-      <div class="mx-auto max-w-5xl px-4 py-6 text-sm text-neutral-400 flex items-center justify-between">
+      <div
+        class="mx-auto max-w-5xl px-4 py-6 text-sm text-neutral-400 flex items-center justify-between"
+      >
         <span> {new Date().getFullYear()} BFSI Insights</span>
         <nav class="space-x-4">
           <a href="/feed.xml" class="hover:underline">RSS feed</a>

@@ -4,7 +4,8 @@ import resources from '../data/resources/resources.json';
 export function GET(context) {
   const site = context.site?.toString() ?? 'https://www.bfsiinsights.com/';
   const title = 'BFSI Insights – Latest Resources';
-  const description = 'Agentic AI insights for executives and professionals in banking, financial services and insurance.';
+  const description =
+    'Agentic AI insights for executives and professionals in banking, financial services and insurance.';
 
   const items = [...resources]
     .sort((a, b) => b.date_added.localeCompare(a.date_added))
