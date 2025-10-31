@@ -1,0 +1,42 @@
+name: Nightly Link Check
+on:
+  schedule:
+    - cron: '17 2 * * *' # daily at 02:17 UTC
+  workflow_dispatch: {}
+
+concurrency:
+  group: nightly-link-check
+  cancel-in-progress: false
+
+jobs:
+  link-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build resources (normalize bundle)
+        run: npm run build:resources
+
+      - name: Check external links
+        run: npm run check:links
+
+      - name: Upload link-check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: link-check-logs
+          path: |
+            src/data/resources/resources.json
+            scripts/check-links.mjs

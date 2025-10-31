@@ -31,9 +31,26 @@ There's nothing special about `src/components/`, but that's where we like to put
 
 Any static assets, like images, can be placed in the `public/` directory.
 
-## 🧞 Commands
+## Getting Started
 
-All commands are run from the root of the project, from a terminal:
+### Feeds
+
+- RSS: https://www.bfsiinsights.com/feed.xml
+- Updates JSON (latest 20): https://www.bfsiinsights.com/updates.json
+
+Add this to an RSS reader (Feedly/Reeder) or automate via Zapier/IFTTT. The JSON endpoint is ideal for lightweight clients and dashboards.
+
+### Quality gates
+
+- Link checker: runs on CI (and nightly) to detect broken external links in `src/data/resources/resources.json`.
+- Lighthouse CI: enforces ≥95 for Performance, Accessibility, Best Practices, and SEO on `/` and `/resources`. Reports are uploaded as CI artifacts.
+
+Local commands:
+
+- `npm run check:links`
+- `npm run build && npm run lhci`
+
+## 🧞 Commands
 
 | Command                   | Action                                           |
 | :------------------------ | :----------------------------------------------- |
