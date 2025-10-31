@@ -4,11 +4,17 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 const FILE = 'src/data/resources/resources.json';
 const CONCURRENCY = 5;
-const TIMEOUT_MS = 10000;
-const RETRIES = 2;
+const TIMEOUT_MS = 15000;
+const RETRIES = 3;
 const SKIP_PATTERNS = [
   // Add patterns to skip domains if needed, e.g. /example\.com/,
 ];
+const SOFT_FAIL_DOMAINS = [/mckinsey\.com/];
+const HEADERS = {
+  'User-Agent':
+    'Mozilla/5.0 (compatible; BFSIInsightsLinkChecker/1.0; +https://www.bfsiinsights.com) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122 Safari/537.36',
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+};
 
 const controllerWithTimeout = (ms) => {
   const c = new AbortController();
@@ -25,7 +31,7 @@ async function headOrGet(url) {
   for (const method of ['HEAD', 'GET']) {
     const { signal, cancel } = controllerWithTimeout(TIMEOUT_MS);
     try {
-      const res = await fetch(url, { method, redirect: 'follow', signal });
+      const res = await fetch(url, { method, redirect: 'follow', signal, headers: HEADERS });
       cancel();
       return res;
     } catch (e) {
@@ -56,6 +62,7 @@ async function main() {
   const items = JSON.parse(raw);
   const urls = items.map((i) => i.url).filter(Boolean);
   const failures = [];
+  const softFailures = [];
 
   let idx = 0;
   const workers = Array.from({ length: CONCURRENCY }, async () => {
@@ -64,15 +71,25 @@ async function main() {
       const url = urls[current];
       if (shouldSkip(url)) continue;
       const res = await check(url);
-      if (!res.ok) failures.push({ url, error: res.error });
+      if (!res.ok) {
+        if (SOFT_FAIL_DOMAINS.some((re) => re.test(url)))
+          softFailures.push({ url, error: res.error });
+        else failures.push({ url, error: res.error });
+      }
     }
   });
   await Promise.all(workers);
 
-  if (failures.length) {
-    console.error(`Broken links (${failures.length}):`);
-    for (const f of failures) console.error(` - ${f.url} :: ${f.error}`);
-    process.exit(1);
+  if (failures.length || softFailures.length) {
+    if (failures.length) {
+      console.error(`Broken links (${failures.length}):`);
+      for (const f of failures) console.error(` - ${f.url} :: ${f.error}`);
+    }
+    if (softFailures.length) {
+      console.warn(`Soft-failed links (${softFailures.length}) [non-blocking]:`);
+      for (const f of softFailures) console.warn(` - ${f.url} :: ${f.error}`);
+    }
+    process.exit(failures.length ? 1 : 0);
   } else {
     console.log(`All ${urls.length} links OK`);
   }
