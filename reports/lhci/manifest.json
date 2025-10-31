@@ -1,0 +1,28 @@
+[
+  {
+    "url": "http://localhost:4321/",
+    "isRepresentativeRun": true,
+    "htmlPath": "/Users/micro/projects/bfsi-insights/reports/lhci/localhost-_-2025_10_31_00_24_20.report.html",
+    "jsonPath": "/Users/micro/projects/bfsi-insights/reports/lhci/localhost-_-2025_10_31_00_24_20.report.json",
+    "summary": {
+      "performance": 1,
+      "accessibility": 1,
+      "best-practices": 0.96,
+      "seo": 1,
+      "pwa": 0.38
+    }
+  },
+  {
+    "url": "http://localhost:4321/resources",
+    "isRepresentativeRun": true,
+    "htmlPath": "/Users/micro/projects/bfsi-insights/reports/lhci/localhost-_resources-2025_10_31_00_24_30.report.html",
+    "jsonPath": "/Users/micro/projects/bfsi-insights/reports/lhci/localhost-_resources-2025_10_31_00_24_30.report.json",
+    "summary": {
+      "performance": 1,
+      "accessibility": 1,
+      "best-practices": 0.96,
+      "seo": 1,
+      "pwa": 0.38
+    }
+  }
+]
