@@ -43,14 +43,14 @@ jobs:
 
       - name: Upload Lighthouse reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lhci-reports
           path: reports/lhci
 
       - name: Upload build artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: site-dist
           path: dist
@@ -63,7 +63,7 @@ jobs:
 
       - name: Upload NPM audit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: npm-audit
           path: reports/npm-audit.json
