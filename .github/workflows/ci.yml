@@ -54,3 +54,16 @@ jobs:
         with:
           name: site-dist
           path: dist
+
+      - name: NPM audit (advisory)
+        if: always()
+        run: |
+          mkdir -p reports
+          npm audit --json > reports/npm-audit.json || true
+
+      - name: Upload NPM audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-audit
+          path: reports/npm-audit.json
