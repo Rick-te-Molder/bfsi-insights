@@ -9,7 +9,25 @@ const RETRIES = 3;
 const SKIP_PATTERNS = [
   // Add patterns to skip domains if needed, e.g. /example\.com/,
 ];
-const SOFT_FAIL_DOMAINS = [/mckinsey\.com/];
+const SOFT_FAIL_DOMAINS_DEFAULT = [/mckinsey\.com/];
+function parseSoftFailDomains() {
+  const env = process.env.SOFT_FAIL_DOMAINS;
+  if (!env) return SOFT_FAIL_DOMAINS_DEFAULT;
+  const extra = env
+    .split(/[\s,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => {
+      try {
+        return new RegExp(s);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+  return [...SOFT_FAIL_DOMAINS_DEFAULT, ...extra];
+}
+const SOFT_FAIL_DOMAINS = parseSoftFailDomains();
 const HEADERS = {
   'User-Agent':
     'Mozilla/5.0 (compatible; BFSIInsightsLinkChecker/1.0; +https://www.bfsiinsights.com) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122 Safari/537.36',
