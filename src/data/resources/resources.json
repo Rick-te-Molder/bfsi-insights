@@ -16,7 +16,7 @@
     "agentic_capabilities": "reasoning",
     "content_type": "article",
     "jurisdiction": "global",
-    "note": "McKinsey article describing how AI will reshape underwriting, distribution and claims by 2030.  [oai_citation:0‡McKinsey & Company](https://www.mckinsey.com/industries/financial-services/our-insights/insurance-2030-the-impact-of-ai-on-the-future-of-insurance?utm_source=chatgpt.com)",
+    "note": "McKinsey article describing how AI will reshape underwriting, distribution and claims by 2030.  [oai_citation:0‡McKinsey & Company](https://www.mckinsey.com/industries/financial-services/our-insights/insurance-2030-the-impact-of-ai-on-the-future-of-insurance)",
     "id": "9f6be1e5a424e8893d7f9ebd13683b1a9dc699c6"
   },
   {
@@ -64,14 +64,14 @@
     "date_published": "2025-07-15",
     "date_added": "2025-10-28T19:00:00+01:00",
     "last_edited": "2025-10-28T19:00:00+01:00",
-    "role": "professional",
+    "role": "executive",
     "industry": "insurance",
     "topic": "technology-and-data-ai",
     "use_cases": "claims-handling",
     "agentic_capabilities": "tool-use",
     "content_type": "report",
     "jurisdiction": "global",
-    "note": "McKinsey report on how insurers must integrate AI enterprise-wide to achieve competitive advantage.  [oai_citation:0‡mckinsey.com](https://www.mckinsey.com/industries/financial-services/our-insights/the-future-of-ai-in-the-insurance-industry?utm_source=chatgpt.com)",
+    "note": "McKinsey report on how insurers must integrate AI enterprise-wide to achieve competitive advantage.  [oai_citation:0‡mckinsey.com](https://www.mckinsey.com/industries/financial-services/our-insights/the-future-of-ai-in-the-insurance-industry)",
     "id": "e5a8bf6e4bf68a8a4c3d68b1f4ce88bb5af8c5d2"
   },
   {
