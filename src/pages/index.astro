@@ -15,6 +15,7 @@ const fmt = (iso) =>
     ? new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })
     : '';
 const asArr = (v) => (Array.isArray(v) ? v : v ? [v] : []);
+const sourceInitial = (s) => (s && s.length ? s[0].toUpperCase() : '');
 ---
 
 <Base title="BFSI Insights">
@@ -64,38 +65,30 @@ const asArr = (v) => (Array.isArray(v) ? v : v ? [v] : []);
                 </span>
               )}
 
-              <div class="mt-1 text-sm text-neutral-400">
+              <div class="mt-1 flex items-center gap-2 text-sm text-neutral-400">
                 <span>{fmt(item.date_added)}</span>
-                {item.authors?.length && <span> · {item.authors[0]}</span>}
-                {item.source_name && <span> · {item.source_name}</span>}
+                {item.source_name && (
+                  <span class="inline-flex h-4 w-4 items-center justify-center rounded-sm border border-neutral-700 bg-neutral-800 text-[10px] leading-none text-neutral-200" aria-hidden="true">
+                    {sourceInitial(item.source_name)}
+                  </span>
+                )}
+                {item.source_name && <span>{item.source_name}</span>}
+                {item.authors?.length && <span>· {item.authors[0]}</span>}
               </div>
 
               {item.note && <p class="mt-2 text-sm text-neutral-300">{item.note}</p>}
 
-              <div class="mt-3 space-y-1">
-                {[
-                  ['Role', role],
-                  ['Industry', industry],
-                  ['Topic', topic],
-                  ['Use cases', use_cases],
-                  ['Agentic', agentic],
-                  ['Content type', content_type],
-                  ['Jurisdiction', jurisdiction],
-                ].map(([label, values]) =>
-                  values.length ? (
-                    <div class="flex flex-wrap items-center gap-2">
-                      <span class="text-xs text-neutral-400">{label}:</span>
-                      {values.map((t) => (
-                        <span
-                          key={`${label}:${t}`}
-                          class="rounded-md border border-neutral-700 px-2 py-0.5 text-xs text-neutral-200"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null,
-                )}
+              <div class="mt-3 flex flex-wrap items-center gap-2">
+                {topic.length ? (
+                  <span class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300">
+                    {topic[0]}
+                  </span>
+                ) : null}
+                {content_type.length ? (
+                  <span class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300">
+                    {content_type[0]}
+                  </span>
+                ) : null}
               </div>
             </li>
           );
