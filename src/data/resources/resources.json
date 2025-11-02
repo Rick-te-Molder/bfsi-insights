@@ -16,7 +16,7 @@
     "agentic_capabilities": "reasoning",
     "content_type": "article",
     "jurisdiction": "global",
-    "note": "McKinsey article describing how AI will reshape underwriting, distribution and claims by 2030.  [oai_citation:0‡McKinsey & Company](https://www.mckinsey.com/industries/financial-services/our-insights/insurance-2030-the-impact-of-ai-on-the-future-of-insurance)",
+    "note": "How AI is expected to reshape underwriting, distribution, and claims in insurance by 2030.",
     "id": "9f6be1e5a424e8893d7f9ebd13683b1a9dc699c6"
   },
   {
@@ -39,8 +39,8 @@
     "last_edited": "2025-10-28T19:00:00+01:00",
     "role": "executive",
     "industry": "cross-bfsi",
-    "topic": "technology-and-data-agentic-engineering",
-    "use_cases": "audit-support",
+    "topic": "strategy-and-management-strategy",
+    "use_cases": "portfolio-analytics",
     "agentic_capabilities": "planning",
     "content_type": "report",
     "jurisdiction": "global",
@@ -71,7 +71,7 @@
     "agentic_capabilities": "tool-use",
     "content_type": "report",
     "jurisdiction": "global",
-    "note": "McKinsey report on how insurers must integrate AI enterprise-wide to achieve competitive advantage.  [oai_citation:0‡mckinsey.com](https://www.mckinsey.com/industries/financial-services/our-insights/the-future-of-ai-in-the-insurance-industry)",
+    "note": "How insurers must integrate AI enterprise-wide to achieve competitive advantage.",
     "id": "e5a8bf6e4bf68a8a4c3d68b1f4ce88bb5af8c5d2"
   },
   {
@@ -101,7 +101,7 @@
     "role": "academic",
     "industry": "cross-bfsi",
     "topic": "technology-and-data-agentic-engineering",
-    "use_cases": "audit-support",
+    "use_cases": "portfolio-analytics",
     "agentic_capabilities": "evaluation",
     "content_type": "peer-reviewed-paper",
     "jurisdiction": "global",
