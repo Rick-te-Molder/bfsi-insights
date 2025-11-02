@@ -63,7 +63,10 @@ const sourceInitial = (s) => (s && s.length ? s[0].toUpperCase() : '');
               <div class="mt-1 flex items-center gap-2 text-sm text-neutral-400">
                 <span>{fmt(item.date_added)}</span>
                 {item.source_name && (
-                  <span class="inline-flex h-4 w-4 items-center justify-center rounded-sm border border-neutral-700 bg-neutral-800 text-[10px] leading-none text-neutral-200" aria-hidden="true">
+                  <span
+                    class="inline-flex h-4 w-4 items-center justify-center rounded-sm border border-neutral-700 bg-neutral-800 text-[10px] leading-none text-neutral-200"
+                    aria-hidden="true"
+                  >
                     {sourceInitial(item.source_name)}
                   </span>
                 )}
