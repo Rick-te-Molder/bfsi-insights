@@ -10,6 +10,7 @@
     "authors": { "type": "array", "items": { "type": "string" } },
     "source_name": { "type": "string" },
     "source_domain": { "type": "string" },
+    "thumbnail": { "type": "string" },
     "date_published": { "type": "string", "format": "date" },
     "date_added": { "type": "string", "format": "date-time" },
     "last_edited": { "type": "string", "format": "date-time" },
