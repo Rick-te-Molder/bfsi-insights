@@ -21,6 +21,11 @@ const externalThumb = (u) =>
 
 const localThumbs = (slug) =>
   slug ? [`/thumbs/${slug}.webp`, `/thumbs/${slug}.jpg`, `/thumbs/${slug}.png`] : [];
+
+const expandItemThumb = (t) => {
+  if (!t) return [];
+  return /\.(webp|png|jpe?g)$/i.test(t) ? [t] : [`${t}.webp`, `${t}.png`, `${t}.jpg`];
+};
 ---
 
 <Base title="BFSI Insights">
@@ -91,10 +96,10 @@ const localThumbs = (slug) =>
                 </div>
                 <div class="col-span-1">
                   <div class="relative">
-                    <div class="ml-auto h-24 w-full rounded-md border border-neutral-800 bg-neutral-800/40" />
+                    <div class="ml-auto h-24 w-full rounded-md border border-neutral-800 bg-neutral-800/40"></div>
                     {(() => {
                       const candidates = [
-                        ...(item.thumbnail ? [item.thumbnail] : []),
+                        ...expandItemThumb(item.thumbnail),
                         ...localThumbs(item.slug),
                         ...(externalThumb(item.url) ? [externalThumb(item.url)] : []),
                       ];
