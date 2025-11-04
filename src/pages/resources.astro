@@ -130,7 +130,7 @@ const expandItemThumb = (t) => {
     >
       No results match the selected filters.
     </div>
-    <ul id="list" class="grid gap-4 sm:grid-cols-2">
+    <ul id="list" class="grid gap-6 sm:grid-cols-2">
       {
         resources.map((item) => {
           const role = item.role || '';
@@ -140,7 +140,8 @@ const expandItemThumb = (t) => {
           const jurisdiction = item.jurisdiction || '';
           return (
             <li
-              class="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-4 shadow-sm"
+              class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition hover:border-neutral-700 hover:ring-neutral-700 cursor-pointer"
+              onclick="openModalFrom(this)"
               data-role={role}
               data-industry={industry}
               data-topic={topic}
@@ -153,6 +154,7 @@ const expandItemThumb = (t) => {
               <a
                 href={item.url}
                 class="text-base font-medium text-sky-400 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-sky-500"
+                onclick="event.stopPropagation()"
               >
                 {item.title}
               </a>
@@ -161,48 +163,60 @@ const expandItemThumb = (t) => {
                 {item.source_name && <span> · {item.source_name}</span>}
                 {item.authors?.length && <span> · {item.authors[0]}</span>}
               </div>
-              <div class="mt-2 text-xs text-neutral-300">
+              <div class="mt-2 text-xs text-neutral-400 flex flex-wrap gap-2">
                 <span>{role}</span>
-                {industry && <span> · {industry}</span>}
-                {topic && <span> · {topic}</span>}
-                {content_type && <span> · {content_type}</span>}
-                {jurisdiction && <span> · {jurisdiction}</span>}
+                {industry && <span>· {industry}</span>}
+                {topic && <span>· {topic}</span>}
+                {content_type && <span>· {content_type}</span>}
+                {jurisdiction && <span>· {jurisdiction}</span>}
               </div>
 
-              <div class="mt-3 grid grid-cols-3 gap-3 items-start">
-                <div class="col-span-2" />
-                <div class="col-span-1">
-                  <div class="relative">
-                    <div
-                      class="ml-auto w-full rounded-md border border-neutral-800 bg-neutral-800/40"
-                      style="aspect-ratio: 16 / 9"
-                    />
-                    {(() => {
-                      const candidates = [
-                        ...expandItemThumb(item.thumbnail),
-                        ...findLocalThumbs(item.slug),
-                        ...(externalThumb(item.url) ? [externalThumb(item.url)] : []),
-                      ];
-                      return candidates.length ? (
-                        <img
-                          src={candidates[0]}
-                          data-next={candidates.slice(1).join('|')}
-                          alt={`${item.source_name || 'Source'} preview`}
-                          width="320"
-                          height="180"
-                          loading="lazy"
-                          decoding="async"
-                          referrerpolicy="no-referrer"
-                          sizes="(min-width: 1024px) 200px, (min-width: 640px) 160px, 33vw"
-                          class="ml-auto w-full rounded-md border border-neutral-800 object-cover opacity-0"
+              <div class="mt-3">
+                <div class="relative">
+                  {(() => {
+                    const candidates = [
+                      ...expandItemThumb(item.thumbnail),
+                      ...findLocalThumbs(item.slug),
+                      ...(externalThumb(item.url) ? [externalThumb(item.url)] : []),
+                    ];
+                    return (
+                      <>
+                        <div
+                          class="w-full rounded-md border border-neutral-800 bg-neutral-800/40"
                           style="aspect-ratio: 16 / 9"
-                          onload="this.classList.remove('opacity-0'); this.previousElementSibling.style.display='none'"
-                          onerror="const n=this.dataset.next||''; if(n){ const parts=n.split('|'); const nx=parts.shift(); this.dataset.next=parts.join('|'); if(nx){ this.src=nx; return; } } this.style.display='none'"
                         />
-                      ) : null;
-                    })()}
-                  </div>
+                        {candidates.length ? (
+                          <img
+                            src={candidates[0]}
+                            data-next={candidates.slice(1).join('|')}
+                            alt={`${item.source_name || 'Source'} preview`}
+                            width="640"
+                            height="360"
+                            loading="lazy"
+                            decoding="async"
+                            referrerpolicy="no-referrer"
+                            sizes="(min-width: 1024px) 560px, (min-width: 640px) 480px, 100vw"
+                            class="w-full rounded-md border border-neutral-800 object-cover opacity-0"
+                            style="aspect-ratio: 16 / 9"
+                            onload="this.classList.remove('opacity-0'); this.previousElementSibling.style.display='none'"
+                            onerror="const n=this.dataset.next||''; if(n){ const parts=n.split('|'); const nx=parts.shift(); this.dataset.next=parts.join('|'); if(nx){ this.src=nx; return; } } this.style.display='none'"
+                          />
+                        ) : null}
+                      </>
+                    );
+                  })()}
                 </div>
+                {item.note && (
+                  <p class="mt-3 text-sm text-neutral-300 line-clamp-2">
+                    {item.note}{' '}
+                    <button
+                      class="text-sky-400 underline-offset-2 hover:underline align-baseline"
+                      onclick="event.stopPropagation(); openModalFrom(this.closest('li'))"
+                    >
+                      (more)
+                    </button>
+                  </p>
+                )}
               </div>
             </li>
           );
@@ -210,6 +224,57 @@ const expandItemThumb = (t) => {
       }
     </ul>
   </section>
+
+  <div id="modal" class="fixed inset-0 z-50 hidden">
+    <div id="modal-backdrop" class="absolute inset-0 bg-black/70"></div>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      class="absolute inset-0 flex items-start justify-center overflow-auto p-4"
+    >
+      <div
+        class="relative mt-10 w-full max-w-3xl rounded-2xl border border-neutral-800 bg-neutral-950 shadow-xl"
+      >
+        <button
+          id="modal-close"
+          aria-label="Close"
+          class="absolute right-3 top-3 rounded p-2 text-neutral-400 hover:text-white">✕</button
+        >
+        <div class="p-5">
+          <h3 id="modal-title" class="text-xl font-semibold"></h3>
+          <div class="mt-1 text-sm text-neutral-400" id="modal-meta"></div>
+          <div class="mt-4">
+            <div
+              class="w-full rounded-md border border-neutral-800 bg-neutral-800/40"
+              style="aspect-ratio: 16 / 9"
+            >
+            </div>
+            <img
+              id="modal-img"
+              alt=""
+              class="mt-0 w-full rounded-md border border-neutral-800 object-cover"
+              width="960"
+              height="540"
+              loading="eager"
+              style="aspect-ratio: 16 / 9"
+            />
+          </div>
+          <div id="modal-tags" class="mt-4 flex flex-wrap gap-2 text-xs"></div>
+          <p id="modal-note" class="mt-4 text-sm text-neutral-200"></p>
+          <div class="mt-4">
+            <a
+              id="modal-link"
+              class="text-sky-400 hover:underline"
+              target="_blank"
+              rel="noopener"
+              href="#">Open source →</a
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script type="module">
     window.addEventListener('DOMContentLoaded', async () => {
