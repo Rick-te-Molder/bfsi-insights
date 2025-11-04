@@ -170,12 +170,13 @@ const expandItemThumb = (t) => {
               </div>
 
               <div class="mt-3 grid grid-cols-3 gap-3 items-start">
-                <div class="col-span-2">
-                  <!-- keep space for future note/tags if desired -->
-                </div>
+                <div class="col-span-2" />
                 <div class="col-span-1">
                   <div class="relative">
-                    <div class="ml-auto w-full rounded-md border border-neutral-800 bg-neutral-800/40" style="aspect-ratio: 16 / 9" />
+                    <div
+                      class="ml-auto w-full rounded-md border border-neutral-800 bg-neutral-800/40"
+                      style="aspect-ratio: 16 / 9"
+                    />
                     {(() => {
                       const candidates = [
                         ...expandItemThumb(item.thumbnail),
