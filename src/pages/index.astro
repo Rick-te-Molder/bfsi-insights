@@ -28,12 +28,23 @@ try {
 } catch {
   thumbFiles = [];
 }
-const findLocalThumbs = (slug) =>
-  slug ? thumbFiles.filter((f) => f.includes(slug)).map((f) => `/thumbs/${f}`) : [];
+const findLocalThumbs = (slug) => {
+  if (!slug) return [];
+  const extPriority = { '.png': 0, '.webp': 1, '.jpg': 2, '.jpeg': 2 };
+  const getExt = (f) => (f.match(/\.[^.]+$/)?.[0] || '').toLowerCase();
+  const files = thumbFiles.filter((f) => f.includes(slug));
+  files.sort((a, b) => {
+    const pa = extPriority[getExt(a)] ?? 99;
+    const pb = extPriority[getExt(b)] ?? 99;
+    if (pa !== pb) return pa - pb;
+    return a.localeCompare(b);
+  });
+  return files.map((f) => `/thumbs/${f}`);
+};
 
 const expandItemThumb = (t) => {
   if (!t) return [];
-  return /\.(webp|png|jpe?g)$/i.test(t) ? [t] : [`${t}.webp`, `${t}.png`, `${t}.jpg`];
+  return /\.(webp|png|jpe?g)$/i.test(t) ? [t] : [`${t}.png`, `${t}.webp`, `${t}.jpg`];
 };
 ---
 
