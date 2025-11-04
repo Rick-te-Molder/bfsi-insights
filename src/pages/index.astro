@@ -25,7 +25,9 @@ let thumbFiles = [];
 try {
   const dirPath = thumbsDirUrl.pathname;
   thumbFiles = fs.readdirSync(dirPath).filter((f) => /\.(webp|png|jpe?g)$/i.test(f));
-} catch {}
+} catch {
+  thumbFiles = [];
+}
 const findLocalThumbs = (slug) =>
   slug ? thumbFiles.filter((f) => f.includes(slug)).map((f) => `/thumbs/${f}`) : [];
 
