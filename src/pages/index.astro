@@ -113,8 +113,8 @@ const expandItemThumb = (t) => {
                           loading="lazy"
                           decoding="async"
                           referrerpolicy="no-referrer"
-                          class="ml-auto h-24 w-full rounded-md border border-neutral-800 object-cover hidden"
-                          onload="this.classList.remove('hidden'); this.previousElementSibling.style.display='none'"
+                          class="ml-auto h-24 w-full rounded-md border border-neutral-800 object-cover opacity-0"
+                          onload="this.classList.remove('opacity-0'); this.previousElementSibling.style.display='none'"
                           onerror="const n=this.dataset.next||''; if(n){ const parts=n.split('|'); const nx=parts.shift(); this.dataset.next=parts.join('|'); if(nx){ this.src=nx; return; } } this.style.display='none'"
                         />
                       ) : null;
