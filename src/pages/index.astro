@@ -235,17 +235,20 @@ const expandItemThumb = (t) => {
       }
       return null;
     }
+    let lastFocus = null;
+    let focusTrapHandler = null;
     function openModalFrom(li) {
       const title = li.querySelector('a')?.textContent?.trim() || '';
       const meta = li.querySelector('.mt-1')?.textContent?.trim() || '';
       const note =
-        li.querySelector('p?.text-sm')?.textContent || li.querySelector('p')?.textContent || '';
+        li.querySelector('p.text-sm')?.textContent || li.querySelector('p')?.textContent || '';
       const img = li.querySelector('img');
       const link = li.querySelector('a')?.href || '#';
       const tags = Array.from(li.querySelectorAll('.flex.flex-wrap span')).map((s) =>
         s.textContent.trim(),
       );
       const m = document.getElementById('modal');
+      lastFocus = document.activeElement;
       m.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
       document.getElementById('modal-title').textContent = title;
@@ -273,12 +276,22 @@ const expandItemThumb = (t) => {
           }
         };
       }
-      document.getElementById('modal-close').focus();
+      const closeBtn = document.getElementById('modal-close');
+      closeBtn.focus();
+      focusTrapHandler = (e) => {
+        if (!m.contains(e.target)) {
+          e.stopPropagation();
+          closeBtn.focus();
+        }
+      };
+      window.addEventListener('focusin', focusTrapHandler);
     }
     function closeModal() {
       const m = document.getElementById('modal');
       m.classList.add('hidden');
       document.body.style.overflow = '';
+      if (focusTrapHandler) window.removeEventListener('focusin', focusTrapHandler);
+      if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
     }
     window.openModalFrom = openModalFrom;
     document.getElementById('modal-close').addEventListener('click', closeModal);
@@ -287,6 +300,23 @@ const expandItemThumb = (t) => {
       if (e.key === 'Escape') {
         closeModal();
       }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      document.addEventListener('click', (e) => {
+        const li = e.target.closest('li[role="button"]');
+        if (!li) return;
+        if (e.target.closest('a,button')) return;
+        openModalFrom(li);
+      });
+      document.addEventListener('keydown', (e) => {
+        const li = e.target.closest('li[role="button"]');
+        if (!li) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openModalFrom(li);
+        }
+      });
     });
   </script>
 </Base>
