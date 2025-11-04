@@ -151,8 +151,8 @@ const values = {
       try {
         const mod = await import('fuse.js');
         FuseCtor = mod?.default || null;
-      } catch (e) {
-        console.warn('Fuse import failed, falling back to simple search:', e);
+      } catch {
+        void 0;
       }
 
       const $ = (id) => document.getElementById(id);
@@ -229,7 +229,9 @@ const values = {
               setVals(parsed);
               return parsed;
             }
-          } catch {}
+          } catch {
+            void 0;
+          }
         }
         setVals(vals);
         return vals;
@@ -281,7 +283,11 @@ const values = {
         el.addEventListener('change', () => {
           const vals = getVals();
           updateQuery(vals);
-          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(vals)); } catch {}
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(vals));
+          } catch {
+            void 0;
+          }
           apply(vals);
         }),
       );
@@ -296,14 +302,18 @@ const values = {
         debounced(() => {
           const vals = getVals();
           updateQuery(vals);
-          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(vals)); } catch {}
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(vals));
+          } catch { void 0; }
           apply(vals);
         }),
       );
       clearBtn?.addEventListener('click', () => {
         setVals({ role: '', industry: '', topic: '', content_type: '', jurisdiction: '', q: '' });
         updateQuery(getVals());
-        try { localStorage.removeItem(STORAGE_KEY); } catch {}
+        try {
+          localStorage.removeItem(STORAGE_KEY);
+        } catch { void 0; }
         apply();
       });
     });
