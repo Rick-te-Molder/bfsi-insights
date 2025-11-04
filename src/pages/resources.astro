@@ -461,14 +461,69 @@ const expandItemThumb = (t) => {
   </script>
 
   <script type="module">
-    function nextSrc(el){const n=el.dataset.next||''; if(n){ const parts=n.split('|'); const nx=parts.shift(); el.dataset.next=parts.join('|'); return nx||null; } return null }
-    function openModalFrom(li){ const title=li.querySelector('a')?.textContent?.trim()||''; const meta=li.querySelector('.mt-1')?.textContent?.trim()||''; const note=li.querySelector('p')?.textContent||''; const img=li.querySelector('img'); const link=li.querySelector('a')?.href||'#'; const tags=Array.from(li.querySelectorAll('.flex.flex-wrap span')).map(s=>s.textContent.trim()); const m=document.getElementById('modal'); m.classList.remove('hidden'); document.body.style.overflow='hidden'; document.getElementById('modal-title').textContent=title; document.getElementById('modal-meta').textContent=meta; document.getElementById('modal-note').textContent=note.replace(/\(more\)\s*$/,''); const tagsEl=document.getElementById('modal-tags'); tagsEl.innerHTML=''; tags.forEach(t=>{ const b=document.createElement('span'); b.className='rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300'; b.textContent=t; tagsEl.appendChild(b); }); const a=document.getElementById('modal-link'); a.href=link; const mi=document.getElementById('modal-img'); if(img){ mi.src=img.currentSrc||img.src; mi.dataset.next=img.dataset.next||''; mi.onerror=()=>{ const nx=nextSrc(mi); if(nx){ mi.src=nx; } }; } document.getElementById('modal-close').focus(); }
-    function closeModal(){ const m=document.getElementById('modal'); m.classList.add('hidden'); document.body.style.overflow=''; }
+    function nextSrc(el) {
+      const n = el.dataset.next || '';
+      if (n) {
+        const parts = n.split('|');
+        const nx = parts.shift();
+        el.dataset.next = parts.join('|');
+        return nx || null;
+      }
+      return null;
+    }
+    function openModalFrom(li) {
+      const title = li.querySelector('a')?.textContent?.trim() || '';
+      const meta = li.querySelector('.mt-1')?.textContent?.trim() || '';
+      const note = li.querySelector('p')?.textContent || '';
+      const img = li.querySelector('img');
+      const link = li.querySelector('a')?.href || '#';
+      const tags = Array.from(li.querySelectorAll('.flex.flex-wrap span')).map((s) =>
+        s.textContent.trim(),
+      );
+      const m = document.getElementById('modal');
+      m.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-meta').textContent = meta;
+      document.getElementById('modal-note').textContent = note.replace(/\(more\)\s*$/, '');
+      const tagsEl = document.getElementById('modal-tags');
+      tagsEl.innerHTML = '';
+      tags.forEach((t) => {
+        const b = document.createElement('span');
+        b.className =
+          'rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300';
+        b.textContent = t;
+        tagsEl.appendChild(b);
+      });
+      const a = document.getElementById('modal-link');
+      a.href = link;
+      const mi = document.getElementById('modal-img');
+      if (img) {
+        mi.src = img.currentSrc || img.src;
+        mi.dataset.next = img.dataset.next || '';
+        mi.onerror = () => {
+          const nx = nextSrc(mi);
+          if (nx) {
+            mi.src = nx;
+          }
+        };
+      }
+      document.getElementById('modal-close').focus();
+    }
+    function closeModal() {
+      const m = document.getElementById('modal');
+      m.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
     // expose
-    window.openModalFrom=openModalFrom;
+    window.openModalFrom = openModalFrom;
     // listeners
     document.getElementById('modal-close').addEventListener('click', closeModal);
     document.getElementById('modal-backdrop').addEventListener('click', closeModal);
-    window.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ closeModal(); }});
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+      }
+    });
   </script>
 </Base>
