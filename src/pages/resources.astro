@@ -51,18 +51,31 @@ const expandItemThumb = (t) => {
   <section class="mb-6">
     <div class="flex items-center justify-between">
       <h2 class="text-2xl font-semibold tracking-tight">Resources</h2>
-      <a
-        href="/"
-        class="text-sm font-medium text-sky-400 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-sky-500"
-        >Home</a
-      >
+      <div class="flex items-center gap-3">
+        <button
+          id="open-sheet"
+          class="sm:hidden rounded-md border border-neutral-700 px-3 py-1 text-sm text-neutral-200 hover:bg-neutral-800"
+          aria-haspopup="dialog"
+          aria-controls="filter-sheet"
+          >Filter <span
+            id="filter-count"
+            class="ml-1 inline-block rounded bg-neutral-800 px-1 text-xs text-neutral-300">0</span
+          ></button
+        >
+        <a
+          href="/"
+          class="text-sm font-medium text-sky-400 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-sky-500"
+          >Home</a
+        >
+      </div>
     </div>
     <p class="mt-1 text-sm text-neutral-300">Filter by attributes to find relevant items.</p>
     <p id="count" class="mt-1 text-xs text-neutral-300" aria-live="polite"></p>
+    <div id="chips" class="mt-2 flex flex-wrap gap-2"></div>
   </section>
 
-  <section class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-    <label class="sm:col-span-2 lg:col-span-5 flex flex-col gap-1 text-sm">
+  <section class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 sm:contents">
+    <label class="hidden sm:col-span-2 lg:col-span-5 sm:flex flex-col gap-1 text-sm">
       <span class="text-neutral-300">Search</span>
       <input
         id="q"
@@ -120,6 +133,101 @@ const expandItemThumb = (t) => {
       >
     </div>
   </section>
+
+  <!-- Mobile bottom-sheet for filters -->
+  <div id="filter-sheet" class="fixed inset-0 z-50 hidden sm:hidden" aria-hidden="true">
+    <div id="sheet-backdrop" class="absolute inset-0 bg-black/70"></div>
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sheet-title"
+      class="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-auto rounded-t-2xl border border-neutral-800 bg-neutral-950 p-4"
+    >
+      <div class="mx-auto max-w-2xl">
+        <div class="flex items-center justify-between">
+          <h3 id="sheet-title" class="text-lg font-semibold">Filters</h3>
+          <button
+            id="close-sheet"
+            aria-label="Close"
+            class="rounded p-2 text-neutral-400 hover:text-white">✕</button
+          >
+        </div>
+        <div class="mt-3 grid gap-3">
+          <label class="flex flex-col gap-1 text-sm">
+            <span class="text-neutral-300">Search</span>
+            <input
+              id="m-q"
+              type="search"
+              placeholder="Search title, note, source, authors"
+              class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
+            />
+          </label>
+          <label class="flex flex-col gap-1 text-sm">
+            <span class="text-neutral-300">Role</span>
+            <select
+              id="m-f-role"
+              class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
+            >
+              <option value="">All</option>
+              {values.role.map((v) => <option value={v}>{v}</option>)}
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-sm">
+            <span class="text-neutral-300">Industry</span>
+            <select
+              id="m-f-industry"
+              class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
+            >
+              <option value="">All</option>
+              {values.industry.map((v) => <option value={v}>{v}</option>)}
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-sm">
+            <span class="text-neutral-300">Topic</span>
+            <select
+              id="m-f-topic"
+              class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
+            >
+              <option value="">All</option>
+              {values.topic.map((v) => <option value={v}>{v}</option>)}
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-sm">
+            <span class="text-neutral-300">Content type</span>
+            <select
+              id="m-f-content_type"
+              class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
+            >
+              <option value="">All</option>
+              {values.content_type.map((v) => <option value={v}>{v}</option>)}
+            </select>
+          </label>
+          <label class="flex flex-col gap-1 text-sm">
+            <span class="text-neutral-300">Jurisdiction</span>
+            <select
+              id="m-f-jurisdiction"
+              class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
+            >
+              <option value="">All</option>
+              {values.jurisdiction.map((v) => <option value={v}>{v}</option>)}
+            </select>
+          </label>
+        </div>
+        <div class="mt-4 flex items-center justify-between">
+          <button
+            id="m-clear"
+            class="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
+            >Clear all</button
+          >
+          <button
+            id="m-apply"
+            class="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
+            >Apply</button
+          >
+        </div>
+      </div>
+    </div>
+  </div>
 
   <section>
     <div
@@ -555,6 +663,145 @@ const expandItemThumb = (t) => {
           openModalFrom(li);
         }
       });
+    });
+  </script>
+  <script type="module">
+    // Mobile bottom-sheet filters: sync with desktop controls and main filtering script
+    window.addEventListener('DOMContentLoaded', () => {
+      const openBtn = document.getElementById('open-sheet');
+      const sheet = document.getElementById('filter-sheet');
+      const sheetPanel = sheet?.querySelector('[role="dialog"]');
+      const backdrop = document.getElementById('sheet-backdrop');
+      const closeBtn = document.getElementById('close-sheet');
+      const countBadge = document.getElementById('filter-count');
+      const chips = document.getElementById('chips');
+      if (!openBtn || !sheet) return;
+
+      const desktop = {
+        q: document.getElementById('q'),
+        role: document.getElementById('f-role'),
+        industry: document.getElementById('f-industry'),
+        topic: document.getElementById('f-topic'),
+        content_type: document.getElementById('f-content_type'),
+        jurisdiction: document.getElementById('f-jurisdiction'),
+      };
+      const mobile = {
+        q: document.getElementById('m-q'),
+        role: document.getElementById('m-f-role'),
+        industry: document.getElementById('m-f-industry'),
+        topic: document.getElementById('m-f-topic'),
+        content_type: document.getElementById('m-f-content_type'),
+        jurisdiction: document.getElementById('m-f-jurisdiction'),
+      };
+
+      function getDesktopVals() {
+        return {
+          role: desktop.role?.value || '',
+          industry: desktop.industry?.value || '',
+          topic: desktop.topic?.value || '',
+          content_type: desktop.content_type?.value || '',
+          jurisdiction: desktop.jurisdiction?.value || '',
+          q: desktop.q?.value?.trim() || '',
+        };
+      }
+      function setDesktopVals(vals) {
+        if (desktop.role) desktop.role.value = vals.role || '';
+        if (desktop.industry) desktop.industry.value = vals.industry || '';
+        if (desktop.topic) desktop.topic.value = vals.topic || '';
+        if (desktop.content_type) desktop.content_type.value = vals.content_type || '';
+        if (desktop.jurisdiction) desktop.jurisdiction.value = vals.jurisdiction || '';
+        if (desktop.q) desktop.q.value = vals.q || '';
+      }
+      function renderChips(vals) {
+        if (!chips) return;
+        chips.innerHTML = '';
+        const entries = Object.entries(vals).filter(([k, v]) => k !== 'q' && v);
+        entries.forEach(([k, v]) => {
+          const b = document.createElement('button');
+          b.className =
+            'rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-200 hover:bg-neutral-800';
+          b.textContent = `${k.replace('_', ' ')}: ${v} ✕`;
+          b.addEventListener('click', () => {
+            const cur = getDesktopVals();
+            cur[k] = '';
+            setDesktopVals(cur);
+            applyFromDesktop();
+          });
+          chips.appendChild(b);
+        });
+        // update count badge
+        const active = entries.length + (vals.q && vals.q.trim() ? 1 : 0);
+        if (countBadge) countBadge.textContent = String(active);
+      }
+      function applyFromDesktop() {
+        // Dispatch change events to let the existing script handle apply+URL+storage
+        ['role', 'industry', 'topic', 'content_type', 'jurisdiction'].forEach((k) => {
+          const el = desktop[k];
+          if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        // trigger input debounce by dispatching input once
+        if (desktop.q) desktop.q.dispatchEvent(new Event('input', { bubbles: true }));
+        renderChips(getDesktopVals());
+      }
+      function openSheet() {
+        syncToMobile();
+        sheet.classList.remove('hidden');
+        sheet.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        mobile.role?.focus();
+      }
+      function closeSheet() {
+        sheet.classList.add('hidden');
+        sheet.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        openBtn.focus();
+      }
+      function syncToMobile() {
+        const v = getDesktopVals();
+        if (mobile.role) mobile.role.value = v.role;
+        if (mobile.industry) mobile.industry.value = v.industry;
+        if (mobile.topic) mobile.topic.value = v.topic;
+        if (mobile.content_type) mobile.content_type.value = v.content_type;
+        if (mobile.jurisdiction) mobile.jurisdiction.value = v.jurisdiction;
+        if (mobile.q) mobile.q.value = v.q;
+      }
+
+      openBtn.addEventListener('click', openSheet);
+      closeBtn?.addEventListener('click', closeSheet);
+      backdrop?.addEventListener('click', closeSheet);
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sheet && !sheet.classList.contains('hidden')) closeSheet();
+      });
+
+      document.getElementById('m-clear')?.addEventListener('click', () => {
+        const empty = {
+          role: '',
+          industry: '',
+          topic: '',
+          content_type: '',
+          jurisdiction: '',
+          q: '',
+        };
+        setDesktopVals(empty);
+        applyFromDesktop();
+        closeSheet();
+      });
+      document.getElementById('m-apply')?.addEventListener('click', () => {
+        const vals = {
+          role: mobile.role?.value || '',
+          industry: mobile.industry?.value || '',
+          topic: mobile.topic?.value || '',
+          content_type: mobile.content_type?.value || '',
+          jurisdiction: mobile.jurisdiction?.value || '',
+          q: mobile.q?.value?.trim() || '',
+        };
+        setDesktopVals(vals);
+        applyFromDesktop();
+        closeSheet();
+      });
+
+      // initial chips render
+      renderChips(getDesktopVals());
     });
   </script>
 </Base>
