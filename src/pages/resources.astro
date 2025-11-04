@@ -144,130 +144,152 @@ const values = {
     </ul>
   </section>
 
-  <script type="module" is:inline>
-    import Fuse from '/node_modules/fuse.js/dist/fuse.esm.js';
-    const $ = (id) => document.getElementById(id);
-    const list = document.getElementById('list');
-    const empty = document.getElementById('empty');
-    const clearBtn = document.getElementById('clear-filters');
-    const countEl = document.getElementById('count');
-    const qEl = document.getElementById('q');
-    const filters = ['role', 'industry', 'topic', 'content_type', 'jurisdiction'].map((f) => ({
-      key: f,
-      el: $(`f-${f}`),
-    }));
+  <script type="module">
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Load Fuse but don't abort if it fails
+      let FuseCtor = null;
+      try {
+        const mod = await import('fuse.js');
+        FuseCtor = mod?.default || null;
+      } catch (e) {
+        console.warn('Fuse import failed, falling back to simple search:', e);
+      }
 
-    // Build an index of items from the DOM data attributes
-    const data = Array.from(list.children).map((li) => ({
-      el: li,
-      title: li.querySelector('a')?.textContent?.trim() || '',
-      note: '',
-      source_name: li.querySelector('.mt-1')?.textContent || '',
-      authors: li.getAttribute('data-authors') || '',
-      role: li.getAttribute('data-role') || '',
-      industry: li.getAttribute('data-industry') || '',
-      topic: li.getAttribute('data-topic') || '',
-      content_type: li.getAttribute('data-content_type') || '',
-      jurisdiction: li.getAttribute('data-jurisdiction') || '',
-    }));
+      const $ = (id) => document.getElementById(id);
+      const list = document.getElementById('list');
+      const empty = document.getElementById('empty');
+      const clearBtn = document.getElementById('clear-filters');
+      const countEl = document.getElementById('count');
+      const qEl = document.getElementById('q');
+      const filters = ['role', 'industry', 'topic', 'content_type', 'jurisdiction'].map((f) => ({
+        key: f,
+        el: $(`f-${f}`),
+      }));
 
-    const fuse = new Fuse(data, {
-      includeScore: true,
-      threshold: 0.35,
-      keys: [
-        { name: 'title', weight: 0.6 },
-        { name: 'source_name', weight: 0.2 },
-        { name: 'authors', weight: 0.2 },
-      ],
-    });
+      if (!list) return;
+      // Build an index of items from the DOM data attributes
+      const data = Array.from(list.children).map((li) => ({
+        el: li,
+        title: li.querySelector('a')?.textContent?.trim() || '',
+        note: '',
+        source_name: li.querySelector('.mt-1')?.textContent || '',
+        authors: li.getAttribute('data-authors') || '',
+        role: li.getAttribute('data-role') || '',
+        industry: li.getAttribute('data-industry') || '',
+        topic: li.getAttribute('data-topic') || '',
+        content_type: li.getAttribute('data-content_type') || '',
+        jurisdiction: li.getAttribute('data-jurisdiction') || '',
+      }));
 
-    function getVals() {
-      const sel = Object.fromEntries(filters.map(({ key, el }) => [key, el.value]));
-      const q = qEl.value.trim();
-      return { ...sel, q };
-    }
-    function setVals(vals) {
-      filters.forEach(({ key, el }) => {
-        el.value = vals[key] ?? '';
-      });
-      qEl.value = vals.q ?? '';
-    }
-    function updateQuery(vals) {
-      const params = new URLSearchParams();
-      for (const [k, v] of Object.entries(vals)) if (v && k !== 'q') params.set(k, v);
-      if (vals.q) params.set('q', vals.q);
-      const qs = params.toString();
-      const url = qs ? `${location.pathname}?${qs}` : location.pathname;
-      history.replaceState(null, '', url);
-    }
-    function readFromQuery() {
-      const params = new URLSearchParams(location.search);
-      const vals = Object.fromEntries([
-        ...filters.map(({ key }) => [key, params.get(key) || '']),
-        ['q', params.get('q') || ''],
-      ]);
-      setVals(vals);
-      return vals;
-    }
-    function apply(vals = getVals()) {
-      let visible = 0;
-      let allowed = new Set(data.map((d, i) => i));
-      // dropdown filters
-      for (const { key } of filters) {
-        const v = vals[key];
-        if (!v) continue;
-        const next = new Set();
-        allowed.forEach((idx) => {
-          if (data[idx][key] === v) next.add(idx);
+      const fuse = FuseCtor
+        ? new FuseCtor(data, {
+            includeScore: true,
+            threshold: 0.35,
+            keys: [
+              { name: 'title', weight: 0.6 },
+              { name: 'source_name', weight: 0.2 },
+              { name: 'authors', weight: 0.2 },
+            ],
+          })
+        : null;
+
+      function getVals() {
+        const sel = Object.fromEntries(filters.map(({ key, el }) => [key, el.value]));
+        const q = qEl.value.trim();
+        return { ...sel, q };
+      }
+      function setVals(vals) {
+        filters.forEach(({ key, el }) => {
+          el.value = vals[key] ?? '';
         });
-        allowed = next;
+        qEl.value = vals.q ?? '';
       }
-      // text search
-      if (vals.q) {
-        const res = fuse.search(vals.q);
-        const ids = new Set(res.map((r) => r.refIndex));
-        allowed = new Set([...allowed].filter((i) => ids.has(i)));
+      function updateQuery(vals) {
+        const params = new URLSearchParams();
+        for (const [k, v] of Object.entries(vals)) if (v && k !== 'q') params.set(k, v);
+        if (vals.q) params.set('q', vals.q);
+        const qs = params.toString();
+        const url = qs ? `${location.pathname}?${qs}` : location.pathname;
+        history.replaceState(null, '', url);
       }
-      // render
-      data.forEach((d, i) => {
-        const ok = allowed.has(i);
-        d.el.classList.toggle('hidden', !ok);
-        if (ok) visible++;
-      });
-      empty.classList.toggle('hidden', visible !== 0);
-      if (countEl) countEl.textContent = `Showing ${visible} of ${list.children.length}`;
-      return visible;
-    }
+      function readFromQuery() {
+        const params = new URLSearchParams(location.search);
+        const vals = Object.fromEntries([
+          ...filters.map(({ key }) => [key, params.get(key) || '']),
+          ['q', params.get('q') || ''],
+        ]);
+        setVals(vals);
+        return vals;
+      }
+      function apply(vals = getVals()) {
+        let visible = 0;
+        let allowed = new Set(data.map((d, i) => i));
+        // dropdown filters
+        for (const { key } of filters) {
+          const v = vals[key];
+          if (!v) continue;
+          const next = new Set();
+          allowed.forEach((idx) => {
+            if (data[idx][key] === v) next.add(idx);
+          });
+          allowed = next;
+        }
+        // text search
+        if (vals.q) {
+          if (fuse) {
+            const res = fuse.search(vals.q);
+            const ids = new Set(res.map((r) => r.refIndex));
+            allowed = new Set([...allowed].filter((i) => ids.has(i)));
+          } else {
+            const q = vals.q.toLowerCase();
+            const match = (d) =>
+              d.title.toLowerCase().includes(q) ||
+              d.source_name.toLowerCase().includes(q) ||
+              d.authors.toLowerCase().includes(q);
+            allowed = new Set([...allowed].filter((i) => match(data[i])));
+          }
+        }
+        // render
+        data.forEach((d, i) => {
+          const ok = allowed.has(i);
+          d.el.classList.toggle('hidden', !ok);
+          if (ok) visible++;
+        });
+        empty.classList.toggle('hidden', visible !== 0);
+        if (countEl) countEl.textContent = `Showing ${visible} of ${list.children.length}`;
+        return visible;
+      }
 
-    // init from query
-    const initVals = readFromQuery();
-    apply(initVals);
-    // events
-    filters.forEach(({ el }) =>
-      el.addEventListener('change', () => {
-        const vals = getVals();
-        updateQuery(vals);
-        apply(vals);
-      }),
-    );
-    const debounced = (() => {
-      let t;
-      return (fn) => {
-        clearTimeout(t);
-        t = setTimeout(fn, 250);
-      };
-    })();
-    qEl.addEventListener('input', () =>
-      debounced(() => {
-        const vals = getVals();
-        updateQuery(vals);
-        apply(vals);
-      }),
-    );
-    clearBtn?.addEventListener('click', () => {
-      setVals({ role: '', industry: '', topic: '', content_type: '', jurisdiction: '', q: '' });
-      updateQuery(getVals());
-      apply();
+      // init from query
+      const initVals = readFromQuery();
+      apply(initVals);
+      // events
+      filters.forEach(({ el }) =>
+        el.addEventListener('change', () => {
+          const vals = getVals();
+          updateQuery(vals);
+          apply(vals);
+        }),
+      );
+      const debounced = (() => {
+        let t;
+        return (fn) => {
+          clearTimeout(t);
+          t = setTimeout(fn, 250);
+        };
+      })();
+      qEl.addEventListener('input', () =>
+        debounced(() => {
+          const vals = getVals();
+          updateQuery(vals);
+          apply(vals);
+        }),
+      );
+      clearBtn?.addEventListener('click', () => {
+        setVals({ role: '', industry: '', topic: '', content_type: '', jurisdiction: '', q: '' });
+        updateQuery(getVals());
+        apply();
+      });
     });
   </script>
 </Base>
