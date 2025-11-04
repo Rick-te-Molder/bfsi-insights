@@ -304,7 +304,9 @@ const values = {
           updateQuery(vals);
           try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(vals));
-          } catch { void 0; }
+          } catch {
+            void 0;
+          }
           apply(vals);
         }),
       );
@@ -313,7 +315,9 @@ const values = {
         updateQuery(getVals());
         try {
           localStorage.removeItem(STORAGE_KEY);
-        } catch { void 0; }
+        } catch {
+          void 0;
+        }
         apply();
       });
     });
