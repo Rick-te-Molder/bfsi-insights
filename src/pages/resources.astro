@@ -166,6 +166,8 @@ const values = {
         el: $(`f-${f}`),
       }));
 
+      const STORAGE_KEY = 'resourcesFiltersV1';
+
       if (!list) return;
       // Build an index of items from the DOM data attributes
       const data = Array.from(list.children).map((li) => ({
@@ -218,6 +220,17 @@ const values = {
           ...filters.map(({ key }) => [key, params.get(key) || '']),
           ['q', params.get('q') || ''],
         ]);
+        const hasAnyParam = Object.values(vals).some((v) => v);
+        if (!hasAnyParam) {
+          try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              setVals(parsed);
+              return parsed;
+            }
+          } catch {}
+        }
         setVals(vals);
         return vals;
       }
@@ -268,6 +281,7 @@ const values = {
         el.addEventListener('change', () => {
           const vals = getVals();
           updateQuery(vals);
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(vals)); } catch {}
           apply(vals);
         }),
       );
@@ -282,12 +296,14 @@ const values = {
         debounced(() => {
           const vals = getVals();
           updateQuery(vals);
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(vals)); } catch {}
           apply(vals);
         }),
       );
       clearBtn?.addEventListener('click', () => {
         setVals({ role: '', industry: '', topic: '', content_type: '', jurisdiction: '', q: '' });
         updateQuery(getVals());
+        try { localStorage.removeItem(STORAGE_KEY); } catch {}
         apply();
       });
     });
