@@ -206,6 +206,7 @@ const expandItemThumb = (t) => {
               height="540"
               loading="eager"
               style="aspect-ratio: 16 / 9"
+              onload="if(this.previousElementSibling){ this.previousElementSibling.style.display='none' }"
             />
           </div>
           <div id="modal-tags" class="mt-4 flex flex-wrap gap-2 text-xs"></div>
