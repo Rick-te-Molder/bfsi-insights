@@ -73,14 +73,16 @@ const expandItemThumb = (t) => {
           const content_type = asArr(item.content_type);
           return (
             <li
-              class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition hover:border-neutral-700 hover:ring-neutral-700 cursor-pointer"
+              class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition hover:border-neutral-700 hover:ring-neutral-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
               role="button"
               tabindex="0"
+              aria-labelledby={`t-${item.slug}`}
               onclick="openModalFrom(this)"
               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); openModalFrom(this)}"
             >
               <div class="flex items-center gap-2">
                 <a
+                  id={`t-${item.slug}`}
                   href={item.url}
                   class="text-xl font-semibold text-sky-400 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-sky-500"
                   onclick="event.stopPropagation()"
@@ -99,7 +101,7 @@ const expandItemThumb = (t) => {
                 )}
               </div>
 
-              <div class="mt-1 flex items-center gap-2 text-sm text-neutral-400">
+              <div class="mt-1 flex items-center gap-2 text-sm text-neutral-300">
                 <span>{fmt(item.date_added)}</span>
                 {item.source_name && <span>{item.source_name}</span>}
                 {item.authors?.length && <span>· {item.authors[0]}</span>}
@@ -153,12 +155,12 @@ const expandItemThumb = (t) => {
                 )}
                 <div class="mt-3 flex flex-wrap items-center gap-2">
                   {topic.length ? (
-                    <span class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300">
+                    <span class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-200">
                       {topic[0]}
                     </span>
                   ) : null}
                   {content_type.length ? (
-                    <span class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300">
+                    <span class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-200">
                       {content_type[0]}
                     </span>
                   ) : null}

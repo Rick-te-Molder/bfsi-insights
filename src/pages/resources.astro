@@ -140,7 +140,7 @@ const expandItemThumb = (t) => {
           const jurisdiction = item.jurisdiction || '';
           return (
             <li
-              class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition hover:border-neutral-700 hover:ring-neutral-700 cursor-pointer"
+              class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition hover:border-neutral-700 hover:ring-neutral-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
               role="button"
               tabindex="0"
               aria-labelledby={`t-${item.slug}`}
@@ -163,12 +163,12 @@ const expandItemThumb = (t) => {
               >
                 {item.title}
               </a>
-              <div class="mt-1 text-sm text-neutral-300">
+              <div class="mt-1 text-sm text-neutral-200">
                 {item.date_published && <span>{fmt(item.date_published)}</span>}
                 {item.source_name && <span> · {item.source_name}</span>}
                 {item.authors?.length && <span> · {item.authors[0]}</span>}
               </div>
-              <div class="mt-2 text-xs text-neutral-400 flex flex-wrap gap-2">
+              <div class="mt-2 text-xs text-neutral-200 flex flex-wrap gap-2">
                 <span>{role}</span>
                 {industry && <span>· {industry}</span>}
                 {topic && <span>· {topic}</span>}
