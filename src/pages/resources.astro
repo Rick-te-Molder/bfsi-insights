@@ -304,9 +304,10 @@ const expandItemThumb = (t) => {
               <div class="mt-3">
                 <div class="relative">
                   {(() => {
+                    const local = findLocalThumbs(item.slug);
                     const candidates = [
-                      ...findLocalThumbs(item.slug),
-                      ...expandItemThumb(item.thumbnail),
+                      ...local,
+                      ...(local.length === 0 ? expandItemThumb(item.thumbnail) : []),
                       ...(externalThumb(item.url) ? [externalThumb(item.url)] : []),
                     ];
                     return (
