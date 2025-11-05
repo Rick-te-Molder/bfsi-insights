@@ -1,6 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import resources from '../data/resources/resources.json';
+import ResourceModal from '../components/ResourceModal.astro';
 import fs from 'node:fs';
 
 const fmt = (iso) =>
@@ -363,72 +364,11 @@ const expandItemThumb = (t) => {
     </ul>
   </section>
 
-  <div id="modal" class="fixed inset-0 z-50 hidden">
-    <div id="modal-backdrop" class="absolute inset-0 bg-black/70"></div>
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-      class="absolute inset-0 flex items-start justify-center overflow-auto p-4"
-    >
-      <div
-        class="relative mt-10 w-full max-w-3xl rounded-2xl border border-neutral-800 bg-neutral-950 shadow-xl"
-      >
-        <button
-          id="modal-close"
-          aria-label="Close"
-          class="absolute right-3 top-3 rounded p-2 text-neutral-300 hover:text-white">✕</button
-        >
-        <div class="p-5">
-          <h3 id="modal-title" class="text-xl font-semibold pr-14 md:pr-16">
-            <a
-              id="modal-title-link"
-              href="#"
-              target="_blank"
-              rel="noopener"
-              class="underline-offset-2 hover:underline"></a>
-          </h3>
-          <div class="mt-0 text-sm text-neutral-300 pr-14 md:pr-16" id="modal-meta"></div>
-          <div class="mt-0 relative">
-            <div style="aspect-ratio: 16 / 9"></div>
-            <div
-              id="modal-skeleton"
-              class="absolute inset-0 rounded-md border border-neutral-800 bg-neutral-800/40"
-            >
-            </div>
-            <img
-              id="modal-img"
-              alt=""
-              class="absolute inset-0 h-full w-full rounded-md border border-neutral-800 object-cover"
-              width="960"
-              height="540"
-              loading="eager"
-              onload="const sk=document.getElementById('modal-skeleton'); if(sk) sk.style.display='none'"
-              onerror="const n=this.dataset.next||''; if(n){ const parts=n.split('|'); const nx=parts.shift(); this.dataset.next=parts.join('|'); if(nx){ this.src=nx; return; } } const sk=document.getElementById('modal-skeleton'); if(sk) sk.style.display='none'; this.style.display='none'"
-            />
-          </div>
-          <div id="modal-tags" class="mt-4 flex flex-wrap gap-2 text-xs"></div>
-          <p id="modal-note" class="mt-4 text-sm text-neutral-200"></p>
-          <div class="mt-4 flex flex-wrap gap-4 items-center">
-            <a id="modal-view-details" class="text-sky-300 underline underline-offset-2" href="#"
-              >View details →</a
-            >
-            <a
-              id="modal-link"
-              class="text-sky-300 underline underline-offset-2"
-              target="_blank"
-              rel="noopener"
-              href="#"
-              title="Opens the publisher’s site in a new tab"
-              >Open on <span id="modal-source">original</span> →</a
-            >
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <ResourceModal />
 
   <script type="module">
+    import initResourceModal from '../scripts/resource-modal';
+    initResourceModal();
     window.addEventListener('DOMContentLoaded', async () => {
       // Load Fuse but don't abort if it fails
       let FuseCtor = null;
@@ -703,7 +643,8 @@ const expandItemThumb = (t) => {
       if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
     }
     // expose
-    window.openModalFrom = openModalFrom;
+    // openModalFrom is now provided by initResourceModal()
+    // window.openModalFrom = openModalFrom;
     // listeners
     document.getElementById('modal-close').addEventListener('click', closeModal);
     document.getElementById('modal-backdrop').addEventListener('click', closeModal);
