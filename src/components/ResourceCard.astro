@@ -1,7 +1,10 @@
 ---
 import fs from 'node:fs';
 
-const { item, index = 0 } = Astro.props as any;
+const props = Astro.props as any;
+const item = props.item;
+const index = props.index ?? 0;
+const isHome = props.mode === 'home';
 const isFirst = Number(index) === 0;
 const fmt = (iso?: string) =>
   iso
@@ -46,7 +49,6 @@ const content_type = asArr(item.content_type);
 const role = item.role || '';
 const industry = item.industry || '';
 const jurisdiction = item.jurisdiction || '';
-const isHome = mode === 'home';
 const isNew = isHome
   ? (Date.now() - new Date(item.date_added as any).getTime()) / 86400000 <= 7
   : false;
