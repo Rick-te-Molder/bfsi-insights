@@ -5,11 +5,6 @@ import ResourceModal from '../components/ResourceModal.astro';
 import ResourceCard from '../components/ResourceCard.astro';
 import fs from 'node:fs';
 
-const fmt = (iso) =>
-  iso
-    ? new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })
-    : '';
-
 const values = {
   role: Array.from(new Set(resources.map((r) => r.role).filter(Boolean))).sort(),
   industry: Array.from(new Set(resources.map((r) => r.industry).filter(Boolean))).sort(),
@@ -260,12 +255,6 @@ const expandItemThumb = (t) => {
     <ul id="list" class="grid gap-6 sm:grid-cols-2">
       {
         resources.map((item, idx) => {
-          const isFirst = idx === 0;
-          const role = item.role || '';
-          const industry = item.industry || '';
-          const topic = item.topic || '';
-          const content_type = item.content_type || '';
-          const jurisdiction = item.jurisdiction || '';
           return <ResourceCard item={item} index={idx} />;
         })
       }
