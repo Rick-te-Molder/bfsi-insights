@@ -620,9 +620,7 @@ const expandItemThumb = (t) => {
       lastFocus = document.activeElement;
       m.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
-      const titleEl = document.getElementById('modal-title');
       const titleA = document.getElementById('modal-title-link');
-      titleEl.textContent = '';
       titleA.textContent = title;
       titleA.href = link;
       document.getElementById('modal-meta').textContent = meta;
