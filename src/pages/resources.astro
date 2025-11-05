@@ -615,7 +615,17 @@ const expandItemThumb = (t) => {
       document.body.style.overflow = 'hidden';
       document.getElementById('modal-title').textContent = title;
       document.getElementById('modal-meta').textContent = meta;
-      document.getElementById('modal-note').textContent = note.replace(/\(more\)\s*$/, '');
+      const linkify = (text) => {
+        if (!text) return '';
+        const urlRe = /(https?:\/\/[\w.-]+(?:\.[\w.-]+)+(?:[:#?\/=][^\s]*)?)/gi;
+        return text.replace(urlRe, (u) => {
+          const h = u.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          return `<a href="${h}" target="_blank" rel="noopener" class="text-sky-300 underline underline-offset-2">${h}</a>`;
+        });
+      };
+      const noteHtml = linkify(note.replace(/\(more\)\s*$/, ''));
+      const noteEl = document.getElementById('modal-note');
+      noteEl.innerHTML = noteHtml;
       const tagsEl = document.getElementById('modal-tags');
       tagsEl.innerHTML = '';
       tags.forEach((t) => {

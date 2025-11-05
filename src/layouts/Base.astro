@@ -25,17 +25,19 @@ const canonical = origin + Astro.url.pathname;
     <link
       rel="icon"
       type="image/svg+xml"
-      href="/favicon-light.svg"
+      sizes="any"
+      href="/favicon-light.svg?v=1"
       media="(prefers-color-scheme: light)"
     />
     <link
       rel="icon"
       type="image/svg+xml"
-      href="/favicon-dark.svg"
+      sizes="any"
+      href="/favicon-dark.svg?v=1"
       media="(prefers-color-scheme: dark)"
     />
     <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#111111" />
-    <link rel="icon" href="/favicon.ico" />
+    <link rel="alternate icon" href="/favicon.ico" />
     <slot name="head" />
   </head>
   <body class="min-h-screen bg-neutral-950 text-neutral-200 antialiased">
