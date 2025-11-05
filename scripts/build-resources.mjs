@@ -75,10 +75,24 @@ function normalizeAuthors(val) {
   if (val == null) return val;
   return [String(val).trim()].filter(Boolean);
 }
+function sanitizeString(s) {
+  if (typeof s !== 'string') return s;
+  // Remove control chars except tab (9), newline (10), carriage return (13) without using control-char regex
+  let cleaned = '';
+  for (let i = 0; i < s.length; i++) {
+    const code = s.charCodeAt(i);
+    if ((code < 32 && code !== 9 && code !== 10 && code !== 13) || code === 127) {
+      continue; // skip disallowed control character
+    }
+    cleaned += s[i];
+  }
+  // Trim leading/trailing whitespace
+  return cleaned.replace(/\s+$/g, '').replace(/^\s+/g, '');
+}
 function trimStringFields(obj) {
   const out = { ...obj };
   for (const k of Object.keys(out)) {
-    if (typeof out[k] === 'string') out[k] = out[k].trim();
+    if (typeof out[k] === 'string') out[k] = sanitizeString(out[k]);
   }
   return out;
 }
