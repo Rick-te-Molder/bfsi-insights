@@ -22,6 +22,8 @@ const canonical = origin + Astro.url.pathname;
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <link rel="alternate" type="application/rss+xml" title="BFSI Insights RSS" href="/feed.xml" />
+    <link rel="icon" href="/favicon.ico" />
+    <slot name="head" />
   </head>
   <body class="min-h-screen bg-neutral-950 text-neutral-200 antialiased">
     <header class="border-b border-neutral-800">

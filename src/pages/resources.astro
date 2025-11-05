@@ -43,11 +43,28 @@ const findLocalThumbs = (slug) => {
 
 const expandItemThumb = (t) => {
   if (!t) return [];
-  return /\.(webp|png|jpe?g)$/i.test(t) ? [t] : [`${t}.png`, `${t}.webp`, `${t}.jpg`];
+  return /\.(webp|png|jpe?g)$/i.test(t) ? [t] : [`${t}.webp`, `${t}.png`, `${t}.jpg`];
 };
 ---
 
 <Base title="Resources · BFSI Insights">
+  {
+    (() => {
+      const first = resources?.[0];
+      if (!first) return null;
+      const candidates = [
+        ...expandItemThumb(first.thumbnail),
+        ...(typeof findLocalThumbs === 'function' ? findLocalThumbs(first.slug) : []),
+        ...(externalThumb(first.url) ? [externalThumb(first.url)] : []),
+      ];
+      const href = candidates[0];
+      return href ? (
+        <Fragment slot="head">
+          <link rel="preload" as="image" href={href} />
+        </Fragment>
+      ) : null;
+    })()
+  }
   <section class="mb-6">
     <div class="flex items-center justify-between">
       <h2 class="text-2xl font-semibold tracking-tight">Resources</h2>
@@ -74,7 +91,7 @@ const expandItemThumb = (t) => {
     <div id="chips" class="mt-2 flex flex-wrap gap-2"></div>
   </section>
 
-  <section class="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5 sm:contents">
+  <section class="mb-6 hidden sm:grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
     <label class="hidden sm:col-span-2 lg:col-span-5 sm:flex flex-col gap-1 text-sm">
       <span class="text-neutral-300">Search</span>
       <input
@@ -240,7 +257,8 @@ const expandItemThumb = (t) => {
     </div>
     <ul id="list" class="grid gap-6 sm:grid-cols-2">
       {
-        resources.map((item) => {
+        resources.map((item, idx) => {
+          const isFirst = idx === 0;
           const role = item.role || '';
           const industry = item.industry || '';
           const topic = item.topic || '';
@@ -249,7 +267,6 @@ const expandItemThumb = (t) => {
           return (
             <li
               class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition hover:border-neutral-700 hover:ring-neutral-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-              role="button"
               tabindex="0"
               aria-labelledby={`t-${item.slug}`}
               onclick="openModalFrom(this)"
@@ -288,8 +305,8 @@ const expandItemThumb = (t) => {
                 <div class="relative">
                   {(() => {
                     const candidates = [
-                      ...expandItemThumb(item.thumbnail),
                       ...findLocalThumbs(item.slug),
+                      ...expandItemThumb(item.thumbnail),
                       ...(externalThumb(item.url) ? [externalThumb(item.url)] : []),
                     ];
                     return (
@@ -305,7 +322,8 @@ const expandItemThumb = (t) => {
                             alt={`${item.source_name || 'Source'} preview`}
                             width="640"
                             height="360"
-                            loading="lazy"
+                            loading={isFirst ? 'eager' : 'lazy'}
+                            fetchpriority={isFirst ? 'high' : 'auto'}
                             decoding="async"
                             referrerpolicy="no-referrer"
                             sizes="(min-width: 1024px) 560px, (min-width: 640px) 480px, 100vw"
@@ -323,7 +341,7 @@ const expandItemThumb = (t) => {
                   <p class="mt-3 text-sm text-neutral-300 line-clamp-2">
                     {item.note}{' '}
                     <button
-                      class="text-sky-300 underline underline-offset-2 align-baseline"
+                      class="inline-flex items-center rounded-md px-2 py-1 text-sky-300 underline underline-offset-2 align-baseline"
                       onclick="event.stopPropagation(); openModalFrom(this.closest('li'))"
                     >
                       (more)
@@ -650,13 +668,13 @@ const expandItemThumb = (t) => {
     // delegated listeners to ensure cards are clickable
     window.addEventListener('DOMContentLoaded', () => {
       document.addEventListener('click', (e) => {
-        const li = e.target.closest('li[role="button"]');
+        const li = e.target.closest('li.group');
         if (!li) return;
         if (e.target.closest('a,button')) return; // let explicit links/buttons work
         openModalFrom(li);
       });
       document.addEventListener('keydown', (e) => {
-        const li = e.target.closest('li[role="button"]');
+        const li = e.target.closest('li.group');
         if (!li) return;
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
