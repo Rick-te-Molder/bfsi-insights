@@ -6,24 +6,55 @@ Agentic AI insights for executives and professionals in banking, financial servi
 
 Inside of your Astro project, you'll see the following folders and files:
 
-```
 bfsi-insights/
+├── .github/
+│ └── workflows/…
+├── .lighthouserc.json
+├── .lighthouserc.desktop.json
+├── .nvmrc
+├── .prettierignore
+├── .prettierrc
+├── .vscode/
+│ ├── extensions.json
+│ └── settings.json
+├── README.md
 ├── astro.config.mjs
+├── eslint.config.js
 ├── package.json
-├── src/
-│   ├── data/
-│   │   ├── inbox/
-│   │   │   └── urls.txt
-│   │   └── resources/
-│   │       └── items/
-│   └── pages/
+├── package-lock.json
+├── postcss.config.js
+├── public/
+│ ├── favicon-dark.svg
+│ ├── favicon-light.svg
+│ ├── favicon.ico (optional; consider removing or replacing with transparent)
+│ ├── safari-pinned-tab.svg
+│ └── thumbs/ (generated/added thumbnails)
 ├── schemas/
-│   └── kb.schema.json
+│ └── kb.schema.json
 ├── scripts/
-│   ├── add-url.mjs
-│   └── ingest.mjs
-└── node_modules/
-```
+│ ├── add-url.mjs
+│ ├── build-resources.mjs (compose src/data/resources/resources.json from items)
+│ ├── check-links.mjs
+│ ├── filename-helper.mjs
+│ ├── generate-notes.mjs (writes notes into per-item files)
+│ └── lint-items-no-time.mjs
+├── src/
+│ ├── data/
+│ │ └── resources/
+│ │ ├── items/ (per-item JSONs; source of truth)
+│ │ └── resources.json (composed output used by pages)
+│ ├── layouts/
+│ │ └── Base.astro
+│ ├── pages/
+│ │ ├── index.astro (Homepage; “Latest” grid)
+│ │ └── resources.astro (Resources list with filters)
+│ └── styles/
+│ └── globals.css (if present)
+├── supabase/ (project metadata/config)
+│ └── … (if used)
+├── tailwind.config.js
+├── tsconfig.json
+└── dist/ (build output)
 
 Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
 
@@ -89,26 +120,132 @@ FILENAME RULE
 - underscores between fields, hyphens within fields, all lowercase
 
 JSON KEYS (strictly per schema)
-{
-"url": "canonical final URL",
-"title": "string",
-"slug": "lowercase-hyphenated title",
-"authors": ["Full Name", "..."],
-"source_name": "Publisher short name, e.g., McKinsey",
-"source_domain": "Publisher domain, e.g., mckinsey.com",
-"date_published": "YYYY-MM-DD",
-"date_added": "ISO 8601 datetime (now)",
-"last_edited": "ISO 8601 datetime (now)",
-"role": "executive | professional | academic",
-"industry": "one of: banking | banking-retail-banking | banking-corporate-banking | banking-lending | banking-payments | banking-deposits | banking-treasury | banking-capital-markets | banking-digital-banking | financial-services | financial-services-financial-advice | financial-services-wealth-management | financial-services-asset-management | financial-services-leasing | financial-services-factoring | financial-services-pension-funds | financial-services-insurance-brokerage | insurance | insurance-health-insurance | insurance-life-insurance | insurance-pension-insurance | insurance-property-and-casualty | cross-bfsi | cross-bfsi-infrastructure | cross-bfsi-shared-services | cross-bfsi-b2b-platforms",
-"topic": "one of: strategy-and-management | strategy-and-management-strategy | strategy-and-management-operating-models | strategy-and-management-transformation | strategy-and-management-case-studies | ecosystem | ecosystem-vendors | ecosystem-institutions | ecosystem-bfsi-sector | ecosystem-ai-industry | governance-and-control | governance-and-control-governance | governance-and-control-risk-management | governance-and-control-compliance | governance-and-control-financial-crime-prevention | governance-and-control-financial-crime-prevention-kyc | governance-and-control-financial-crime-prevention-cdd | governance-and-control-financial-crime-prevention-aml | governance-and-control-financial-crime-prevention-fraud-detection | governance-and-control-financial-crime-prevention-sanctions-screening | governance-and-control-auditing | governance-and-control-internal-controls | regulatory-and-standards | regulatory-and-standards-regulation | regulatory-and-standards-standards | regulatory-and-standards-policy | regulatory-and-standards-guidance | technology-and-data | technology-and-data-ai | technology-and-data-agentic-engineering | technology-and-data-rag | technology-and-data-orchestration | technology-and-data-data-management | technology-and-data-infrastructure | technology-and-data-cybersecurity | technology-and-data-monitoring | methods-and-approaches | methods-and-approaches-methodology | methods-and-approaches-models | methods-and-approaches-best-practices",
-"use_cases": "one of: customer-onboarding | identity-verification | document-processing | transaction-monitoring | credit-assessment | fraud-detection | claims-handling | portfolio-analytics | regulatory-reporting | audit-support",
-"agentic_capabilities": "one of: reasoning | planning | memory | tool-use | collaboration | autonomy | evaluation | monitoring",
-"content_type": "one of: report | white-paper | peer-reviewed-paper | article | presentation | webinar | dataset | website | policy-document",
-"jurisdiction": "one of: eu | uk | us | nl | global | other",
-"note": "short free text",
-"id": "sha1(url) as 40-char lowercase hex"
-}
+kb.item
+├─ type: object
+├─ additionalProperties: false
+├─ properties
+│ ├─ url: string (uri) [REQ]
+│ ├─ title: string
+│ ├─ slug: string (pattern: ^[a-z0-9]+(?:-[a-z0-9]+)\*$)
+│  ├─ authors: array<string>
+│  ├─ source_name: string
+│  ├─ source_domain: string
+│  ├─ thumbnail: string
+│  ├─ date_published: string (date)
+│  ├─ date_added: string (date-time)
+│  ├─ last_edited: string (date-time)
+│  ├─ role: string [REQ]
+│  │  └─ one of: executive | professional | academic
+│  ├─ industry: string [REQ]
+│  │  ├─ banking
+│  │  │  ├─ retail-banking
+│  │  │  ├─ corporate-banking
+│  │  │  ├─ lending
+│  │  │  ├─ payments
+│  │  │  ├─ deposits
+│  │  │  ├─ treasury
+│  │  │  ├─ capital-markets
+│  │  │  └─ digital-banking
+│  │  ├─ financial-services
+│  │  │  ├─ financial-advice
+│  │  │  ├─ wealth-management
+│  │  │  ├─ asset-management
+│  │  │  ├─ leasing
+│  │  │  ├─ factoring
+│  │  │  ├─ pension-funds
+│  │  │  └─ insurance-brokerage
+│  │  ├─ insurance
+│  │  │  ├─ health-insurance
+│  │  │  ├─ life-insurance
+│  │  │  ├─ pension-insurance
+│  │  │  └─ property-and-casualty
+│  │  └─ cross-bfsi
+│  │     ├─ infrastructure
+│  │     ├─ shared-services
+│  │     └─ b2b-platforms
+│  ├─ topic: string [REQ]
+│  │  ├─ strategy-and-management
+│  │  │  ├─ strategy
+│  │  │  ├─ operating-models
+│  │  │  ├─ transformation
+│  │  │  └─ case-studies
+│  │  ├─ ecosystem
+│  │  │  ├─ vendors
+│  │  │  ├─ institutions
+│  │  │  ├─ bfsi-sector
+│  │  │  └─ ai-industry
+│  │  ├─ governance-and-control
+│  │  │  ├─ governance
+│  │  │  ├─ risk-management
+│  │  │  ├─ compliance
+│  │  │  ├─ financial-crime-prevention
+│  │  │  │  ├─ kyc
+│  │  │  │  ├─ cdd
+│  │  │  │  ├─ aml
+│  │  │  │  ├─ fraud-detection
+│  │  │  │  └─ sanctions-screening
+│  │  │  ├─ auditing
+│  │  │  └─ internal-controls
+│  │  ├─ regulatory-and-standards
+│  │  │  ├─ regulation
+│  │  │  ├─ standards
+│  │  │  ├─ policy
+│  │  │  └─ guidance
+│  │  ├─ technology-and-data
+│  │  │  ├─ ai
+│  │  │  ├─ agentic-engineering
+│  │  │  ├─ rag
+│  │  │  ├─ orchestration
+│  │  │  ├─ data-management
+│  │  │  ├─ infrastructure
+│  │  │  ├─ cybersecurity
+│  │  │  └─ monitoring
+│  │  └─ methods-and-approaches
+│  │     ├─ methodology
+│  │     ├─ models
+│  │     └─ best-practices
+│  ├─ use_cases: string [REQ]
+│  │  ├─ customer-onboarding
+│  │  ├─ identity-verification
+│  │  ├─ document-processing
+│  │  ├─ transaction-monitoring
+│  │  ├─ credit-assessment
+│  │  ├─ fraud-detection
+│  │  ├─ claims-handling
+│  │  ├─ portfolio-analytics
+│  │  ├─ regulatory-reporting
+│  │  └─ audit-support
+│  ├─ agentic_capabilities: string [REQ]
+│  │  ├─ reasoning
+│  │  ├─ planning
+│  │  ├─ memory
+│  │  ├─ tool-use
+│  │  ├─ collaboration
+│  │  ├─ autonomy
+│  │  ├─ evaluation
+│  │  └─ monitoring
+│  ├─ content_type: string [REQ]
+│  │  ├─ report
+│  │  ├─ white-paper
+│  │  ├─ peer-reviewed-paper
+│  │  ├─ article
+│  │  ├─ presentation
+│  │  ├─ webinar
+│  │  ├─ dataset
+│  │  ├─ website
+│  │  └─ policy-document
+│  ├─ jurisdiction: string [REQ]
+│  │  ├─ eu
+│  │  ├─ uk
+│  │  ├─ us
+│  │  ├─ nl
+│  │  ├─ global
+│  │  └─ other
+│  ├─ note: string
+│  └─ id: string (pattern: ^[a-f0-9]{40}$)
+└─ required:
+url, role, industry, topic, use_cases,
+agentic_capabilities, content_type, jurisdiction
 
 RULES
 
