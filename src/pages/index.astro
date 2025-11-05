@@ -125,7 +125,9 @@ const expandItemThumb = (t) => {
               </div>
 
               <div class="mt-1 flex items-center gap-2 text-sm text-neutral-300">
-                <span>{fmt(item.date_added)}</span>
+                <span title="Date added">
+                  <span class="text-neutral-400">Added</span> {fmt(item.date_added)}
+                </span>
                 {item.source_name && <span>{item.source_name}</span>}
                 {item.authors?.length && <span>· {item.authors[0]}</span>}
               </div>
