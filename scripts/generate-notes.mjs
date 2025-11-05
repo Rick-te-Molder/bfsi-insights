@@ -98,7 +98,7 @@ async function main() {
       } else {
         console.log('no content');
       }
-    } catch (e) {
+    } catch {
       console.log('fail');
     }
     processed++;
