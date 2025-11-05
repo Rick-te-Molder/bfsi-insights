@@ -617,7 +617,7 @@ const expandItemThumb = (t) => {
       document.getElementById('modal-meta').textContent = meta;
       const linkify = (text) => {
         if (!text) return '';
-        const urlRe = /(https?:\/\/[\w.-]+(?:\.[\w.-]+)+(?:[:#?\/=][^\s]*)?)/gi;
+        const urlRe = /(https?:\/\/[\w.-]+(?:\.[\w.-]+)+(?:[:#?/=][^\s]*)?)/gi;
         return text.replace(urlRe, (u) => {
           const h = u.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
           return `<a href="${h}" target="_blank" rel="noopener" class="text-sky-300 underline underline-offset-2">${h}</a>`;
