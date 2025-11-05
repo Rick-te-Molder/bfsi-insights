@@ -13,6 +13,7 @@
     "lint:items": "node scripts/lint-items-no-time.mjs",
     "build:resources": "node scripts/build-resources.mjs",
     "check:links": "node scripts/check-links.mjs",
+    "notes": "node scripts/generate-notes.mjs",
     "lhci": "npx @lhci/cli@0.14.0 autorun --config=.lighthouserc.json"
   },
   "dependencies": {
@@ -32,7 +33,9 @@
     "eslint-plugin-astro": "^1.0.2",
     "globals": "^14.0.0",
     "prettier": "^3.3.3",
-    "prettier-plugin-astro": "^0.14.1"
+    "prettier-plugin-astro": "^0.14.1",
+    "jsdom": "^25.0.0",
+    "@mozilla/readability": "^0.5.0"
   },
   "engines": {
     "node": ">=20 <21"
