@@ -1,0 +1,143 @@
+---
+import fs from 'node:fs';
+
+const { item, index = 0 } = Astro.props as any;
+const isFirst = Number(index) === 0;
+const fmt = (iso?: string) =>
+  iso
+    ? new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })
+    : '';
+const asArr = (v: any) => (Array.isArray(v) ? v : v ? [v] : []);
+
+// Helpers (server-side local discovery + client-safe fallbacks)
+const externalThumb = (u?: string) =>
+  u
+    ? `https://image.thum.io/get/nojs/width/${isFirst ? 960 : 640}/crop/${isFirst ? 960 : 640}/${encodeURIComponent(u)}`
+    : null;
+const expandItemThumb = (t?: string) =>
+  !t ? [] : /\.(webp|png|jpe?g)$/i.test(t) ? [t] : [`${t}.webp`, `${t}.png`, `${t}.jpg`];
+
+let thumbFiles: string[] = [];
+try {
+  const thumbsDirUrl = new URL('../../public/thumbs/', import.meta.url);
+  const dirPath = thumbsDirUrl.pathname;
+  thumbFiles = fs.readdirSync(dirPath).filter((f) => /\.(webp|png|jpe?g)$/i.test(f));
+} catch {
+  thumbFiles = [];
+}
+const findLocalThumbs = (slug?: string) => {
+  if (!slug) return [] as string[];
+  if (!thumbFiles.length)
+    return [`/thumbs/${slug}.png`, `/thumbs/${slug}.webp`, `/thumbs/${slug}.jpg`];
+  const extPriority: Record<string, number> = { '.png': 0, '.webp': 1, '.jpg': 2, '.jpeg': 2 };
+  const getExt = (f: string) => (f.match(/\.[^.]+$/)?.[0] || '').toLowerCase();
+  const files = thumbFiles.filter((f) => f.includes(slug));
+  files.sort((a, b) => {
+    const pa = extPriority[getExt(a)] ?? 99;
+    const pb = extPriority[getExt(b)] ?? 99;
+    if (pa !== pb) return pa - pb;
+    return a.localeCompare(b);
+  });
+  return files.map((f) => `/thumbs/${f}`);
+};
+
+const topic = asArr(item.topic);
+const content_type = asArr(item.content_type);
+const role = item.role || '';
+const industry = item.industry || '';
+const jurisdiction = item.jurisdiction || '';
+const local = findLocalThumbs(item.slug);
+const candidates = [
+  ...local,
+  ...(local.length === 0 ? expandItemThumb(item.thumbnail) : []),
+  ...(externalThumb(item.url) ? [externalThumb(item.url)] : []),
+];
+---
+
+<li
+  class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition-colors hover:border-neutral-700 hover:ring-neutral-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+  tabindex="0"
+  aria-labelledby={`t-${item.slug}`}
+  onclick="openModalFrom(this)"
+  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); openModalFrom(this)}"
+  data-role={role}
+  data-industry={industry}
+  data-topic={topic[0] || ''}
+  data-content_type={content_type[0] || ''}
+  data-jurisdiction={jurisdiction}
+  data-authors={Array.isArray(item.authors) ? item.authors.join(', ') : item.authors || ''}
+  data-slug={item.slug}
+  data-url={item.url}
+  data-source_name={item.source_name || ''}
+>
+  <a
+    id={`t-${item.slug}`}
+    href={`/${item.slug}`}
+    class="text-xl font-semibold text-sky-200 underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+    onclick="event.stopPropagation()"
+  >
+    {item.title}
+  </a>
+  <div class="mt-1 text-sm text-neutral-200">
+    {
+      item.date_published && (
+        <span title="Date published">
+          <span class="text-neutral-400">Published</span> {fmt(item.date_published)}
+        </span>
+      )
+    }
+    {item.source_name && <span> · {item.source_name}</span>}
+    {item.authors?.length && <span> · {item.authors[0]}</span>}
+  </div>
+
+  <div class="mt-2">
+    <div class="relative">
+      <>
+        <div
+          class="w-full rounded-md border border-neutral-800 bg-neutral-800/40"
+          style="aspect-ratio: 16 / 9"
+        >
+        </div>
+        {
+          candidates.length ? (
+            <img
+              src={candidates[0]}
+              data-next={candidates.slice(1).join('|')}
+              alt={`${item.source_name || 'Source'} preview`}
+              width={isFirst ? 960 : 640}
+              height={isFirst ? 540 : 360}
+              loading={isFirst ? 'eager' : 'lazy'}
+              fetchpriority={isFirst ? 'high' : 'auto'}
+              decoding="async"
+              referrerpolicy="no-referrer"
+              sizes="(min-width: 1024px) 560px, (min-width: 640px) 480px, 100vw"
+              class="w-full rounded-md border border-neutral-800 object-cover opacity-0"
+              style="aspect-ratio: 16 / 9"
+              onload="this.classList.remove('opacity-0'); this.previousElementSibling.style.display='none'"
+              onerror="const n=this.dataset.next||''; if(n){ const parts=n.split('|'); const nx=parts.shift(); this.dataset.next=parts.join('|'); if(nx){ this.src=nx; return; } } this.style.display='none'"
+            />
+          ) : null
+        }
+      </>
+    </div>
+    {
+      item.note && (
+        <div class="mt-3">
+          <p class="text-sm text-neutral-300 line-clamp-3">{item.note}</p>
+          <div class="mt-1 flex justify-end">
+            <button
+              class="text-sm text-sky-300 underline underline-offset-2"
+              onclick="event.stopPropagation(); openModalFrom(this.closest('li'))"
+            >
+              … read more
+            </button>
+          </div>
+        </div>
+      )
+    }
+    <div class="mt-3 text-xs text-neutral-200 flex flex-wrap gap-2">
+      {role && <span>{role}</span>}
+      {content_type.length ? <span>· {content_type[0]}</span> : null}
+    </div>
+  </div>
+</li>
