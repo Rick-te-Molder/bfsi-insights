@@ -17,7 +17,7 @@
     "agentic_capabilities": "reasoning",
     "content_type": "article",
     "jurisdiction": "global",
-    "note": "How AI is expected to reshape underwriting, distribution, and claims in insurance by 2030.",
+    "note": "The insurance industry is approaching a major transformation driven by artificial intelligence (AI). By 2030, carriers will shift from a “detect and repair” model to “predict and prevent,” leveraging massive data flows and cognitive technologies. Four key trends will shape this: (1) a surge in connected devices providing real-time behavioral and usage data, (2) greater use of robotics and autonomous systems that reshape risk pools, (3) the growth of open data ecosystems and shared platforms, and (4) advances in deep learning enabling intelligent automation of underwriting, claims and pricing. Distribution will become instantaneous, underwriting near-real-time and claims highly automated, with human intervention reserved for complex cases. To succeed carriers must act now: build an AI-aware culture, create comprehensive data strategies, overhaul technology and talent, and define strategic visions for new business models. Those who treat this shift as opportunity rather than threat will be best positioned.",
     "id": "9f6be1e5a424e8893d7f9ebd13683b1a9dc699c6"
   },
   {
@@ -74,7 +74,7 @@
     "agentic_capabilities": "tool-use",
     "content_type": "report",
     "jurisdiction": "global",
-    "note": "How insurers must integrate AI enterprise-wide to achieve competitive advantage.",
+    "note": "Generative AI (gen AI) and agentic AI offer a major inflection point for insurers. Unlike earlier analytics, gen AI brings reasoning, creativity and empathy—traits highly relevant to underwriting, claims and customer service.  ￼ Insurers are using AI across sales, underwriting, claims, back-office and servicing to automate workflows and personalise experiences.  ￼ To deliver value they must go beyond isolated pilots: they need a clear enterprise-wide AI vision, deep workflow rewiring, modern data/tech stacks, and scalable reusable components.  ￼ A key example: future onboarding could involve multi-agent AI systems that intake data, build risk profiles, price policies, review compliance and escalate only when needed.  ￼ Insurers who invest now and embed AI end-to-end will process more business faster, with better risk insight and more personal service; those who only dabble risk lagging behind.",
     "id": "e5a8bf6e4bf68a8a4c3d68b1f4ce88bb5af8c5d2"
   },
   {
@@ -109,7 +109,7 @@
     "agentic_capabilities": "evaluation",
     "content_type": "peer-reviewed-paper",
     "jurisdiction": "global",
-    "note": "l̡��ȹ��B�˯xo �4�O��\u0018g�\u001b\u0006k��m�V�<�\"���O!6F{�ݫ�z� �\b� \u0016�5D�� �����O�����\u0014Y�3�\u000e��\u001f\u000f�����\u0017����Ev�zK�D�� �\u001e��V\u0004�� ����J�#� �� \u0017� ��I^I���\u001c�\u001f\b\u000f-�A�N��n�Nڜ}L*�\u0018�r���t�\u0015�5�f ��f Գ\u0003�\u001f/Y�\u001e�U�)PT�*�;r�^<\u000ekpI���΂6�#���M�ף� \u0017b1�G�s�������\u0019\u000e�\u001c��z�\"�θ�G �X��\u0004NS���[ �%�����H�\u0003 � �Hۦ�4�-�MT�SW��H\u00195���\u0001\u0013�\u0019�������&��}\u0018)Ü_5�3��ȷ�#Ӭ vm�U';M�9+�ȑ9�d\u000e/��0 f*�O�֒\u0007C�\\�ʇj\u0006�D���\u000e\u00011����쪽�jV�u�������tc5{.po\u0004�F@�,���)�vۼ�)��\u0007RkH>��{��&�{ˉ��M�\u0002�����*\u001c��\u0014F8)�n��\u000eո@�\u0012�%�\\��+��h�\u0001\u0004M���~�����$߇�4\u0016�&��zMI��\u0014E�ȹ@�\u0017~7ٖ��su�aFN�y�0�?c��h� =\u000f��: \u001d\u0017��\u0011��,��d�\u0011R�[ �U��B�#�?�O� /H�[m�\u001f�^z\u0016�M�%\\v��9����\u000fU��%r��\u0013\u001a\\���>dͥ3��5bC\u0005DC���\u000e>/���\u001f��<-�\u0006���<�?�z�\u0018�y\u001eUfk�PB��q��R:�%+�\u0007e-A�g����#m-,���������\u0004���� a��,\u000f�)`{\u00120�q\u0007��� o\\{K{)*��w��䝋S��h��\"��GkTD\u0010��\\�\u0005҉ +/��:t)Iԗu\"��;~\u001e)�>��ǉ��=�@@� )���t�c2 W\u001dMIAA�R�Y� )*I�3Z�(����m�\u0013\u001e�z*���Cq�…",
+    "note": "This paper investigates why systems made up of multiple large-language-model (LLM) agents — so-called Multi-Agent Systems (MAS) — often underperform despite high expectations. The authors collected over 1,600 execution traces from seven MAS frameworks using modern LLMs (e.g., GPT-4, Claude, CodeLlama) and developed the first large dataset of MAS failures. They also defined a taxonomy of 14 failure modes grouped into three categories: (1) System design issues (e.g., unclear roles or steps repeated), (2) Inter-agent misalignment (e.g., agents ignoring each other or failing to ask clarifying questions), and (3) Task verification failures (e.g., incomplete or incorrect checks of output). They show that many failures stem not just from the LLM models themselves but from architectural, coordination and verification design. They release the dataset and taxonomy publicly to help guide better MAS design and research.",
     "id": "f0d1a8d15a063b7b9d3fd3cacd8c162f87623456"
   }
 ]
