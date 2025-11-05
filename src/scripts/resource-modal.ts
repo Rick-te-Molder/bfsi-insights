@@ -7,14 +7,7 @@ function nextSrc(el: HTMLImageElement): string | null {
   return nx || null;
 }
 
-function linkify(text: string): string {
-  if (!text) return '';
-  const urlRe = /(https?:\/\/[\w.-]+(?:\.[\w.-]+)+(?:[:#?/=][^\s]*)?)/gi;
-  return text.replace(urlRe, (u) => {
-    const h = u.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return `<a href="${h}" target="_blank" rel="noopener" class="text-sky-300 underline underline-offset-2">${h}</a>`;
-  });
-}
+import { linkify } from '../lib/text';
 
 let lastFocus: Element | null = null;
 let focusTrapHandler: ((e: FocusEvent) => void) | null = null;
