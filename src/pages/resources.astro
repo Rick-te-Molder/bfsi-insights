@@ -374,7 +374,14 @@ const expandItemThumb = (t) => {
           class="absolute right-3 top-3 rounded p-2 text-neutral-300 hover:text-white">✕</button
         >
         <div class="p-5">
-          <h3 id="modal-title" class="text-xl font-semibold pr-14 md:pr-16"></h3>
+          <h3 id="modal-title" class="text-xl font-semibold pr-14 md:pr-16">
+            <a
+              id="modal-title-link"
+              href="#"
+              target="_blank"
+              rel="noopener"
+              class="underline-offset-2 hover:underline"></a>
+          </h3>
           <div class="mt-1 text-sm text-neutral-300 pr-14 md:pr-16" id="modal-meta"></div>
           <div class="mt-4">
             <div
@@ -613,7 +620,11 @@ const expandItemThumb = (t) => {
       lastFocus = document.activeElement;
       m.classList.remove('hidden');
       document.body.style.overflow = 'hidden';
-      document.getElementById('modal-title').textContent = title;
+      const titleEl = document.getElementById('modal-title');
+      const titleA = document.getElementById('modal-title-link');
+      titleEl.textContent = '';
+      titleA.textContent = title;
+      titleA.href = link;
       document.getElementById('modal-meta').textContent = meta;
       const linkify = (text) => {
         if (!text) return '';
