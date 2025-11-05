@@ -62,6 +62,12 @@ There's nothing special about `src/components/`, but that's where we like to put
 
 Any static assets, like images, can be placed in the `public/` directory.
 
+src/data/resources/items is the canonical store; run scripts/build-resources.mjs to regenerate resources.json if needed.
+
+scripts/generate-notes.mjs can fill per-item notes from URLs.
+
+Favicons in public/ include SVGs and Safari mask; SVGs are preferred in Base.astro.
+
 ## Getting Started
 
 ### Feeds
