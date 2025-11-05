@@ -380,22 +380,22 @@ const expandItemThumb = (t) => {
               class="underline-offset-2 hover:underline"></a>
           </h3>
           <div class="mt-0 text-sm text-neutral-300 pr-14 md:pr-16" id="modal-meta"></div>
-          <div class="mt-0">
+          <div class="mt-0 relative">
+            <div style="aspect-ratio: 16 / 9"></div>
             <div
-              class="w-full rounded-md border border-neutral-800 bg-neutral-800/40"
-              style="aspect-ratio: 16 / 9"
+              id="modal-skeleton"
+              class="absolute inset-0 rounded-md border border-neutral-800 bg-neutral-800/40"
             >
             </div>
             <img
               id="modal-img"
               alt=""
-              class="mt-0 w-full rounded-md border border-neutral-800 object-cover"
+              class="absolute inset-0 h-full w-full rounded-md border border-neutral-800 object-cover"
               width="960"
               height="540"
               loading="eager"
-              style="aspect-ratio: 16 / 9"
-              onload="if(this.previousElementSibling){ this.previousElementSibling.style.display='none' }"
-              onerror="const n=this.dataset.next||''; if(n){ const parts=n.split('|'); const nx=parts.shift(); this.dataset.next=parts.join('|'); if(nx){ this.src=nx; return; } } this.style.display='none'"
+              onload="const sk=document.getElementById('modal-skeleton'); if(sk) sk.style.display='none'"
+              onerror="const n=this.dataset.next||''; if(n){ const parts=n.split('|'); const nx=parts.shift(); this.dataset.next=parts.join('|'); if(nx){ this.src=nx; return; } } const sk=document.getElementById('modal-skeleton'); if(sk) sk.style.display='none'; this.style.display='none'"
             />
           </div>
           <div id="modal-tags" class="mt-4 flex flex-wrap gap-2 text-xs"></div>
