@@ -167,14 +167,16 @@ const expandItemThumb = (t) => {
                   })()}
                 </div>
                 {item.note && (
-                  <div class="relative mt-3">
-                    <p class="text-sm text-neutral-300 line-clamp-3 pr-24">{item.note}</p>
-                    <button
-                      class="absolute bottom-0 right-0 text-sm text-sky-300 underline underline-offset-2 bg-gradient-to-l from-neutral-950 via-neutral-950/80 to-transparent pl-2"
-                      onclick="event.stopPropagation(); openModalFrom(this.closest('li'))"
-                    >
-                      … read more
-                    </button>
+                  <div class="mt-3">
+                    <p class="text-sm text-neutral-300 line-clamp-3">{item.note}</p>
+                    <div class="mt-1 flex justify-end">
+                      <button
+                        class="text-sm text-sky-300 underline underline-offset-2"
+                        onclick="event.stopPropagation(); openModalFrom(this.closest('li'))"
+                      >
+                        … read more
+                      </button>
+                    </div>
                   </div>
                 )}
                 <div class="mt-3 flex flex-wrap items-center gap-2">
