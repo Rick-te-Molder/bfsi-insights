@@ -62,7 +62,7 @@ const expandItemThumb = (t) => {
       <h3 class="text-xl font-semibold">Latest</h3>
       <a
         href="/resources"
-        class="text-sm font-medium text-sky-400 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-sky-500"
+        class="text-sm font-medium text-sky-200 underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
         >Browse all resources →</a
       >
     </div>
@@ -84,7 +84,7 @@ const expandItemThumb = (t) => {
                 <a
                   id={`t-${item.slug}`}
                   href={item.url}
-                  class="text-xl font-semibold text-sky-400 underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  class="text-xl font-semibold text-sky-200 underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
                   onclick="event.stopPropagation()"
                 >
                   {item.title}
@@ -146,7 +146,7 @@ const expandItemThumb = (t) => {
                   <p class="mt-3 text-sm text-neutral-300 line-clamp-2">
                     {item.note}{' '}
                     <button
-                      class="text-sky-400 underline-offset-2 hover:underline align-baseline"
+                      class="text-sky-300 underline underline-offset-2 align-baseline"
                       onclick="event.stopPropagation(); openModalFrom(this.closest('li'))"
                     >
                       (more)
@@ -214,7 +214,7 @@ const expandItemThumb = (t) => {
           <div class="mt-4">
             <a
               id="modal-link"
-              class="text-sky-400 hover:underline"
+              class="text-sky-300 underline underline-offset-2"
               target="_blank"
               rel="noopener"
               href="#">Open source →</a
