@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import { fmt } from '../lib/fmt';
 import fs from 'node:fs';
 
 export async function getStaticPaths() {
@@ -16,10 +17,8 @@ if (!item) {
   throw new Error('Not found');
 }
 
-const fmt = (iso?: string) =>
-  iso
-    ? new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })
-    : '';
+const title = item.title;
+const description = (item.note || '').slice(0, 220);
 
 const externalThumb = (u?: string) =>
   u ? `https://image.thum.io/get/nojs/width/960/crop/960/${encodeURIComponent(u)}` : null;
@@ -50,8 +49,6 @@ const expandItemThumb = (t?: string) => {
   return /\.(webp|png|jpe?g)$/i.test(t) ? [t] : [`${t}.webp`, `${t}.png`, `${t}.jpg`];
 };
 
-const title = item.title;
-const description = (item.note || '').slice(0, 220);
 const candidates = [
   ...findLocalThumbs(item.slug),
   ...expandItemThumb(item.thumbnail),
@@ -73,6 +70,14 @@ const ogImage = candidates[0] || undefined;
 
   <article class="mx-auto max-w-3xl">
     <header>
+      <div class="mb-2">
+        <a
+          href="/resources"
+          class="text-sm text-neutral-300 underline underline-offset-2"
+          onclick="if(document.referrer && document.referrer.startsWith(location.origin)){ history.back(); return false; }"
+          >← Back</a
+        >
+      </div>
       <h1 class="text-3xl font-bold tracking-tight">{item.title}</h1>
       <div class="mt-2 text-sm text-neutral-300">
         {
@@ -155,8 +160,12 @@ const ogImage = candidates[0] || undefined;
         href={item.url}
         target="_blank"
         rel="noopener"
-        class="text-sky-300 underline underline-offset-2">Open source →</a
+        class="text-sky-300 underline underline-offset-2"
+        aria-label={`Open original on ${item.source_name || 'source'} for ${item.title}`}
+        title={`Opens ${item.source_name || 'the publisher'} in a new tab`}
       >
+        Open on {item.source_name || 'original'} →
+      </a>
     </div>
   </article>
 </Base>
