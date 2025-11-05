@@ -89,13 +89,19 @@ const expandItemThumb = (t) => {
           const isAboveFold = idx < 2;
           const topic = asArr(item.topic);
           const content_type = asArr(item.content_type);
+          const role = item.role || '';
           return (
             <li
-              class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition hover:border-neutral-700 hover:ring-neutral-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition-colors hover:border-neutral-700 hover:ring-neutral-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
               tabindex="0"
               aria-labelledby={`t-${item.slug}`}
               onclick="openModalFrom(this)"
               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); openModalFrom(this)}"
+              data-role={item.role || ''}
+              data-industry={item.industry || ''}
+              data-topic={topic[0] || ''}
+              data-content_type={content_type[0] || ''}
+              data-jurisdiction={item.jurisdiction || ''}
             >
               <div class="flex items-center gap-2">
                 <a
@@ -172,9 +178,9 @@ const expandItemThumb = (t) => {
                   </p>
                 )}
                 <div class="mt-3 flex flex-wrap items-center gap-2">
-                  {topic.length ? (
+                  {role ? (
                     <span class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-200">
-                      {topic[0]}
+                      {role}
                     </span>
                   ) : null}
                   {content_type.length ? (
@@ -278,9 +284,13 @@ const expandItemThumb = (t) => {
         li.querySelector('p.text-sm')?.textContent || li.querySelector('p')?.textContent || '';
       const img = li.querySelector('img');
       const link = li.querySelector('a')?.href || '#';
-      const tags = Array.from(li.querySelectorAll('.flex.flex-wrap span')).map((s) =>
-        s.textContent.trim(),
-      );
+      const tags = [
+        li.getAttribute('data-role') || '',
+        li.getAttribute('data-industry') || '',
+        li.getAttribute('data-topic') || '',
+        li.getAttribute('data-content_type') || '',
+        li.getAttribute('data-jurisdiction') || '',
+      ].filter(Boolean);
       const m = document.getElementById('modal');
       lastFocus = document.activeElement;
       m.classList.remove('hidden');
