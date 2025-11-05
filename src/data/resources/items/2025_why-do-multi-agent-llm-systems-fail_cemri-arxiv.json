@@ -30,6 +30,6 @@
   "agentic_capabilities": "evaluation",
   "content_type": "peer-reviewed-paper",
   "jurisdiction": "global",
-  "note": "Empirical study of failure modes in multi-agent LLM systems (MAST taxonomy, 1600+ annotated traces).",
+  "note": "This paper investigates why systems made up of multiple large-language-model (LLM) agents — so-called Multi-Agent Systems (MAS) — often underperform despite high expectations. The authors collected over 1,600 execution traces from seven MAS frameworks using modern LLMs (e.g., GPT-4, Claude, CodeLlama) and developed the first large dataset of MAS failures. They also defined a taxonomy of 14 failure modes grouped into three categories: (1) System design issues (e.g., unclear roles or steps repeated), (2) Inter-agent misalignment (e.g., agents ignoring each other or failing to ask clarifying questions), and (3) Task verification failures (e.g., incomplete or incorrect checks of output). They show that many failures stem not just from the LLM models themselves but from architectural, coordination and verification design. They release the dataset and taxonomy publicly to help guide better MAS design and research.",
   "id": "f0d1a8d15a063b7b9d3fd3cacd8c162f87623456"
 }

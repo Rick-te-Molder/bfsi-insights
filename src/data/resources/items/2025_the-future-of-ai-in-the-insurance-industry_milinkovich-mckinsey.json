@@ -23,6 +23,6 @@
   "agentic_capabilities": "tool-use",
   "content_type": "report",
   "jurisdiction": "global",
-  "note": "How insurers must integrate AI enterprise-wide to achieve competitive advantage.",
+  "note": "Generative AI (gen AI) and agentic AI offer a major inflection point for insurers. Unlike earlier analytics, gen AI brings reasoning, creativity and empathy—traits highly relevant to underwriting, claims and customer service.  ￼ Insurers are using AI across sales, underwriting, claims, back-office and servicing to automate workflows and personalise experiences.  ￼ To deliver value they must go beyond isolated pilots: they need a clear enterprise-wide AI vision, deep workflow rewiring, modern data/tech stacks, and scalable reusable components.  ￼ A key example: future onboarding could involve multi-agent AI systems that intake data, build risk profiles, price policies, review compliance and escalate only when needed.  ￼ Insurers who invest now and embed AI end-to-end will process more business faster, with better risk insight and more personal service; those who only dabble risk lagging behind.",
   "id": "e5a8bf6e4bf68a8a4c3d68b1f4ce88bb5af8c5d2"
 }
