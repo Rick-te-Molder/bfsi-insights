@@ -26,3 +26,8 @@ pnpm-debug.log*
 reports/
 dist/
 .astro/
+
+# Test artifacts
+playwright-report/
+ test-results/
+ .playwright/
