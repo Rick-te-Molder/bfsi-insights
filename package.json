@@ -18,7 +18,8 @@
     "e2e": "playwright test",
     "check:links": "node scripts/check-links.mjs",
     "notes": "node scripts/generate-notes.mjs",
-    "lhci": "npx @lhci/cli@0.14.0 autorun --config=.lighthouserc.json"
+    "lhci": "npx @lhci/cli@0.14.0 autorun --config=.lighthouserc.json",
+    "prepare": "husky"
   },
   "dependencies": {
     "@astrojs/rss": "^4.0.7",
