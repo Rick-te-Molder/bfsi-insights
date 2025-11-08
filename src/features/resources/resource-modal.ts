@@ -7,7 +7,7 @@ function nextSrc(el: HTMLImageElement): string | null {
   return nx || null;
 }
 
-import { linkify } from '../lib/text';
+import { linkify } from '../../lib/text';
 
 let lastFocus: Element | null = null;
 let focusTrapHandler: ((e: FocusEvent) => void) | null = null;

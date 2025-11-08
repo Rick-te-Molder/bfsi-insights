@@ -1,8 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
 import resources from '../data/resources/resources.json';
-import ResourceCard from '../components/ResourceCard.astro';
-import ResourceModal from '../components/ResourceModal.astro';
+import ResourceCard from '../features/resources/ResourceCard.astro';
+import ResourceModal from '../features/resources/ResourceModal.astro';
 import fs from 'node:fs';
 
 const latest = [...resources].sort((a, b) => b.date_added.localeCompare(a.date_added)).slice(0, 6);
@@ -80,7 +80,7 @@ const expandItemThumb = (t) => {
 
   <ResourceModal />
   <script type="module">
-    import initResourceModal from '../scripts/resource-modal';
+    import initResourceModal from '../features/resources/resource-modal';
     initResourceModal();
   </script>
 </Base>

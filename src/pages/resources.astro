@@ -1,8 +1,8 @@
 ---
 import Base from '../layouts/Base.astro';
 import resources from '../data/resources/resources.json';
-import ResourceModal from '../components/ResourceModal.astro';
-import ResourceCard from '../components/ResourceCard.astro';
+import ResourceModal from '../features/resources/ResourceModal.astro';
+import ResourceCard from '../features/resources/ResourceCard.astro';
 import fs from 'node:fs';
 
 const values = {
@@ -264,8 +264,8 @@ const expandItemThumb = (t) => {
   <ResourceModal />
 
   <script type="module">
-    import initResourceModal from '../scripts/resource-modal';
-    import initResourceFilters from '../scripts/resource-filters';
+    import initResourceModal from '../features/resources/resource-modal';
+    import initResourceFilters from '../features/resources/resource-filters';
     initResourceModal();
     window.addEventListener('DOMContentLoaded', () => {
       initResourceFilters();
