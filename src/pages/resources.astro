@@ -264,8 +264,8 @@ const expandItemThumb = (t) => {
   <ResourceModal />
 
   <script type="module">
-    import initResourceModal from '/src/features/resources/resource-modal';
-    import initResourceFilters from '/src/features/resources/resource-filters';
+    import initResourceModal from '/src/features/resources/resource-modal.ts';
+    import initResourceFilters from '/src/features/resources/resource-filters.ts';
     initResourceModal();
     window.addEventListener('DOMContentLoaded', () => {
       initResourceFilters();
