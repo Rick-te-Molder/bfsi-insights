@@ -260,8 +260,49 @@ const expandItemThumb = (t) => {
     </ul>
   </section>
 
-  <script>
-    import '../client-init';
+  <script is:inline>
+    (function () {
+      function enhanceImages() {
+        const imgs = Array.from(document.querySelectorAll('li.group img'));
+        imgs.forEach((img) => {
+          const placeholder = img.previousElementSibling;
+          const onload = () => {
+            img.classList.remove('opacity-0');
+            if (placeholder) placeholder.style.display = 'none';
+          };
+          const onerror = () => {
+            const n = img.dataset?.next || '';
+            if (n) {
+              const parts = n.split('|');
+              const nx = parts.shift();
+              img.dataset.next = parts.join('|');
+              if (nx) {
+                img.src = nx;
+                return;
+              }
+            }
+            img.style.display = 'none';
+            if (placeholder) placeholder.style.display = 'none';
+          };
+          img.addEventListener('load', onload, { once: true });
+          img.addEventListener('error', onerror);
+          if (img.complete) {
+            if (img.naturalWidth > 0) onload();
+            else onerror();
+          }
+        });
+      }
+      if (document.readyState !== 'loading') enhanceImages();
+      else window.addEventListener('DOMContentLoaded', enhanceImages);
+    })();
+  </script>
+  <script type="module">
+    import initResourceModal from '../features/resources/resource-modal.ts';
+    import initResourceFilters from '../features/resources/resource-filters.ts';
+    initResourceModal();
+    if (document.getElementById('list')) {
+      window.addEventListener('DOMContentLoaded', () => initResourceFilters());
+    }
   </script>
 
   <script type="module">
