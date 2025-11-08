@@ -37,7 +37,7 @@ const findLocalThumbs = (slug: string) => {
   return files.map((f) => `/thumbs/${f}`);
 };
 
-const expandItemThumb = (t) => {
+const expandItemThumb = (t: string | undefined) => {
   if (!t) return [];
   return /\.(webp|png|jpe?g)$/i.test(t) ? [t] : [`${t}.webp`, `${t}.png`, `${t}.jpg`];
 };
