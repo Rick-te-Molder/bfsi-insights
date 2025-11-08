@@ -77,58 +77,42 @@ const expandItemThumb = (t) => {
     </ul>
   </section>
 
-  <script is:inline>
-    (function () {
-      console.log('[enhance] Script loaded');
-      function enhanceImages() {
-        const imgs = Array.from(document.querySelectorAll('li.group img'));
-        console.log('[enhance] Found images:', imgs.length);
-        imgs.forEach((img, i) => {
-          console.log(
-            '[enhance] Image',
-            i,
-            'src:',
-            img.src,
-            'complete:',
-            img.complete,
-            'classList:',
-            img.className,
-          );
-          const placeholder = img.previousElementSibling;
-          const onload = () => {
-            img.classList.remove('opacity-0');
-            if (placeholder) placeholder.style.display = 'none';
-          };
-          const onerror = () => {
-            const n = img.dataset?.next || '';
-            if (n) {
-              const parts = n.split('|');
-              const nx = parts.shift();
-              img.dataset.next = parts.join('|');
-              if (nx) {
-                img.src = nx;
-                return;
-              }
-            }
-            img.style.display = 'none';
-            if (placeholder) placeholder.style.display = 'none';
-          };
-          img.addEventListener('load', onload, { once: true });
-          img.addEventListener('error', onerror);
-          if (img.complete) {
-            console.log('[enhance] Image', i, 'already complete, naturalWidth:', img.naturalWidth);
-            if (img.naturalWidth > 0) onload();
-            else onerror();
-          }
-        });
-      }
-      console.log('[enhance] readyState:', document.readyState);
-      if (document.readyState !== 'loading') enhanceImages();
-      else window.addEventListener('DOMContentLoaded', enhanceImages);
-    })();
-  </script>
   <script type="module">
-    import initResourceModal from '../features/resources/resource-modal.ts';
+    import initResourceModal from '../features/resources/resource-modal';
     initResourceModal();
+
+    function enhanceImages(root = document) {
+      const imgs = Array.from(root.querySelectorAll('li.group img'));
+      imgs.forEach((img) => {
+        const placeholder = img.previousElementSibling;
+        const onload = () => {
+          img.classList.remove('opacity-0');
+          if (placeholder) placeholder.style.display = 'none';
+        };
+        const onerror = () => {
+          const n = (img.dataset && img.dataset.next) || '';
+          if (n) {
+            const parts = n.split('|');
+            const nx = parts.shift();
+            img.dataset.next = parts.join('|');
+            if (nx) {
+              img.src = nx;
+              return;
+            }
+          }
+          img.style.display = 'none';
+          if (placeholder) placeholder.style.display = 'none';
+        };
+        img.addEventListener('load', onload, { once: true });
+        img.addEventListener('error', onerror);
+        if (img.complete) {
+          if (img.naturalWidth > 0) onload();
+          else onerror();
+        }
+      });
+    }
+
+    if (document.readyState !== 'loading') enhanceImages();
+    else window.addEventListener('DOMContentLoaded', () => enhanceImages());
   </script>
 </Base>
