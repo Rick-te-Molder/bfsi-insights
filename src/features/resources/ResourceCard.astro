@@ -57,10 +57,9 @@ const isUpdated = isHome
     ? (Date.now() - new Date(item.last_edited as any).getTime()) / 86400000 <= 7 && !isNew
     : false
   : false;
-const local = findLocalThumbs(item.slug);
 const candidates = [
-  ...local,
-  ...(local.length === 0 ? expandItemThumb(item.thumbnail) : []),
+  ...expandItemThumb(item.thumbnail),
+  ...findLocalThumbs(item.slug),
   ...(externalThumb(item.url) ? [externalThumb(item.url)] : []),
 ];
 ---
