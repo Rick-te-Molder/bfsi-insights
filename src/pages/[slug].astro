@@ -108,8 +108,8 @@ const ogImage = candidates[0] || undefined;
             height="540"
             class="absolute inset-0 h-full w-full rounded-md border border-neutral-800 object-cover"
             loading="eager"
-            onload="const sk=document.getElementById('skeleton'); if(sk) sk.style.display='none'"
-            onerror="const n=this.dataset.next||''; if(n){ const parts=n.split('|'); const nx=parts.shift(); this.dataset.next=parts.join('|'); if(nx){ this.src=nx; return; } } const sk=document.getElementById('skeleton'); if(sk) sk.style.display='none'; this.style.display='none'"
+            onload="const s=document.getElementById('skeleton'); if(s) s.style.display='none'"
+            onerror="const n=this.dataset.next||''; if(n){ const parts=n.split('|'); const nx=parts.shift(); this.dataset.next=parts.join('|'); if(nx){ this.src=nx; return; } } const s2=document.getElementById('skeleton'); if(s2) s2.style.display='none'; this.style.display='none'"
           />
         </div>
       ) : null
