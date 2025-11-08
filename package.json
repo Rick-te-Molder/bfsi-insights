@@ -5,13 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "npm run build:resources && astro build",
+    "build": "npm run validate:resources && npm run build:resources && astro build",
     "preview": "astro preview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "lint:items": "node scripts/lint-items-no-time.mjs",
     "build:resources": "node scripts/build-resources.mjs",
+    "validate:resources": "node scripts/validate-resources.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test",
     "check:links": "node scripts/check-links.mjs",
     "notes": "node scripts/generate-notes.mjs",
     "lhci": "npx @lhci/cli@0.14.0 autorun --config=.lighthouserc.json"
@@ -21,10 +25,13 @@
     "@astrojs/tailwind": "^6.0.2",
     "astro": "^5.15.1",
     "fuse.js": "^6.6.2",
-    "tailwindcss": "^3.4.15"
+    "tailwindcss": "^3.4.15",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",
+    "@mozilla/readability": "^0.6.0",
+    "@playwright/test": "^1.56.1",
     "@typescript-eslint/parser": "^8.12.2",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
@@ -32,12 +39,21 @@
     "eslint": "^9.38.0",
     "eslint-plugin-astro": "^1.0.2",
     "globals": "^14.0.0",
+    "happy-dom": "^20.0.10",
+    "husky": "^9.1.7",
+    "jsdom": "^25.0.0",
+    "lint-staged": "^15.5.2",
     "prettier": "^3.3.3",
     "prettier-plugin-astro": "^0.14.1",
-    "jsdom": "^25.0.0",
-    "@mozilla/readability": "^0.5.0"
+    "vitest": "^4.0.8"
   },
   "engines": {
-    "node": ">=20 <21"
+    "node": ">=20 <25"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,astro,json,css,md}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
   }
 }
