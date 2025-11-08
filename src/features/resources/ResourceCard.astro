@@ -31,7 +31,7 @@ try {
 const findLocalThumbs = (slug?: string) => {
   if (!slug) return [] as string[];
   if (!thumbFiles.length)
-    return [`/thumbs/${slug}.png`, `/thumbs/${slug}.webp`, `/thumbs/${slug}.jpg`];
+    return [`/thumbs/${slug}.webp`, `/thumbs/${slug}.png`, `/thumbs/${slug}.jpg`];
   const extPriority: Record<string, number> = { '.png': 0, '.webp': 1, '.jpg': 2, '.jpeg': 2 };
   const getExt = (f: string) => (f.match(/\.[^.]+$/)?.[0] || '').toLowerCase();
   const files = thumbFiles.filter((f) => f.includes(slug));
