@@ -78,38 +78,37 @@ const expandItemThumb = (t: string | undefined) => {
   </section>
 
   <script>
-    function enhanceImages(root) {
-      if (!root) root = document;
-      const imgs = Array.from(root.querySelectorAll('li.group img'));
-      imgs.forEach((img: Element) => {
-        const imgEl = img as HTMLImageElement;
+    function enhanceImages(root?: Document | HTMLElement) {
+      const container = root || document;
+      const imgs = Array.from(container.querySelectorAll('li.group img')) as HTMLImageElement[];
+      imgs.forEach((img) => {
         const placeholder = img.previousElementSibling;
         const onload = () => {
-          imgEl.classList.remove('opacity-0');
+          img.classList.remove('opacity-0');
           if (placeholder && placeholder instanceof HTMLElement) {
             placeholder.style.display = 'none';
           }
         };
         const onerror = () => {
-          const n = imgEl.dataset?.next || '';
+          const n = img.dataset?.next || '';
           if (n) {
             const parts = n.split('|');
             const nx = parts.shift();
             if (nx) {
-              imgEl.dataset.next = parts.join('|');
-              imgEl.src = nx;
+              img.dataset.next = parts.join('|');
+              img.src = nx;
               return;
             }
           }
-          imgEl.style.display = 'none';
+          img.style.display = 'none';
           if (placeholder && placeholder instanceof HTMLElement) {
             placeholder.style.display = 'none';
           }
         };
-        imgEl.addEventListener('load', onload, { once: true });
-        imgEl.addEventListener('error', onerror);
-        if (imgEl.complete) {
-          if (imgEl.naturalWidth > 0) {
+        img.addEventListener('load', onload, { once: true });
+        img.addEventListener('error', onerror);
+        if (img.complete) {
+          if (img.naturalWidth > 0) {
             onload();
           } else {
             onerror();
