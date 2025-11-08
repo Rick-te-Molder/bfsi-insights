@@ -294,6 +294,56 @@ const expandItemThumb = (t) => {
 
     if (document.readyState !== 'loading') enhanceImages();
     else window.addEventListener('DOMContentLoaded', () => enhanceImages());
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const list = document.getElementById('list');
+      if (!list) return;
+
+      const items = Array.from(list.children);
+      const applyFilters = () => {
+        const role = document.getElementById('f-role')?.value || '';
+        const industry = document.getElementById('f-industry')?.value || '';
+        const topic = document.getElementById('f-topic')?.value || '';
+        const q = document.getElementById('q')?.value?.trim().toLowerCase() || '';
+
+        let visible = 0;
+        items.forEach((item) => {
+          const matches =
+            (!role || item.getAttribute('data-role') === role) &&
+            (!industry || item.getAttribute('data-industry') === industry) &&
+            (!topic || item.getAttribute('data-topic') === topic) &&
+            (!q || item.textContent?.toLowerCase().includes(q));
+
+          item.style.display = matches ? '' : 'none';
+          if (matches) visible++;
+        });
+
+        const empty = document.getElementById('empty');
+        if (empty) empty.classList.toggle('hidden', visible > 0);
+        const count = document.getElementById('count');
+        if (count) count.textContent = visible;
+      };
+
+      ['f-role', 'f-industry', 'f-topic', 'f-content_type', 'f-jurisdiction'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('change', applyFilters);
+      });
+
+      let debounce;
+      document.getElementById('q')?.addEventListener('input', () => {
+        clearTimeout(debounce);
+        debounce = setTimeout(applyFilters, 300);
+      });
+
+      document.getElementById('clear-filters')?.addEventListener('click', () => {
+        ['f-role', 'f-industry', 'f-topic', 'f-content_type', 'f-jurisdiction'].forEach((id) => {
+          const el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+        const q = document.getElementById('q');
+        if (q) q.value = '';
+        applyFilters();
+      });
+    });
   </script>
 
   <script type="module">

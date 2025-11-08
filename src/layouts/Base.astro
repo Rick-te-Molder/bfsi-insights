@@ -83,5 +83,71 @@ const canonical = origin + Astro.url.pathname;
       </div>
     </footer>
     <ResourceModal />
+    <script>
+      (function () {
+        const linkify = (text) => {
+          if (!text) return '';
+          const escapeHtml = (s) =>
+            s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+          return text.replace(/(https?:\/\/[\w.-]+(?:\.[\w.-]+)+(?:[:#?/=][^\s]*)?)/gi, (u) => {
+            const h = escapeHtml(u);
+            return `<a href="${h}" target="_blank" rel="noopener" class="text-sky-300 underline underline-offset-2">${h}</a>`;
+          });
+        };
+
+        let lastFocus = null;
+        const openModal = (li) => {
+          const modal = document.getElementById('modal');
+          if (!modal) return;
+
+          lastFocus = document.activeElement;
+          modal.classList.remove('hidden');
+          document.body.style.overflow = 'hidden';
+
+          const title = li.querySelector('a')?.textContent?.trim() || '';
+          const titleLink = document.getElementById('modal-title-link');
+          if (titleLink) {
+            titleLink.textContent = title;
+            titleLink.href = li.querySelector('a')?.href || '#';
+          }
+
+          const note = li.querySelector('p')?.textContent || '';
+          const noteEl = document.getElementById('modal-note');
+          if (noteEl) noteEl.innerHTML = linkify(note.replace(/\(more\)\s*$/, ''));
+
+          document.getElementById('modal-close')?.focus();
+        };
+
+        const closeModal = () => {
+          const modal = document.getElementById('modal');
+          if (modal) {
+            modal.classList.add('hidden');
+            document.body.style.overflow = '';
+            if (lastFocus) lastFocus.focus();
+          }
+        };
+
+        document.getElementById('modal-close')?.addEventListener('click', closeModal);
+        document.getElementById('modal-backdrop')?.addEventListener('click', closeModal);
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') closeModal();
+        });
+
+        document.addEventListener('click', (e) => {
+          const btn = e.target.closest('[data-open-modal]');
+          if (btn) {
+            e.preventDefault();
+            const card = btn.closest('li.group');
+            if (card) openModal(card);
+            return;
+          }
+
+          const card = e.target.closest('li.group');
+          if (card && !e.target.closest('a[id^="t-"]')) {
+            openModal(card);
+          }
+        });
+      })();
+    </script>
   </body>
 </html>
