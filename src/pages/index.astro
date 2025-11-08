@@ -80,11 +80,11 @@ const expandItemThumb = (t) => {
 
   <ResourceModal />
   <script type="module">
-    import initResourceModal from '../features/resources/resource-modal';
+    import initResourceModal from '/src/features/resources/resource-modal';
     initResourceModal();
 
     function enhanceImages(root = document) {
-      const imgs = Array.from(root.querySelectorAll('img[data-next]'));
+      const imgs = Array.from(root.querySelectorAll('li.group img'));
       imgs.forEach((img) => {
         const placeholder = img.previousElementSibling;
         const onload = () => {
@@ -92,7 +92,7 @@ const expandItemThumb = (t) => {
           if (placeholder) placeholder.style.display = 'none';
         };
         const onerror = () => {
-          const n = img.dataset.next || '';
+          const n = (img.dataset && img.dataset.next) || '';
           if (n) {
             const parts = n.split('|');
             const nx = parts.shift();
@@ -107,8 +107,10 @@ const expandItemThumb = (t) => {
         };
         img.addEventListener('load', onload, { once: true });
         img.addEventListener('error', onerror);
-        // If cached and already complete
-        if (img.complete && img.naturalWidth > 0) onload();
+        if (img.complete) {
+          if (img.naturalWidth > 0) onload();
+          else onerror();
+        }
       });
     }
 
