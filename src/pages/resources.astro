@@ -312,10 +312,11 @@ const expandItemThumb = (t) => {
 
       const items = Array.from(list.children) as HTMLElement[];
       const applyFilters = () => {
-        const role = document.getElementById('f-role')?.value || '';
-        const industry = document.getElementById('f-industry')?.value || '';
-        const topic = document.getElementById('f-topic')?.value || '';
-        const q = document.getElementById('q')?.value?.trim().toLowerCase() || '';
+        const role = (document.getElementById('f-role') as HTMLSelectElement)?.value || '';
+        const industry = (document.getElementById('f-industry') as HTMLSelectElement)?.value || '';
+        const topic = (document.getElementById('f-topic') as HTMLSelectElement)?.value || '';
+        const q =
+          (document.getElementById('q') as HTMLInputElement)?.value?.trim().toLowerCase() || '';
 
         let visible = 0;
         items.forEach((item) => {
@@ -346,7 +347,7 @@ const expandItemThumb = (t) => {
         }
       });
 
-      let debounce = 0;
+      let debounce: ReturnType<typeof setTimeout>;
       const qInput = document.getElementById('q');
       if (qInput) {
         qInput.addEventListener('input', () => {
