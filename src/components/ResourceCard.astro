@@ -69,8 +69,6 @@ const candidates = [
   class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition-colors hover:border-neutral-700 hover:ring-neutral-700 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
   tabindex="0"
   aria-labelledby={`t-${item.slug}`}
-  onclick="openModalFrom(this)"
-  onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); openModalFrom(this)}"
   data-role={role}
   data-industry={industry}
   data-topic={topic[0] || ''}
@@ -161,7 +159,8 @@ const candidates = [
           <div class="mt-1 flex justify-end">
             <button
               class="text-sm text-sky-300 underline underline-offset-2"
-              onclick="event.stopPropagation(); openModalFrom(this.closest('li'))"
+              type="button"
+              data-open-modal="true"
             >
               … read more
             </button>

@@ -122,21 +122,111 @@ export default function initResourceModal() {
     if (e.key === 'Escape') closeModal();
   });
 
-  // Delegate clicks and keys to open modal when clicking/tapping list items
-  window.addEventListener('DOMContentLoaded', () => {
-    document.addEventListener('click', (e) => {
-      const li = (e.target as HTMLElement).closest('li.group') as HTMLElement | null;
-      if (!li) return;
-      if ((e.target as HTMLElement).closest('a,button')) return;
+  // Utilities to safely bind once
+  const mark = (el: Element, key: string) =>
+    el instanceof HTMLElement ? (el.dataset[key] = '1') : undefined;
+  const isMarked = (el: Element, key: string) =>
+    el instanceof HTMLElement ? el.dataset[key] === '1' : false;
+
+  function attachToCard(li: HTMLElement) {
+    if (isMarked(li, 'modalBound')) return;
+    li.addEventListener('click', (e) => {
+      const t = e.target as HTMLElement;
+      if (t.closest('[data-open-modal]')) return; // button handler will run
+      if (t.closest('a[id^="t-"]')) return; // allow title link navigation
       openModalFrom(li);
     });
-    document.addEventListener('keydown', (e) => {
-      const li = (e.target as HTMLElement).closest('li.group') as HTMLElement | null;
-      if (!li) return;
-      if (e.key === 'Enter' || e.key === ' ') {
+    li.addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Enter' || (e as KeyboardEvent).key === ' ') {
         e.preventDefault();
         openModalFrom(li);
       }
     });
+    mark(li, 'modalBound');
+  }
+  function attachToButton(btn: HTMLElement) {
+    if (isMarked(btn, 'modalBtnBound')) return;
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const li = btn.closest('li.group') as HTMLElement | null;
+      if (li) openModalFrom(li);
+    });
+    mark(btn, 'modalBtnBound');
+  }
+
+  // Attach to existing nodes
+  Array.from(document.querySelectorAll('li.group')).forEach((el) =>
+    attachToCard(el as HTMLElement),
+  );
+  Array.from(document.querySelectorAll('[data-open-modal]')).forEach((el) =>
+    attachToButton(el as HTMLElement),
+  );
+
+  // Observe future additions
+  const mo = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      m.addedNodes.forEach((n) => {
+        if (!(n instanceof Element)) return;
+        if (n.matches && n.matches('li.group')) attachToCard(n as HTMLElement);
+        n.querySelectorAll &&
+          n.querySelectorAll('li.group').forEach((el) => attachToCard(el as HTMLElement));
+        if (n.matches && n.matches('[data-open-modal]')) attachToButton(n as HTMLElement);
+        n.querySelectorAll &&
+          n
+            .querySelectorAll('[data-open-modal]')
+            .forEach((el) => attachToButton(el as HTMLElement));
+      });
+    }
+  });
+  mo.observe(document.documentElement, { subtree: true, childList: true });
+
+  // Delegate clicks and keys to open modal when clicking/tapping list items (capture on window to beat others)
+  window.addEventListener(
+    'click',
+    (e) => {
+      const node = e.target as Node;
+      const el = node instanceof Element ? node : (node.parentElement as Element | null);
+      if (!el) return;
+      const btn = el.closest('[data-open-modal]') as HTMLElement | null;
+      const li = el.closest('li.group') as HTMLElement | null;
+      // Minimal debug logs (remove after debugging)
+      try {
+        console.log('[modal] click', {
+          path: location.pathname,
+          tag: el.tagName,
+          id: (el as HTMLElement).id,
+          classes: (el as HTMLElement).className,
+          hasBtn: !!btn,
+          hasLi: !!li,
+        });
+      } catch {}
+      // Explicit button to open modal
+      if (btn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const li = btn.closest('li.group') as HTMLElement | null;
+        try {
+          console.log('[modal] btn click -> li', !!li);
+        } catch {}
+        if (li) openModalFrom(li);
+        return;
+      }
+      if (!li) return;
+      if (el.closest('a[id^="t-"]')) return;
+      try {
+        console.log('[modal] card click -> open');
+      } catch {}
+      openModalFrom(li);
+    },
+    { capture: true },
+  );
+  document.addEventListener('keydown', (e) => {
+    const li = (e.target as HTMLElement).closest('li.group') as HTMLElement | null;
+    if (!li) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openModalFrom(li);
+    }
   });
 }
