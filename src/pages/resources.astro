@@ -261,7 +261,8 @@ const expandItemThumb = (t) => {
   </section>
 
   <script>
-    function enhanceImages(root = document) {
+    function enhanceImages(root) {
+      if (!root) root = document;
       const imgs = Array.from(root.querySelectorAll('li.group img'));
       imgs.forEach((img) => {
         const placeholder = img.previousElementSibling;
@@ -345,7 +346,7 @@ const expandItemThumb = (t) => {
         }
       });
 
-      let debounce;
+      let debounce = 0;
       const qInput = document.getElementById('q');
       if (qInput) {
         qInput.addEventListener('input', () => {
