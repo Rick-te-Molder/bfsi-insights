@@ -12,21 +12,21 @@ const values = {
   jurisdiction: Array.from(new Set(resources.map((r) => r.jurisdiction).filter(Boolean))).sort(),
 };
 
-const externalThumb = (u) =>
+const externalThumb = (u: string | undefined) =>
   u ? `https://image.thum.io/get/nojs/width/600/crop/600/${encodeURIComponent(u)}` : null;
 
 const thumbsDirUrl = new URL('../../public/thumbs/', import.meta.url);
-let thumbFiles = [];
+let thumbFiles: string[] = [];
 try {
   const dirPath = thumbsDirUrl.pathname;
   thumbFiles = fs.readdirSync(dirPath).filter((f) => /\.(webp|png|jpe?g)$/i.test(f));
 } catch {
   thumbFiles = [];
 }
-const findLocalThumbs = (slug) => {
+const findLocalThumbs = (slug: string) => {
   if (!slug) return [];
-  const extPriority = { '.png': 0, '.webp': 1, '.jpg': 2, '.jpeg': 2 };
-  const getExt = (f) => (f.match(/\.[^.]+$/)?.[0] || '').toLowerCase();
+  const extPriority: Record<string, number> = { '.png': 0, '.webp': 1, '.jpg': 2, '.jpeg': 2 };
+  const getExt = (f: string) => (f.match(/\.[^.]+$/)?.[0] || '').toLowerCase();
   const files = thumbFiles.filter((f) => f.includes(slug));
   files.sort((a, b) => {
     const pa = extPriority[getExt(a)] ?? 99;
@@ -264,34 +264,35 @@ const expandItemThumb = (t) => {
     function enhanceImages(root) {
       if (!root) root = document;
       const imgs = Array.from(root.querySelectorAll('li.group img'));
-      imgs.forEach((img) => {
+      imgs.forEach((img: Element) => {
+        const imgEl = img as HTMLImageElement;
         const placeholder = img.previousElementSibling;
         const onload = () => {
-          img.classList.remove('opacity-0');
+          imgEl.classList.remove('opacity-0');
           if (placeholder && placeholder instanceof HTMLElement) {
             placeholder.style.display = 'none';
           }
         };
         const onerror = () => {
-          const n = img.dataset?.next || '';
+          const n = imgEl.dataset?.next || '';
           if (n) {
             const parts = n.split('|');
             const nx = parts.shift();
             if (nx) {
-              img.dataset.next = parts.join('|');
-              img.src = nx;
+              imgEl.dataset.next = parts.join('|');
+              imgEl.src = nx;
               return;
             }
           }
-          img.style.display = 'none';
+          imgEl.style.display = 'none';
           if (placeholder && placeholder instanceof HTMLElement) {
             placeholder.style.display = 'none';
           }
         };
-        img.addEventListener('load', onload, { once: true });
-        img.addEventListener('error', onerror);
-        if (img.complete) {
-          if (img.naturalWidth > 0) {
+        imgEl.addEventListener('load', onload, { once: true });
+        imgEl.addEventListener('error', onerror);
+        if (imgEl.complete) {
+          if (imgEl.naturalWidth > 0) {
             onload();
           } else {
             onerror();
@@ -310,7 +311,7 @@ const expandItemThumb = (t) => {
       const list = document.getElementById('list');
       if (!list) return;
 
-      const items = Array.from(list.children);
+      const items = Array.from(list.children) as HTMLElement[];
       const applyFilters = () => {
         const role = document.getElementById('f-role')?.value || '';
         const industry = document.getElementById('f-industry')?.value || '';
