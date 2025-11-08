@@ -262,11 +262,6 @@ const expandItemThumb = (t) => {
 
   <script>
     import '../client-init';
-    import initResourceFilters from '../features/resources/resource-filters';
-    if (document.getElementById('list')) {
-      if (document.readyState !== 'loading') initResourceFilters();
-      else window.addEventListener('DOMContentLoaded', () => initResourceFilters());
-    }
   </script>
 
   <script type="module">
