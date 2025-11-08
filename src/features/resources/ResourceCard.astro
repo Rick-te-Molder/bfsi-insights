@@ -144,8 +144,6 @@ const candidates = [
               sizes="(min-width: 1024px) 560px, (min-width: 640px) 480px, 100vw"
               class="w-full rounded-md border border-neutral-800 object-cover opacity-0"
               style="aspect-ratio: 16 / 9"
-              onload="this.classList.remove('opacity-0'); this.previousElementSibling.style.display='none'"
-              onerror="const n=this.dataset.next||''; if(n){ const parts=n.split('|'); const nx=parts.shift(); this.dataset.next=parts.join('|'); if(nx){ this.src=nx; return; } } this.style.display='none'"
             />
           ) : null
         }

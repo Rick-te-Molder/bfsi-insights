@@ -270,6 +270,37 @@ const expandItemThumb = (t) => {
     window.addEventListener('DOMContentLoaded', () => {
       initResourceFilters();
     });
+
+    function enhanceImages(root = document) {
+      const imgs = Array.from(root.querySelectorAll('img[data-next]'));
+      imgs.forEach((img) => {
+        const placeholder = img.previousElementSibling;
+        const onload = () => {
+          img.classList.remove('opacity-0');
+          if (placeholder) placeholder.style.display = 'none';
+        };
+        const onerror = () => {
+          const n = img.dataset.next || '';
+          if (n) {
+            const parts = n.split('|');
+            const nx = parts.shift();
+            img.dataset.next = parts.join('|');
+            if (nx) {
+              img.src = nx;
+              return;
+            }
+          }
+          img.style.display = 'none';
+          if (placeholder) placeholder.style.display = 'none';
+        };
+        img.addEventListener('load', onload, { once: true });
+        img.addEventListener('error', onerror);
+        if (img.complete && img.naturalWidth > 0) onload();
+      });
+    }
+
+    if (document.readyState !== 'loading') enhanceImages();
+    else window.addEventListener('DOMContentLoaded', () => enhanceImages());
   </script>
 
   <script type="module">
