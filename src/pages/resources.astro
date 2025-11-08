@@ -267,33 +267,43 @@ const expandItemThumb = (t) => {
         const placeholder = img.previousElementSibling;
         const onload = () => {
           img.classList.remove('opacity-0');
-          if (placeholder) placeholder.style.display = 'none';
+          if (placeholder && placeholder instanceof HTMLElement) {
+            placeholder.style.display = 'none';
+          }
         };
         const onerror = () => {
-          const n = (img.dataset && img.dataset.next) || '';
+          const n = img.dataset?.next || '';
           if (n) {
             const parts = n.split('|');
             const nx = parts.shift();
-            img.dataset.next = parts.join('|');
             if (nx) {
+              img.dataset.next = parts.join('|');
               img.src = nx;
               return;
             }
           }
           img.style.display = 'none';
-          if (placeholder) placeholder.style.display = 'none';
+          if (placeholder && placeholder instanceof HTMLElement) {
+            placeholder.style.display = 'none';
+          }
         };
         img.addEventListener('load', onload, { once: true });
         img.addEventListener('error', onerror);
         if (img.complete) {
-          if (img.naturalWidth > 0) onload();
-          else onerror();
+          if (img.naturalWidth > 0) {
+            onload();
+          } else {
+            onerror();
+          }
         }
       });
     }
 
-    if (document.readyState !== 'loading') enhanceImages();
-    else window.addEventListener('DOMContentLoaded', () => enhanceImages());
+    if (document.readyState !== 'loading') {
+      enhanceImages();
+    } else {
+      window.addEventListener('DOMContentLoaded', () => enhanceImages());
+    }
 
     window.addEventListener('DOMContentLoaded', () => {
       const list = document.getElementById('list');
@@ -319,30 +329,47 @@ const expandItemThumb = (t) => {
         });
 
         const empty = document.getElementById('empty');
-        if (empty) empty.classList.toggle('hidden', visible > 0);
+        if (empty) {
+          empty.classList.toggle('hidden', visible > 0);
+        }
         const count = document.getElementById('count');
-        if (count) count.textContent = visible;
+        if (count) {
+          count.textContent = String(visible);
+        }
       };
 
       ['f-role', 'f-industry', 'f-topic', 'f-content_type', 'f-jurisdiction'].forEach((id) => {
-        document.getElementById(id)?.addEventListener('change', applyFilters);
+        const el = document.getElementById(id);
+        if (el) {
+          el.addEventListener('change', applyFilters);
+        }
       });
 
       let debounce;
-      document.getElementById('q')?.addEventListener('input', () => {
-        clearTimeout(debounce);
-        debounce = setTimeout(applyFilters, 300);
-      });
-
-      document.getElementById('clear-filters')?.addEventListener('click', () => {
-        ['f-role', 'f-industry', 'f-topic', 'f-content_type', 'f-jurisdiction'].forEach((id) => {
-          const el = document.getElementById(id);
-          if (el) el.value = '';
+      const qInput = document.getElementById('q');
+      if (qInput) {
+        qInput.addEventListener('input', () => {
+          clearTimeout(debounce);
+          debounce = setTimeout(applyFilters, 300);
         });
-        const q = document.getElementById('q');
-        if (q) q.value = '';
-        applyFilters();
-      });
+      }
+
+      const clearBtn = document.getElementById('clear-filters');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          ['f-role', 'f-industry', 'f-topic', 'f-content_type', 'f-jurisdiction'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el && el instanceof HTMLSelectElement) {
+              el.value = '';
+            }
+          });
+          const q = document.getElementById('q');
+          if (q && q instanceof HTMLInputElement) {
+            q.value = '';
+          }
+          applyFilters();
+        });
+      }
     });
   </script>
 
