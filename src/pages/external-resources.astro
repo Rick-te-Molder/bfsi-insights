@@ -1,0 +1,54 @@
+---
+import Base from '../layouts/Base.astro';
+import externalResources from '../data/external-resources.json';
+
+// Group by category
+const grouped = externalResources.reduce(
+  (acc, resource) => {
+    if (!acc[resource.category]) acc[resource.category] = [];
+    acc[resource.category].push(resource);
+    return acc;
+  },
+  {} as Record<string, typeof externalResources>,
+);
+
+const categories = Object.keys(grouped).sort();
+---
+
+<Base title="External Resources · BFSI Insights">
+  <div class="mx-auto max-w-4xl px-4 py-8">
+    <header class="mb-8">
+      <h1 class="text-3xl font-bold tracking-tight">External Resources</h1>
+      <p class="mt-2 text-neutral-300">
+        Curated knowledge bases and content-rich websites for BFSI and Agentic AI research.
+      </p>
+    </header>
+
+    <div class="space-y-10">
+      {
+        categories.map((category) => (
+          <section>
+            <h2 class="mb-4 text-xl font-semibold text-neutral-200">{category}</h2>
+            <div class="space-y-4">
+              {grouped[category].map((resource) => (
+                <div class="rounded-lg border border-neutral-800 bg-neutral-900/40 p-4 transition-colors hover:border-neutral-700">
+                  <h3 class="font-medium">
+                    <a
+                      href={resource.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-sky-300 underline-offset-2 hover:underline"
+                    >
+                      {resource.name} →
+                    </a>
+                  </h3>
+                  <p class="mt-1 text-sm text-neutral-300">{resource.description}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))
+      }
+    </div>
+  </div>
+</Base>
