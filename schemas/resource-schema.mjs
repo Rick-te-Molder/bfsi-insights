@@ -17,7 +17,10 @@ export const Resource = z.object({
   role: z.string().optional(),
   industry: z.string().optional(),
   jurisdiction: z.string().optional(),
-  authors: z.union([z.array(z.string()), z.string()]).optional().transform(normalizeArray),
+  authors: z
+    .union([z.array(z.string()), z.string()])
+    .optional()
+    .transform(normalizeArray),
   note: z.string().optional(),
 });
 
