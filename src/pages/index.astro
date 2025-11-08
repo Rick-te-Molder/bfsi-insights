@@ -77,9 +77,8 @@ const expandItemThumb = (t) => {
     </ul>
   </section>
 
-  <script type="module">
+  <script>
     import initResourceModal from '../features/resources/resource-modal';
-    initResourceModal();
 
     function enhanceImages(root = document) {
       const imgs = Array.from(root.querySelectorAll('li.group img'));
@@ -112,7 +111,14 @@ const expandItemThumb = (t) => {
       });
     }
 
-    if (document.readyState !== 'loading') enhanceImages();
-    else window.addEventListener('DOMContentLoaded', () => enhanceImages());
+    if (document.readyState !== 'loading') {
+      initResourceModal();
+      enhanceImages();
+    } else {
+      window.addEventListener('DOMContentLoaded', () => {
+        initResourceModal();
+        enhanceImages();
+      });
+    }
   </script>
 </Base>
