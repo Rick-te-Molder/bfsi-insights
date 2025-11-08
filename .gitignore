@@ -31,3 +31,8 @@ dist/
 playwright-report/
  test-results/
  .playwright/
+
+# Test artifacts
+playwright-report/
+test-results/
+.playwright/
