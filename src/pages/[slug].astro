@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import { marked } from 'marked';
 import { fmt } from '../lib/fmt';
 import fs from 'node:fs';
 
@@ -115,7 +116,14 @@ const ogImage = candidates[0] || undefined;
       ) : null
     }
 
-    {item.note && <div class="mt-4 text-sm text-neutral-200 whitespace-pre-wrap">{item.note}</div>}
+    {
+      item.note && (
+        <div
+          class="mt-4 text-sm text-neutral-200 prose prose-invert prose-sm max-w-none"
+          set:html={marked.parse(item.note)}
+        />
+      )
+    }
 
     <div class="mt-4 flex flex-wrap gap-2 text-xs">
       {

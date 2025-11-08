@@ -83,16 +83,18 @@ const canonical = origin + Astro.url.pathname;
       </div>
     </footer>
     <ResourceModal />
-    <script>
+    <script type="module">
+      import { marked } from 'https://cdn.jsdelivr.net/npm/marked@11/+esm';
+
       (function () {
-        const linkify = (text) => {
+        marked.setOptions({
+          breaks: true,
+          gfm: true,
+        });
+
+        const parseNote = (text) => {
           if (!text) return '';
-          const escapeHtml = (s) =>
-            s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          return text.replace(/(https?:\/\/[\w.-]+(?:\.[\w.-]+)+(?:[:#?/=][^\s]*)?)/gi, (u) => {
-            const h = escapeHtml(u);
-            return `<a href="${h}" target="_blank" rel="noopener" class="text-sky-300 underline underline-offset-2">${h}</a>`;
-          });
+          return marked.parse(text.replace(/\(more\)\s*$/, ''));
         };
 
         let lastFocus = null;
@@ -113,7 +115,7 @@ const canonical = origin + Astro.url.pathname;
 
           const note = li.querySelector('p')?.textContent || '';
           const noteEl = document.getElementById('modal-note');
-          if (noteEl) noteEl.innerHTML = linkify(note.replace(/\(more\)\s*$/, ''));
+          if (noteEl) noteEl.innerHTML = parseNote(note);
 
           // Load modal image
           const modalImg = document.getElementById('modal-img');
