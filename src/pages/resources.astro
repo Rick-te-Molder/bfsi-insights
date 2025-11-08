@@ -1,7 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
 import resources from '../data/resources/resources.json';
-import ResourceModal from '../features/resources/ResourceModal.astro';
 import ResourceCard from '../features/resources/ResourceCard.astro';
 import fs from 'node:fs';
 
@@ -261,49 +260,8 @@ const expandItemThumb = (t) => {
     </ul>
   </section>
 
-  <ResourceModal />
-
-  <script type="module">
-    import initResourceModal from '../features/resources/resource-modal.ts';
-    import initResourceFilters from '../features/resources/resource-filters.ts';
-    initResourceModal();
-    window.addEventListener('DOMContentLoaded', () => {
-      initResourceFilters();
-    });
-
-    function enhanceImages(root = document) {
-      const imgs = Array.from(root.querySelectorAll('li.group img'));
-      imgs.forEach((img) => {
-        const placeholder = img.previousElementSibling;
-        const onload = () => {
-          img.classList.remove('opacity-0');
-          if (placeholder) placeholder.style.display = 'none';
-        };
-        const onerror = () => {
-          const n = (img.dataset && img.dataset.next) || '';
-          if (n) {
-            const parts = n.split('|');
-            const nx = parts.shift();
-            img.dataset.next = parts.join('|');
-            if (nx) {
-              img.src = nx;
-              return;
-            }
-          }
-          img.style.display = 'none';
-          if (placeholder) placeholder.style.display = 'none';
-        };
-        img.addEventListener('load', onload, { once: true });
-        img.addEventListener('error', onerror);
-        if (img.complete) {
-          if (img.naturalWidth > 0) onload();
-          else onerror();
-        }
-      });
-    }
-
-    if (document.readyState !== 'loading') enhanceImages();
-    else window.addEventListener('DOMContentLoaded', () => enhanceImages());
+  <script>
+    import '../client-init';
   </script>
 
   <script type="module">

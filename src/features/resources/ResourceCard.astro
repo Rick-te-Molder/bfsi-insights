@@ -124,8 +124,9 @@ const candidates = [
   <div class="mt-2">
     <div class="relative">
       <>
+        <div style="aspect-ratio: 16 / 9"></div>
         <div
-          class="w-full rounded-md border border-neutral-800 bg-neutral-800/40"
+          class="absolute inset-0 w-full rounded-md border border-neutral-800 bg-neutral-800/40"
           style="aspect-ratio: 16 / 9"
         >
         </div>
@@ -142,8 +143,7 @@ const candidates = [
               decoding="async"
               referrerpolicy="no-referrer"
               sizes="(min-width: 1024px) 560px, (min-width: 640px) 480px, 100vw"
-              class="w-full rounded-md border border-neutral-800 object-cover opacity-0"
-              style="aspect-ratio: 16 / 9"
+              class="absolute inset-0 w-full h-full rounded-md border border-neutral-800 object-cover opacity-0"
             />
           ) : null
         }

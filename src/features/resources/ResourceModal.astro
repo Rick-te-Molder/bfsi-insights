@@ -34,11 +34,11 @@
           <img
             id="modal-img"
             alt=""
-            class="absolute inset-0 h-full w-full rounded-md border border-neutral-800 object-cover"
+            class="absolute inset-0 h-full w-full rounded-md border border-neutral-800 object-cover opacity-0"
             width="960"
             height="540"
             loading="eager"
-            onload="const sk=document.getElementById('modal-skeleton'); if(sk) sk.style.display='none'"
+            onload="this.classList.remove('opacity-0'); const sk=document.getElementById('modal-skeleton'); if(sk) sk.style.display='none'"
             onerror="const n=this.dataset.next||''; if(n){ const parts=n.split('|'); const nx=parts.shift(); this.dataset.next=parts.join('|'); if(nx){ this.src=nx; return; } } const sk=document.getElementById('modal-skeleton'); if(sk) sk.style.display='none'; this.style.display='none'"
           />
         </div>

@@ -1,4 +1,6 @@
 ---
+import ResourceModal from '../features/resources/ResourceModal.astro';
+
 const {
   title = 'BFSI Insights',
   description = 'Agentic AI insights for executives and professionals in banking, financial services and insurance.',
@@ -72,7 +74,7 @@ const canonical = origin + Astro.url.pathname;
           href="https://www.rtminnovations.com/"
           target="_blank"
           rel="noopener"
-          class="hover:underline">&copy; {new Date().getFullYear()} RTM INNOVATIONS</a
+          class="hover:underline">&copy; {2024} RTM INNOVATIONS</a
         >
         <nav class="space-x-4">
           <a href="/feed.xml" class="hover:underline">RSS feed</a>
@@ -80,5 +82,6 @@ const canonical = origin + Astro.url.pathname;
         </nav>
       </div>
     </footer>
+    <ResourceModal />
   </body>
 </html>
