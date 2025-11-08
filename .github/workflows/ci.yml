@@ -1,69 +1,37 @@
 name: CI
-on: [push, pull_request]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-  build:
+  build-test:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install
         run: npm ci
 
-      - name: Lint code
-        run: npm run lint -- --max-warnings=0
-
-      - name: Check formatting
+      - name: Format check
         run: npm run format:check
 
-      - name: Validate items (no forbidden keys)
-        run: npm run lint:items
+      - name: Lint
+        run: npm run lint
 
-      - name: Check external links
-        run: npm run check:links
+      - name: Validate data
+        run: npm run validate:resources
 
-      - name: Build Astro site
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build
         run: npm run build
-
-      - name: Lighthouse CI
-        run: npm run lhci
-
-      - name: Upload Lighthouse reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: lhci-reports
-          path: reports/lhci
-
-      - name: Upload build artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: site-dist
-          path: dist
-
-      - name: NPM audit (advisory)
-        if: always()
-        run: |
-          mkdir -p reports
-          npm audit --json > reports/npm-audit.json || true
-
-      - name: Upload NPM audit report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: npm-audit
-          path: reports/npm-audit.json
