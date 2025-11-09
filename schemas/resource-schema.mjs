@@ -149,7 +149,10 @@ export const Resource = z.object({
     .transform(normalizeArray),
   jurisdiction: JurisdictionEnum.optional(),
   note: z.string().optional(),
-  id: z.string().regex(/^[a-f0-9]{40}$/).optional(),
+  id: z
+    .string()
+    .regex(/^[a-f0-9]{40}$/)
+    .optional(),
 });
 
 export const Resources = z.array(Resource);

@@ -5,15 +5,15 @@ import { JSDOM } from 'jsdom';
 export async function extractContent(url) {
   try {
     const contentType = detectContentType(url);
-    
+
     if (contentType === 'pdf') {
       return await extractFromPDF(url);
     }
-    
+
     if (contentType === 'html') {
       return await extractFromHTML(url);
     }
-    
+
     return {
       success: false,
       error: 'unsupported_type',
@@ -43,7 +43,7 @@ async function extractFromHTML(url) {
         'User-Agent': 'Mozilla/5.0 (compatible; BFSI-Insights/1.0)',
       },
     });
-    
+
     if (!response.ok) {
       return {
         success: false,
@@ -51,12 +51,12 @@ async function extractFromHTML(url) {
         message: `HTTP ${response.status}: ${response.statusText}`,
       };
     }
-    
+
     const html = await response.text();
     const dom = new JSDOM(html, { url });
     const reader = new Readability(dom.window.document);
     const article = reader.parse();
-    
+
     if (!article) {
       return {
         success: false,
@@ -64,12 +64,12 @@ async function extractFromHTML(url) {
         message: 'Could not extract readable content',
       };
     }
-    
+
     const textContent = article.textContent
       .replace(/\s+/g, ' ')
       .replace(/\n{3,}/g, '\n\n')
       .trim();
-    
+
     return {
       success: true,
       title: article.title,

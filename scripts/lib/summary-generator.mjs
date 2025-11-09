@@ -184,7 +184,7 @@ async function generateSummariesFromPDF(resource, extractedContent) {
 
 function buildPromptForPDF(resource) {
   const existingNote = resource.note || 'No additional context available';
-  
+
   return `Generate three-tier summaries for this BFSI PDF document based on its metadata and existing notes.
 
 <source_metadata>
@@ -250,9 +250,7 @@ function validateSummaries(summaries) {
 
   if (!summaries.summary_medium) errors.push('summary_medium missing');
   else if (summaries.summary_medium.length < 240 || summaries.summary_medium.length > 480)
-    errors.push(
-      `summary_medium length (${summaries.summary_medium.length}) not in 240-480 range`,
-    );
+    errors.push(`summary_medium length (${summaries.summary_medium.length}) not in 240-480 range`);
 
   if (!summaries.summary_long) errors.push('summary_long missing');
   else if (summaries.summary_long.length < 640 || summaries.summary_long.length > 1120)
