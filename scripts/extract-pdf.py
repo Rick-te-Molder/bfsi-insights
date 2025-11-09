@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PDF text extraction using pdfplumber
+PDF text extraction using PyMuPDF (fitz)
 Usage: python3 extract-pdf.py <pdf_url>
 Output: JSON with extracted text and metadata
 """
@@ -10,7 +10,7 @@ import json
 import io
 import ssl
 import urllib.request
-import pdfplumber
+import fitz  # PyMuPDF
 
 
 def extract_pdf_from_url(url):
@@ -32,27 +32,28 @@ def extract_pdf_from_url(url):
         with urllib.request.urlopen(req, timeout=30, context=ssl_context) as response:
             pdf_data = response.read()
         
-        # Extract text using pdfplumber
+        # Extract text using PyMuPDF
         pdf_file = io.BytesIO(pdf_data)
         
         all_text = []
         metadata = {}
         
-        with pdfplumber.open(pdf_file) as pdf:
+        with fitz.open(stream=pdf_file, filetype="pdf") as pdf:
             metadata = {
-                'pages': len(pdf.pages),
-                'metadata': pdf.metadata if hasattr(pdf, 'metadata') else {}
+                'pages': pdf.page_count,
+                'metadata': pdf.metadata
             }
             
-            for page in pdf.pages:
-                text = page.extract_text()
+            for page_num in range(pdf.page_count):
+                page = pdf[page_num]
+                text = page.get_text("text", sort=True)  # Extract text with sorting
                 if text:
                     all_text.append(text)
         
         full_text = '\n\n'.join(all_text)
         
-        # Clean up text
-        full_text = ' '.join(full_text.split())  # Normalize whitespace
+        # Clean up text - normalize whitespace and remove excessive newlines
+        full_text = ' '.join(full_text.split())
         
         return {
             'success': True,

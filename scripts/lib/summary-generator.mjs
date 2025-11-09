@@ -19,7 +19,7 @@ export async function generateSummaries(resource, extractedContent) {
         {
           role: 'system',
           content:
-            'You are an expert at creating tiered summaries for BFSI (Banking, Financial Services, Insurance) knowledge resources. Generate precise, engaging summaries that help professionals quickly understand content relevance.',
+            'You are a BFSI professional explaining insights to a colleague over a beer after work. Write in plain, conversational language. Extract ACTUAL findings and concrete insights from the content - not vague promises about what "will be discussed". Be specific and down-to-earth.',
         },
         {
           role: 'user',
@@ -81,30 +81,31 @@ ${extractedContent.content || extractedContent.excerpt || 'No content available'
 Generate three summaries optimized for different contexts:
 
 1. **summary_short** - TARGET 180 CHARACTERS (acceptable: 120-240):
-   - Compelling hook for card display
-   - Scannable, punchy
-   - Focus on key value proposition
+   - Write like you're texting a colleague: "Hey, this paper found X and Y"
+   - State ACTUAL findings, not what will be covered
+   - Conversational, concrete, punchy
    - NO markdown formatting
    - Aim for exactly 180 characters, can be ±60 chars
 
 2. **summary_medium** - TARGET 360 CHARACTERS (acceptable: 240-480):
-   - Narrative preview for modal display
-   - Engaging, informative
-   - Explain what readers will learn
+   - Explain the core findings like you're chatting over coffee
+   - Use plain spoken language: "Basically, they discovered..."
+   - State SPECIFIC insights from the content, not vague descriptions
    - Simple markdown allowed (bold, italic)
    - Aim for exactly 360 characters, can be ±120 chars
 
 3. **summary_long** - TARGET 880 CHARACTERS (acceptable: 640-1120):
-   - Structured overview for detail page
+   - Explain this like you're at a bar after work with a colleague
    - Use this exact structure:
      ## Context
-     [Brief background and setting]
+     [What prompted this? Set the scene in plain language]
      
-     ## Relevance
-     [Why this matters to BFSI professionals]
+     ## Relevance  
+     [Why should BFSI folks care? Be specific and practical]
      
      ## Key Insights
-     [Main takeaways, 2-3 bullet points]
+     [What did they ACTUALLY find? Concrete takeaways, not "will explore" - use conversational language]
+   - Write naturally, avoid academic jargon
    - Full markdown formatting
    - Aim for exactly 880 characters, can be ±240 chars
 
@@ -115,7 +116,11 @@ Return as JSON:
   "summary_long": "..."
 }
 
-CRITICAL: Aim for the TARGET character counts. Count your characters carefully and adjust to hit the targets as closely as possible.`;
+CRITICAL INSTRUCTIONS:
+- Extract ACTUAL findings and insights from the content, NOT what "will be discussed"
+- Write in plain, conversational language as if explaining to a colleague over a beer
+- Be concrete and specific - use real examples and data points from the content
+- Aim for the TARGET character counts - count carefully and adjust to hit targets`;
 }
 
 function validateSummaries(summaries) {
