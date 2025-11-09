@@ -36,3 +36,6 @@ playwright-report/
 playwright-report/
 test-results/
 .playwright/
+.env
+summaries-review.json
+summaries-review.json

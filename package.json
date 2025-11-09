@@ -18,6 +18,8 @@
     "e2e": "playwright test",
     "check:links": "node scripts/check-links.mjs",
     "notes": "node scripts/generate-notes.mjs",
+    "generate:summaries": "node scripts/generate-summaries.mjs",
+    "apply:summaries": "node scripts/apply-summaries.mjs",
     "lhci": "npx @lhci/cli@0.14.0 autorun --config=.lighthouserc.json",
     "prepare": "husky"
   },
@@ -26,8 +28,10 @@
     "@astrojs/tailwind": "^6.0.2",
     "@tailwindcss/typography": "^0.5.19",
     "astro": "^5.15.1",
+    "dotenv": "^17.2.3",
     "fuse.js": "^6.6.2",
     "marked": "^17.0.0",
+    "openai": "^6.8.1",
     "tailwindcss": "3.4.18",
     "zod": "^3.25.76"
   },
