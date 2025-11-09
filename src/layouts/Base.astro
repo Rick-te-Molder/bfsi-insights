@@ -116,6 +116,44 @@ const canonical = origin + Astro.url.pathname;
           const titleText = document.getElementById('modal-title-text');
           if (titleText) titleText.textContent = title;
 
+          // Populate metadata
+          const authors = li.getAttribute('data-authors') || '';
+          const sourceName = li.getAttribute('data-source_name') || '';
+          const metaEl = document.getElementById('modal-meta');
+          if (metaEl) {
+            const parts = [];
+            if (authors) parts.push(authors);
+            if (sourceName) parts.push(sourceName);
+            metaEl.textContent = parts.join(' • ');
+          }
+
+          // Populate tags
+          const tagsEl = document.getElementById('modal-tags');
+          if (tagsEl) {
+            tagsEl.innerHTML = '';
+            const role = li.getAttribute('data-role');
+            const industry = li.getAttribute('data-industry');
+            const topic = li.getAttribute('data-topic');
+            const contentType = li.getAttribute('data-content_type');
+            const jurisdiction = li.getAttribute('data-jurisdiction');
+
+            const addTag = (text) => {
+              if (text) {
+                const tag = document.createElement('span');
+                tag.className =
+                  'rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-neutral-300';
+                tag.textContent = text;
+                tagsEl.appendChild(tag);
+              }
+            };
+
+            addTag(role);
+            addTag(industry);
+            addTag(topic);
+            addTag(contentType);
+            addTag(jurisdiction);
+          }
+
           const summaryMedium = li.getAttribute('data-summary-medium') || '';
           const noteEl = document.getElementById('modal-note');
           if (noteEl) noteEl.innerHTML = parseNote(summaryMedium);
@@ -144,14 +182,9 @@ const canonical = origin + Astro.url.pathname;
           const btn = e.target.closest('[data-open-modal]');
           if (btn) {
             e.preventDefault();
-            const card = btn.closest('li.group');
+            const card = btn.closest('li');
             if (card) openModal(card);
             return;
-          }
-
-          const card = e.target.closest('li.group');
-          if (card && !e.target.closest('a[id^="t-"]')) {
-            openModal(card);
           }
         });
       })();
