@@ -19,7 +19,7 @@ if (!item) {
 }
 
 const title = item.title;
-const description = (item.note || '').slice(0, 220);
+const description = (item.summary_medium || item.summary_short || '').slice(0, 220);
 
 const externalThumb = (u?: string) =>
   u ? `https://image.thum.io/get/nojs/width/960/crop/960/${encodeURIComponent(u)}` : null;
@@ -117,10 +117,10 @@ const ogImage = candidates[0] || undefined;
     }
 
     {
-      item.note && (
+      item.summary_long && (
         <div
           class="mt-4 text-sm text-neutral-200 prose prose-invert prose-sm max-w-none"
-          set:html={marked.parse(item.note)}
+          set:html={marked.parse(item.summary_long)}
         />
       )
     }

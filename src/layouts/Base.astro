@@ -117,9 +117,9 @@ const canonical = origin + Astro.url.pathname;
             titleLink.href = li.querySelector('a')?.href || '#';
           }
 
-          const note = li.querySelector('p')?.textContent || '';
+          const summaryMedium = li.getAttribute('data-summary-medium') || '';
           const noteEl = document.getElementById('modal-note');
-          if (noteEl) noteEl.innerHTML = parseNote(note);
+          if (noteEl) noteEl.innerHTML = parseNote(summaryMedium);
 
           // Load modal image
           const modalImg = document.getElementById('modal-img');

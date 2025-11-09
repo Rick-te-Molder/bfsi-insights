@@ -78,6 +78,7 @@ const candidates = [
   data-url={item.url}
   data-source_name={item.source_name || ''}
   data-thumbnail={item.thumbnail || ''}
+  data-summary-medium={item.summary_medium || ''}
 >
   <div class="flex items-center gap-2">
     <a
@@ -149,9 +150,9 @@ const candidates = [
       </>
     </div>
     {
-      item.note && (
+      item.summary_short && (
         <div class="mt-3">
-          <p class="text-sm text-neutral-300 line-clamp-3">{item.note}</p>
+          <p class="text-sm text-neutral-300 line-clamp-3">{item.summary_short}</p>
           <div class="mt-1 flex justify-end">
             <button
               class="text-sm text-sky-300 underline underline-offset-2"
