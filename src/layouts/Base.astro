@@ -179,12 +179,23 @@ const canonical = origin + Astro.url.pathname;
         });
 
         document.addEventListener('click', (e) => {
+          // Handle Preview button clicks
           const btn = e.target.closest('[data-open-modal]');
           if (btn) {
             e.preventDefault();
+            e.stopPropagation();
             const card = btn.closest('li');
             if (card) openModal(card);
             return;
+          }
+
+          // Handle card clicks (navigate to detail page)
+          const card = e.target.closest('li[data-slug]');
+          if (card && !e.target.closest('a[data-card-link]')) {
+            const link = card.querySelector('a[data-card-link]');
+            if (link) {
+              window.location.href = link.href;
+            }
           }
         });
       })();
