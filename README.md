@@ -93,6 +93,8 @@ FILENAME RULE
 - underscores between fields, hyphens within fields, all lowercase
 
 JSON KEYS (strictly per schema)
+
+```
 kb.item
 ├─ type: object
 ├─ additionalProperties: false
@@ -217,8 +219,9 @@ kb.item
 │  ├─ note: string
 │  └─ id: string (pattern: ^[a-f0-9]{40}$)
 └─ required:
-url, role, industry, topic, use_cases,
-agentic_capabilities, content_type, jurisdiction
+   url, role, industry, topic, use_cases,
+   agentic_capabilities, content_type, jurisdiction
+```
 
 RULES
 
