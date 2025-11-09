@@ -4,69 +4,34 @@ Agentic AI insights for executives and professionals in banking, financial servi
 
 ## 🚀 Project Structure
 
-Inside of your Astro project, you'll see the following folders and files:
+Inside of your Astro project, you'll see the following folders:
 
 bfsi-insights/
-├── .github/
-│ └── workflows/…
-├── .lighthouserc.json
-├── .lighthouserc.desktop.json
-├── .nvmrc
-├── .prettierignore
-├── .prettierrc
-├── .vscode/
-│ ├── extensions.json
-│ └── settings.json
-├── README.md
-├── astro.config.mjs
-├── eslint.config.js
-├── package.json
-├── package-lock.json
-├── postcss.config.js
-├── public/
-│ ├── favicon-dark.svg
-│ ├── favicon-light.svg
-│ ├── favicon.ico (optional; consider removing or replacing with transparent)
-│ ├── safari-pinned-tab.svg
-│ └── thumbs/ (generated/added thumbnails)
-├── schemas/
-│ └── kb.schema.json
-├── scripts/
-│ ├── add-url.mjs
-│ ├── build-resources.mjs (compose src/data/resources/resources.json from items)
-│ ├── check-links.mjs
-│ ├── filename-helper.mjs
-│ ├── generate-notes.mjs (writes notes into per-item files)
-│ └── lint-items-no-time.mjs
+├── .github/ # CI/CD workflows
+├── .vscode/ # Editor configuration
+├── public/ # Static assets (favicons, thumbnails)
+├── schemas/ # JSON schemas for validation
+├── scripts/ # Build and maintenance scripts
 ├── src/
-│ ├── data/
-│ │ └── resources/
-│ │ ├── items/ (per-item JSONs; source of truth)
-│ │ └── resources.json (composed output used by pages)
-│ ├── layouts/
-│ │ └── Base.astro
-│ ├── pages/
-│ │ ├── index.astro (Homepage; “Latest” grid)
-│ │ └── resources.astro (Resources list with filters)
-│ └── styles/
-│ └── globals.css (if present)
-├── supabase/ (project metadata/config)
-│ └── … (if used)
-├── tailwind.config.js
-├── tsconfig.json
-└── dist/ (build output)
+│ ├── components/ # Reusable UI components
+│ ├── data/ # Resource data (items/, resources.json)
+│ ├── features/ # Feature-specific components
+│ ├── layouts/ # Page layouts
+│ ├── lib/ # Utility functions
+│ ├── pages/ # Route pages (.astro files)
+│ ├── shared/ # Shared utilities
+│ ├── styles/ # Global styles
+│ └── types/ # TypeScript type definitions
+├── supabase/ # Database configuration (if used)
+└── dist/ # Build output
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+**Key directories:**
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
-
-Any static assets, like images, can be placed in the `public/` directory.
-
-src/data/resources/items is the canonical store; run scripts/build-resources.mjs to regenerate resources.json if needed.
-
-scripts/generate-notes.mjs can fill per-item notes from URLs.
-
-Favicons in public/ include SVGs and Safari mask; SVGs are preferred in Base.astro.
+- `src/pages/` — Astro looks for `.astro` or `.md` files here. Each page is exposed as a route based on its file name.
+- `src/components/` and `src/features/` — Reusable Astro/React/Vue/Svelte/Preact components.
+- `public/` — Static assets like images and favicons.
+- `src/data/resources/items/` — Canonical store for resource items (per-item JSONs). Run `scripts/build-resources.mjs` to regenerate `resources.json`.
+- `scripts/` — Includes utilities like `generate-notes.mjs` to fill per-item notes from URLs.
 
 ## Getting Started
 
