@@ -110,45 +110,19 @@ const canonical = origin + Astro.url.pathname;
           modal.classList.remove('hidden');
           document.body.style.overflow = 'hidden';
 
-          const title = li.querySelector('a')?.textContent?.trim() || '';
-          const titleLink = document.getElementById('modal-title-link');
-          if (titleLink) {
-            titleLink.textContent = title;
-            titleLink.href = li.querySelector('a')?.href || '#';
-          }
+          const title = li.querySelector('a')?.textContent || '';
+          const detailHref = li.querySelector('a')?.href || '#';
+
+          const titleText = document.getElementById('modal-title-text');
+          if (titleText) titleText.textContent = title;
 
           const summaryMedium = li.getAttribute('data-summary-medium') || '';
           const noteEl = document.getElementById('modal-note');
           if (noteEl) noteEl.innerHTML = parseNote(summaryMedium);
 
-          // Load modal image
-          const modalImg = document.getElementById('modal-img');
-          if (modalImg) {
-            const thumb = li.getAttribute('data-thumbnail') || '';
-            const slug = li.getAttribute('data-slug') || '';
-            const candidates = [];
-            if (thumb) {
-              if (/\.(webp|png|jpe?g)$/i.test(thumb)) candidates.push(thumb);
-              else candidates.push(thumb + '.png', thumb + '.webp', thumb + '.jpg');
-            }
-            if (slug) candidates.push(`/thumbs/${slug}.png`, `/thumbs/${slug}.webp`);
-
-            if (candidates.length) {
-              modalImg.src = candidates[0];
-              modalImg.dataset.next = candidates.slice(1).join('|');
-              modalImg.onerror = () => {
-                const next = modalImg.dataset.next || '';
-                if (next) {
-                  const parts = next.split('|');
-                  const nx = parts.shift();
-                  modalImg.dataset.next = parts.join('|');
-                  if (nx) modalImg.src = nx;
-                }
-              };
-            }
-          }
-
-          document.getElementById('modal-close')?.focus();
+          // Update view details link
+          const viewDetailsBtn = document.getElementById('modal-view-details');
+          if (viewDetailsBtn) viewDetailsBtn.href = detailHref;
         };
 
         const closeModal = () => {

@@ -168,11 +168,18 @@ const ogImage = candidates[0] || undefined;
         href={item.url}
         target="_blank"
         rel="noopener"
-        class="text-sky-300 underline underline-offset-2"
+        class="inline-flex items-center gap-2 rounded-lg border border-sky-600 bg-sky-600/10 px-5 py-2.5 text-sm font-semibold text-sky-300 hover:bg-sky-600/20 transition-colors"
         aria-label={`Open original on ${item.source_name || 'source'} for ${item.title}`}
         title={`Opens ${item.source_name || 'the publisher'} in a new tab`}
       >
-        Open on {item.source_name || 'original'} →
+        Open on {item.source_name || 'original'}
+        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+        </svg>
       </a>
     </div>
   </article>

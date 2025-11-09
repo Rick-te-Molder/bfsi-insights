@@ -9,53 +9,42 @@
     <div
       class="relative mt-10 w-full max-w-3xl rounded-2xl border border-neutral-800 bg-neutral-950 shadow-xl"
     >
-      <button
-        id="modal-close"
-        aria-label="Close"
-        class="absolute right-3 top-3 rounded p-2 text-neutral-300 hover:text-white">✕</button
-      >
-      <div class="p-5">
-        <h3 id="modal-title" class="text-xl font-semibold pr-14 md:pr-16">
-          <a id="modal-title-link" href="#" class="underline-offset-2 hover:underline"></a>
+      <div class="absolute right-3 top-3 flex items-center gap-3">
+        <span class="text-xs text-neutral-500"
+          >Press <kbd
+            class="rounded border border-neutral-700 bg-neutral-800 px-1.5 py-0.5 text-neutral-400"
+            >ESC</kbd
+          > to close</span
+        >
+        <button
+          id="modal-close"
+          aria-label="Close"
+          class="rounded p-2 text-neutral-300 hover:text-white">✕</button
+        >
+      </div>
+      <div class="p-6">
+        <h3 id="modal-title" class="text-2xl font-semibold pr-32">
+          <span id="modal-title-text" class="text-sky-200"></span>
         </h3>
-        <div class="mt-0 text-sm text-neutral-300 pr-14 md:pr-16" id="modal-meta"></div>
-        <div class="mt-0 relative">
-          <div style="aspect-ratio: 16 / 9"></div>
-          <div
-            id="modal-skeleton"
-            class="absolute inset-0 rounded-md border border-neutral-800 bg-neutral-800/40"
-          >
-          </div>
-          <img
-            id="modal-img"
-            alt=""
-            class="absolute inset-0 h-full w-full rounded-md border border-neutral-800 object-cover opacity-0"
-            width="960"
-            height="540"
-            loading="eager"
-            onload="this.classList.remove('opacity-0'); const sk=document.getElementById('modal-skeleton'); if(sk) sk.style.display='none'"
-            onerror="const n=this.dataset.next||''; if(n){ const parts=n.split('|'); const nx=parts.shift(); this.dataset.next=parts.join('|'); if(nx){ this.src=nx; return; } } const sk=document.getElementById('modal-skeleton'); if(sk) sk.style.display='none'; this.style.display='none'"
-          />
-        </div>
+        <div class="mt-2 text-sm text-neutral-400" id="modal-meta"></div>
         <div id="modal-tags" class="mt-4 flex flex-wrap gap-2 text-xs"></div>
         <div
           id="modal-note"
-          class="mt-4 text-sm text-neutral-200 prose prose-invert prose-sm max-w-none"
+          class="mt-4 text-base text-neutral-200 prose prose-invert prose-sm max-w-none"
         >
         </div>
-        <div class="mt-4 flex flex-wrap gap-4 items-center">
-          <a id="modal-view-details" class="text-sky-300 underline underline-offset-2" href="#"
-            >View details →</a
-          >
+        <div class="mt-6">
           <a
-            id="modal-link"
-            class="text-sky-300 underline underline-offset-2"
-            target="_blank"
-            rel="noopener"
+            id="modal-view-details"
+            class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-sky-500 transition-colors"
             href="#"
-            title="Opens the publisher’s site in a new tab"
-            >Open on <span id="modal-source">original</span> →</a
           >
+            View full details
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
+              ></path>
+            </svg>
+          </a>
         </div>
       </div>
     </div>
