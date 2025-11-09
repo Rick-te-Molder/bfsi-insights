@@ -1,6 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://bfsiinsights.com/schemas/kb.schema.json",
+  "title": "BFSI Insights Resource Schema",
+  "description": "Canonical schema for BFSI knowledge base resources. This is the single source of truth - resource-schema.mjs (Zod) is derived from this file. Used by build-resources.mjs for strict validation during build.",
   "type": "object",
   "additionalProperties": false,
   "properties": {

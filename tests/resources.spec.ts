@@ -8,7 +8,7 @@ describe('resource schema', () => {
         slug: 'abc',
         title: 'Title',
         url: 'https://example.com',
-        topic: 'ai',
+        topic: 'technology-and-data-ai',
         content_type: ['report'],
       },
     ];
