@@ -6,24 +6,26 @@ Agentic AI insights for executives and professionals in banking, financial servi
 
 Inside of your Astro project, you'll see the following folders:
 
+```
 bfsi-insights/
-├── .github/ # CI/CD workflows
-├── .vscode/ # Editor configuration
-├── public/ # Static assets (favicons, thumbnails)
-├── schemas/ # JSON schemas for validation
-├── scripts/ # Build and maintenance scripts
+├── .github/          # CI/CD workflows
+├── .vscode/          # Editor configuration
+├── public/           # Static assets (favicons, thumbnails)
+├── schemas/          # JSON schemas for validation
+├── scripts/          # Build and maintenance scripts
 ├── src/
-│ ├── components/ # Reusable UI components
-│ ├── data/ # Resource data (items/, resources.json)
-│ ├── features/ # Feature-specific components
-│ ├── layouts/ # Page layouts
-│ ├── lib/ # Utility functions
-│ ├── pages/ # Route pages (.astro files)
-│ ├── shared/ # Shared utilities
-│ ├── styles/ # Global styles
-│ └── types/ # TypeScript type definitions
-├── supabase/ # Database configuration (if used)
-└── dist/ # Build output
+│   ├── components/   # Reusable UI components
+│   ├── data/         # Resource data (items/, resources.json)
+│   ├── features/     # Feature-specific components
+│   ├── layouts/      # Page layouts
+│   ├── lib/          # Utility functions
+│   ├── pages/        # Route pages (.astro files)
+│   ├── shared/       # Shared utilities
+│   ├── styles/       # Global styles
+│   └── types/        # TypeScript type definitions
+├── supabase/         # Database configuration (if used)
+└── dist/             # Build output
+```
 
 **Key directories:**
 
