@@ -137,6 +137,9 @@
     },
     "jurisdiction": { "type": "string", "enum": ["eu", "uk", "us", "nl", "global", "other"] },
     "note": { "type": "string" },
+    "summary_short": { "type": "string", "minLength": 120, "maxLength": 240 },
+    "summary_medium": { "type": "string", "minLength": 240, "maxLength": 480 },
+    "summary_long": { "type": "string", "minLength": 640, "maxLength": 1120 },
     "id": { "type": "string", "pattern": "^[a-f0-9]{40}$" }
   },
   "required": [

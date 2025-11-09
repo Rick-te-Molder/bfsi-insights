@@ -148,6 +148,9 @@ export const Resource = z.object({
     .transform(normalizeArray),
   jurisdiction: JurisdictionEnum.optional(),
   note: z.string().optional(),
+  summary_short: z.string().min(120).max(240).optional(),
+  summary_medium: z.string().min(240).max(480).optional(),
+  summary_long: z.string().min(640).max(1120).optional(),
   id: z
     .string()
     .regex(/^[a-f0-9]{40}$/)
