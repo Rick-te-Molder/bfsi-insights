@@ -3,7 +3,6 @@ import { z } from 'zod';
 // Generated from kb.schema.json - keep in sync with canonical schema
 // This schema is more lenient for runtime validation and includes transformations
 
-const StringOrStringArray = z.union([z.string(), z.array(z.string())]).optional();
 const normalizeArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 
 // Enums from kb.schema.json

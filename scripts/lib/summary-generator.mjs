@@ -9,9 +9,9 @@ const openai = new OpenAI({
 });
 
 export async function generateSummaries(resource, extractedContent) {
-  // Handle PDFs differently - upload to OpenAI
+  // Handle PDFs differently - use metadata approach
   if (extractedContent.isPdf) {
-    return await generateSummariesFromPDF(resource, extractedContent);
+    return await generateSummariesFromPDF(resource);
   }
 
   // Handle HTML/text content
@@ -127,7 +127,7 @@ IMPORTANT: Each summary MUST meet the minimum character requirements. Count char
  * Generate summaries from PDF using metadata (temporary solution)
  * TODO: Implement proper PDF extraction using external service for scale
  */
-async function generateSummariesFromPDF(resource, extractedContent) {
+async function generateSummariesFromPDF(resource) {
   try {
     const prompt = buildPromptForPDF(resource);
 
