@@ -58,7 +58,7 @@
     "node": ">=20 <25"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,astro,json,css,md}": [
+    "*.{ts,tsx,js,jsx,mjs,astro,json,css,md}": [
       "prettier --write",
       "eslint --fix"
     ]
