@@ -81,7 +81,7 @@ const candidates = [
 >
   <a
     href={`/${item.slug}`}
-    class="absolute inset-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 pointer-events-none"
+    class="absolute inset-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 z-0"
     aria-label={`View details for ${item.title}`}
     tabindex="0"
     data-card-link
@@ -160,7 +160,7 @@ const candidates = [
           <p class="text-sm text-neutral-300 line-clamp-3">{item.summary_short}</p>
           <div class="mt-2 flex justify-end">
             <button
-              class="inline-flex items-center gap-1 text-sm text-sky-300 hover:text-sky-200 transition-colors px-2 py-1 rounded hover:bg-neutral-800/50"
+              class="relative z-20 inline-flex items-center gap-1 text-sm text-sky-300 hover:text-sky-200 transition-colors px-2 py-1 rounded hover:bg-neutral-800/50"
               type="button"
               data-open-modal="true"
               aria-label="Preview summary"
