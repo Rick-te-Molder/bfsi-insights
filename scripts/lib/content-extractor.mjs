@@ -1,6 +1,14 @@
 #!/usr/bin/env node
 import { Readability } from '@mozilla/readability';
 import { JSDOM } from 'jsdom';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const execFileAsync = promisify(execFile);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export async function extractContent(url) {
   try {
@@ -87,41 +95,44 @@ async function extractFromHTML(url) {
 }
 
 /**
- * Extract content from PDF - returns buffer for OpenAI to process
+ * Extract content from PDF using Python script
  */
 async function extractFromPDF(url) {
   try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; BFSI-Insights/1.0)',
-      },
-    });
+    // Call Python script
+    const scriptPath = path.join(__dirname, '..', 'extract-pdf.py');
+    const { stdout, stderr } = await execFileAsync('python3', [scriptPath, url]);
 
-    if (!response.ok) {
+    if (stderr) {
+      console.error('Python stderr:', stderr);
+    }
+
+    const result = JSON.parse(stdout);
+
+    if (!result.success) {
       return {
         success: false,
-        error: 'fetch_failed',
-        message: `HTTP ${response.status}: ${response.statusText}`,
+        error: result.error,
+        message: result.message,
       };
     }
 
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    // Return PDF as buffer - OpenAI will process it directly
     return {
       success: true,
-      isPdf: true,
       title: 'PDF Document',
-      pdfBuffer: buffer,
-      content: '[PDF content - will be processed by OpenAI]',
-      excerpt: 'PDF document',
+      content: result.text,
+      excerpt: result.text.substring(0, 500),
+      metadata: {
+        pages: result.pages,
+        char_count: result.char_count,
+        source: 'python_pdfplumber',
+      },
     };
   } catch (error) {
     return {
       success: false,
       error: error.message,
-      message: `PDF fetch failed: ${error.message}`,
+      message: `PDF extraction failed: ${error.message}`,
     };
   }
 }

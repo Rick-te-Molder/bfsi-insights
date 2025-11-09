@@ -9,12 +9,7 @@ const openai = new OpenAI({
 });
 
 export async function generateSummaries(resource, extractedContent) {
-  // Handle PDFs differently - use metadata approach
-  if (extractedContent.isPdf) {
-    return await generateSummariesFromPDF(resource);
-  }
-
-  // Handle HTML/text content
+  // Both HTML and PDF content are now text-based
   const prompt = buildPrompt(resource, extractedContent);
 
   try {
@@ -85,21 +80,21 @@ ${extractedContent.content || extractedContent.excerpt || 'No content available'
 
 Generate three summaries optimized for different contexts:
 
-1. **summary_short** - MUST BE 120-240 CHARACTERS:
+1. **summary_short** - TARGET 180 CHARACTERS (acceptable: 120-240):
    - Compelling hook for card display
    - Scannable, punchy
    - Focus on key value proposition
    - NO markdown formatting
-   - CRITICAL: Must be AT LEAST 120 characters, maximum 240
+   - Aim for exactly 180 characters, can be ±60 chars
 
-2. **summary_medium** - MUST BE 240-480 CHARACTERS:
+2. **summary_medium** - TARGET 360 CHARACTERS (acceptable: 240-480):
    - Narrative preview for modal display
    - Engaging, informative
    - Explain what readers will learn
    - Simple markdown allowed (bold, italic)
-   - CRITICAL: Must be AT LEAST 240 characters, maximum 480
+   - Aim for exactly 360 characters, can be ±120 chars
 
-3. **summary_long** - MUST BE 640-1120 CHARACTERS:
+3. **summary_long** - TARGET 880 CHARACTERS (acceptable: 640-1120):
    - Structured overview for detail page
    - Use this exact structure:
      ## Context
@@ -111,7 +106,7 @@ Generate three summaries optimized for different contexts:
      ## Key Insights
      [Main takeaways, 2-3 bullet points]
    - Full markdown formatting
-   - CRITICAL: Must be AT LEAST 640 characters, maximum 1120
+   - Aim for exactly 880 characters, can be ±240 chars
 
 Return as JSON:
 {
@@ -120,125 +115,7 @@ Return as JSON:
   "summary_long": "..."
 }
 
-IMPORTANT: Each summary MUST meet the minimum character requirements. Count characters carefully before responding.`;
-}
-
-/**
- * Generate summaries from PDF using metadata (temporary solution)
- * TODO: Implement proper PDF extraction using external service for scale
- */
-async function generateSummariesFromPDF(resource) {
-  try {
-    const prompt = buildPromptForPDF(resource);
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are an expert at creating tiered summaries for BFSI knowledge resources. Based on title and metadata provided, generate precise summaries.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.7,
-    });
-
-    const result = JSON.parse(response.choices[0].message.content);
-
-    const validation = validateSummaries(result);
-    if (!validation.valid) {
-      return {
-        success: false,
-        error: 'validation_failed',
-        message: validation.errors.join(', '),
-        raw: result,
-      };
-    }
-
-    return {
-      success: true,
-      summaries: {
-        summary_short: result.summary_short,
-        summary_medium: result.summary_medium,
-        summary_long: result.summary_long,
-      },
-      metadata: {
-        model: 'gpt-4o',
-        tokens: response.usage,
-        source: 'pdf_metadata',
-      },
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error.message,
-      message: `PDF summary generation failed: ${error.message}`,
-    };
-  }
-}
-
-function buildPromptForPDF(resource) {
-  const existingNote = resource.note || 'No additional context available';
-
-  return `Generate three-tier summaries for this BFSI PDF document based on its metadata and existing notes.
-
-<source_metadata>
-Title: ${resource.title}
-Authors: ${resource.authors?.join(', ') || 'Unknown'}
-Source: ${resource.source_name || 'Unknown'}
-Type: ${resource.content_type}
-Industry: ${resource.industry}
-Topic: ${resource.topic}
-URL: ${resource.url}
-</source_metadata>
-
-<existing_notes>
-${existingNote}
-</existing_notes>
-
-Based on this information, generate three summaries optimized for different contexts:
-
-1. **summary_short** - MUST BE 120-240 CHARACTERS:
-   - Compelling hook for card display
-   - Scannable, punchy
-   - Focus on key value proposition
-   - NO markdown formatting
-   - CRITICAL: Must be AT LEAST 120 characters, maximum 240
-
-2. **summary_medium** - MUST BE 240-480 CHARACTERS:
-   - Narrative preview for modal display
-   - Engaging, informative
-   - Explain what readers will learn
-   - Simple markdown allowed (bold, italic)
-   - CRITICAL: Must be AT LEAST 240 characters, maximum 480
-
-3. **summary_long** - MUST BE 640-1120 CHARACTERS:
-   - Structured overview for detail page
-   - Use this exact structure:
-     ## Context
-     [Brief background and setting]
-     
-     ## Relevance
-     [Why this matters to BFSI professionals]
-     
-     ## Key Insights
-     [Main takeaways, 2-3 bullet points]
-   - Full markdown formatting
-   - CRITICAL: Must be AT LEAST 640 characters, maximum 1120
-
-Return as JSON:
-{
-  "summary_short": "...",
-  "summary_medium": "...",
-  "summary_long": "..."
-}
-
-IMPORTANT: Each summary MUST meet the minimum character requirements. Count characters carefully before responding.`;
+CRITICAL: Aim for the TARGET character counts. Count your characters carefully and adjust to hit the targets as closely as possible.`;
 }
 
 function validateSummaries(summaries) {
