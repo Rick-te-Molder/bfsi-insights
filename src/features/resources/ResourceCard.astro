@@ -81,14 +81,14 @@ const candidates = [
 >
   <a
     href={`/${item.slug}`}
-    class="absolute inset-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 z-0"
+    class="absolute inset-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 z-10"
     aria-label={`View details for ${item.title}`}
     tabindex="0"
     data-card-link
   >
   </a>
 
-  <div class="relative z-10">
+  <div class="relative z-20 pointer-events-none">
     <div class="flex items-center gap-2">
       <h3 id={`t-${item.slug}`} class="text-xl font-semibold text-sky-200">
         {item.title}
@@ -110,16 +110,10 @@ const candidates = [
     </div>
     <div class="relative mt-1 text-sm text-neutral-200">
       {
-        isHome ? (
-          <span title="Date added">
-            <span class="text-neutral-400">Added</span> {fmt(item.date_added)}
+        item.date_published && (
+          <span title="Date published">
+            <span class="text-neutral-400">Published</span> {fmt(item.date_published)}
           </span>
-        ) : (
-          item.date_published && (
-            <span title="Date published">
-              <span class="text-neutral-400">Published</span> {fmt(item.date_published)}
-            </span>
-          )
         )
       }
       {item.source_name && <span> · {item.source_name}</span>}
@@ -155,7 +149,7 @@ const candidates = [
             <p class="text-sm text-neutral-300 line-clamp-3">{item.summary_short}</p>
             <div class="mt-2 flex justify-end">
               <button
-                class="relative z-30 inline-flex items-center gap-1 text-sm text-sky-300 hover:text-sky-200 transition-colors px-2 py-1 rounded hover:bg-neutral-800/50"
+                class="relative z-30 inline-flex items-center gap-1 text-sm text-sky-300 hover:text-sky-200 transition-colors px-2 py-1 rounded hover:bg-neutral-800/50 pointer-events-auto"
                 type="button"
                 data-open-modal="true"
                 aria-label="Preview summary"
