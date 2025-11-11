@@ -1,4 +1,16 @@
 #!/usr/bin/env node
+/**
+ * Enrichment Agent - Generates summaries and tags using full taxonomies from database
+ *
+ * Usage:
+ *   node scripts/enrich.mjs              # Enrich all pending
+ *   node scripts/enrich.mjs --limit=5    # Limit to 5 items
+ *   node scripts/enrich.mjs --dry-run    # Preview only
+ *
+ * Requires: OPENAI_API_KEY in .env
+ * Schema: Pulls taxonomy values from bfsi_industry, bfsi_topic tables
+ */
+
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
@@ -7,10 +19,76 @@ dotenv.config();
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
+// Cache for taxonomy values
+let TAXONOMIES = null;
+
+async function loadTaxonomies() {
+  if (TAXONOMIES) return TAXONOMIES;
+
+  console.log('📚 Loading taxonomies from database...');
+
+  const [industries, topics] = await Promise.all([
+    supabase.from('bfsi_industry').select('slug, label, level').order('sort_order'),
+    supabase.from('bfsi_topic').select('slug, label, level').order('sort_order'),
+  ]);
+
+  if (industries.error || topics.error) {
+    throw new Error('Failed to load taxonomies from database');
+  }
+
+  TAXONOMIES = {
+    role: ['executive', 'professional', 'academic'],
+    industry: industries.data.map((i) => i.slug),
+    topic: topics.data.map((t) => t.slug),
+    content_type: [
+      'report',
+      'white-paper',
+      'peer-reviewed-paper',
+      'article',
+      'presentation',
+      'webinar',
+      'dataset',
+      'website',
+      'policy-document',
+    ],
+    geography: ['eu', 'uk', 'us', 'nl', 'global', 'other'],
+    use_cases: [
+      'customer-onboarding',
+      'identity-verification',
+      'document-processing',
+      'transaction-monitoring',
+      'credit-assessment',
+      'fraud-detection',
+      'claims-handling',
+      'portfolio-analytics',
+      'regulatory-reporting',
+      'audit-support',
+    ],
+    agentic_capabilities: [
+      'reasoning',
+      'planning',
+      'memory',
+      'tool-use',
+      'collaboration',
+      'autonomy',
+      'evaluation',
+      'monitoring',
+    ],
+  };
+
+  console.log(
+    `   ✓ Loaded ${TAXONOMIES.industry.length} industries, ${TAXONOMIES.topic.length} topics\n`,
+  );
+
+  return TAXONOMIES;
+}
+
 async function enrich(options = {}) {
   const { limit, dryRun = false } = options;
   console.log('🧠 Starting enrichment...');
   console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}\n`);
+
+  await loadTaxonomies();
 
   const { data: items, error } = await supabase
     .from('ingestion_queue')
@@ -39,12 +117,12 @@ async function enrich(options = {}) {
           .from('ingestion_queue')
           .update({
             payload: { ...item.payload, summary: enrichment.summary, tags: enrichment.tags },
-            prompt_version: 'v1.1',
+            prompt_version: 'v2.0-db-taxonomy',
             model_id: 'gpt-4o-mini',
           })
           .eq('id', item.id);
         console.log(
-          `   ✅ Role: ${enrichment.tags.role}, Industry: ${enrichment.tags.industry}, Topic: ${enrichment.tags.topic}`,
+          `   ✅ ${enrichment.tags.role} | ${enrichment.tags.industry} | ${enrichment.tags.topic}`,
         );
       } else {
         console.log(`   [DRY] ${enrichment.summary.short.substring(0, 60)}...`);
@@ -62,31 +140,38 @@ async function enrich(options = {}) {
 async function generateEnrichment(content, title) {
   if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not set');
 
-  const prompt = `You are a BFSI analyst. Analyze this resource and return ONLY valid JSON.
+  const taxonomies = await loadTaxonomies();
+
+  const prompt = `You are a BFSI AI analyst. Analyze this resource and return ONLY valid JSON.
 
 Title: ${title}
 Content: ${content}
 
-Return JSON with this EXACT structure. Pick ONE value per field from the allowed list:
+Return JSON with this structure. Pick the SINGLE MOST SPECIFIC value for each field:
 
 {
   "summary": {
-    "short": "35-50 word elevator pitch",
-    "medium": "120-180 word analysis with BFSI implications",
-    "long": "300+ word comprehensive analysis"
+    "short": "120-240 characters - concise summary for cards",
+    "medium": "240-480 characters - detailed analysis with BFSI context",
+    "long": "640-1120 characters - comprehensive analysis with implications"
   },
   "tags": {
-    "role": "PICK ONE: executive OR practitioner OR academic",
-    "industry": "PICK ONE: banking OR insurance OR fintech OR wealth-management OR payments OR general",
-    "topic": "PICK ONE: agentic-ai OR generative-ai OR machine-learning OR risk-management OR customer-experience OR regulatory-compliance OR data-analytics",
-    "content_type": "PICK ONE: article OR report OR peer-reviewed-paper OR whitepaper OR blog-article",
-    "jurisdiction": "PICK ONE: EU OR US OR UK OR APAC OR global OR none",
-    "use_cases": ["array of 2-5 specific BFSI use cases"],
-    "agentic_capabilities": ["array of 2-5 agent capabilities if mentioned, else empty array"]
+    "role": "ONE OF: ${taxonomies.role.join(', ')}",
+    "industry": "ONE OF (pick MOST SPECIFIC): ${taxonomies.industry.join(', ')}",
+    "topic": "ONE OF (pick MOST SPECIFIC): ${taxonomies.topic.join(', ')}",
+    "content_type": "ONE OF: ${taxonomies.content_type.join(', ')}",
+    "geography": "ONE OF: ${taxonomies.geography.join(', ')} (regulatory OR market focus)",
+    "use_cases": "ONE OF: ${taxonomies.use_cases.join(', ')}",
+    "agentic_capabilities": "ONE OF: ${taxonomies.agentic_capabilities.join(', ')}"
   }
 }
 
-CRITICAL: Each tag field MUST be exactly ONE of the allowed values. Do NOT invent new values.`;
+RULES:
+1. Pick EXACTLY ONE value per field
+2. Use most SPECIFIC hierarchical value (e.g., "technology-and-data-agentic-engineering" not "technology-and-data")
+3. All lowercase, hyphenated
+4. Geography: if regulatory focus → jurisdiction, if market focus → geographic region
+5. If no clear fit, use parent category (e.g., "banking" if no specific subsector)`;
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',

@@ -135,7 +135,7 @@
         "policy-document"
       ]
     },
-    "jurisdiction": { "type": "string", "enum": ["eu", "uk", "us", "nl", "global", "other"] },
+    "geography": { "type": "string", "enum": ["eu", "uk", "us", "nl", "global", "other"] },
     "note": { "type": "string" },
     "summary_short": { "type": "string", "minLength": 120, "maxLength": 240 },
     "summary_medium": { "type": "string", "minLength": 240, "maxLength": 480 },
