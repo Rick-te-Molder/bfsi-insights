@@ -1,0 +1,195 @@
+---
+import Base from '../../layouts/Base.astro';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+);
+
+const { data: pending } = await supabase
+  .from('ingestion_queue')
+  .select('*')
+  .eq('status', 'pending')
+  .order('discovered_at', { ascending: false });
+
+const enriched = pending?.filter((item) => item.payload?.summary?.short) || [];
+const notEnriched = pending?.filter((item) => !item.payload?.summary?.short) || [];
+---
+
+<Base title="Review Queue">
+  <div class="mx-auto max-w-7xl px-4 py-8">
+    <header class="mb-8">
+      <h1 class="text-4xl font-bold">📋 Review Queue</h1>
+      <p class="mt-2 text-neutral-300">Approve or reject discovered resources</p>
+      <div class="mt-4 flex gap-4 text-sm">
+        <span class="rounded-full bg-sky-500/10 px-3 py-1 text-sky-300">
+          {enriched.length} ready to review
+        </span>
+        <span class="rounded-full bg-amber-500/10 px-3 py-1 text-amber-300">
+          {notEnriched.length} awaiting enrichment
+        </span>
+      </div>
+    </header>
+
+    {
+      enriched.length === 0 && notEnriched.length === 0 && (
+        <div class="rounded-lg border border-neutral-800 bg-neutral-900/60 p-8 text-center">
+          <p class="text-neutral-400">✨ Queue is empty!</p>
+        </div>
+      )
+    }
+
+    {
+      notEnriched.length > 0 && (
+        <div class="mb-8 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4">
+          <p class="text-amber-300">⏳ {notEnriched.length} items need enrichment</p>
+          <code class="mt-2 inline-block rounded bg-neutral-800 px-3 py-2 text-sm">
+            node scripts/enrich.mjs
+          </code>
+        </div>
+      )
+    }
+
+    <div class="space-y-6">
+      {
+        enriched.map((item) => (
+          <article
+            class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 transition hover:border-neutral-700"
+            data-item-id={item.id}
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1">
+                <h2 class="text-2xl font-semibold text-sky-200">{item.payload.title}</h2>
+                <div class="mt-2 flex flex-wrap gap-2 text-sm text-neutral-400">
+                  <span>🔗 {item.payload.source}</span>
+                  <span>📅 {new Date(item.payload.published_at).toLocaleDateString()}</span>
+                </div>
+
+                {item.payload.summary?.short && (
+                  <p class="mt-4 text-neutral-300">{item.payload.summary.short}</p>
+                )}
+
+                {item.payload.tags && (
+                  <div class="mt-4 flex flex-wrap gap-2">
+                    {item.payload.tags.role && (
+                      <span class="rounded-full bg-purple-500/10 px-3 py-1 text-xs text-purple-300">
+                        {item.payload.tags.role}
+                      </span>
+                    )}
+                    {item.payload.tags.industry && (
+                      <span class="rounded-full bg-blue-500/10 px-3 py-1 text-xs text-blue-300">
+                        {item.payload.tags.industry}
+                      </span>
+                    )}
+                    {item.payload.tags.topic && (
+                      <span class="rounded-full bg-green-500/10 px-3 py-1 text-xs text-green-300">
+                        {item.payload.tags.topic}
+                      </span>
+                    )}
+                    {item.payload.tags.content_type && (
+                      <span class="rounded-full bg-orange-500/10 px-3 py-1 text-xs text-orange-300">
+                        {item.payload.tags.content_type}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="mt-4 inline-block text-sm text-sky-400 hover:text-sky-300"
+                >
+                  View original →
+                </a>
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <button
+                  class="approve-btn rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-500 transition"
+                  data-id={item.id}
+                >
+                  ✓ Approve
+                </button>
+                <button
+                  class="reject-btn rounded-lg bg-red-600 px-6 py-2 font-semibold text-white hover:bg-red-500 transition"
+                  data-id={item.id}
+                >
+                  ✗ Reject
+                </button>
+              </div>
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+
+  <script>
+    document.querySelectorAll('.approve-btn').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        const id = (e.target as HTMLElement).dataset.id;
+        if (!id) return;
+
+        const article = document.querySelector(`[data-item-id="${id}"]`);
+        if (!article) return;
+
+        try {
+          const response = await fetch('/api/approve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id }),
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            article.classList.add('opacity-50');
+            (e.target as HTMLElement).textContent = '✓ Approved!';
+            (e.target as HTMLElement).disabled = true;
+            setTimeout(() => article.remove(), 1000);
+          } else {
+            alert('Error: ' + result.error);
+          }
+        } catch {
+          alert('Failed to approve');
+        }
+      });
+    });
+
+    document.querySelectorAll('.reject-btn').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        const id = (e.target as HTMLElement).dataset.id;
+        if (!id) return;
+
+        const reason = prompt('Reason for rejection (optional):');
+        if (reason === null) return;
+
+        const article = document.querySelector(`[data-item-id="${id}"]`);
+        if (!article) return;
+
+        try {
+          const response = await fetch('/api/reject', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, reason }),
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            article.classList.add('opacity-50');
+            (e.target as HTMLElement).textContent = '✗ Rejected';
+            (e.target as HTMLElement).disabled = true;
+            setTimeout(() => article.remove(), 1000);
+          } else {
+            alert('Error: ' + result.error);
+          }
+        } catch {
+          alert('Failed to reject');
+        }
+      });
+    });
+  </script>
+</Base>
