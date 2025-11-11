@@ -52,7 +52,7 @@ export async function getAllResources(): Promise<Resource[]> {
     .from('kb_resource_pretty')
     .select('*')
     .eq('status', 'published')
-    .order('date_added', { ascending: false });
+    .order('date_published', { ascending: false });
 
   if (error) {
     console.error('Error fetching resources:', error);
@@ -95,7 +95,7 @@ export async function getFilteredResources(filters: {
   if (filters.content_type) query = query.eq('content_type', filters.content_type);
   if (filters.jurisdiction) query = query.eq('jurisdiction', filters.jurisdiction);
 
-  query = query.order('date_added', { ascending: false });
+  query = query.order('date_published', { ascending: false });
 
   const { data, error } = await query;
 
