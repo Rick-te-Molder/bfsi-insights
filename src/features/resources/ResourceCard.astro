@@ -81,12 +81,15 @@ const candidates = [
 >
   <a
     href={`/${item.slug}`}
-    class="absolute inset-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 z-10"
+    class="absolute inset-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 z-0"
     aria-label={`View details for ${item.title}`}
     tabindex="0"
     data-card-link
   >
-    <div class="relative z-10 flex items-center gap-2 pointer-events-none">
+  </a>
+
+  <div class="relative z-10">
+    <div class="flex items-center gap-2">
       <h3 id={`t-${item.slug}`} class="text-xl font-semibold text-sky-200">
         {item.title}
       </h3>
@@ -124,32 +127,27 @@ const candidates = [
     </div>
 
     <div class="relative mt-2">
-      <div class="relative">
-        <>
-          <div style="aspect-ratio: 16 / 9"></div>
-          <div
-            class="absolute inset-0 w-full rounded-md border border-neutral-800 bg-neutral-800/40"
-            style="aspect-ratio: 16 / 9"
-          >
-          </div>
-          {
-            candidates.length ? (
-              <img
-                src={candidates[0]}
-                data-next={candidates.slice(1).join('|')}
-                alt={`${item.source_name || 'Source'} preview`}
-                width={isFirst ? 960 : 640}
-                height={isFirst ? 540 : 360}
-                loading={isFirst ? 'eager' : 'lazy'}
-                fetchpriority={isFirst ? 'high' : 'auto'}
-                decoding="async"
-                referrerpolicy="no-referrer"
-                sizes="(min-width: 1024px) 560px, (min-width: 640px) 480px, 100vw"
-                class="absolute inset-0 w-full h-full rounded-md border border-neutral-800 object-cover opacity-0"
-              />
-            ) : null
-          }
-        </>
+      <div
+        class="relative w-full rounded-md border border-neutral-800 bg-neutral-800/40"
+        style="aspect-ratio: 16 / 9; overflow: hidden;"
+      >
+        {
+          candidates.length ? (
+            <img
+              src={candidates[0]}
+              data-next={candidates.slice(1).join('|')}
+              alt={`${item.source_name || 'Source'} preview`}
+              width={isFirst ? 960 : 640}
+              height={isFirst ? 540 : 360}
+              loading={isFirst ? 'eager' : 'lazy'}
+              fetchpriority={isFirst ? 'high' : 'auto'}
+              decoding="async"
+              referrerpolicy="no-referrer"
+              sizes="(min-width: 1024px) 560px, (min-width: 640px) 480px, 100vw"
+              class="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : null
+        }
       </div>
       {
         item.summary_short && (
@@ -187,5 +185,5 @@ const candidates = [
         {content_type.length ? <span>· {content_type[0]}</span> : null}
       </div>
     </div>
-  </a>
+  </div>
 </li>
