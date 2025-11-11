@@ -28,7 +28,7 @@ export interface Resource {
   note: string;
   role: string;
   content_type: string;
-  jurisdiction: string;
+  geography: string;
   industry: string;
   topic: string;
   use_cases: string;
@@ -85,7 +85,7 @@ export async function getFilteredResources(filters: {
   industry?: string;
   topic?: string;
   content_type?: string;
-  jurisdiction?: string;
+  geography?: string;
 }): Promise<Resource[]> {
   let query = supabase.from('kb_resource_pretty').select('*').eq('status', 'published');
 
@@ -93,7 +93,7 @@ export async function getFilteredResources(filters: {
   if (filters.industry) query = query.eq('industry', filters.industry);
   if (filters.topic) query = query.eq('topic', filters.topic);
   if (filters.content_type) query = query.eq('content_type', filters.content_type);
-  if (filters.jurisdiction) query = query.eq('jurisdiction', filters.jurisdiction);
+  if (filters.geography) query = query.eq('geography', filters.geography);
 
   query = query.order('date_published', { ascending: false });
 

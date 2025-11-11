@@ -25,7 +25,7 @@ function normalizeKeys(input) {
     usecase: 'use_cases',
     agentic_capability: 'agentic_capabilities',
     type: 'content_type',
-    region: 'jurisdiction',
+    region: 'geography',
   };
   const out = { ...input };
   for (const [legacy, canonical] of Object.entries(legacyMap)) {
@@ -53,7 +53,7 @@ const ENUM_FIELDS = [
   'use_cases',
   'agentic_capabilities',
   'content_type',
-  'jurisdiction',
+  'geography',
 ];
 const ENUMS = Object.fromEntries(
   ENUM_FIELDS.map((f) => [f, new Set(SCHEMA.properties?.[f]?.enum || [])]),

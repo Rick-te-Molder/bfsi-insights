@@ -9,7 +9,6 @@ on:
 jobs:
   discover:
     runs-on: ubuntu-latest
-    environment: production
     
     steps:
       - name: Checkout code
@@ -45,7 +44,6 @@ jobs:
 
   enrich:
     runs-on: ubuntu-latest
-    environment: production
     needs: discover
     if: success()
     

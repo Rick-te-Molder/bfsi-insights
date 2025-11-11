@@ -41,7 +41,7 @@ function initResourceModal() {
       li.getAttribute('data-industry') || '',
       li.getAttribute('data-topic') || '',
       li.getAttribute('data-content_type') || '',
-      li.getAttribute('data-jurisdiction') || '',
+      li.getAttribute('data-geography') || '',
     ].filter(Boolean);
 
     const m = document.getElementById('modal')!;

@@ -5,7 +5,7 @@ export default function initResourceFilters() {
   const clearBtn = document.getElementById('clear-filters');
   const countEl = document.getElementById('count');
   const qEl = document.getElementById('q') as HTMLInputElement | null;
-  const filters = ['role', 'industry', 'topic', 'content_type', 'jurisdiction'].map((f) => ({
+  const filters = ['role', 'industry', 'topic', 'content_type', 'geography'].map((f) => ({
     key: f,
     el: $(`f-${f}`) as HTMLSelectElement | null,
   }));
@@ -25,7 +25,7 @@ export default function initResourceFilters() {
       industry: el.getAttribute('data-industry') || '',
       topic: el.getAttribute('data-topic') || '',
       content_type: el.getAttribute('data-content_type') || '',
-      jurisdiction: el.getAttribute('data-jurisdiction') || '',
+      geography: el.getAttribute('data-geography') || '',
     };
   });
 
@@ -165,7 +165,7 @@ export default function initResourceFilters() {
     }),
   );
   clearBtn?.addEventListener('click', () => {
-    setVals({ role: '', industry: '', topic: '', content_type: '', jurisdiction: '', q: '' });
+    setVals({ role: '', industry: '', topic: '', content_type: '', geography: '', q: '' });
     updateQuery(getVals());
     try {
       localStorage.removeItem(STORAGE_KEY);
@@ -189,7 +189,7 @@ export default function initResourceFilters() {
       industry: document.getElementById('f-industry') as HTMLSelectElement | null,
       topic: document.getElementById('f-topic') as HTMLSelectElement | null,
       content_type: document.getElementById('f-content_type') as HTMLSelectElement | null,
-      jurisdiction: document.getElementById('f-jurisdiction') as HTMLSelectElement | null,
+      geography: document.getElementById('f-geography') as HTMLSelectElement | null,
     } as const;
     const mobile = {
       q: document.getElementById('m-q') as HTMLInputElement | null,
@@ -197,7 +197,7 @@ export default function initResourceFilters() {
       industry: document.getElementById('m-f-industry') as HTMLSelectElement | null,
       topic: document.getElementById('m-f-topic') as HTMLSelectElement | null,
       content_type: document.getElementById('m-f-content_type') as HTMLSelectElement | null,
-      jurisdiction: document.getElementById('m-f-jurisdiction') as HTMLSelectElement | null,
+      geography: document.getElementById('m-f-geography') as HTMLSelectElement | null,
     } as const;
 
     function getDesktopVals() {
@@ -206,7 +206,7 @@ export default function initResourceFilters() {
         industry: desktop.industry?.value || '',
         topic: desktop.topic?.value || '',
         content_type: desktop.content_type?.value || '',
-        jurisdiction: desktop.jurisdiction?.value || '',
+        geography: desktop.geography?.value || '',
         q: desktop.q?.value?.trim() || '',
       };
     }
@@ -215,7 +215,7 @@ export default function initResourceFilters() {
       if (desktop.industry) desktop.industry.value = vals.industry || '';
       if (desktop.topic) desktop.topic.value = vals.topic || '';
       if (desktop.content_type) desktop.content_type.value = vals.content_type || '';
-      if (desktop.jurisdiction) desktop.jurisdiction.value = vals.jurisdiction || '';
+      if (desktop.geography) desktop.geography.value = vals.geography || '';
       if (desktop.q) desktop.q.value = vals.q || '';
     }
     function renderChips(vals: Record<string, string>) {
@@ -239,7 +239,7 @@ export default function initResourceFilters() {
       if (countBadge) countBadge.textContent = String(active);
     }
     function applyFromDesktop() {
-      ['role', 'industry', 'topic', 'content_type', 'jurisdiction'].forEach((k) => {
+      ['role', 'industry', 'topic', 'content_type', 'geography'].forEach((k) => {
         const el = (desktop as any)[k] as HTMLSelectElement | null;
         if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
       });
@@ -265,7 +265,7 @@ export default function initResourceFilters() {
       if (mobile.industry) mobile.industry.value = v.industry;
       if (mobile.topic) mobile.topic.value = v.topic;
       if (mobile.content_type) mobile.content_type.value = v.content_type;
-      if (mobile.jurisdiction) mobile.jurisdiction.value = v.jurisdiction;
+      if (mobile.geography) mobile.geography.value = v.geography;
       if (mobile.q) mobile.q.value = v.q;
     }
 
@@ -283,7 +283,7 @@ export default function initResourceFilters() {
         industry: '',
         topic: '',
         content_type: '',
-        jurisdiction: '',
+        geography: '',
         q: '',
       };
       setDesktopVals(empty);
@@ -296,7 +296,7 @@ export default function initResourceFilters() {
         industry: mobile.industry?.value || '',
         topic: mobile.topic?.value || '',
         content_type: mobile.content_type?.value || '',
-        jurisdiction: mobile.jurisdiction?.value || '',
+        geography: mobile.geography?.value || '',
         q: mobile.q?.value?.trim() || '',
       };
       setDesktopVals(vals);

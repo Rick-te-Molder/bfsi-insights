@@ -116,7 +116,7 @@ const ContentTypeEnum = z.enum([
   'policy-document',
 ]);
 
-const JurisdictionEnum = z.enum(['eu', 'uk', 'us', 'nl', 'global', 'other']);
+const GeographyEnum = z.enum(['eu', 'uk', 'us', 'nl', 'global', 'other']);
 
 export const Resource = z.object({
   url: z.string().url().optional(),
@@ -146,7 +146,7 @@ export const Resource = z.object({
     .union([ContentTypeEnum, z.array(ContentTypeEnum)])
     .optional()
     .transform(normalizeArray),
-  jurisdiction: JurisdictionEnum.optional(),
+  geography: GeographyEnum.optional(),
   note: z.string().optional(),
   summary_short: z.string().min(120).max(240).optional(),
   summary_medium: z.string().min(240).max(480).optional(),

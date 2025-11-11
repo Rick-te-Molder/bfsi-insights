@@ -12,7 +12,7 @@ export async function GET() {
     industry: item.industry,
     topic: item.topic,
     content_type: item.content_type,
-    jurisdiction: item.jurisdiction,
+    geography: item.geography,
   }));
 
   return new Response(JSON.stringify({ items: latest }, null, 2), {
