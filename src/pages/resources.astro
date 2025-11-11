@@ -1,8 +1,11 @@
 ---
 import Base from '../layouts/Base.astro';
-import resources from '../data/resources/resources.json';
+import { getAllResources } from '../lib/supabase';
 import ResourceCard from '../features/resources/ResourceCard.astro';
 import fs from 'node:fs';
+
+// Fetch all resources from Supabase
+const resources = await getAllResources();
 
 const values = {
   role: Array.from(new Set(resources.map((r) => r.role).filter(Boolean))).sort(),

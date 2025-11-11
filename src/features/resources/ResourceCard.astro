@@ -81,113 +81,111 @@ const candidates = [
 >
   <a
     href={`/${item.slug}`}
-    class="absolute inset-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 z-0"
+    class="absolute inset-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 z-10"
     aria-label={`View details for ${item.title}`}
     tabindex="0"
     data-card-link
   >
-    <span class="sr-only">{item.title}</span>
-  </a>
-
-  <div class="relative z-10 flex items-center gap-2 pointer-events-none">
-    <h3 id={`t-${item.slug}`} class="text-xl font-semibold text-sky-200">
-      {item.title}
-    </h3>
-    {
-      isHome && isNew && (
-        <span class="ml-1 align-middle rounded-full bg-emerald-400/10 px-2 py-0.5 text-xs font-semibold text-emerald-300 ring-1 ring-inset ring-emerald-400/30">
-          New
-        </span>
-      )
-    }
-    {
-      isHome && isUpdated && (
-        <span class="ml-1 align-middle rounded-full bg-amber-400/10 px-2 py-0.5 text-xs font-semibold text-amber-300 ring-1 ring-inset ring-amber-400/30">
-          Updated
-        </span>
-      )
-    }
-  </div>
-  <div class="relative z-10 mt-1 text-sm text-neutral-200 pointer-events-none">
-    {
-      isHome ? (
-        <span title="Date added">
-          <span class="text-neutral-400">Added</span> {fmt(item.date_added)}
-        </span>
-      ) : (
-        item.date_published && (
-          <span title="Date published">
-            <span class="text-neutral-400">Published</span> {fmt(item.date_published)}
+    <div class="relative z-10 flex items-center gap-2 pointer-events-none">
+      <h3 id={`t-${item.slug}`} class="text-xl font-semibold text-sky-200">
+        {item.title}
+      </h3>
+      {
+        isHome && isNew && (
+          <span class="ml-1 align-middle rounded-full bg-emerald-400/10 px-2 py-0.5 text-xs font-semibold text-emerald-300 ring-1 ring-inset ring-emerald-400/30">
+            New
           </span>
         )
-      )
-    }
-    {item.source_name && <span> · {item.source_name}</span>}
-    {item.authors?.length && <span> · {item.authors[0]}</span>}
-  </div>
+      }
+      {
+        isHome && isUpdated && (
+          <span class="ml-1 align-middle rounded-full bg-amber-400/10 px-2 py-0.5 text-xs font-semibold text-amber-300 ring-1 ring-inset ring-amber-400/30">
+            Updated
+          </span>
+        )
+      }
+    </div>
+    <div class="relative mt-1 text-sm text-neutral-200">
+      {
+        isHome ? (
+          <span title="Date added">
+            <span class="text-neutral-400">Added</span> {fmt(item.date_added)}
+          </span>
+        ) : (
+          item.date_published && (
+            <span title="Date published">
+              <span class="text-neutral-400">Published</span> {fmt(item.date_published)}
+            </span>
+          )
+        )
+      }
+      {item.source_name && <span> · {item.source_name}</span>}
+      {item.authors?.length && <span> · {item.authors[0]}</span>}
+    </div>
 
-  <div class="relative z-10 mt-2 pointer-events-none">
-    <div class="relative">
-      <>
-        <div style="aspect-ratio: 16 / 9"></div>
-        <div
-          class="absolute inset-0 w-full rounded-md border border-neutral-800 bg-neutral-800/40"
-          style="aspect-ratio: 16 / 9"
-        >
-        </div>
-        {
-          candidates.length ? (
-            <img
-              src={candidates[0]}
-              data-next={candidates.slice(1).join('|')}
-              alt={`${item.source_name || 'Source'} preview`}
-              width={isFirst ? 960 : 640}
-              height={isFirst ? 540 : 360}
-              loading={isFirst ? 'eager' : 'lazy'}
-              fetchpriority={isFirst ? 'high' : 'auto'}
-              decoding="async"
-              referrerpolicy="no-referrer"
-              sizes="(min-width: 1024px) 560px, (min-width: 640px) 480px, 100vw"
-              class="absolute inset-0 w-full h-full rounded-md border border-neutral-800 object-cover opacity-0"
-            />
-          ) : null
-        }
-      </>
-    </div>
-    {
-      item.summary_short && (
-        <div class="relative z-10 mt-3 pointer-events-none">
-          <p class="text-sm text-neutral-300 line-clamp-3">{item.summary_short}</p>
-          <div class="mt-2 flex justify-end">
-            <button
-              class="relative z-20 inline-flex items-center gap-1 text-sm text-sky-300 hover:text-sky-200 transition-colors px-2 py-1 rounded hover:bg-neutral-800/50 pointer-events-auto"
-              type="button"
-              data-open-modal="true"
-              aria-label="Preview summary"
-            >
-              <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                />
-              </svg>
-              Preview
-            </button>
+    <div class="relative mt-2">
+      <div class="relative">
+        <>
+          <div style="aspect-ratio: 16 / 9"></div>
+          <div
+            class="absolute inset-0 w-full rounded-md border border-neutral-800 bg-neutral-800/40"
+            style="aspect-ratio: 16 / 9"
+          >
           </div>
-        </div>
-      )
-    }
-    <div class="mt-3 text-xs text-neutral-200 flex flex-wrap gap-2">
-      {role && <span>{role}</span>}
-      {content_type.length ? <span>· {content_type[0]}</span> : null}
+          {
+            candidates.length ? (
+              <img
+                src={candidates[0]}
+                data-next={candidates.slice(1).join('|')}
+                alt={`${item.source_name || 'Source'} preview`}
+                width={isFirst ? 960 : 640}
+                height={isFirst ? 540 : 360}
+                loading={isFirst ? 'eager' : 'lazy'}
+                fetchpriority={isFirst ? 'high' : 'auto'}
+                decoding="async"
+                referrerpolicy="no-referrer"
+                sizes="(min-width: 1024px) 560px, (min-width: 640px) 480px, 100vw"
+                class="absolute inset-0 w-full h-full rounded-md border border-neutral-800 object-cover opacity-0"
+              />
+            ) : null
+          }
+        </>
+      </div>
+      {
+        item.summary_short && (
+          <div class="relative mt-3">
+            <p class="text-sm text-neutral-300 line-clamp-3">{item.summary_short}</p>
+            <div class="mt-2 flex justify-end">
+              <button
+                class="relative z-30 inline-flex items-center gap-1 text-sm text-sky-300 hover:text-sky-200 transition-colors px-2 py-1 rounded hover:bg-neutral-800/50"
+                type="button"
+                data-open-modal="true"
+                aria-label="Preview summary"
+              >
+                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+                Preview
+              </button>
+            </div>
+          </div>
+        )
+      }
+      <div class="mt-3 text-xs text-neutral-200 flex flex-wrap gap-2">
+        {role && <span>{role}</span>}
+        {content_type.length ? <span>· {content_type[0]}</span> : null}
+      </div>
     </div>
-  </div>
+  </a>
 </li>

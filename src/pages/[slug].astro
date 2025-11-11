@@ -2,18 +2,16 @@
 import Base from '../layouts/Base.astro';
 import { marked } from 'marked';
 import { fmt } from '../lib/fmt';
+import { getAllResources, getResourceBySlug } from '../lib/supabase';
 import fs from 'node:fs';
 
 export async function getStaticPaths() {
-  const mod = await import('../data/resources/resources.json');
-  const items = (mod.default || mod) as any[];
-  return items.map((it) => ({ params: { slug: it.slug } }));
+  const resources = await getAllResources();
+  return resources.map((it) => ({ params: { slug: it.slug } }));
 }
 
 const { slug } = Astro.params;
-const mod = await import('../data/resources/resources.json');
-const items = (mod.default || mod) as any[];
-const item = items.find((it) => it.slug === slug);
+const item = await getResourceBySlug(slug!);
 if (!item) {
   throw new Error('Not found');
 }

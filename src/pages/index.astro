@@ -1,10 +1,12 @@
 ---
 import Base from '../layouts/Base.astro';
-import resources from '../data/resources/resources.json';
+import { getAllResources } from '../lib/supabase';
 import ResourceCard from '../features/resources/ResourceCard.astro';
 import fs from 'node:fs';
 
-const latest = [...resources].sort((a, b) => b.date_added.localeCompare(a.date_added)).slice(0, 6);
+// Fetch latest 6 resources from Supabase
+const allResources = await getAllResources();
+const latest = allResources.slice(0, 6);
 
 const externalThumb = (u: string | undefined) =>
   u ? `https://image.thum.io/get/nojs/width/600/crop/600/${encodeURIComponent(u)}` : null;

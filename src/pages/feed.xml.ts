@@ -1,7 +1,8 @@
 import rss from '@astrojs/rss';
-import resources from '../data/resources/resources.json';
+import { getAllResources } from '../lib/supabase';
 
-export function GET(context) {
+export async function GET(context) {
+  const resources = await getAllResources();
   const site = context.site?.toString() ?? 'https://www.bfsiinsights.com/';
   const title = 'BFSI Insights – Latest Resources';
   const description =
