@@ -3,9 +3,12 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import Ajv from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const SCHEMA_PATH = 'schemas/kb.schema.json';
-const ITEMS_DIR = 'src/data/resources/items';
 const OUT_FILE = 'src/data/resources/resources.json';
 
 // load canonical schema
@@ -107,18 +110,57 @@ function normalizeValues(input) {
   return out;
 }
 
-const files = (await fs.readdir(ITEMS_DIR)).filter((f) => f.endsWith('.json')).sort();
+// Fetch resources from Supabase
+const supabase = createClient(
+  process.env.PUBLIC_SUPABASE_URL,
+  process.env.PUBLIC_SUPABASE_ANON_KEY,
+);
+
+const { data: dbResources, error } = await supabase
+  .from('kb_resource')
+  .select('*')
+  .eq('status', 'published')
+  .order('date_added', { ascending: false });
+
+if (error) {
+  console.error('Error fetching resources from Supabase:', error);
+  process.exit(1);
+}
+
+if (!dbResources || dbResources.length === 0) {
+  console.warn('⚠️  No resources found in database. Check:');
+  console.warn('   - PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY are set in .env');
+  console.warn('   - kb_resource table has rows with status="published"');
+  console.warn('   - Anon key has SELECT permission on kb_resource');
+}
+
 const items = [];
 
-for (const f of files) {
-  const p = path.join(ITEMS_DIR, f);
-  const raw = await fs.readFile(p, 'utf8');
-  let obj;
-  try {
-    obj = JSON.parse(raw);
-  } catch (e) {
-    console.error(`Invalid JSON: ${f}\n${e.message}`);
-    process.exit(1);
+for (const resource of dbResources || []) {
+  // Map database columns to schema format
+  const obj = {
+    url: resource.url,
+    title: resource.title,
+    slug: resource.slug,
+    source_name: resource.source_name,
+    date_published: resource.publication_date,
+    date_added: resource.date_added,
+    authors: resource.author ? resource.author.split(', ') : [],
+    summary_short: resource.summary_short,
+    summary_medium: resource.summary_medium,
+    summary_long: resource.summary_long,
+    role: resource.role,
+    content_type: resource.content_type,
+    industry: resource.industry,
+    topic: resource.topic,
+    geography: resource.geography,
+    use_cases: resource.use_cases,
+    agentic_capabilities: resource.agentic_capabilities,
+  };
+
+  // Only include thumbnail if it exists
+  if (resource.thumbnail) {
+    obj.thumbnail = resource.thumbnail;
   }
 
   // normalize values and strip extras before validation
@@ -130,7 +172,7 @@ for (const f of files) {
     const details = ajv.errorsText(validate.errors, { separator: '\n' });
     const extra = Object.keys(withValues).filter((k) => !allowedKeys.has(k));
     console.error(
-      `Invalid: ${f}\n${details}${extra.length ? `\nExtra keys: ${extra.join(', ')}` : ''}`,
+      `Invalid: ${resource.title}\n${details}${extra.length ? `\nExtra keys: ${extra.join(', ')}` : ''}`,
     );
     process.exit(1);
   }
