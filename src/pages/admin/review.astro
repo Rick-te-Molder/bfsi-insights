@@ -130,6 +130,7 @@ const notEnriched = pending?.filter((item) => !item.payload?.summary?.short) || 
     document.querySelectorAll('.approve-btn').forEach((btn) => {
       btn.addEventListener('click', async (e) => {
         const id = (e.target as HTMLElement).dataset.id;
+        console.log('Approve ID:', id, 'Type:', typeof id);
         if (!id) return;
 
         const article = document.querySelector(`[data-item-id="${id}"]`);
@@ -150,10 +151,12 @@ const notEnriched = pending?.filter((item) => !item.payload?.summary?.short) || 
             (e.target as HTMLElement).disabled = true;
             setTimeout(() => article.remove(), 1000);
           } else {
-            alert('Error: ' + result.error);
+            console.error('Approval failed:', result.error);
+            alert('Approval failed: ' + result.error);
           }
-        } catch {
-          alert('Failed to approve');
+        } catch (err) {
+          console.error('Request failed:', err);
+          alert('Request failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
         }
       });
     });

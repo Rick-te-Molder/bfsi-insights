@@ -147,7 +147,7 @@ async function generateEnrichment(content, title) {
 Title: ${title}
 Content: ${content}
 
-Return JSON with this structure. Pick the SINGLE MOST SPECIFIC value for each field:
+Return JSON with this EXACT structure. Each tag field must contain EXACTLY ONE string value (no pipes, no arrays, no multiple values):
 
 {
   "summary": {
@@ -156,22 +156,22 @@ Return JSON with this structure. Pick the SINGLE MOST SPECIFIC value for each fi
     "long": "640-1120 characters - comprehensive analysis with implications"
   },
   "tags": {
-    "role": "ONE OF: ${taxonomies.role.join(', ')}",
-    "industry": "ONE OF (pick MOST SPECIFIC): ${taxonomies.industry.join(', ')}",
-    "topic": "ONE OF (pick MOST SPECIFIC): ${taxonomies.topic.join(', ')}",
-    "content_type": "ONE OF: ${taxonomies.content_type.join(', ')}",
-    "geography": "ONE OF: ${taxonomies.geography.join(', ')} (regulatory OR market focus)",
-    "use_cases": "ONE OF: ${taxonomies.use_cases.join(', ')}",
-    "agentic_capabilities": "ONE OF: ${taxonomies.agentic_capabilities.join(', ')}"
+    "role": "<pick ONE from: ${taxonomies.role.join(', ')}>",
+    "industry": "<pick ONE most specific from: ${taxonomies.industry.slice(0, 10).join(', ')}...>",
+    "topic": "<pick ONE most specific from: ${taxonomies.topic.slice(0, 10).join(', ')}...>",
+    "content_type": "<pick ONE from: ${taxonomies.content_type.join(', ')}>",
+    "geography": "<pick ONE from: ${taxonomies.geography.join(', ')}>",
+    "use_cases": "<pick ONE from: ${taxonomies.use_cases.join(', ')}>",
+    "agentic_capabilities": "<pick ONE from: ${taxonomies.agentic_capabilities.join(', ')}>"
   }
 }
 
-RULES:
-1. Pick EXACTLY ONE value per field
-2. Use most SPECIFIC hierarchical value (e.g., "technology-and-data-agentic-engineering" not "technology-and-data")
-3. All lowercase, hyphenated
-4. Geography: if regulatory focus → jurisdiction, if market focus → geographic region
-5. If no clear fit, use parent category (e.g., "banking" if no specific subsector)`;
+CRITICAL RULES:
+1. Each tag field = SINGLE STRING VALUE ONLY (e.g., "academic", NOT "academic|executive")
+2. NO pipes (|), NO commas in tag values, NO arrays
+3. Use most specific hierarchical value available
+4. Geography: "global" for worldwide content, specific region if focused
+5. All lowercase, hyphenated format`;
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -186,7 +186,19 @@ RULES:
 
   if (!response.ok) throw new Error(`OpenAI API error: ${response.status}`);
   const data = await response.json();
-  return JSON.parse(data.choices[0].message.content);
+  const result = JSON.parse(data.choices[0].message.content);
+
+  // Validate: reject if any tag contains pipes (multiple values)
+  const tags = result.tags || {};
+  for (const [key, value] of Object.entries(tags)) {
+    if (typeof value === 'string' && value.includes('|')) {
+      throw new Error(
+        `Invalid tag ${key}: contains multiple values "${value}". Expected single value.`,
+      );
+    }
+  }
+
+  return result;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

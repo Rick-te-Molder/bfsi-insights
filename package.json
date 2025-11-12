@@ -24,6 +24,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@astrojs/node": "^9.5.0",
     "@astrojs/rss": "^4.0.7",
     "@astrojs/tailwind": "^6.0.2",
     "@supabase/supabase-js": "^2.81.0",
