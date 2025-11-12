@@ -123,14 +123,14 @@ const expandItemThumb = (t: string | undefined) => {
       <span class="text-neutral-300">Industry</span>
       <select id="f-industry" class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1">
         <option value="">All</option>
-        {values.industry.map((v) => <option value={v}>{v}</option>)}
+        {values.industry.map((v) => <option value={v.value}>{v.label}</option>)}
       </select>
     </label>
     <label class="flex flex-col gap-1 text-sm">
       <span class="text-neutral-300">Topic</span>
       <select id="f-topic" class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1">
         <option value="">All</option>
-        {values.topic.map((v) => <option value={v}>{v}</option>)}
+        {values.topic.map((v) => <option value={v.value}>{v.label}</option>)}
       </select>
     </label>
     <label class="flex flex-col gap-1 text-sm">
@@ -140,7 +140,7 @@ const expandItemThumb = (t: string | undefined) => {
         class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1"
       >
         <option value="">All</option>
-        {values.content_type.map((v) => <option value={v}>{v}</option>)}
+        {values.content_type.map((v) => <option value={v.value}>{v.label}</option>)}
       </select>
     </label>
     <label class="flex flex-col gap-1 text-sm">
@@ -150,7 +150,7 @@ const expandItemThumb = (t: string | undefined) => {
         class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1"
       >
         <option value="">All</option>
-        {values.jurisdiction.map((v) => <option value={v}>{v}</option>)}
+        {values.jurisdiction.map((v) => <option value={v.value}>{v.label}</option>)}
       </select>
     </label>
     <div class="sm:col-span-2 lg:col-span-5 flex justify-end">
@@ -197,7 +197,7 @@ const expandItemThumb = (t: string | undefined) => {
               class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
             >
               <option value="">All</option>
-              {values.role.map((v) => <option value={v}>{v}</option>)}
+              {values.role.map((v) => <option value={v.value}>{v.label}</option>)}
             </select>
           </label>
           <label class="flex flex-col gap-1 text-sm">
@@ -207,7 +207,7 @@ const expandItemThumb = (t: string | undefined) => {
               class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
             >
               <option value="">All</option>
-              {values.industry.map((v) => <option value={v}>{v}</option>)}
+              {values.industry.map((v) => <option value={v.value}>{v.label}</option>)}
             </select>
           </label>
           <label class="flex flex-col gap-1 text-sm">
@@ -217,7 +217,7 @@ const expandItemThumb = (t: string | undefined) => {
               class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
             >
               <option value="">All</option>
-              {values.topic.map((v) => <option value={v}>{v}</option>)}
+              {values.topic.map((v) => <option value={v.value}>{v.label}</option>)}
             </select>
           </label>
           <label class="flex flex-col gap-1 text-sm">
@@ -227,7 +227,7 @@ const expandItemThumb = (t: string | undefined) => {
               class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
             >
               <option value="">All</option>
-              {values.content_type.map((v) => <option value={v}>{v}</option>)}
+              {values.content_type.map((v) => <option value={v.value}>{v.label}</option>)}
             </select>
           </label>
           <label class="flex flex-col gap-1 text-sm">
@@ -237,7 +237,7 @@ const expandItemThumb = (t: string | undefined) => {
               class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
             >
               <option value="">All</option>
-              {values.jurisdiction.map((v) => <option value={v}>{v}</option>)}
+              {values.jurisdiction.map((v) => <option value={v.value}>{v.label}</option>)}
             </select>
           </label>
         </div>
