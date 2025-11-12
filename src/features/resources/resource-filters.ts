@@ -173,6 +173,11 @@ export default function initResourceFilters() {
       /* ignore */
     }
     apply();
+    // Clear filter badges if they exist
+    const chips = document.getElementById('chips');
+    if (chips) chips.innerHTML = '';
+    const countBadge = document.getElementById('filter-count');
+    if (countBadge) countBadge.textContent = '0';
   });
 
   // Mobile bottom-sheet controls
