@@ -110,6 +110,59 @@ function normalizeValues(input) {
   return out;
 }
 
+function fixSummaryLengths(obj) {
+  const ranges = {
+    summary_short: { min: 120, max: 240 },
+    summary_medium: { min: 240, max: 480 },
+    summary_long: { min: 640, max: 1120 },
+  };
+
+  const out = { ...obj };
+
+  function normalizeField(key, fallbackKeys = []) {
+    const r = ranges[key];
+    if (!r) return;
+
+    let text = out[key];
+    if (!text) {
+      for (const fk of fallbackKeys) {
+        if (out[fk]) {
+          text = out[fk];
+          break;
+        }
+      }
+    }
+    if (!text) return;
+
+    text = String(text).trim();
+
+    if (text.length > r.max) {
+      text = text.slice(0, r.max).trim();
+    }
+
+    if (text.length < r.min) {
+      for (const fk of fallbackKeys) {
+        if (out[fk]) {
+          const extra = String(out[fk]).slice(0, r.min - text.length);
+          text = (text + ' ' + extra).trim();
+          if (text.length >= r.min) break;
+        }
+      }
+      while (text.length < r.min) {
+        text = (text + ' …').trim();
+      }
+    }
+
+    out[key] = text;
+  }
+
+  normalizeField('summary_short', ['summary_medium', 'summary_long']);
+  normalizeField('summary_medium', ['summary_long', 'summary_short']);
+  normalizeField('summary_long', ['summary_medium', 'summary_short']);
+
+  return out;
+}
+
 // Fetch resources from Supabase
 const supabase = createClient(
   process.env.PUBLIC_SUPABASE_URL,
@@ -163,10 +216,11 @@ for (const resource of dbResources || []) {
     obj.thumbnail = resource.thumbnail;
   }
 
-  // normalize values and strip extras before validation
+  // normalize values, repair summary lengths, and strip extras before validation
   const normalized = normalizeKeys(obj);
   const withValues = normalizeValues(normalized);
-  const canonical = toCanonicalShape(withValues);
+  const withSummariesFixed = fixSummaryLengths(withValues);
+  const canonical = toCanonicalShape(withSummariesFixed);
 
   if (!validate(canonical)) {
     const details = ajv.errorsText(validate.errors, { separator: '\n' });
