@@ -122,8 +122,60 @@ function parseRSS(xml, source) {
 
       if (!url || !url.startsWith('http')) continue;
 
+      const text = (title + ' ' + description).toLowerCase();
+
+      // BFSI Relevance Check (PDCA improvement)
+      const bfsiKeywords = [
+        'bank',
+        'banking',
+        'finance',
+        'financial',
+        'insurance',
+        'fintech',
+        'payment',
+        'credit',
+        'risk',
+        'compliance',
+        'regulation',
+        'aml',
+        'kyc',
+        'fraud',
+        'asset',
+        'investment',
+        'loan',
+        'mortgage',
+        'wealth',
+        'trading',
+        'securities',
+        'capital',
+        'treasury',
+        'defi',
+        'crypto',
+        'blockchain',
+        'ledger',
+        'settlement',
+      ];
+
+      const hasBfsiKeyword = bfsiKeywords.some((kw) => text.includes(kw));
+
+      // EXCLUSION patterns for clearly irrelevant content
+      const exclusionPatterns = [
+        /\b(medical|healthcare|x-ray|diagnosis|patient|clinical|hospital|doctor)\b/i,
+        /\b(classroom|curriculum|pedagogy|teaching methods|school|student|k-12)\b/i,
+        /\b(agriculture|farming|crop|soil|harvest|livestock)\b/i,
+        /\b(manufacturing|factory|production line|assembly|industrial machinery)\b/i,
+        /\b(military|defense|weapon|combat|warfare)\b/i,
+      ];
+
+      const hasExclusion = exclusionPatterns.some((pattern) => pattern.test(text));
+
+      // Skip if no BFSI keyword OR has exclusion pattern
+      if (!hasBfsiKeyword || hasExclusion) {
+        continue;
+      }
+
+      // Original source keyword check (if defined)
       if (source.keywords.length > 0) {
-        const text = (title + ' ' + description).toLowerCase();
         const hasKeyword = source.keywords.some((kw) => text.includes(kw.toLowerCase()));
         if (!hasKeyword) continue;
       }

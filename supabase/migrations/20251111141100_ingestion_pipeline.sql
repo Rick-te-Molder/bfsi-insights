@@ -344,7 +344,112 @@ WHERE status = 'pending'
 ORDER BY discovered_at DESC;
 
 -- ============================================================================
--- PART 8: Grant permissions
+-- PART 8: Create restore function for rejected items
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION restore_from_rejection(p_queue_id uuid, p_note text DEFAULT NULL)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Reset rejected item back to pending for re-review
+  UPDATE ingestion_queue
+  SET 
+    status = 'pending',
+    reviewed_at = NULL,
+    reviewer = NULL,
+    rejection_reason = CASE 
+      WHEN p_note IS NOT NULL THEN rejection_reason || ' | RESTORED: ' || p_note
+      ELSE rejection_reason || ' | RESTORED'
+    END
+  WHERE id = p_queue_id AND status = 'rejected';
+  
+  RETURN FOUND;
+END $$;
+
+COMMENT ON FUNCTION restore_from_rejection IS 'Restores a rejected item back to pending status for re-review';
+
+-- ============================================================================
+-- PART 9: PDCA Cycle - Analytics & Prompt Management
+-- ============================================================================
+
+-- Track prompt versions and their performance
+CREATE TABLE IF NOT EXISTS prompt_versions (
+  id SERIAL PRIMARY KEY,
+  version text UNIQUE NOT NULL,
+  prompt_text text NOT NULL,
+  created_at timestamptz DEFAULT NOW(),
+  created_by uuid REFERENCES auth.users(id),
+  is_active boolean DEFAULT false,
+  notes text
+);
+
+-- Track rejection patterns for continuous improvement
+CREATE TABLE IF NOT EXISTS rejection_analytics (
+  id SERIAL PRIMARY KEY,
+  rejection_reason text,
+  rejection_category text, -- 'not-bfsi-relevant', 'low-quality', 'duplicate', 'wrong-topic', 'other'
+  queue_item_id uuid REFERENCES ingestion_queue(id),
+  prompt_version text,
+  discovered_source text,
+  industry text,
+  topic text,
+  created_at timestamptz DEFAULT NOW()
+);
+
+CREATE INDEX idx_rejection_analytics_category ON rejection_analytics(rejection_category);
+CREATE INDEX idx_rejection_analytics_prompt ON rejection_analytics(prompt_version);
+CREATE INDEX idx_rejection_analytics_created ON rejection_analytics(created_at DESC);
+
+-- Function to automatically log rejections for PDCA analysis
+CREATE OR REPLACE FUNCTION log_rejection_analytics()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.status = 'rejected' AND OLD.status = 'pending' THEN
+    INSERT INTO rejection_analytics (
+      rejection_reason,
+      rejection_category,
+      queue_item_id,
+      prompt_version,
+      discovered_source,
+      industry,
+      topic
+    ) VALUES (
+      NEW.rejection_reason,
+      -- Auto-categorize based on keywords in rejection reason
+      CASE 
+        WHEN NEW.rejection_reason ILIKE '%not relevant%' OR 
+             NEW.rejection_reason ILIKE '%little to do with bfsi%' OR
+             NEW.rejection_reason ILIKE '%not bfsi%' THEN 'not-bfsi-relevant'
+        WHEN NEW.rejection_reason ILIKE '%quality%' OR 
+             NEW.rejection_reason ILIKE '%poor%' THEN 'low-quality'
+        WHEN NEW.rejection_reason ILIKE '%duplicate%' THEN 'duplicate'
+        WHEN NEW.rejection_reason ILIKE '%wrong topic%' OR
+             NEW.rejection_reason ILIKE '%off-topic%' THEN 'wrong-topic'
+        ELSE 'other'
+      END,
+      NEW.id,
+      NEW.prompt_version,
+      NEW.payload->>'source',
+      NEW.payload->'tags'->>'industry',
+      NEW.payload->'tags'->>'topic'
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER track_rejections
+AFTER UPDATE ON ingestion_queue
+FOR EACH ROW
+EXECUTE FUNCTION log_rejection_analytics();
+
+COMMENT ON TABLE prompt_versions IS 'Track prompt versions for A/B testing and performance monitoring';
+COMMENT ON TABLE rejection_analytics IS 'Analyze rejection patterns for PDCA continuous improvement';
+
+-- ============================================================================
+-- PART 10: Grant permissions
 -- ============================================================================
 
 GRANT SELECT ON ingestion_review_queue TO authenticated;

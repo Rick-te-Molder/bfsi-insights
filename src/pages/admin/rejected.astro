@@ -1,0 +1,192 @@
+---
+import Base from '../../layouts/Base.astro';
+import { createClient } from '@supabase/supabase-js';
+
+export const prerender = false;
+
+// Auth check
+const supabaseAuth = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+);
+
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const refreshToken = Astro.cookies.get('sb-refresh-token')?.value;
+
+if (!accessToken || !refreshToken) {
+  return new Response(
+    '<html><body><h1>Unauthorized</h1><p>Please log in to access this page.</p></body></html>',
+    { status: 401, headers: { 'Content-Type': 'text/html' } },
+  );
+}
+
+const {
+  data: { user },
+  error: authError,
+} = await supabaseAuth.auth.setSession({
+  access_token: accessToken,
+  refresh_token: refreshToken,
+});
+
+if (authError || !user) {
+  return new Response(
+    '<html><body><h1>Unauthorized</h1><p>Invalid or expired session. Please log in again.</p></body></html>',
+    { status: 401, headers: { 'Content-Type': 'text/html' } },
+  );
+}
+
+// Fetch rejected items
+const supabase = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.SUPABASE_SERVICE_KEY,
+);
+
+const { data: rejected } = await supabase
+  .from('ingestion_queue')
+  .select('*')
+  .eq('status', 'rejected')
+  .order('reviewed_at', { ascending: false });
+---
+
+<Base title="Rejected Items">
+  <div class="mx-auto max-w-7xl px-4 py-8">
+    <header class="mb-8">
+      <h1 class="text-4xl font-bold">🗑️ Rejected Items</h1>
+      <p class="mt-2 text-neutral-300">Review and restore previously rejected resources</p>
+      <div class="mt-4 flex gap-4 text-sm">
+        <a
+          href="/admin/review"
+          class="rounded-full bg-sky-500/10 px-3 py-1 text-sky-300 hover:bg-sky-500/20"
+        >
+          ← Back to review queue
+        </a>
+        <span class="rounded-full bg-red-500/10 px-3 py-1 text-red-300">
+          {rejected?.length || 0} rejected items
+        </span>
+      </div>
+    </header>
+
+    {
+      rejected?.length === 0 && (
+        <div class="rounded-lg border border-neutral-800 bg-neutral-900/60 p-8 text-center">
+          <p class="text-neutral-400">✨ No rejected items!</p>
+        </div>
+      )
+    }
+
+    <div class="space-y-6">
+      {
+        rejected?.map((item) => (
+          <article
+            class="rounded-xl border border-red-800/40 bg-neutral-900/60 p-6 transition hover:border-red-700/60"
+            data-item-id={item.id}
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1">
+                <h2 class="text-2xl font-semibold text-neutral-200">{item.payload.title}</h2>
+                <div class="mt-2 flex flex-wrap gap-2 text-sm text-neutral-400">
+                  <span>🔗 {item.payload.source}</span>
+                  <span>📅 {new Date(item.payload.published_at).toLocaleDateString()}</span>
+                  <span class="text-red-400">
+                    ✖ Rejected: {new Date(item.reviewed_at).toLocaleDateString()}
+                  </span>
+                </div>
+
+                {item.rejection_reason && (
+                  <div class="mt-3 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2">
+                    <p class="text-sm font-medium text-red-300">Rejection reason:</p>
+                    <p class="text-sm text-red-200">{item.rejection_reason}</p>
+                  </div>
+                )}
+
+                {item.payload.summary?.short && (
+                  <p class="mt-4 text-neutral-300">{item.payload.summary.short}</p>
+                )}
+
+                {item.payload.tags && (
+                  <div class="mt-4 flex flex-wrap gap-2">
+                    {item.payload.tags.role && (
+                      <span class="rounded-full bg-purple-500/10 px-3 py-1 text-xs text-purple-300">
+                        {item.payload.tags.role}
+                      </span>
+                    )}
+                    {item.payload.tags.industry && (
+                      <span class="rounded-full bg-blue-500/10 px-3 py-1 text-xs text-blue-300">
+                        {item.payload.tags.industry}
+                      </span>
+                    )}
+                    {item.payload.tags.topic && (
+                      <span class="rounded-full bg-green-500/10 px-3 py-1 text-xs text-green-300">
+                        {item.payload.tags.topic}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="mt-4 inline-block text-sm text-sky-400 hover:text-sky-300"
+                >
+                  View original →
+                </a>
+              </div>
+
+              <div class="flex flex-col gap-2">
+                <button
+                  class="restore-btn rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-500 transition"
+                  data-id={item.id}
+                >
+                  ↺ Restore
+                </button>
+              </div>
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+
+  <script>
+    document.querySelectorAll('.restore-btn').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        const id = (e.target as HTMLElement).dataset.id;
+        if (!id) return;
+
+        const note = prompt('Optional note for restoration (why you changed your mind):');
+        if (note === null) return; // User cancelled
+
+        const article = document.querySelector(`[data-item-id="${id}"]`);
+        if (!article) return;
+
+        try {
+          const response = await fetch('/api/restore', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, note: note || null }),
+          });
+
+          const result = await response.json();
+
+          if (result.success) {
+            article.classList.add('opacity-50');
+            (e.target as HTMLElement).textContent = '✓ Restored!';
+            (e.target as HTMLElement).disabled = true;
+            setTimeout(() => {
+              article.remove();
+              // Reload if no more items
+              if (document.querySelectorAll('[data-item-id]').length === 0) {
+                window.location.reload();
+              }
+            }, 1000);
+          } else {
+            alert('Error: ' + result.error);
+          }
+        } catch (err) {
+          alert('Failed to restore: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        }
+      });
+    });
+  </script>
+</Base>

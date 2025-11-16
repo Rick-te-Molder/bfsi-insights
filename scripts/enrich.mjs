@@ -112,12 +112,29 @@ async function enrich(options = {}) {
       const content = item.payload.description || item.payload.title;
       const enrichment = await generateEnrichment(content, item.payload.title);
 
+      // Auto-reject if not BFSI relevant (PDCA improvement)
+      if (enrichment.bfsi_relevant === false) {
+        console.log(`   ⚠️  Not BFSI relevant: ${enrichment.relevance_reason}`);
+        if (!dryRun) {
+          await supabase
+            .from('ingestion_queue')
+            .update({
+              status: 'rejected',
+              rejection_reason: `Auto-rejected: ${enrichment.relevance_reason}`,
+              reviewed_at: new Date().toISOString(),
+            })
+            .eq('id', item.id);
+          console.log(`   ✖️  Auto-rejected`);
+        }
+        continue;
+      }
+
       if (!dryRun) {
         await supabase
           .from('ingestion_queue')
           .update({
             payload: { ...item.payload, summary: enrichment.summary, tags: enrichment.tags },
-            prompt_version: 'v2.0-db-taxonomy',
+            prompt_version: 'v3.0-bfsi-filter',
             model_id: 'gpt-4o-mini',
           })
           .eq('id', item.id);
@@ -144,10 +161,23 @@ async function generateEnrichment(content, title) {
 
   const prompt = `You are a BFSI AI analyst. Analyze this resource and return ONLY valid JSON.
 
+CRITICAL: First assess if this content is relevant to Banking, Financial Services, or Insurance (BFSI).
+If the content is NOT primarily about BFSI topics, set bfsi_relevant to false.
+
 Title: ${title}
 Content: ${content}
 
+BFSI Relevance Criteria:
+- Must relate to banking, financial services, insurance, fintech, or related technologies
+- AI/tech content must have clear BFSI applications or implications
+- Educational content must be for BFSI professionals or related to financial education
+- Healthcare, agriculture, or other domain-specific content is NOT relevant unless it has direct BFSI applications
+
 Return JSON with this EXACT structure. Each tag field must contain EXACTLY ONE string value (no pipes, no arrays, no multiple values):
+
+{
+  "bfsi_relevant": true or false,
+  "relevance_reason": "Brief explanation of BFSI relevance or why it's not relevant",
 
 {
   "summary": {
