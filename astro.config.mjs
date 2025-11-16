@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
+import node from '@astrojs/node';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -23,6 +24,7 @@ function emitHeadersFile() {
 export default defineConfig({
   site: 'https://www.bfsiinsights.com',
   output: 'static',
+  adapter: node({ mode: 'standalone' }),
   integrations: [tailwind()],
   vite: { plugins: [emitHeadersFile()] },
 });

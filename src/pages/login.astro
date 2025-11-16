@@ -1,0 +1,145 @@
+---
+import Base from '../layouts/Base.astro';
+export const prerender = false;
+---
+
+<Base title="Admin Login · BFSI Insights">
+  <div class="mx-auto max-w-md px-4 py-16">
+    <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-8">
+      <header class="mb-6">
+        <h1 class="text-3xl font-bold">🔐 Admin Login</h1>
+        <p class="mt-2 text-sm text-neutral-400">Sign in to access the review queue</p>
+      </header>
+
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label for="email" class="block text-sm font-medium text-neutral-300 mb-1"> Email </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="admin@example.com"
+            required
+            autocomplete="email"
+            class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+          />
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-medium text-neutral-300 mb-1">
+            Password
+          </label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="••••••••"
+            required
+            autocomplete="current-password"
+            class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+          />
+        </div>
+
+        <div
+          id="error"
+          class="hidden rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-300"
+          role="alert"
+        >
+        </div>
+
+        <button
+          type="submit"
+          id="submit-btn"
+          class="w-full rounded-lg bg-sky-600 px-4 py-3 font-semibold text-white hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-neutral-900 disabled:cursor-not-allowed disabled:opacity-50 transition"
+        >
+          <span id="btn-text">Sign In</span>
+          <span id="btn-loading" class="hidden">Signing in...</span>
+        </button>
+      </form>
+
+      <div class="mt-6 text-center">
+        <a href="/" class="text-sm text-sky-400 hover:text-sky-300 underline underline-offset-2">
+          ← Back to home
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+
+    const supabase = createClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    );
+
+    const form = document.getElementById('login-form') as HTMLFormElement;
+    const emailInput = document.getElementById('email') as HTMLInputElement;
+    const passwordInput = document.getElementById('password') as HTMLInputElement;
+    const errorDiv = document.getElementById('error') as HTMLDivElement;
+    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+    const btnText = document.getElementById('btn-text') as HTMLSpanElement;
+    const btnLoading = document.getElementById('btn-loading') as HTMLSpanElement;
+
+    function showError(message: string) {
+      errorDiv.textContent = message;
+      errorDiv.classList.remove('hidden');
+    }
+
+    function hideError() {
+      errorDiv.classList.add('hidden');
+      errorDiv.textContent = '';
+    }
+
+    function setLoading(isLoading: boolean) {
+      submitBtn.disabled = isLoading;
+      if (isLoading) {
+        btnText.classList.add('hidden');
+        btnLoading.classList.remove('hidden');
+      } else {
+        btnText.classList.remove('hidden');
+        btnLoading.classList.add('hidden');
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideError();
+      setLoading(true);
+
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          showError(error.message);
+          setLoading(false);
+          return;
+        }
+
+        if (!data.session) {
+          showError('No session returned. Please try again.');
+          setLoading(false);
+          return;
+        }
+
+        // Set cookies with proper attributes
+        const cookieOptions = 'path=/; max-age=604800; samesite=lax';
+        document.cookie = `sb-access-token=${data.session.access_token}; ${cookieOptions}`;
+        document.cookie = `sb-refresh-token=${data.session.refresh_token}; ${cookieOptions}`;
+
+        // Redirect to admin review
+        window.location.href = '/admin/review';
+      } catch (err) {
+        showError('An unexpected error occurred. Please try again.');
+        setLoading(false);
+        console.error('Login error:', err);
+      }
+    });
+  </script>
+</Base>

@@ -2,9 +2,45 @@
 import Base from '../../layouts/Base.astro';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
+export const prerender = false;
+
+// Create Supabase client for auth check
+const supabaseAuth = createClient(
   import.meta.env.PUBLIC_SUPABASE_URL,
   import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+);
+
+// Get session from cookie
+const accessToken = Astro.cookies.get('sb-access-token')?.value;
+const refreshToken = Astro.cookies.get('sb-refresh-token')?.value;
+
+if (!accessToken || !refreshToken) {
+  return new Response(
+    '<html><body><h1>Unauthorized</h1><p>Please log in to access this page.</p><p>You need to set up Supabase authentication first.</p></body></html>',
+    { status: 401, headers: { 'Content-Type': 'text/html' } },
+  );
+}
+
+// Verify the session
+const {
+  data: { user },
+  error: authError,
+} = await supabaseAuth.auth.setSession({
+  access_token: accessToken,
+  refresh_token: refreshToken,
+});
+
+if (authError || !user) {
+  return new Response(
+    '<html><body><h1>Unauthorized</h1><p>Invalid or expired session. Please log in again.</p></body></html>',
+    { status: 401, headers: { 'Content-Type': 'text/html' } },
+  );
+}
+
+// User is authenticated, use service key for admin operations
+const supabase = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.SUPABASE_SERVICE_KEY,
 );
 
 const { data: pending } = await supabase
