@@ -7,12 +7,18 @@ export default function initResourceFilters() {
   const qEl = document.getElementById('q') as HTMLInputElement | null;
   const chipsEl = document.getElementById('chips');
   const badgeEl = document.getElementById('filter-count');
+  const loadMoreBtn = document.getElementById('load-more-btn') as HTMLButtonElement | null;
+  const paginationCount = document.getElementById('pagination-count');
+  const paginationContainer = document.getElementById('pagination-container');
   const filters = ['role', 'industry', 'topic', 'content_type', 'geography'].map((f) => ({
     key: f,
     el: $(`f-${f}`) as HTMLSelectElement | null,
   }));
 
   const STORAGE_KEY = 'resourcesFiltersV1';
+  const PAGE_SIZE = 30;
+  let currentPage = 1;
+
   if (!list) return;
 
   const renderChipsSummary = (vals: Record<string, string>) => {
@@ -80,6 +86,7 @@ export default function initResourceFilters() {
     const params = new URLSearchParams();
     for (const [k, v] of Object.entries(vals)) if (v && k !== 'q') params.set(k, v);
     if (vals.q) params.set('q', vals.q);
+    if (currentPage > 1) params.set('page', String(currentPage));
     const qs = params.toString();
     const url = qs ? `${location.pathname}?${qs}` : location.pathname;
     history.replaceState(null, '', url);
@@ -90,6 +97,16 @@ export default function initResourceFilters() {
       ...filters.map(({ key }) => [key, params.get(key) || '']),
       ['q', params.get('q') || ''],
     ]);
+
+    // Read page from URL
+    const pageParam = params.get('page');
+    if (pageParam) {
+      const parsed = parseInt(pageParam, 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        currentPage = parsed;
+      }
+    }
+
     const hasAnyParam = Object.values(vals).some((v) => v);
 
     // If no URL params, check localStorage or persona preference
@@ -138,7 +155,12 @@ export default function initResourceFilters() {
     setVals(vals);
     return vals;
   }
-  function apply(vals = getVals()) {
+  function apply(vals = getVals(), resetPage = false) {
+    // Reset to page 1 when filters change
+    if (resetPage) {
+      currentPage = 1;
+    }
+
     let visible = 0;
     let allowed = new Set(data.map((_, i) => i));
     // dropdown filters
@@ -175,15 +197,50 @@ export default function initResourceFilters() {
         allowed = new Set([...allowed].filter((i) => match((data as any)[i])));
       }
     }
+    // Paginate: only show up to currentPage * PAGE_SIZE items
+    const filteredIndices = Array.from(allowed);
+    const totalFiltered = filteredIndices.length;
+    const visibleCount = Math.min(currentPage * PAGE_SIZE, totalFiltered);
+    const visibleIndices = new Set(filteredIndices.slice(0, visibleCount));
+
     // render
     data.forEach((d, i) => {
-      const ok = allowed.has(i);
-      d.el.classList.toggle('hidden', !ok);
-      if (ok) visible++;
+      const isFiltered = allowed.has(i);
+      const isPaginated = visibleIndices.has(i);
+      d.el.classList.toggle('hidden', !isPaginated);
+      if (isPaginated) visible++;
     });
-    if (empty) empty.classList.toggle('hidden', visible !== 0);
+
+    // Update UI
+    if (empty) empty.classList.toggle('hidden', totalFiltered !== 0);
     if (countEl) countEl.textContent = `Showing ${visible} of ${list.children.length}`;
+
+    // Update pagination controls
+    updatePaginationUI(visible, totalFiltered);
+    updateQuery(vals);
+
     return visible;
+  }
+
+  function updatePaginationUI(visible: number, total: number) {
+    if (!loadMoreBtn || !paginationCount || !paginationContainer) return;
+
+    const hasMore = visible < total;
+
+    if (total === 0) {
+      // No results - hide pagination
+      paginationContainer.classList.add('hidden');
+    } else {
+      paginationContainer.classList.remove('hidden');
+      paginationCount.textContent = `Showing ${visible} of ${total} resources`;
+
+      if (hasMore) {
+        loadMoreBtn.classList.remove('hidden');
+        loadMoreBtn.disabled = false;
+      } else {
+        loadMoreBtn.classList.add('hidden');
+      }
+    }
   }
 
   // init from query
@@ -194,7 +251,6 @@ export default function initResourceFilters() {
   filters.forEach(({ key, el }) =>
     el?.addEventListener('change', () => {
       const vals = getVals();
-      updateQuery(vals);
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(vals));
 
@@ -206,7 +262,7 @@ export default function initResourceFilters() {
       } catch {
         /* ignore */
       }
-      apply(vals);
+      apply(vals, true); // Reset page when filter changes
       renderChipsSummary(vals);
     }),
   );
@@ -220,25 +276,36 @@ export default function initResourceFilters() {
   qEl?.addEventListener('input', () =>
     debounced(() => {
       const vals = getVals();
-      updateQuery(vals);
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(vals));
       } catch {
         /* ignore */
       }
-      apply(vals);
+      apply(vals, true); // Reset page when search changes
     }),
   );
   clearBtn?.addEventListener('click', () => {
     setVals({ role: 'all', industry: '', topic: '', content_type: '', geography: '', q: '' });
-    updateQuery(getVals());
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
       /* ignore */
     }
-    apply();
+    apply(getVals(), true); // Reset page when clearing
     renderChipsSummary(getVals());
+  });
+
+  // Load More button
+  loadMoreBtn?.addEventListener('click', () => {
+    currentPage++;
+    apply(getVals(), false);
+
+    // Smooth scroll to first new item
+    const visibleItems = Array.from(list.children).filter((el) => !el.classList.contains('hidden'));
+    const firstNewItem = visibleItems[(currentPage - 1) * PAGE_SIZE];
+    if (firstNewItem) {
+      firstNewItem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   });
 
   // Mobile bottom-sheet controls
@@ -331,6 +398,7 @@ export default function initResourceFilters() {
         q: '',
       };
       setDesktopVals(empty);
+      currentPage = 1; // Reset page when clearing filters
       applyFromDesktop();
       closeSheet();
     });
@@ -344,10 +412,11 @@ export default function initResourceFilters() {
         q: mobile.q?.value?.trim() || '',
       };
       setDesktopVals(vals);
+      currentPage = 1; // Reset page when applying mobile filters
       applyFromDesktop();
       closeSheet();
     });
 
-    renderChips(getDesktopVals());
+    renderChipsSummary(getDesktopVals());
   }
 }
