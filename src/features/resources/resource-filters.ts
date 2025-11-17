@@ -18,7 +18,7 @@ export default function initResourceFilters() {
   const renderChipsSummary = (vals: Record<string, string>) => {
     if (!chipsEl) return;
     chipsEl.innerHTML = '';
-    const entries = Object.entries(vals).filter(([k, v]) => k !== 'q' && v);
+    const entries = Object.entries(vals).filter(([k, v]) => k !== 'q' && v && v !== 'all');
     entries.forEach(([k, v]) => {
       const button = document.createElement('button');
       button.className =
