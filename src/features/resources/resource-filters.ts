@@ -5,6 +5,8 @@ export default function initResourceFilters() {
   const clearBtn = document.getElementById('clear-filters');
   const countEl = document.getElementById('count');
   const qEl = document.getElementById('q') as HTMLInputElement | null;
+  const chipsEl = document.getElementById('chips');
+  const badgeEl = document.getElementById('filter-count');
   const filters = ['role', 'industry', 'topic', 'content_type', 'geography'].map((f) => ({
     key: f,
     el: $(`f-${f}`) as HTMLSelectElement | null,
@@ -12,6 +14,29 @@ export default function initResourceFilters() {
 
   const STORAGE_KEY = 'resourcesFiltersV1';
   if (!list) return;
+
+  const renderChipsSummary = (vals: Record<string, string>) => {
+    if (!chipsEl) return;
+    chipsEl.innerHTML = '';
+    const entries = Object.entries(vals).filter(([k, v]) => k !== 'q' && v);
+    entries.forEach(([k, v]) => {
+      const button = document.createElement('button');
+      button.className =
+        'rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-200 hover:bg-neutral-800';
+      const displayValue = v.charAt(0).toUpperCase() + v.slice(1);
+      button.textContent = `${k.replace('_', ' ')}: ${displayValue} ✕`;
+      button.addEventListener('click', () => {
+        const current = getVals();
+        current[k] = '';
+        setVals(current);
+        apply(current);
+        renderChipsSummary(current);
+      });
+      chipsEl.appendChild(button);
+    });
+    const activeCount = entries.length + (vals.q?.trim() ? 1 : 0);
+    if (badgeEl) badgeEl.textContent = String(activeCount);
+  };
 
   // Build an index of items from the DOM data attributes
   const data = Array.from(list.children).map((li) => {
@@ -164,6 +189,7 @@ export default function initResourceFilters() {
   // init from query
   const initVals = readFromQuery();
   apply(initVals);
+  renderChipsSummary(initVals);
   // events
   filters.forEach(({ key, el }) =>
     el?.addEventListener('change', () => {
@@ -181,6 +207,7 @@ export default function initResourceFilters() {
         /* ignore */
       }
       apply(vals);
+      renderChipsSummary(vals);
     }),
   );
   const debounced = (() => {
@@ -211,11 +238,7 @@ export default function initResourceFilters() {
       /* ignore */
     }
     apply();
-    // Clear filter badges if they exist
-    const chips = document.getElementById('chips');
-    if (chips) chips.innerHTML = '';
-    const countBadge = document.getElementById('filter-count');
-    if (countBadge) countBadge.textContent = '0';
+    renderChipsSummary(getVals());
   });
 
   // Mobile bottom-sheet controls
@@ -223,8 +246,6 @@ export default function initResourceFilters() {
   const sheet = document.getElementById('filter-sheet');
   const backdrop = document.getElementById('sheet-backdrop');
   const closeBtn = document.getElementById('close-sheet');
-  const countBadge = document.getElementById('filter-count');
-  const chips = document.getElementById('chips');
   if (openBtn && sheet) {
     const desktop = {
       q: document.getElementById('q') as HTMLInputElement | null,
@@ -261,35 +282,13 @@ export default function initResourceFilters() {
       if (desktop.geography) desktop.geography.value = vals.geography || '';
       if (desktop.q) desktop.q.value = vals.q || '';
     }
-    function renderChips(vals: Record<string, string>) {
-      if (!chips) return;
-      chips.innerHTML = '';
-      const entries = Object.entries(vals).filter(([k, v]) => k !== 'q' && v);
-      entries.forEach(([k, v]) => {
-        const b = document.createElement('button');
-        b.className =
-          'rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-200 hover:bg-neutral-800';
-        // Capitalize first letter for display
-        const displayValue = v.charAt(0).toUpperCase() + v.slice(1);
-        b.textContent = `${k.replace('_', ' ')}: ${displayValue} ✕`;
-        b.addEventListener('click', () => {
-          const cur = getDesktopVals();
-          (cur as any)[k] = '';
-          setDesktopVals(cur);
-          applyFromDesktop();
-        });
-        chips.appendChild(b);
-      });
-      const active = entries.length + (vals.q && vals.q.trim() ? 1 : 0);
-      if (countBadge) countBadge.textContent = String(active);
-    }
     function applyFromDesktop() {
       ['role', 'industry', 'topic', 'content_type', 'geography'].forEach((k) => {
         const el = (desktop as any)[k] as HTMLSelectElement | null;
         if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
       });
       if (desktop.q) desktop.q.dispatchEvent(new Event('input', { bubbles: true }));
-      renderChips(getDesktopVals());
+      renderChipsSummary(getDesktopVals());
     }
     function openSheet() {
       syncToMobile();
