@@ -53,9 +53,6 @@ const values = {
   jurisdiction: createValuesWithCounts('jurisdiction'),
 };
 
-const externalThumb = (u: string | undefined) =>
-  u ? `https://image.thum.io/get/nojs/width/600/crop/600/${encodeURIComponent(u)}` : null;
-
 const thumbsDirUrl = new URL('../../public/thumbs/', import.meta.url);
 let thumbFiles: string[] = [];
 try {
@@ -92,7 +89,6 @@ const expandItemThumb = (t: string | undefined) => {
       const candidates = [
         ...(typeof findLocalThumbs === 'function' ? findLocalThumbs(first.slug) : []),
         ...expandItemThumb(first.thumbnail),
-        ...(externalThumb(first.url) ? [externalThumb(first.url)] : []),
       ];
       const href = candidates[0];
       return href ? (

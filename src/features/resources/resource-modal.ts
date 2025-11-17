@@ -70,15 +70,12 @@ function openModalFrom(li: HTMLElement) {
   const makeCandidates = () => {
     const slug = li.getAttribute('data-slug') || '';
     const thumb = li.getAttribute('data-thumbnail') || '';
-    const url = li.getAttribute('data-url') || '';
     const arr: string[] = [];
     if (thumb) {
       if (/\.(webp|png|jpe?g)$/i.test(thumb)) arr.push(thumb);
       else arr.push(`${thumb}.webp`, `${thumb}.png`, `${thumb}.jpg`);
     }
     if (slug) arr.push(`/thumbs/${slug}.png`, `/thumbs/${slug}.webp`, `/thumbs/${slug}.jpg`);
-    if (url)
-      arr.push(`https://image.thum.io/get/nojs/width/960/crop/960/${encodeURIComponent(url)}`);
     // de-dup
     return Array.from(new Set(arr));
   };

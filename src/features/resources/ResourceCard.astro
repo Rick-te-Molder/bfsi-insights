@@ -13,10 +13,6 @@ const fmt = (iso?: string) =>
 const asArr = (v: any) => (Array.isArray(v) ? v : v ? [v] : []);
 
 // Helpers (server-side local discovery + client-safe fallbacks)
-const externalThumb = (u?: string) =>
-  u
-    ? `https://image.thum.io/get/nojs/width/${isFirst ? 960 : 640}/crop/${isFirst ? 960 : 640}/${encodeURIComponent(u)}`
-    : null;
 const expandItemThumb = (t?: string) => {
   if (!t) return [];
   if (/\.(webp|png|jpe?g)$/i.test(t)) return [t];
@@ -61,11 +57,7 @@ const isUpdated = isHome
     ? (Date.now() - new Date(item.last_edited as any).getTime()) / 86400000 <= 7 && !isNew
     : false
   : false;
-const candidates = [
-  ...findLocalThumbs(item.slug),
-  ...expandItemThumb(item.thumbnail),
-  ...(externalThumb(item.url) ? [externalThumb(item.url)] : []),
-];
+const candidates = [...findLocalThumbs(item.slug), ...expandItemThumb(item.thumbnail)];
 ---
 
 <li

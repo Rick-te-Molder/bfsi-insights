@@ -197,7 +197,7 @@
     "geography": "global",
     "use_cases": "fraud-detection",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2510.22963"
+    "thumbnail": "/thumbs/compressionattackexploitingpromptcompressionasanewattacksurfaceinllm-poweredagents.png"
   },
   {
     "url": "https://arxiv.org/abs/2510.25441",
@@ -217,7 +217,7 @@
     "geography": "global",
     "use_cases": "customer-onboarding",
     "agentic_capabilities": "collaboration",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2510.25441"
+    "thumbnail": "/thumbs/groundedinrealitylearninganddeployingproactivellmfromofflinelogs.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.03929",
@@ -237,7 +237,7 @@
     "geography": "global",
     "use_cases": "document-processing",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.03929"
+    "thumbnail": "/thumbs/nvidianemotronnanov2vl.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04689",
@@ -257,7 +257,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04689"
+    "thumbnail": "/thumbs/adaptivetestingforllmevaluationapsychometricalternativetostaticbenchmarks.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04694",
@@ -277,7 +277,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04694"
+    "thumbnail": "/thumbs/reasoninguptheinstructionladderforcontrollablelanguagemodels.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04696",
@@ -297,7 +297,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04696"
+    "thumbnail": "/thumbs/encourageevaluatingraglocalfastandreliable.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04697",
@@ -317,7 +317,7 @@
     "geography": "global",
     "use_cases": "fraud-detection",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04697"
+    "thumbnail": "/thumbs/simulatingmisinformationvulnerabilitieswithagentpersonas.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04705",
@@ -337,7 +337,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04705"
+    "thumbnail": "/thumbs/polis-benchtowardsmulti-dimensionalevaluationofllmsforbilingualpolicytasksingovernmentalscenarios.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04706",
@@ -357,7 +357,7 @@
     "geography": "global",
     "use_cases": "customer-onboarding",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04706"
+    "thumbnail": "/thumbs/prioritizeeconomyorclimateactioninvestigatingchatgptresponsedifferencesbasedoninferredpoliticalorien.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04715",
@@ -377,7 +377,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04715"
+    "thumbnail": "/thumbs/firstisnotreallybetterthanlastevaluatinglayerchoiceandaggregationstrategiesinlanguagemodeldatainflue.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04728",
@@ -397,7 +397,7 @@
     "geography": "global",
     "use_cases": "fraud-detection",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04728"
+    "thumbnail": "/thumbs/trustworthinesscalibrationframeworkforphishingemaildetectionusinglargelanguagemodels.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04875",
@@ -417,7 +417,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04875"
+    "thumbnail": "/thumbs/minimalandmechanisticconditionsforbehavioralself-awarenessinllms.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04914",
@@ -437,7 +437,7 @@
     "geography": "global",
     "use_cases": "customer-onboarding",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04914"
+    "thumbnail": "/thumbs/meralion-serrobustspeechemotionrecognitionmodelforenglishandsealanguages.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04919",
@@ -457,7 +457,7 @@
     "geography": "global",
     "use_cases": "document-processing",
     "agentic_capabilities": "memory",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04919"
+    "thumbnail": "/thumbs/budgetmemlearningselectivememorypoliciesforcost-efficientlong-contextprocessinginlanguagemodels.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04949",
@@ -477,7 +477,7 @@
     "geography": "global",
     "use_cases": "fraud-detection",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04949"
+    "thumbnail": "/thumbs/deepforgeseallatentspace-drivensemi-fragilewatermarkingfordeepfakedetectionusingmulti-agentadversari.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04962",
@@ -497,7 +497,7 @@
     "geography": "global",
     "use_cases": "customer-onboarding",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04962"
+    "thumbnail": "/thumbs/toogoodtobebadonthefailureofllmstorole-playvillains.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04995",
@@ -517,7 +517,7 @@
     "geography": "global",
     "use_cases": "customer-onboarding",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04995"
+    "thumbnail": "/thumbs/enhancingpublicspeakingskillsinengineeringstudentsthroughai.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.05000",
@@ -537,7 +537,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.05000"
+    "thumbnail": "/thumbs/querygenerationpipelinewithenhancedanswerabilityassessmentforfinancialinformationretrieval.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.05005",
@@ -557,7 +557,7 @@
     "geography": "global",
     "use_cases": "transaction-monitoring",
     "agentic_capabilities": "collaboration",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.05005"
+    "thumbnail": "/thumbs/multi-agentcoordinationviaflowmatching.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.05018",
@@ -577,7 +577,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.05018"
+    "thumbnail": "/thumbs/pluralisticbehaviorsuitestress-testingmulti-turnadherencetocustombehavioralpolicies.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.05040",
@@ -597,7 +597,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.05040"
+    "thumbnail": "/thumbs/ua-code-benchacompetitiveprogrammingbenchmarkforevaluatingllmcodegenerationinukrainian.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.05165",
@@ -617,7 +617,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.05165"
+    "thumbnail": "/thumbs/generatingsoftwarearchitecturedescriptionfromsourcecodeusingreverseengineeringandlargelanguagemodel.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.05269",
@@ -637,7 +637,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "collaboration",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.05269"
+    "thumbnail": "/thumbs/tamasbenchmarkingadversarialrisksinmulti-agentllmsystems.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.05299",
@@ -657,7 +657,7 @@
     "geography": "global",
     "use_cases": "transaction-monitoring",
     "agentic_capabilities": "monitoring",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.05299"
+    "thumbnail": "/thumbs/livestarlivestreamingassistantforreal-worldonlinevideounderstanding.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.05320",
@@ -677,7 +677,7 @@
     "geography": "eu",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.05320"
+    "thumbnail": "/thumbs/whatarethefactsautomatedextractionofcourt-establishedfactsfromcriminal-courtopinions.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.05385",
@@ -697,7 +697,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.05385"
+    "thumbnail": "/thumbs/tearagatoken-efficientagenticretrieval-augmentedgenerationframework.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.05459",
@@ -717,7 +717,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.05459"
+    "thumbnail": "/thumbs/swe-compasstowardsunifiedevaluationofagenticcodingabilitiesforlargelanguagemodels.png"
   },
   {
     "url": "https://arxiv.org/abs/2503.04412",
@@ -737,7 +737,7 @@
     "geography": "global",
     "use_cases": "credit-assessment",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2503.04412"
+    "thumbnail": "/thumbs/widerordeeperscalingllminference-timecomputewithadaptivebranchingtreesearch.png"
   },
   {
     "url": "https://arxiv.org/abs/2506.18156",
@@ -757,7 +757,7 @@
     "geography": "global",
     "use_cases": "customer-onboarding",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2506.18156"
+    "thumbnail": "/thumbs/aithroughthehumanlensinvestigatingcognitivetheoriesinmachinepsychology.png"
   },
   {
     "url": "https://arxiv.org/abs/2510.04173",
@@ -777,7 +777,7 @@
     "geography": "global",
     "use_cases": "fraud-detection",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2510.04173"
+    "thumbnail": "/thumbs/openagentspecificationagentspecaunifiedrepresentationforaiagents.png"
   },
   {
     "url": "https://arxiv.org/abs/2510.04391",
@@ -797,7 +797,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2510.04391"
+    "thumbnail": "/thumbs/internalworldmodelsasimaginationnetworksincognitiveagents.png"
   },
   {
     "url": "https://arxiv.org/abs/2510.15144",
@@ -817,7 +817,7 @@
     "geography": "global",
     "use_cases": "customer-onboarding",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2510.15144"
+    "thumbnail": "/thumbs/hugagentbenchmarkingllmsforsimulationofindividualizedhumanreasoning.png"
   },
   {
     "url": "https://arxiv.org/abs/2510.21150",
@@ -837,7 +837,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2510.21150"
+    "thumbnail": "/thumbs/stringseedofthoughtpromptingllmsfordistribution-faithfulanddiversegeneration.png"
   },
   {
     "url": "https://arxiv.org/abs/2510.24145",
@@ -857,7 +857,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "monitoring",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2510.24145"
+    "thumbnail": "/thumbs/fromobservabilitydatatodiagnosisanevolvingmulti-agentsystemforincidentmanagementincloudsystems.png"
   },
   {
     "url": "https://arxiv.org/abs/2510.26854",
@@ -877,7 +877,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2510.26854"
+    "thumbnail": "/thumbs/inverseknowledgesearchoververifiablereasoningsynthesizingascientificencyclopediafromalongchains-of-t.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.03138",
@@ -897,7 +897,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.03138"
+    "thumbnail": "/thumbs/deepknown-guardaproprietarymodel-basedsafetyresponseframeworkforaiagents.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.03724",
@@ -917,7 +917,7 @@
     "geography": "global",
     "use_cases": "fraud-detection",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.03724"
+    "thumbnail": "/thumbs/outbiddingandoutbluffingelitehumansmasteringliarspokerviaself-playandreinforcementlearning.png"
   },
   {
     "url": "https://arxiv.org/abs/2412.05447",
@@ -937,7 +937,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2412.05447"
+    "thumbnail": "/thumbs/tobugraphknowledgegraph-basedretrievalforenhancedllmperformancebeyondrag.png"
   },
   {
     "url": "https://arxiv.org/abs/2501.03265",
@@ -957,7 +957,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2501.03265"
+    "thumbnail": "/thumbs/cognitiveedgecomputingacomprehensivesurveyonoptimizinglargemodelsandaiagentsforpervasivedeployment.png"
   },
   {
     "url": "https://arxiv.org/abs/2501.09766",
@@ -977,7 +977,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "tool-use",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2501.09766"
+    "thumbnail": "/thumbs/itoolreinforcedfine-tuningwithdynamicdeficiencycalibrationforadvancedtooluse.png"
   },
   {
     "url": "https://arxiv.org/abs/2502.02421",
@@ -997,7 +997,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2502.02421"
+    "thumbnail": "/thumbs/activation-informedmergingoflargelanguagemodels.png"
   },
   {
     "url": "https://arxiv.org/abs/2502.16395",
@@ -1017,7 +1017,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2502.16395"
+    "thumbnail": "/thumbs/aireprananalyst-inspectorframeworkforevaluatingreproducibilityofllmsindatascience.png"
   },
   {
     "url": "https://arxiv.org/abs/2504.06265",
@@ -1037,7 +1037,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2504.06265"
+    "thumbnail": "/thumbs/largelanguagemodelsasuncertainty-calibratedoptimizersforexperimentaldiscovery.png"
   },
   {
     "url": "https://arxiv.org/abs/2504.21700",
@@ -1057,7 +1057,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2504.21700"
+    "thumbnail": "/thumbs/xbreakingunderstandinghowllmssecurityalignmentcanbebroken.png"
   },
   {
     "url": "https://arxiv.org/abs/2505.13438",
@@ -1077,7 +1077,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2505.13438"
+    "thumbnail": "/thumbs/optimizinganytimereasoningviabudgetrelativepolicyoptimization.png"
   },
   {
     "url": "https://arxiv.org/abs/2506.05305",
@@ -1097,7 +1097,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "collaboration",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2506.05305"
+    "thumbnail": "/thumbs/prorefineinference-timepromptrefinementwithtextualfeedback.png"
   },
   {
     "url": "https://arxiv.org/abs/2506.09338",
@@ -1117,7 +1117,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2506.09338"
+    "thumbnail": "/thumbs/knowwhatyoudontknowuncertaintycalibrationofprocessrewardmodels.png"
   },
   {
     "url": "https://arxiv.org/abs/2507.03279",
@@ -1137,7 +1137,7 @@
     "geography": "global",
     "use_cases": "customer-onboarding",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2507.03279"
+    "thumbnail": "/thumbs/conformalinformationpursuitforinteractivelyguidinglargelanguagemodels.png"
   },
   {
     "url": "https://arxiv.org/abs/2507.09601",
@@ -1157,7 +1157,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2507.09601"
+    "thumbnail": "/thumbs/nmixxdomain-adaptedneuralembeddingsforcross-lingualexplorationoffinance.png"
   },
   {
     "url": "https://arxiv.org/abs/2508.15809",
@@ -1177,7 +1177,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "collaboration",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2508.15809"
+    "thumbnail": "/thumbs/chain-of-queryunleashingthepowerofllmsinsql-aidedtableunderstandingviamulti-agentcollaboration.png"
   },
   {
     "url": "https://arxiv.org/abs/2508.18312",
@@ -1197,7 +1197,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2508.18312"
+    "thumbnail": "/thumbs/whatmattersindatafordpo.png"
   },
   {
     "url": "https://arxiv.org/abs/2508.20866",
@@ -1217,7 +1217,7 @@
     "geography": "global",
     "use_cases": "fraud-detection",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2508.20866"
+    "thumbnail": "/thumbs/aiagenticvulnerabilityinjectionandtransformationwithoptimizedreasoning.png"
   },
   {
     "url": "https://arxiv.org/abs/2509.00616",
@@ -1237,7 +1237,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2509.00616"
+    "thumbnail": "/thumbs/timecopilot.png"
   },
   {
     "url": "https://arxiv.org/abs/2510.17797",
@@ -1257,7 +1257,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "planning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2510.17797"
+    "thumbnail": "/thumbs/enterprisedeepresearchsteerablemulti-agentdeepresearchforenterpriseanalytics.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04700",
@@ -1277,7 +1277,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04700"
+    "thumbnail": "/thumbs/separatethewheatfromthechaffwinnowingdowndivergentviewsinretrievalaugmentedgeneration.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.04703",
@@ -1297,67 +1297,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.04703"
-  },
-  {
-    "url": "https://blog.propellocloud.com/financial-services-trends",
-    "title": "10 Trends Defining Growth for Financial Services Businesses in 2024",
-    "slug": "10-trends-defining-growth-financial-services-2024",
-    "source_name": "Propello Cloud",
-    "date_published": "2024-06-25",
-    "date_added": "2025-11-10T16:55:59+00:00",
-    "authors": ["Propello Cloud"],
-    "summary_short": "Digital transformation and AI in financial services enhance customer personalization, with data analytics boosting retention by 78%. Open banking users grow 50% annually.",
-    "summary_medium": "Basically, they discovered that digital transformation and AI are pivotal for financial services growth. Fintech innovations lead to better customer experiences, with data analytics improving customer loyalty by 78%. Open banking is expanding, with user growth expected to hit 50% annually by 2024, driven by regulatory changes and demand for real-time transactions.",
-    "summary_long": "## Context\nFinancial services are undergoing rapid transformation due to technology, consumer demand, and regulatory shifts. Fintech and digital-only providers are challenging traditional models, forcing incumbents to innovate.\n\n## Relevance  \nBFSI professionals must adapt to leverage digital tools, AI, and open banking to remain competitive, improve customer experience, and enhance operational efficiency.\n\n## Key Insights  \n1. **Digital Transformation:** Fintech disrupts the sector, with digital banks offering lower fees and innovative services. \n2. **Data-driven Insights:** Personalized services increase loyalty by 78%, optimizing processes and risk management.\n3. **Open Banking:** User growth at 50% annually, driven by regulatory changes like the EU's PSD2. \n4. **AI Utilization:** Enhances productivity and personalization, addressing rising security concerns.",
-    "role": "executive",
-    "content_type": "article",
-    "industry": "cross-bfsi",
-    "topic": "technology-and-data",
-    "geography": "global",
-    "use_cases": "portfolio-analytics",
-    "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Fblog.propellocloud.com%2Ffinancial-services-trends"
-  },
-  {
-    "url": "https://moringaschool.com/blog/latest-data-science-trends-reshaping-the-industry-in-2024/",
-    "title": "Latest Data Science Trends Reshaping The Industry in 2024",
-    "slug": "latest-data-science-trends-reshaping-industry-2024",
-    "source_name": "Moringa School",
-    "date_published": "2024-07-30",
-    "date_added": "2025-11-10T16:55:59+00:00",
-    "authors": ["Sasha Achieng"],
-    "summary_short": "AI and ML are driving automation in BFSI, enhancing efficiency with explainable models. Real-time big data analytics and DataOps improve decision-making speed. Privacy-tech like differential privacy is crucial.",
-    "summary_medium": "Basically, they discovered AI and ML are automating complex BFSI tasks, boosting efficiency. Real-time analytics via edge computing and DataOps enhance decision speed. Privacy-preserving techniques like differential privacy are essential for compliance in BFSI.",
-    "summary_long": "## Context\nIn 2024, data science in BFSI is rapidly evolving with AI and machine learning leading the charge. Organizations are increasingly leveraging big data for real-time insights and integrating data science across disciplines.\n\n## Relevance  \nBFSI professionals must adapt to these trends to enhance operational efficiency, ensure data privacy, and maintain a competitive edge. The rise of AI-powered automation can reduce manual intervention, while real-time analytics can improve decision-making.\n\n## Key Insights  \n1. **AI and ML**: These technologies are automating tasks, requiring BFSI professionals to develop skills in AI ethics and explainability.\n2. **Real-Time Analytics**: Edge computing and DataOps are crucial for faster decision-making.\n3. **Data Privacy**: Techniques like differential privacy are vital for compliance.\n4. **Interdisciplinary Integration**: Combining data science with fields like engineering and social sciences offers new BFSI solutions.",
-    "role": "professional",
-    "content_type": "article",
-    "industry": "cross-bfsi",
-    "topic": "technology-and-data-data-management",
-    "geography": "global",
-    "use_cases": "portfolio-analytics",
-    "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Fmoringaschool.com%2Fblog%2Flatest-data-science-trends-reshaping-the-industry-in-2024%2F"
-  },
-  {
-    "url": "https://explodingtopics.com/blog/computer-science-trends",
-    "title": "8 Top Computer Science Trends (2024 & 2025)",
-    "slug": "8-top-computer-science-trends-2024-2025",
-    "source_name": "Exploding Topics",
-    "date_published": "2024-06-10",
-    "date_added": "2025-11-10T16:55:59+00:00",
-    "authors": ["Josh Howarth"],
-    "summary_short": "AI's impact is growing with 18% of CS papers using AI tools. Quantum computing could revolutionize data science. Zero Trust security is rising sharply, reducing breach costs.",
-    "summary_medium": "Basically, they discovered AI's role in research is expanding, with 18% of CS papers using AI tools. Quantum computing promises breakthroughs in data science. Zero Trust models, crucial for BFSI, can mitigate $3.86M breach costs and are becoming industry standard.",
-    "summary_long": "## Context\nThe computer science landscape is rapidly evolving with AI, quantum computing, and security models like Zero Trust gaining traction. These advancements are reshaping research, data processing, and cybersecurity.\n\n## Relevance\nFor BFSI, AI can streamline operations and enhance data analysis. Quantum computing holds potential for complex financial modeling. Zero Trust is critical to safeguard against costly breaches.\n\n## Key Insights\n- AI's resurgence is evident with 18% of CS papers utilizing AI, up from 2% pre-2022.\n- Quantum computing interest surged 110%, promising advancements in data science and AI.\n- Zero Trust security models are crucial, with IBM noting average breach costs of $3.86M, emphasizing the need for robust cybersecurity measures.",
-    "role": "professional",
-    "content_type": "article",
-    "industry": "cross-bfsi",
-    "topic": "technology-and-data",
-    "geography": "global",
-    "use_cases": "portfolio-analytics",
-    "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Fexplodingtopics.com%2Fblog%2Fcomputer-science-trends"
+    "thumbnail": "/thumbs/measuringwhatmattersconstructvalidityinlargelanguagemodelbenchmarks.png"
   },
   {
     "url": "https://blogs.nvidia.com/blog/what-is-agentic-ai/",
@@ -1377,7 +1317,67 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Fblogs.nvidia.com%2Fblog%2Fwhat-is-agentic-ai%2F"
+    "thumbnail": "/thumbs/what-is-agentic-ai.png"
+  },
+  {
+    "url": "https://blog.propellocloud.com/financial-services-trends",
+    "title": "10 Trends Defining Growth for Financial Services Businesses in 2024",
+    "slug": "10-trends-defining-growth-financial-services-2024",
+    "source_name": "Propello Cloud",
+    "date_published": "2024-06-25",
+    "date_added": "2025-11-10T16:55:59+00:00",
+    "authors": ["Propello Cloud"],
+    "summary_short": "Digital transformation and AI in financial services enhance customer personalization, with data analytics boosting retention by 78%. Open banking users grow 50% annually.",
+    "summary_medium": "Basically, they discovered that digital transformation and AI are pivotal for financial services growth. Fintech innovations lead to better customer experiences, with data analytics improving customer loyalty by 78%. Open banking is expanding, with user growth expected to hit 50% annually by 2024, driven by regulatory changes and demand for real-time transactions.",
+    "summary_long": "## Context\nFinancial services are undergoing rapid transformation due to technology, consumer demand, and regulatory shifts. Fintech and digital-only providers are challenging traditional models, forcing incumbents to innovate.\n\n## Relevance  \nBFSI professionals must adapt to leverage digital tools, AI, and open banking to remain competitive, improve customer experience, and enhance operational efficiency.\n\n## Key Insights  \n1. **Digital Transformation:** Fintech disrupts the sector, with digital banks offering lower fees and innovative services. \n2. **Data-driven Insights:** Personalized services increase loyalty by 78%, optimizing processes and risk management.\n3. **Open Banking:** User growth at 50% annually, driven by regulatory changes like the EU's PSD2. \n4. **AI Utilization:** Enhances productivity and personalization, addressing rising security concerns.",
+    "role": "executive",
+    "content_type": "article",
+    "industry": "cross-bfsi",
+    "topic": "technology-and-data",
+    "geography": "global",
+    "use_cases": "portfolio-analytics",
+    "agentic_capabilities": "reasoning",
+    "thumbnail": "/thumbs/10-trends-defining-growth-financial-services-2024.png"
+  },
+  {
+    "url": "https://explodingtopics.com/blog/computer-science-trends",
+    "title": "8 Top Computer Science Trends (2024 & 2025)",
+    "slug": "8-top-computer-science-trends-2024-2025",
+    "source_name": "Exploding Topics",
+    "date_published": "2024-06-10",
+    "date_added": "2025-11-10T16:55:59+00:00",
+    "authors": ["Josh Howarth"],
+    "summary_short": "AI's impact is growing with 18% of CS papers using AI tools. Quantum computing could revolutionize data science. Zero Trust security is rising sharply, reducing breach costs.",
+    "summary_medium": "Basically, they discovered AI's role in research is expanding, with 18% of CS papers using AI tools. Quantum computing promises breakthroughs in data science. Zero Trust models, crucial for BFSI, can mitigate $3.86M breach costs and are becoming industry standard.",
+    "summary_long": "## Context\nThe computer science landscape is rapidly evolving with AI, quantum computing, and security models like Zero Trust gaining traction. These advancements are reshaping research, data processing, and cybersecurity.\n\n## Relevance\nFor BFSI, AI can streamline operations and enhance data analysis. Quantum computing holds potential for complex financial modeling. Zero Trust is critical to safeguard against costly breaches.\n\n## Key Insights\n- AI's resurgence is evident with 18% of CS papers utilizing AI, up from 2% pre-2022.\n- Quantum computing interest surged 110%, promising advancements in data science and AI.\n- Zero Trust security models are crucial, with IBM noting average breach costs of $3.86M, emphasizing the need for robust cybersecurity measures.",
+    "role": "professional",
+    "content_type": "article",
+    "industry": "cross-bfsi",
+    "topic": "technology-and-data",
+    "geography": "global",
+    "use_cases": "portfolio-analytics",
+    "agentic_capabilities": "reasoning",
+    "thumbnail": "/thumbs/8-top-computer-science-trends-2024-2025.png"
+  },
+  {
+    "url": "https://moringaschool.com/blog/latest-data-science-trends-reshaping-the-industry-in-2024/",
+    "title": "Latest Data Science Trends Reshaping The Industry in 2024",
+    "slug": "latest-data-science-trends-reshaping-industry-2024",
+    "source_name": "Moringa School",
+    "date_published": "2024-07-30",
+    "date_added": "2025-11-10T16:55:59+00:00",
+    "authors": ["Sasha Achieng"],
+    "summary_short": "AI and ML are driving automation in BFSI, enhancing efficiency with explainable models. Real-time big data analytics and DataOps improve decision-making speed. Privacy-tech like differential privacy is crucial.",
+    "summary_medium": "Basically, they discovered AI and ML are automating complex BFSI tasks, boosting efficiency. Real-time analytics via edge computing and DataOps enhance decision speed. Privacy-preserving techniques like differential privacy are essential for compliance in BFSI.",
+    "summary_long": "## Context\nIn 2024, data science in BFSI is rapidly evolving with AI and machine learning leading the charge. Organizations are increasingly leveraging big data for real-time insights and integrating data science across disciplines.\n\n## Relevance  \nBFSI professionals must adapt to these trends to enhance operational efficiency, ensure data privacy, and maintain a competitive edge. The rise of AI-powered automation can reduce manual intervention, while real-time analytics can improve decision-making.\n\n## Key Insights  \n1. **AI and ML**: These technologies are automating tasks, requiring BFSI professionals to develop skills in AI ethics and explainability.\n2. **Real-Time Analytics**: Edge computing and DataOps are crucial for faster decision-making.\n3. **Data Privacy**: Techniques like differential privacy are vital for compliance.\n4. **Interdisciplinary Integration**: Combining data science with fields like engineering and social sciences offers new BFSI solutions.",
+    "role": "professional",
+    "content_type": "article",
+    "industry": "cross-bfsi",
+    "topic": "technology-and-data-data-management",
+    "geography": "global",
+    "use_cases": "portfolio-analytics",
+    "agentic_capabilities": "reasoning",
+    "thumbnail": "/thumbs/latest-data-science-trends-reshaping-industry-2024.png"
   },
   {
     "url": "https://imaginovation.net/blog/what-is-digital-transformation-importance-for-businesses/",
@@ -1397,7 +1397,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Fimaginovation.net%2Fblog%2Fwhat-is-digital-transformation-importance-for-businesses%2F"
+    "thumbnail": "/thumbs/what-is-digital-transformation-why-important-for-businesses.png"
   },
   {
     "url": "https://fintechmagazine.com/news/payment-innovation-real-time-systems-shape-industry-future",
@@ -1417,55 +1417,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Ffintechmagazine.com%2Fnews%2Fpayment-innovation-real-time-systems-shape-industry-future"
-  },
-  {
-    "url": "https://www.mckinsey.com/industries/financial-services/our-insights/insurance-2030-the-impact-of-ai-on-the-future-of-insurance",
-    "title": "Insurance 2030—The impact of AI on the future of insurance",
-    "slug": "insurance-2030-the-impact-of-ai-on-the-future-of-insurance",
-    "source_name": "McKinsey",
-    "date_published": "2021-03-12",
-    "date_added": "2025-10-28T18:00:00+00:00",
-    "authors": ["Ramnath Balasubramanian", "Ari Libarikian", "Doug McElhaney"],
-    "summary_short": "Insurance in 2030 will use AI for real-time pricing and claims. Devices will flood insurers with data. Expect faster, automated processes and tailored user experiences.",
-    "summary_medium": "Basically, they discovered that by 2030, AI will transform insurance. Claims will be automated, using data from connected devices. Insurers will offer personalized, dynamic pricing. Distribution will change with instant policies and smart contracts, while underwriting will become rapid and data-driven. Agents will shift to tech-savvy advisors. It's a big tech leap in insurance!",
-    "summary_long": "## Context\nAI is reshaping industries, and insurance is no exception. This paper looks at how AI will transform insurance by 2030, changing how policies are bought, priced, and claimed.\n\n## Relevance\nFor anyone in BFSI, these changes mean adapting to rapid AI integration. Insurers must get tech-savvy, as AI will lead to new products and customer experiences.\n\n## Key Insights\nBy 2030, expect real-time insurance pricing and claims thanks to AI and data from connected devices. The underwriting process will be almost instant, with AI analyzing vast data streams. Claims will be automated, minimizing human involvement. Agents will evolve into tech-empowered advisors. It's about shifting from 'detect and repair' to 'predict and prevent'. The focus will be on personalized, usage-based insurance products, requiring insurers to revamp their strategies for the future.",
-    "role": "executive",
-    "content_type": "article",
-    "industry": "insurance",
-    "topic": "technology-and-data-ai",
-    "geography": "global",
-    "use_cases": "claims-handling",
-    "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Fwww.mckinsey.com%2Findustries%2Ffinancial-services%2Four-insights%2Finsurance-2030-the-impact-of-ai-on-the-future-of-insurance"
-  },
-  {
-    "url": "https://www.deloitte.com/content/dam/assets-zone3/us/en/docs/services/consulting/2025/agentic-ai-enterprise-2028.pdf",
-    "title": "Agentic Enterprise 2028: A Blueprint for Cost Savings, Job Creation, and Faster Growth Through Agentic AI",
-    "slug": "agentic-enterprise-2028",
-    "source_name": "Deloitte",
-    "date_published": "2025-09-01",
-    "date_added": "2025-10-28T18:00:00+00:00",
-    "authors": [
-      "Vivek Kulkarni",
-      "Greg Vert",
-      "Caroline Ritter",
-      "Prakul Sharma",
-      "Beena Ammanath",
-      "Jim Rowan",
-      "Scott Holcomb"
-    ],
-    "summary_short": "This paper found that agentic AI can slash costs, speed up product releases, and create high-value jobs. It's about using AI smartly, not just automating tasks.",
-    "summary_medium": "Basically, they discovered that agentic AI isn't just about automating tasks. It's a game-changer for cost savings and faster growth. By 2028, companies using it can cut costs, get products out faster, and create new roles focused on strategic oversight. It's about integrating AI into the very fabric of business operations, transforming how companies work.",
-    "summary_long": "## Context\nThe report looks at how agentic AI is set to revolutionize business operations by 2028. Companies are under pressure to innovate, reduce costs, and manage talent better.\n\n## Relevance\nFor BFSI folks, this means smarter, quicker processes and new job roles. It's not just about automation but using AI to make strategic decisions and enhance customer interactions.\n\n## Key Insights\nThey found agentic AI can dramatically reduce operating costs and speed up time-to-market by allowing AI 'agents' to independently handle tasks. These agents need good data and governance to work effectively. Early movers will set industry standards, so starting now can give companies a competitive edge. Plus, it opens up new roles as employees shift to higher-value work, focusing on strategic oversight and orchestration.",
-    "role": "executive",
-    "content_type": "report",
-    "industry": "cross-bfsi",
-    "topic": "technology-and-data",
-    "geography": "global",
-    "use_cases": "portfolio-analytics",
-    "agentic_capabilities": "planning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Fwww.deloitte.com%2Fcontent%2Fdam%2Fassets-zone3%2Fus%2Fen%2Fdocs%2Fservices%2Fconsulting%2F2025%2Fagentic-ai-enterprise-2028.pdf"
+    "thumbnail": "/thumbs/payment-innovation-real-time-systems-shape-industry-future.png"
   },
   {
     "url": "https://www.mckinsey.com/industries/financial-services/our-insights/the-future-of-ai-in-the-insurance-industry",
@@ -1492,7 +1444,27 @@
     "geography": "global",
     "use_cases": "claims-handling",
     "agentic_capabilities": "tool-use",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Fwww.mckinsey.com%2Findustries%2Ffinancial-services%2Four-insights%2Fthe-future-of-ai-in-the-insurance-industry"
+    "thumbnail": "/thumbs/2025_the-future-of-ai-in-the-insurance-industry_milinkovich-mckinsey.png"
+  },
+  {
+    "url": "https://www.mckinsey.com/industries/financial-services/our-insights/insurance-2030-the-impact-of-ai-on-the-future-of-insurance",
+    "title": "Insurance 2030—The impact of AI on the future of insurance",
+    "slug": "insurance-2030-the-impact-of-ai-on-the-future-of-insurance",
+    "source_name": "McKinsey",
+    "date_published": "2021-03-12",
+    "date_added": "2025-10-28T18:00:00+00:00",
+    "authors": ["Ramnath Balasubramanian", "Ari Libarikian", "Doug McElhaney"],
+    "summary_short": "Insurance in 2030 will use AI for real-time pricing and claims. Devices will flood insurers with data. Expect faster, automated processes and tailored user experiences.",
+    "summary_medium": "Basically, they discovered that by 2030, AI will transform insurance. Claims will be automated, using data from connected devices. Insurers will offer personalized, dynamic pricing. Distribution will change with instant policies and smart contracts, while underwriting will become rapid and data-driven. Agents will shift to tech-savvy advisors. It's a big tech leap in insurance!",
+    "summary_long": "## Context\nAI is reshaping industries, and insurance is no exception. This paper looks at how AI will transform insurance by 2030, changing how policies are bought, priced, and claimed.\n\n## Relevance\nFor anyone in BFSI, these changes mean adapting to rapid AI integration. Insurers must get tech-savvy, as AI will lead to new products and customer experiences.\n\n## Key Insights\nBy 2030, expect real-time insurance pricing and claims thanks to AI and data from connected devices. The underwriting process will be almost instant, with AI analyzing vast data streams. Claims will be automated, minimizing human involvement. Agents will evolve into tech-empowered advisors. It's about shifting from 'detect and repair' to 'predict and prevent'. The focus will be on personalized, usage-based insurance products, requiring insurers to revamp their strategies for the future.",
+    "role": "executive",
+    "content_type": "article",
+    "industry": "insurance",
+    "topic": "technology-and-data-ai",
+    "geography": "global",
+    "use_cases": "claims-handling",
+    "agentic_capabilities": "reasoning",
+    "thumbnail": "/thumbs/2021_insurance-2030-the-impact-of-ai-on-the-future-of-insurance_balasubramanian-mckinsey.webp"
   },
   {
     "url": "https://arxiv.org/pdf/2503.13657",
@@ -1526,6 +1498,34 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fpdf%2F2503.13657"
+    "thumbnail": "/thumbs/2025_why-do-multi-agent-llm-systems-fail_cemri-arxiv.png"
+  },
+  {
+    "url": "https://www.deloitte.com/content/dam/assets-zone3/us/en/docs/services/consulting/2025/agentic-ai-enterprise-2028.pdf",
+    "title": "Agentic Enterprise 2028: A Blueprint for Cost Savings, Job Creation, and Faster Growth Through Agentic AI",
+    "slug": "agentic-enterprise-2028",
+    "source_name": "Deloitte",
+    "date_published": "2025-09-01",
+    "date_added": "2025-10-28T18:00:00+00:00",
+    "authors": [
+      "Vivek Kulkarni",
+      "Greg Vert",
+      "Caroline Ritter",
+      "Prakul Sharma",
+      "Beena Ammanath",
+      "Jim Rowan",
+      "Scott Holcomb"
+    ],
+    "summary_short": "This paper found that agentic AI can slash costs, speed up product releases, and create high-value jobs. It's about using AI smartly, not just automating tasks.",
+    "summary_medium": "Basically, they discovered that agentic AI isn't just about automating tasks. It's a game-changer for cost savings and faster growth. By 2028, companies using it can cut costs, get products out faster, and create new roles focused on strategic oversight. It's about integrating AI into the very fabric of business operations, transforming how companies work.",
+    "summary_long": "## Context\nThe report looks at how agentic AI is set to revolutionize business operations by 2028. Companies are under pressure to innovate, reduce costs, and manage talent better.\n\n## Relevance\nFor BFSI folks, this means smarter, quicker processes and new job roles. It's not just about automation but using AI to make strategic decisions and enhance customer interactions.\n\n## Key Insights\nThey found agentic AI can dramatically reduce operating costs and speed up time-to-market by allowing AI 'agents' to independently handle tasks. These agents need good data and governance to work effectively. Early movers will set industry standards, so starting now can give companies a competitive edge. Plus, it opens up new roles as employees shift to higher-value work, focusing on strategic oversight and orchestration.",
+    "role": "executive",
+    "content_type": "report",
+    "industry": "cross-bfsi",
+    "topic": "technology-and-data",
+    "geography": "global",
+    "use_cases": "portfolio-analytics",
+    "agentic_capabilities": "planning",
+    "thumbnail": "/thumbs/2025_agentic-enterprise-2028_kulkarni-deloitte.webp"
   }
 ]

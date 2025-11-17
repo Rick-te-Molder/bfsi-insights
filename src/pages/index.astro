@@ -36,9 +36,6 @@ const roleOptionsWithCounts = roleOptions.map((option) => ({
 const allByPersona = Object.values(byRole).flat();
 const latest = Array.from(new Map(allByPersona.map((item) => [item.id, item])).values());
 
-const externalThumb = (u: string | undefined) =>
-  u ? `https://image.thum.io/get/nojs/width/600/crop/600/${encodeURIComponent(u)}` : null;
-
 const thumbsDirUrl = new URL('../../public/thumbs/', import.meta.url);
 let thumbFiles: string[] = [];
 try {
@@ -74,11 +71,7 @@ const expandItemThumb = (t: string | undefined) => {
     (() => {
       const first = latest?.[0];
       if (!first) return null;
-      const candidates = [
-        ...findLocalThumbs(first.slug),
-        ...expandItemThumb(first.thumbnail),
-        ...(externalThumb(first.url) ? [externalThumb(first.url)] : []),
-      ];
+      const candidates = [...findLocalThumbs(first.slug), ...expandItemThumb(first.thumbnail)];
       const href = candidates[0];
       return href ? (
         <Fragment slot="head">

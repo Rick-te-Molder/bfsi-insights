@@ -19,9 +19,6 @@ if (!item) {
 const title = item.title;
 const description = (item.summary_medium || item.summary_short || '').slice(0, 220);
 
-const externalThumb = (u?: string) =>
-  u ? `https://image.thum.io/get/nojs/width/960/crop/960/${encodeURIComponent(u)}` : null;
-
 const thumbsDirUrl = new URL('../../public/thumbs/', import.meta.url);
 let thumbFiles: string[] = [];
 try {
@@ -50,11 +47,7 @@ const expandItemThumb = (t?: string) => {
   return [`${t}.webp`, `${t}.png`, `${t}.jpg`];
 };
 
-const candidates = [
-  ...findLocalThumbs(item.slug),
-  ...expandItemThumb(item.thumbnail),
-  ...(externalThumb(item.url) ? [externalThumb(item.url)!] : []),
-];
+const candidates = [...findLocalThumbs(item.slug), ...expandItemThumb(item.thumbnail)];
 const ogImage = candidates[0] || undefined;
 ---
 
