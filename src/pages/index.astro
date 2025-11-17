@@ -132,6 +132,9 @@ const expandItemThumb = (t: string | undefined) => {
       const resources = byPersona[persona] || byPersona.all;
 
       console.log(`Filtering to ${persona}:`, resources.length, 'items');
+      if (resources.length > 0) {
+        console.log('Sample item:', resources[0]);
+      }
 
       if (resources.length === 0) {
         grid.innerHTML = `

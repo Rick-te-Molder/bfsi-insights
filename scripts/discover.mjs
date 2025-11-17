@@ -206,14 +206,37 @@ function parseRSS(xml, source) {
         title,
         url,
         source: source.name,
-        published_at: dateMatch
-          ? new Date(dateMatch[1]).toISOString()
-          : (() => {
-              console.warn(
-                `   ⚠️  No date found for: ${title.substring(0, 50)}... - using current date`,
-              );
-              return new Date().toISOString();
-            })(),
+        published_at: (() => {
+          // Try RSS date first
+          if (dateMatch) {
+            const rssDate = new Date(dateMatch[1]);
+            if (!isNaN(rssDate.getTime())) {
+              return rssDate.toISOString();
+            }
+          }
+
+          // For arXiv, extract date from paper ID if RSS date missing/invalid
+          if (source.name === 'arXiv') {
+            const arxivIdMatch = url.match(/arxiv\.org\/(?:abs|pdf)\/(\d{4})\.(\d+)/);
+            if (arxivIdMatch) {
+              const yymm = arxivIdMatch[1]; // e.g., "2511"
+              const year = 2000 + parseInt(yymm.substring(0, 2)); // "25" -> 2025
+              const month = parseInt(yymm.substring(2, 4)); // "11" -> 11
+
+              if (year >= 2020 && year <= 2030 && month >= 1 && month <= 12) {
+                // Use first day of the month as fallback
+                const arxivDate = new Date(year, month - 1, 1);
+                return arxivDate.toISOString();
+              }
+            }
+          }
+
+          // Last resort: current date
+          console.warn(
+            `   ⚠️  No date found for: ${title.substring(0, 50)}... - using current date`,
+          );
+          return new Date().toISOString();
+        })(),
         description: description.substring(0, 500),
       });
     }
