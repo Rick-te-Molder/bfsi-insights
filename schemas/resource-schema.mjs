@@ -1,4 +1,5 @@
 /* eslint-env node */
+import { env } from 'node:process';
 import { z } from 'zod';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
@@ -14,8 +15,8 @@ const normalizeArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 // Fetch valid roles dynamically from ref_role table
 let RoleEnum;
 try {
-  const supabaseUrl = process.env.PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseUrl = env.PUBLIC_SUPABASE_URL;
+  const supabaseKey = env.SUPABASE_SERVICE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
 
   if (supabaseUrl && supabaseKey) {
     const supabase = createClient(supabaseUrl, supabaseKey);

@@ -17,8 +17,12 @@ const externalThumb = (u?: string) =>
   u
     ? `https://image.thum.io/get/nojs/width/${isFirst ? 960 : 640}/crop/${isFirst ? 960 : 640}/${encodeURIComponent(u)}`
     : null;
-const expandItemThumb = (t?: string) =>
-  !t ? [] : /\.(webp|png|jpe?g)$/i.test(t) ? [t] : [`${t}.webp`, `${t}.png`, `${t}.jpg`];
+const expandItemThumb = (t?: string) => {
+  if (!t) return [];
+  if (/\.(webp|png|jpe?g)$/i.test(t)) return [t];
+  if (t.startsWith('http://') || t.startsWith('https://')) return [t];
+  return [`${t}.webp`, `${t}.png`, `${t}.jpg`];
+};
 
 let thumbFiles: string[] = [];
 try {
