@@ -1,5 +1,6 @@
 ---
 import Base from '../layouts/Base.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
 import { marked } from 'marked';
 import { fmt } from '../lib/fmt';
 import { getAllResources, getResourceBySlug } from '../lib/supabase';
@@ -63,15 +64,15 @@ const ogImage = candidates[0] || undefined;
   }
 
   <article class="mx-auto max-w-3xl">
+    <Breadcrumbs
+      segments={[
+        { label: 'Home', href: '/' },
+        { label: 'Resources', href: '/resources' },
+        { label: item.title },
+      ]}
+    />
+
     <header>
-      <div class="mb-2">
-        <a
-          href="/resources"
-          class="text-sm text-neutral-300 underline underline-offset-2"
-          onclick="if(document.referrer && document.referrer.startsWith(location.origin)){ history.back(); return false; }"
-          >← Back</a
-        >
-      </div>
       <h1 class="text-3xl font-bold tracking-tight">{item.title}</h1>
       <div class="mt-2 text-sm text-neutral-300">
         {

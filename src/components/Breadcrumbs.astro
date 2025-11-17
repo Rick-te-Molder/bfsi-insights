@@ -1,0 +1,75 @@
+---
+interface Segment {
+  label: string;
+  href?: string;
+}
+
+interface Props {
+  segments: Segment[];
+}
+
+const { segments } = Astro.props;
+---
+
+<!-- Desktop Breadcrumbs -->
+<nav aria-label="Breadcrumb" class="hidden sm:block mb-6 text-sm text-neutral-400">
+  <ol class="flex items-center space-x-2">
+    {
+      segments.map((segment, idx) => {
+        const isLast = idx === segments.length - 1;
+        return (
+          <li class="flex items-center">
+            {idx > 0 && (
+              <svg
+                class="w-4 h-4 mx-2 text-neutral-600"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            )}
+            {isLast ? (
+              <span class="text-neutral-200 font-medium truncate max-w-md" aria-current="page">
+                {segment.label}
+              </span>
+            ) : (
+              <a
+                href={segment.href}
+                class="hover:text-neutral-200 hover:underline transition-colors"
+              >
+                {segment.label}
+              </a>
+            )}
+          </li>
+        );
+      })
+    }
+  </ol>
+</nav>
+
+<!-- Mobile Back Link -->
+<nav aria-label="Breadcrumb" class="sm:hidden mb-6">
+  {
+    segments.length > 1 && (
+      <a
+        href={segments[segments.length - 2]?.href || '/'}
+        class="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-neutral-200 transition-colors"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M15 19l-7-7 7-7"
+          />
+        </svg>
+        <span>Back to {segments[segments.length - 2]?.label || 'Home'}</span>
+      </a>
+    )
+  }
+</nav>
