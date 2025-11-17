@@ -16,7 +16,7 @@
     "date_published": { "type": "string", "format": "date" },
     "date_added": { "type": "string", "format": "date-time" },
     "last_edited": { "type": "string", "format": "date-time" },
-    "role": { "type": "string", "enum": ["executive", "professional", "academic"] },
+    "role": { "type": "string", "enum": ["executive", "professional", "researcher"] },
     "industry": {
       "type": "string",
       "enum": [

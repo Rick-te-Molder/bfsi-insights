@@ -80,7 +80,7 @@ async function loadTaxonomies() {
   }
 
   TAXONOMIES = {
-    role: ['executive', 'professional', 'academic'],
+    role: ['executive', 'professional', 'researcher'],
     industry: industries.data.map((i) => i.slug),
     topic: topics.data.map((t) => t.slug),
     content_type: [
@@ -272,7 +272,7 @@ Return JSON with this EXACT structure. Each tag field must contain EXACTLY ONE s
   "persona_scores": {
     "executive": 0.0-1.0 (strategic relevance, regulatory impact, market shifts, transformation themes),
     "professional": 0.0-1.0 (operational guidance, technical content, implementation specifics),
-    "academic": 0.0-1.0 (formal methods, empirical results, theory, peer-reviewed rigor)
+    "researcher": 0.0-1.0 (formal methods, empirical results, theory, peer-reviewed rigor)
   },
   "tags": {
     "role": "<pick ONE from: ${taxonomies.role.join(', ')}>",
@@ -286,7 +286,7 @@ Return JSON with this EXACT structure. Each tag field must contain EXACTLY ONE s
 }
 
 CRITICAL RULES:
-1. Each tag field = SINGLE STRING VALUE ONLY (e.g., "academic", NOT "academic|executive")
+1. Each tag field = SINGLE STRING VALUE ONLY (e.g., "researcher", NOT "researcher|executive")
 2. NO pipes (|), NO commas in tag values, NO arrays
 3. Use most specific hierarchical value available
 4. Geography: "global" for worldwide content, specific region if focused
