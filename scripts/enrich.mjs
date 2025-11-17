@@ -22,6 +22,49 @@ const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 // Cache for taxonomy values
 let TAXONOMIES = null;
 
+function calculateQualityScore(item, enrichment) {
+  // Source reputation weights
+  const sourceReputation = {
+    McKinsey: 1.0,
+    'Boston Consulting Group': 1.0,
+    'Deloitte Insights': 0.95,
+    'Federal Reserve': 1.0,
+    'Bank for International Settlements': 1.0,
+    Gartner: 0.9,
+    arXiv: 0.7,
+  };
+
+  // Content type weights
+  const contentTypeWeight = {
+    'peer-reviewed-paper': 0.95,
+    'white-paper': 0.9,
+    report: 0.9,
+    'policy-document': 0.95,
+    article: 0.7,
+    presentation: 0.6,
+    webinar: 0.5,
+    dataset: 0.6,
+    website: 0.5,
+  };
+
+  // Recency (items < 30 days get full weight)
+  const publishedDate = new Date(item.payload.published_at || item.discovered_at);
+  const ageInDays = (Date.now() - publishedDate.getTime()) / (1000 * 60 * 60 * 24);
+  const recencyScore = ageInDays < 30 ? 1.0 : ageInDays < 90 ? 0.9 : ageInDays < 180 ? 0.8 : 0.7;
+
+  // Relevance confidence from LLM
+  const relevanceConfidence = enrichment.relevance_confidence || 0.5;
+
+  // Calculate weighted score
+  const sourceScore = sourceReputation[item.payload.source] || 0.6;
+  const typeScore = contentTypeWeight[enrichment.tags.content_type] || 0.6;
+
+  const qualityScore =
+    sourceScore * 0.35 + typeScore * 0.2 + recencyScore * 0.15 + relevanceConfidence * 0.3;
+
+  return Math.round(qualityScore * 100) / 100; // Round to 2 decimals
+}
+
 async function loadTaxonomies() {
   if (TAXONOMIES) return TAXONOMIES;
 
@@ -116,7 +159,7 @@ async function enrich(options = {}) {
       if (enrichment.bfsi_relevant === false) {
         console.log(`   ⚠️  Not BFSI relevant: ${enrichment.relevance_reason}`);
         if (!dryRun) {
-          await supabase
+          const { error: rejectError } = await supabase
             .from('ingestion_queue')
             .update({
               status: 'rejected',
@@ -124,23 +167,47 @@ async function enrich(options = {}) {
               reviewed_at: new Date().toISOString(),
             })
             .eq('id', item.id);
-          console.log(`   ✖️  Auto-rejected`);
+
+          if (rejectError) {
+            console.error(`   ❌ Failed to reject: ${rejectError.message}`);
+          } else {
+            console.log(`   ✖️  Auto-rejected`);
+          }
         }
         continue;
       }
 
       if (!dryRun) {
-        await supabase
+        // Store enrichment with metadata
+        const enrichedPayload = {
+          ...item.payload,
+          summary: enrichment.summary,
+          tags: enrichment.tags,
+          persona_scores: enrichment.persona_scores,
+          quality_score: calculateQualityScore(item, enrichment),
+          relevance_confidence: enrichment.relevance_confidence,
+        };
+
+        // Generate thumbnail URL using screenshot service
+        const thumbnailUrl = `https://image.thum.io/get/nojs/width/640/crop/640/${encodeURIComponent(item.url)}`;
+
+        const { error: updateError } = await supabase
           .from('ingestion_queue')
           .update({
-            payload: { ...item.payload, summary: enrichment.summary, tags: enrichment.tags },
+            payload: enrichedPayload,
+            thumb_ref: thumbnailUrl,
             prompt_version: 'v3.0-bfsi-filter',
             model_id: 'gpt-4o-mini',
           })
           .eq('id', item.id);
-        console.log(
-          `   ✅ ${enrichment.tags.role} | ${enrichment.tags.industry} | ${enrichment.tags.topic}`,
-        );
+
+        if (updateError) {
+          console.error(`   ❌ Failed to update: ${updateError.message}`);
+        } else {
+          console.log(
+            `   ✅ ${enrichment.tags.role} | ${enrichment.tags.industry} | ${enrichment.tags.topic}`,
+          );
+        }
       } else {
         console.log(`   [DRY] ${enrichment.summary.short.substring(0, 60)}...`);
       }
@@ -153,6 +220,9 @@ async function enrich(options = {}) {
   console.log(`\n📊 Enriched ${enriched}/${itemsToEnrich.length}`);
   return { enriched };
 }
+
+// TODO: Add Editor Agent for quality validation
+// async function editorReview(item, enrichment) { ... }
 
 async function generateEnrichment(content, title) {
   if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not set');

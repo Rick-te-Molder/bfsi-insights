@@ -96,6 +96,10 @@ const expandItemThumb = (t: string | undefined) => {
     const filter = document.getElementById('persona-filter') as HTMLSelectElement;
     const grid = document.getElementById('resources-grid')!;
 
+    // Store original cards HTML to prevent loss when showing empty state
+    const originalCards = Array.from(grid.children);
+    let emptyMessage: HTMLElement | null = null;
+
     // Restore saved preference
     const saved = localStorage.getItem('bfsi-persona-preference');
     if (saved && ['all', 'executive', 'professional', 'academic'].includes(saved)) {
@@ -113,31 +117,49 @@ const expandItemThumb = (t: string | undefined) => {
 
     function filterResources() {
       const persona = filter.value;
-      const cards = grid.querySelectorAll('li');
+
+      // Remove empty message if it exists
+      if (emptyMessage && emptyMessage.parentNode) {
+        emptyMessage.remove();
+        emptyMessage = null;
+      }
+
+      // Restore original cards if they were removed
+      if (
+        grid.children.length === 0 ||
+        (grid.children.length === 1 && grid.children[0].classList.contains('col-span-2'))
+      ) {
+        grid.innerHTML = '';
+        originalCards.forEach((card) => grid.appendChild(card.cloneNode(true)));
+      }
+
+      const cards = Array.from(grid.querySelectorAll('li:not(.col-span-2)')) as HTMLElement[];
 
       if (persona === 'all') {
         cards.forEach((card) => (card.style.display = ''));
         return;
       }
 
-      // Hide cards that don't match persona
-      // This is a simple show/hide - role attribute should be added to cards
+      // Show/hide cards based on persona
+      let visibleCount = 0;
       cards.forEach((card) => {
         const role = card.getAttribute('data-role');
-        if (role === persona || role === 'all') {
+        // Match exact persona or show if no role specified
+        if (role === persona) {
           card.style.display = '';
+          visibleCount++;
         } else {
           card.style.display = 'none';
         }
       });
 
       // Show message if no cards visible
-      const visibleCount = Array.from(cards).filter(
-        (c) => (c as HTMLElement).style.display !== 'none',
-      ).length;
       if (visibleCount === 0) {
-        grid.innerHTML =
-          '<li class="col-span-2 rounded-lg border border-neutral-800 bg-neutral-900/60 p-8 text-center text-neutral-400">No resources available for this audience yet. Check back soon!</li>';
+        emptyMessage = document.createElement('li');
+        emptyMessage.className =
+          'col-span-2 rounded-lg border border-neutral-800 bg-neutral-900/60 p-8 text-center text-neutral-400';
+        emptyMessage.textContent = 'No resources available for this audience yet. Check back soon!';
+        grid.appendChild(emptyMessage);
       }
     }
   </script>

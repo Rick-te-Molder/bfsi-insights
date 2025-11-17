@@ -119,7 +119,9 @@ function parseRSS(xml, source) {
   const itemRegex = /<(?:item|entry)[^>]*>([\s\S]*?)<\/(?:item|entry)>/gi;
   const titleRegex = /<title>(?:<!\[CDATA\[)?([^\]<]+)(?:\]\]>)?<\/title>/i;
   const linkRegex = /<link[^>]*>([^<]+)<\/link>|<link[^>]*href=["']([^"']+)["']/i;
-  const dateRegex = /<(?:pubDate|published)>([^<]+)<\/(?:pubDate|published)>/i;
+  // Multiple date formats: pubDate, published, dc:date, updated, date
+  const dateRegex =
+    /<(?:pubDate|published|dc:date|updated|date)>([^<]+)<\/(?:pubDate|published|dc:date|updated|date)>/i;
   const descRegex =
     /<(?:description|summary)>(?:<!\[CDATA\[)?([^\]<]+)(?:\]\]>)?<\/(?:description|summary)>/i;
 
@@ -204,7 +206,14 @@ function parseRSS(xml, source) {
         title,
         url,
         source: source.name,
-        published_at: dateMatch ? new Date(dateMatch[1]).toISOString() : new Date().toISOString(),
+        published_at: dateMatch
+          ? new Date(dateMatch[1]).toISOString()
+          : (() => {
+              console.warn(
+                `   ⚠️  No date found for: ${title.substring(0, 50)}... - using current date`,
+              );
+              return new Date().toISOString();
+            })(),
         description: description.substring(0, 500),
       });
     }
