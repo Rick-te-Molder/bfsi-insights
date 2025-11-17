@@ -142,6 +142,8 @@ const expandItemThumb = (t: string | undefined) => {
       console.log(`Filtering to ${persona}:`, resources.length, 'items');
       if (resources.length > 0) {
         console.log('Sample item:', resources[0]);
+        console.log('Sample thumbnail:', resources[0].thumbnail);
+        console.log('Sample URL:', resources[0].url);
       }
 
       if (resources.length === 0) {
