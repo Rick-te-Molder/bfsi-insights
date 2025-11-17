@@ -6,7 +6,12 @@ import addFormats from 'ajv-formats';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
-dotenv.config();
+// Load .env for local development only
+// In CI/CD, environment variables should be set directly in the platform
+// DO NOT commit .env file to version control (already in .gitignore)
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ silent: true });
+}
 
 const SCHEMA_PATH = 'schemas/kb.schema.json';
 const OUT_FILE = 'src/data/resources/resources.json';
