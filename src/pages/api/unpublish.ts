@@ -1,11 +1,9 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 
-export const prerender = false;
-
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    // Authenticate user
+    // Auth via access/refresh cookies
     const accessToken = cookies.get('sb-access-token')?.value;
     const refreshToken = cookies.get('sb-refresh-token')?.value;
 
@@ -13,7 +11,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    // Verify session
     const supabaseAuth = createClient(
       import.meta.env.PUBLIC_SUPABASE_URL,
       import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
@@ -36,14 +33,9 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return new Response(JSON.stringify({ error: 'Missing id' }), { status: 400 });
     }
 
-    // Use service key for admin operations
-    const supabase = createClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.SUPABASE_SERVICE_KEY,
-    );
-
-    const { data, error } = await supabase.rpc('reject_from_queue', {
-      p_queue_id: id,
+    // Use authenticated session (RPC has admin checks built-in)
+    const { data, error } = await supabaseAuth.rpc('unpublish_resource', {
+      p_resource_id: id,
       p_reason: reason || null,
     });
 
@@ -51,8 +43,8 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 
-    return new Response(JSON.stringify({ success: true }), { status: 200 });
-  } catch (error) {
+    return new Response(JSON.stringify({ success: true, data }), { status: 200 });
+  } catch (err) {
     return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 });
   }
 };

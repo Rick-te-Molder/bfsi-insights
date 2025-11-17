@@ -1,0 +1,201 @@
+---
+import Base from '../../layouts/Base.astro';
+// Client-side only - no server-side auth or data fetching
+---
+
+<Base title="Review Queue">
+  <div class="mx-auto max-w-7xl px-4 py-8">
+    <header class="mb-8">
+      <h1 class="text-4xl font-bold">📋 Review Queue</h1>
+      <p class="mt-2 text-neutral-300">Approve or reject discovered resources</p>
+      <div id="stats" class="mt-4 flex gap-4 text-sm">
+        <!-- Stats loaded client-side -->
+      </div>
+    </header>
+
+    <div
+      id="loading"
+      class="rounded-lg border border-neutral-800 bg-neutral-900/60 p-8 text-center"
+    >
+      <p class="text-neutral-400">⏳ Loading...</p>
+    </div>
+
+    <div id="error" class="hidden rounded-lg border border-red-500/20 bg-red-500/5 p-8 text-center">
+      <p class="text-red-300"></p>
+    </div>
+
+    <div
+      id="unenriched-notice"
+      class="hidden mb-8 rounded-lg border border-amber-500/20 bg-amber-500/5 p-4"
+    >
+      <p class="text-amber-300"><span id="unenriched-count"></span> items need enrichment</p>
+      <code class="mt-2 inline-block rounded bg-neutral-800 px-3 py-2 text-sm">
+        node scripts/enrich.mjs
+      </code>
+    </div>
+
+    <div id="items-container" class="space-y-6">
+      <!-- Items loaded client-side -->
+    </div>
+  </div>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+
+    const supabase = createClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    );
+
+    async function loadQueue() {
+      const loading = document.getElementById('loading')!;
+      const error = document.getElementById('error')!;
+      const statsDiv = document.getElementById('stats')!;
+      const unenrichedNotice = document.getElementById('unenriched-notice')!;
+      const container = document.getElementById('items-container')!;
+
+      try {
+        // Check auth
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session) {
+          window.location.href = '/login';
+          return;
+        }
+
+        // Load queue data
+        const { data: pending, error: loadError } = await supabase
+          .from('ingestion_queue')
+          .select('*')
+          .eq('status', 'pending')
+          .order('discovered_at', { ascending: false });
+
+        if (loadError) throw loadError;
+
+        loading.classList.add('hidden');
+
+        const enriched = (pending || []).filter((item) => item.payload?.summary?.short);
+        const notEnriched = (pending || []).filter((item) => !item.payload?.summary?.short);
+
+        // Update stats
+        statsDiv.innerHTML = `
+          <span class="rounded-full bg-sky-500/10 px-3 py-1 text-sky-300">
+            ${enriched.length} ready to review
+          </span>
+          <span class="rounded-full bg-amber-500/10 px-3 py-1 text-amber-300">
+            ${notEnriched.length} awaiting enrichment
+          </span>
+        `;
+
+        if (notEnriched.length > 0) {
+          document.getElementById('unenriched-count')!.textContent = `⏳ ${notEnriched.length}`;
+          unenrichedNotice.classList.remove('hidden');
+        }
+
+        if (enriched.length === 0) {
+          container.innerHTML =
+            '<div class="rounded-lg border border-neutral-800 bg-neutral-900/60 p-8 text-center"><p class="text-neutral-400">✨ Queue is empty!</p></div>';
+          return;
+        }
+
+        // Render items
+        container.innerHTML = enriched
+          .map(
+            (item) => `
+          <article class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 transition hover:border-neutral-700" data-item-id="${item.id}">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex-1">
+                <h2 class="text-2xl font-semibold text-sky-200">${item.payload.title}</h2>
+                <div class="mt-2 flex flex-wrap gap-2 text-sm text-neutral-400">
+                  <span>🔗 ${item.payload.source}</span>
+                  <span>📅 ${new Date(item.payload.published_at).toLocaleDateString()}</span>
+                </div>
+                ${item.payload.summary?.short ? `<p class="mt-4 text-neutral-300">${item.payload.summary.short}</p>` : ''}
+                <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="mt-4 inline-block text-sm text-sky-400 hover:text-sky-300">View original →</a>
+              </div>
+              <div class="flex flex-col gap-2">
+                <button class="approve-btn rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-500 transition" data-id="${item.id}">✓ Approve</button>
+                <button class="reject-btn rounded-lg bg-red-600 px-6 py-2 font-semibold text-white hover:bg-red-500 transition" data-id="${item.id}">✗ Reject</button>
+              </div>
+            </div>
+          </article>
+        `,
+          )
+          .join('');
+
+        // Setup event handlers with delegation
+        container.addEventListener('click', async (e) => {
+          const target = e.target as HTMLElement;
+
+          if (target.classList.contains('approve-btn')) {
+            const id = target.dataset.id;
+            if (!id) return;
+
+            const article = document.querySelector(`[data-item-id="${id}"]`);
+            if (!article) return;
+
+            try {
+              const response = await fetch('/api/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id }),
+              });
+
+              const result = await response.json();
+
+              if (result.success) {
+                article.classList.add('opacity-50');
+                target.textContent = '✓ Approved!';
+                target.disabled = true;
+                setTimeout(() => article.remove(), 1000);
+              } else {
+                alert('Approval failed: ' + result.error);
+              }
+            } catch (err) {
+              alert('Request failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+            }
+          } else if (target.classList.contains('reject-btn')) {
+            const id = target.dataset.id;
+            if (!id) return;
+
+            const reason = prompt('Reason for rejection (optional):');
+            if (reason === null) return;
+
+            const article = document.querySelector(`[data-item-id="${id}"]`);
+            if (!article) return;
+
+            try {
+              const response = await fetch('/api/reject', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, reason }),
+              });
+
+              const result = await response.json();
+
+              if (result.success) {
+                article.classList.add('opacity-50');
+                target.textContent = '✗ Rejected';
+                target.disabled = true;
+                setTimeout(() => article.remove(), 1000);
+              } else {
+                alert('Error: ' + result.error);
+              }
+            } catch {
+              alert('Failed to reject');
+            }
+          }
+        });
+      } catch (err) {
+        loading.classList.add('hidden');
+        error.classList.remove('hidden');
+        error.querySelector('p')!.textContent =
+          err instanceof Error ? err.message : 'Failed to load queue';
+      }
+    }
+
+    loadQueue();
+  </script>
+</Base>

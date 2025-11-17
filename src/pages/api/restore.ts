@@ -1,11 +1,9 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 
-export const prerender = false;
-
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    // Authenticate user
+    // Authenticate
     const accessToken = cookies.get('sb-access-token')?.value;
     const refreshToken = cookies.get('sb-refresh-token')?.value;
 
@@ -13,7 +11,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
-    // Verify session
     const supabaseAuth = createClient(
       import.meta.env.PUBLIC_SUPABASE_URL,
       import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
@@ -31,31 +28,23 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return new Response(JSON.stringify({ error: 'Invalid session' }), { status: 401 });
     }
 
-    const { id } = await request.json();
-    console.log('API received ID:', id, 'Type:', typeof id);
+    const { id, note } = await request.json();
     if (!id) {
       return new Response(JSON.stringify({ error: 'Missing id' }), { status: 400 });
     }
 
-    // Use service key for admin operations
-    const supabase = createClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.SUPABASE_SERVICE_KEY,
-    );
-
-    const { error } = await supabase.rpc('approve_from_queue', { p_queue_id: id });
+    // Use authenticated session (RPC has admin checks built-in)
+    const { data, error } = await supabaseAuth.rpc('restore_from_rejection', {
+      p_queue_id: id,
+      p_note: note || null,
+    });
 
     if (error) {
-      console.error('Supabase RPC error:', error);
       return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 
     return new Response(JSON.stringify({ success: true }), { status: 200 });
   } catch (error) {
-    console.error('Approve error:', error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Internal server error' }),
-      { status: 500 },
-    );
+    return new Response(JSON.stringify({ error: 'Internal server error' }), { status: 500 });
   }
 };

@@ -1,11 +1,9 @@
 import type { APIRoute } from 'astro';
 import { createClient } from '@supabase/supabase-js';
 
-export const prerender = false;
-
 export const POST: APIRoute = async ({ request, cookies }) => {
   try {
-    // Authenticate
+    // Authenticate user
     const accessToken = cookies.get('sb-access-token')?.value;
     const refreshToken = cookies.get('sb-refresh-token')?.value;
 
@@ -13,6 +11,7 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
     }
 
+    // Verify session
     const supabaseAuth = createClient(
       import.meta.env.PUBLIC_SUPABASE_URL,
       import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
@@ -30,20 +29,15 @@ export const POST: APIRoute = async ({ request, cookies }) => {
       return new Response(JSON.stringify({ error: 'Invalid session' }), { status: 401 });
     }
 
-    const { id, note } = await request.json();
+    const { id, reason } = await request.json();
     if (!id) {
       return new Response(JSON.stringify({ error: 'Missing id' }), { status: 400 });
     }
 
-    // Use service key for admin operations
-    const supabase = createClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.SUPABASE_SERVICE_KEY,
-    );
-
-    const { data, error } = await supabase.rpc('restore_from_rejection', {
+    // Use authenticated session (RPC has admin checks built-in)
+    const { data, error } = await supabaseAuth.rpc('reject_from_queue', {
       p_queue_id: id,
-      p_note: note || null,
+      p_reason: reason || null,
     });
 
     if (error) {
