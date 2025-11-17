@@ -1,11 +1,25 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getAllResources } from '../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import ResourceCard from '../features/resources/ResourceCard.astro';
 import fs from 'node:fs';
 
 // Fetch all resources from Supabase
 const resources = await getAllResources();
+
+// Fetch valid roles from ref_role table
+const supabase = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+);
+const { data: roles } = await supabase.from('ref_role').select('value, label').order('sort_order');
+
+const roleOptions = roles || [
+  { value: 'executive', label: 'Executives' },
+  { value: 'professional', label: 'Professionals' },
+  { value: 'researcher', label: 'Researchers' },
+];
 
 // Create filter values with counts
 const createValuesWithCounts = (field: keyof (typeof resources)[0]) => {
@@ -116,9 +130,7 @@ const expandItemThumb = (t: string | undefined) => {
       <span class="text-neutral-300">View for</span>
       <select id="f-role" class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1">
         <option value="all">Everyone</option>
-        <option value="executive">Executives</option>
-        <option value="professional">Professionals</option>
-        <option value="researcher">Researchers</option>
+        {roleOptions.map((r) => <option value={r.value}>{r.label}</option>)}
       </select>
     </label>
     <label class="flex flex-col gap-1 text-sm">
@@ -198,8 +210,8 @@ const expandItemThumb = (t: string | undefined) => {
               id="m-f-role"
               class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
             >
-              <option value="">All</option>
-              {values.role.map((v) => <option value={v.value}>{v.label}</option>)}
+              <option value="all">Everyone</option>
+              {roles.map((r) => <option value={r.value}>{r.label}</option>)}
             </select>
           </label>
           <label class="flex flex-col gap-1 text-sm">

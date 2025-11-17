@@ -20,6 +20,31 @@ const OUT_FILE = 'src/data/resources/resources.json';
 const schemaRaw = await fs.readFile(SCHEMA_PATH, 'utf8');
 const SCHEMA = JSON.parse(schemaRaw);
 
+// Initialize Supabase client
+const supabaseUrl = process.env.PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing Supabase credentials');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Fetch valid roles from ref_role table and update schema dynamically
+const { data: rolesData, error: rolesError } = await supabase
+  .from('ref_role')
+  .select('value')
+  .order('sort_order');
+
+if (rolesError) {
+  console.warn('Could not fetch roles from ref_role, using schema defaults:', rolesError.message);
+} else if (rolesData && rolesData.length > 0) {
+  // Update schema with dynamic roles
+  SCHEMA.properties.role.enum = rolesData.map((r) => r.value);
+  console.log('✓ Loaded roles from database:', SCHEMA.properties.role.enum.join(', '));
+}
+
 // Use full format validation and rely on ajv-formats defaults (uri, date, date-time)
 const ajv = new Ajv({ strict: false, allErrors: true, validateFormats: 'full' });
 addFormats(ajv);
@@ -168,12 +193,7 @@ function fixSummaryLengths(obj) {
   return out;
 }
 
-// Fetch resources from Supabase
-const supabase = createClient(
-  process.env.PUBLIC_SUPABASE_URL,
-  process.env.PUBLIC_SUPABASE_ANON_KEY,
-);
-
+// Fetch resources from Supabase (reuse client initialized above)
 const { data: dbResources, error } = await supabase
   .from('kb_resource')
   .select('*')

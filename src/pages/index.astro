@@ -1,19 +1,34 @@
 ---
 import Base from '../layouts/Base.astro';
 import { getAllResources } from '../lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import ResourceCard from '../features/resources/ResourceCard.astro';
 import fs from 'node:fs';
 
 // Fetch enough resources to ensure we have 6 per persona
 const allResources = await getAllResources();
 
-// Get 6 most recent from each persona for client-side filtering
-const executive = allResources.filter((r) => r.role === 'executive').slice(0, 6);
-const professional = allResources.filter((r) => r.role === 'professional').slice(0, 6);
-const researcher = allResources.filter((r) => r.role === 'researcher').slice(0, 6);
+// Fetch valid roles from ref_role table
+const supabase = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+);
+const { data: roles } = await supabase.from('ref_role').select('value, label').order('sort_order');
+
+const roleOptions = roles || [
+  { value: 'executive', label: 'Executives' },
+  { value: 'professional', label: 'Professionals' },
+  { value: 'researcher', label: 'Researchers' },
+];
+const validRoles = roleOptions.map((r) => r.value);
+
+// Get 6 most recent from each persona for client-side filtering (dynamically based on ref_role)
+const byRole = Object.fromEntries(
+  validRoles.map((role) => [role, allResources.filter((r) => r.role === role).slice(0, 6)]),
+);
 
 // Combine all (deduplicate by id)
-const allByPersona = [...executive, ...professional, ...researcher];
+const allByPersona = Object.values(byRole).flat();
 const latest = Array.from(new Map(allByPersona.map((item) => [item.id, item])).values());
 
 const externalThumb = (u: string | undefined) =>
@@ -83,9 +98,7 @@ const expandItemThumb = (t: string | undefined) => {
           class="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-300 focus:outline-none focus:ring-2 focus:ring-sky-500"
         >
           <option value="all">Everyone</option>
-          <option value="executive">Executives</option>
-          <option value="professional">Professionals</option>
-          <option value="researcher">Researchers</option>
+          {roleOptions.map((r) => <option value={r.value}>{r.label}</option>)}
         </select>
         <a
           href="/resources"
@@ -99,7 +112,7 @@ const expandItemThumb = (t: string | undefined) => {
     </ul>
   </section>
 
-  <script>
+  <script define:vars={{ validRoles }}>
     // Persona filter using show/hide on server-rendered cards
     const filterEl = document.getElementById('persona-filter');
     const gridEl = document.getElementById('resources-grid');
@@ -113,7 +126,8 @@ const expandItemThumb = (t: string | undefined) => {
 
       console.log('Homepage: Saved preference:', saved);
 
-      if (saved && ['all', 'executive', 'professional', 'researcher'].includes(saved)) {
+      const validValues = ['all', ...validRoles];
+      if (saved && validValues.includes(saved)) {
         filterEl.value = saved;
       } else {
         filterEl.value = defaultPersona;

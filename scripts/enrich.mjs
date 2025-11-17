@@ -79,8 +79,19 @@ async function loadTaxonomies() {
     throw new Error('Failed to load taxonomies from database');
   }
 
+  // Fetch valid roles from ref_role table
+  const { data: rolesData, error: rolesError } = await supabase
+    .from('ref_role')
+    .select('value')
+    .order('sort_order');
+
+  if (rolesError) {
+    console.error('Error fetching roles:', rolesError);
+    process.exit(1);
+  }
+
   TAXONOMIES = {
-    role: ['executive', 'professional', 'researcher'],
+    role: rolesData.map((r) => r.value),
     industry: industries.data.map((i) => i.slug),
     topic: topics.data.map((t) => t.slug),
     content_type: [
