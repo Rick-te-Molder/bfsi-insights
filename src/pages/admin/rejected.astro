@@ -120,15 +120,15 @@ import Base from '../../layouts/Base.astro';
             if (!article) return;
 
             try {
-              const response = await fetch('/api/restore', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, note: note || null }),
+              // Call Supabase RPC directly (has admin check built-in)
+              const { error } = await supabase.rpc('restore_from_rejection', {
+                p_queue_id: id,
+                p_note: note || null,
               });
 
-              const result = await response.json();
-
-              if (result.success) {
+              if (error) {
+                alert('Error: ' + error.message);
+              } else {
                 article.classList.add('opacity-50');
                 target.textContent = '✓ Restored!';
                 target.disabled = true;
@@ -138,8 +138,6 @@ import Base from '../../layouts/Base.astro';
                     window.location.reload();
                   }
                 }, 1000);
-              } else {
-                alert('Error: ' + result.error);
               }
             } catch (err) {
               alert('Failed to restore: ' + (err instanceof Error ? err.message : 'Unknown error'));

@@ -137,21 +137,16 @@ import Base from '../../layouts/Base.astro';
             if (!article) return;
 
             try {
-              const response = await fetch('/api/approve', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id }),
-              });
+              // Call Supabase RPC directly (has admin check built-in)
+              const { error } = await supabase.rpc('approve_from_queue', { p_queue_id: id });
 
-              const result = await response.json();
-
-              if (result.success) {
+              if (error) {
+                alert('Approval failed: ' + error.message);
+              } else {
                 article.classList.add('opacity-50');
                 target.textContent = '✓ Approved!';
                 target.disabled = true;
                 setTimeout(() => article.remove(), 1000);
-              } else {
-                alert('Approval failed: ' + result.error);
               }
             } catch (err) {
               alert('Request failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
@@ -167,24 +162,22 @@ import Base from '../../layouts/Base.astro';
             if (!article) return;
 
             try {
-              const response = await fetch('/api/reject', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, reason }),
+              // Call Supabase RPC directly (has admin check built-in)
+              const { error } = await supabase.rpc('reject_from_queue', {
+                p_queue_id: id,
+                p_reason: reason || null,
               });
 
-              const result = await response.json();
-
-              if (result.success) {
+              if (error) {
+                alert('Error: ' + error.message);
+              } else {
                 article.classList.add('opacity-50');
                 target.textContent = '✗ Rejected';
                 target.disabled = true;
                 setTimeout(() => article.remove(), 1000);
-              } else {
-                alert('Error: ' + result.error);
               }
-            } catch {
-              alert('Failed to reject');
+            } catch (err) {
+              alert('Failed to reject: ' + (err instanceof Error ? err.message : 'Unknown error'));
             }
           }
         });
