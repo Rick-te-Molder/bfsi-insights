@@ -1,12 +1,40 @@
+/* eslint-env node */
 import { z } from 'zod';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config({ silent: true });
 
 // Generated from kb.schema.json - keep in sync with canonical schema
 // This schema is more lenient for runtime validation and includes transformations
 
 const normalizeArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 
-// Enums from kb.schema.json
-const RoleEnum = z.enum(['executive', 'professional', 'academic']);
+// Fetch valid roles dynamically from ref_role table
+let RoleEnum;
+try {
+  const supabaseUrl = process.env.PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.PUBLIC_SUPABASE_ANON_KEY;
+
+  if (supabaseUrl && supabaseKey) {
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    const { data: rolesData } = await supabase.from('ref_role').select('value').order('sort_order');
+
+    if (rolesData && rolesData.length > 0) {
+      RoleEnum = z.enum(rolesData.map((r) => r.value));
+    } else {
+      // Fallback if database fetch fails
+      RoleEnum = z.enum(['executive', 'professional', 'researcher']);
+    }
+  } else {
+    // Fallback if no credentials
+    RoleEnum = z.enum(['executive', 'professional', 'researcher']);
+  }
+} catch {
+  // Fallback if fetch fails
+  RoleEnum = z.enum(['executive', 'professional', 'researcher']);
+}
 
 const IndustryEnum = z.enum([
   'banking',
