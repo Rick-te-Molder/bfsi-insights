@@ -144,16 +144,38 @@ const expandItemThumb = (t: string | undefined) => {
 
       // Re-render cards for selected persona
       grid.innerHTML = resources
-        .map(
-          (item) => `
+        .map((item) => {
+          // Generate thumbnail URL
+          const thumbnailUrl =
+            item.thumbnail ||
+            `https://image.thum.io/get/nojs/width/640/crop/640/${encodeURIComponent(item.url)}`;
+
+          // Format date safely
+          let dateStr = '';
+          if (item.publication_date) {
+            const date = new Date(item.publication_date);
+            if (!isNaN(date.getTime())) {
+              dateStr = date.toLocaleDateString('en-GB', { year: 'numeric', month: 'short' });
+            }
+          }
+
+          return `
           <li class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition-all hover:border-neutral-700 hover:ring-neutral-700 hover:bg-neutral-900 relative"
               data-role="${item.role || ''}">
             <a href="/resources/${item.slug}" class="block">
+              <div class="mb-4 aspect-video overflow-hidden rounded-lg bg-neutral-800">
+                <img 
+                  src="${thumbnailUrl}"
+                  alt="${item.title}"
+                  class="h-full w-full object-cover transition group-hover:scale-105"
+                  loading="lazy"
+                />
+              </div>
               <h3 class="text-xl font-semibold text-sky-200 group-hover:text-sky-100">
                 ${item.title}
               </h3>
               <p class="mt-1 text-sm text-neutral-400">
-                ${item.source_name || ''} • ${new Date(item.publication_date).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })}
+                ${item.source_name || ''}${dateStr ? ' • ' + dateStr : ''}
               </p>
               ${item.summary_short ? `<p class="mt-3 text-sm text-neutral-300 line-clamp-3">${item.summary_short}</p>` : ''}
               <div class="mt-3 flex flex-wrap gap-2 text-xs">
@@ -162,8 +184,8 @@ const expandItemThumb = (t: string | undefined) => {
               </div>
             </a>
           </li>
-        `,
-        )
+        `;
+        })
         .join('');
     }
   </script>
