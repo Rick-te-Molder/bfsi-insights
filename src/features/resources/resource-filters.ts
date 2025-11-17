@@ -269,7 +269,9 @@ export default function initResourceFilters() {
         const b = document.createElement('button');
         b.className =
           'rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-200 hover:bg-neutral-800';
-        b.textContent = `${k.replace('_', ' ')}: ${v} ✕`;
+        // Capitalize first letter for display
+        const displayValue = v.charAt(0).toUpperCase() + v.slice(1);
+        b.textContent = `${k.replace('_', ' ')}: ${displayValue} ✕`;
         b.addEventListener('click', () => {
           const cur = getDesktopVals();
           (cur as any)[k] = '';
