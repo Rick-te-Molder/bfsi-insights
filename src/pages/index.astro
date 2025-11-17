@@ -106,6 +106,14 @@ const expandItemThumb = (t: string | undefined) => {
     const filter = document.getElementById('persona-filter') as HTMLSelectElement;
     const grid = document.getElementById('resources-grid')!;
 
+    // Debug: Log available resources per persona
+    console.log('Persona resources:', {
+      all: byPersona.all?.length || 0,
+      executive: byPersona.executive?.length || 0,
+      professional: byPersona.professional?.length || 0,
+      academic: byPersona.academic?.length || 0,
+    });
+
     // Restore saved preference
     const saved = localStorage.getItem('bfsi-persona-preference');
     if (saved && ['all', 'executive', 'professional', 'academic'].includes(saved)) {
@@ -122,6 +130,8 @@ const expandItemThumb = (t: string | undefined) => {
     function filterResources() {
       const persona = filter.value;
       const resources = byPersona[persona] || byPersona.all;
+
+      console.log(`Filtering to ${persona}:`, resources.length, 'items');
 
       if (resources.length === 0) {
         grid.innerHTML = `
