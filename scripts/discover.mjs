@@ -169,15 +169,19 @@ function parseRSS(xml, source) {
 
       const hasExclusion = exclusionPatterns.some((pattern) => pattern.test(text));
 
-      // Skip if no BFSI keyword OR has exclusion pattern
-      if (!hasBfsiKeyword || hasExclusion) {
+      // Skip if has exclusion pattern
+      if (hasExclusion) {
         continue;
       }
 
-      // Original source keyword check (if defined)
-      if (source.keywords.length > 0) {
-        const hasKeyword = source.keywords.some((kw) => text.includes(kw.toLowerCase()));
-        if (!hasKeyword) continue;
+      // OR logic: Accept if has BFSI keyword OR source keyword
+      const hasSourceKeyword =
+        source.keywords.length === 0 ||
+        source.keywords.some((kw) => text.includes(kw.toLowerCase()));
+
+      // Skip only if NEITHER BFSI nor source keywords match
+      if (!hasBfsiKeyword && !hasSourceKeyword) {
+        continue;
       }
 
       items.push({

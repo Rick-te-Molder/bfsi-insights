@@ -161,29 +161,43 @@ async function generateEnrichment(content, title) {
 
   const prompt = `You are a BFSI AI analyst. Analyze this resource and return ONLY valid JSON.
 
-CRITICAL: First assess if this content is relevant to Banking, Financial Services, or Insurance (BFSI).
-If the content is NOT primarily about BFSI topics, set bfsi_relevant to false.
+CRITICAL BFSI RELEVANCE CHECK:
 
 Title: ${title}
 Content: ${content}
 
-BFSI Relevance Criteria:
-- Must relate to banking, financial services, insurance, fintech, or related technologies
-- AI/tech content must have clear BFSI applications or implications
-- Educational content must be for BFSI professionals or related to financial education
-- Healthcare, agriculture, or other domain-specific content is NOT relevant unless it has direct BFSI applications
+This content is ONLY relevant if it meets ONE of these criteria:
+
+1. PRIMARY FOCUS: Main topic is banking, insurance, or financial services
+   ✓ Examples: "AI for credit scoring", "LLMs in banking", "Fraud detection in payments"
+   ✗ Counter: "AI in education with example of student loans"
+
+2. DIRECT APPLICATION: Technology/method with clear, specific BFSI use case
+   ✓ Examples: "RAG for contract analysis" (BFSI uses contracts), "Multi-agent systems for trading"
+   ✗ Counter: "RAG systems" (generic, no BFSI context)
+
+3. REGULATORY/INDUSTRY: BFSI regulations, industry reports, standards
+   ✓ Examples: "Basel III implementation", "GDPR for banks", "ISO 20022 adoption"
+
+NOT RELEVANT if:
+- BFSI mentioned only as passing example
+- "Finance" means funding/budgeting, not financial services
+- Healthcare, education, retail, etc. as primary domain
+- Generic AI/tech with no BFSI context
 
 Return JSON with this EXACT structure. Each tag field must contain EXACTLY ONE string value (no pipes, no arrays, no multiple values):
 
 {
   "bfsi_relevant": true or false,
-  "relevance_reason": "Brief explanation of BFSI relevance or why it's not relevant",
+  "relevance_confidence": 0.0-1.0 (0.9+ = very confident, 0.5-0.8 = uncertain, <0.5 = likely not relevant),
+  "primary_domain": "banking|insurance|fintech|payments|wealth-management|healthcare|education|manufacturing|other",
+  "relevance_reason": "2-3 sentence explanation with specific BFSI connections or why it's not relevant",
 
 {
   "summary": {
-    "short": "120-240 characters - concise summary for cards",
-    "medium": "240-480 characters - detailed analysis with BFSI context",
-    "long": "640-1120 characters - comprehensive analysis with implications"
+    "short": "120-240 characters - Lead with KEY FINDING or MAIN CLAIM. Use concrete numbers/metrics if available. NO 'This paper presents...' language. Format: '[Key Insight]. [Supporting detail].'",
+    "medium": "240-480 characters - Elaborate on HOW and WHY. Include methodology or approach. Add 1-2 specific examples. Connect to BFSI practitioner concerns.",
+    "long": "640-1120 characters - Deep dive into implications for BFSI. Include limitations or caveats. Suggest actionable next steps. Compare to existing approaches. Note any regulatory considerations."
   },
   "tags": {
     "role": "<pick ONE from: ${taxonomies.role.join(', ')}>",
@@ -201,7 +215,23 @@ CRITICAL RULES:
 2. NO pipes (|), NO commas in tag values, NO arrays
 3. Use most specific hierarchical value available
 4. Geography: "global" for worldwide content, specific region if focused
-5. All lowercase, hyphenated format`;
+5. All lowercase, hyphenated format
+
+SUMMARY EXAMPLES:
+
+BAD (generic description):
+"This paper explores the use of AI in banking and presents a framework for implementation."
+
+GOOD (specific insight):
+"Shows 43% cost reduction in customer service using 3-agent LLM workflow. Key: agent coordination reduces hallucinations by 67%."
+
+BAD (vague):
+"The report discusses digital transformation in financial services."
+
+GOOD (actionable):
+"Banks adopting API-first architecture see 3x faster product launches. Critical success factor: legacy system integration strategy."
+
+Focus on: WHAT was found, HOW MUCH impact, WHY it matters to BFSI practitioners.`;
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
