@@ -169,9 +169,9 @@ const expandItemThumb = (t: string | undefined) => {
   </script>
 
   <script>
-    function enhanceImages(root?: Document | HTMLElement) {
+    function enhanceImages(root) {
       const container = root || document;
-      const imgs = Array.from(container.querySelectorAll('li.group img')) as HTMLImageElement[];
+      const imgs = Array.from(container.querySelectorAll('li.group img'));
       imgs.forEach((img) => {
         const placeholder = img.previousElementSibling;
         const onload = () => {
