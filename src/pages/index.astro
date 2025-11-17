@@ -101,51 +101,59 @@ const expandItemThumb = (t: string | undefined) => {
 
   <script>
     // Persona filter using show/hide on server-rendered cards
-    const filter = document.getElementById('persona-filter');
-    const grid = document.getElementById('resources-grid');
+    const filterEl = document.getElementById('persona-filter');
+    const gridEl = document.getElementById('resources-grid');
 
-    // Restore saved preference or default to executive
-    const saved = localStorage.getItem('bfsi-persona-preference');
-    const defaultPersona = 'executive';
-
-    if (saved && ['all', 'executive', 'professional', 'academic'].includes(saved)) {
-      filter.value = saved;
+    if (!filterEl || !gridEl) {
+      console.error('Filter or grid element not found');
     } else {
-      filter.value = defaultPersona;
-      localStorage.setItem('bfsi-persona-preference', defaultPersona);
-    }
+      // Restore saved preference or default to executive
+      const saved = localStorage.getItem('bfsi-persona-preference');
+      const defaultPersona = 'executive';
 
-    // Apply initial filter
-    filterResources();
+      console.log('Homepage: Saved preference:', saved);
 
-    // Handle filter change
-    filter.addEventListener('change', () => {
-      console.log('Homepage: Setting persona to', filter.value);
-      localStorage.setItem('bfsi-persona-preference', filter.value);
+      if (saved && ['all', 'executive', 'professional', 'academic'].includes(saved)) {
+        filterEl.value = saved;
+      } else {
+        filterEl.value = defaultPersona;
+        localStorage.setItem('bfsi-persona-preference', defaultPersona);
+      }
+
+      console.log('Homepage: Set filter to:', filterEl.value);
+
+      // Apply initial filter
       filterResources();
-    });
 
-    function filterResources() {
-      const persona = filter.value;
-
-      console.log(`Filtering to ${persona}:`, persona);
-
-      // Show/hide cards based on persona
-      const allCards = Array.from(grid.children);
-      let visibleCount = 0;
-
-      allCards.forEach((card) => {
-        const cardRole = card.getAttribute('data-role');
-
-        if (persona === 'all' || cardRole === persona) {
-          card.style.display = '';
-          visibleCount++;
-        } else {
-          card.style.display = 'none';
-        }
+      // Handle filter change
+      filterEl.addEventListener('change', () => {
+        console.log('Homepage: Setting persona to', filterEl.value);
+        localStorage.setItem('bfsi-persona-preference', filterEl.value);
+        filterResources();
       });
 
-      console.log(`Showing ${visibleCount} cards`);
+      function filterResources() {
+        const persona = filterEl.value;
+
+        console.log(`Filtering to ${persona}:`, persona);
+
+        // Show/hide cards based on persona
+        const allCards = Array.from(gridEl.children);
+        let visibleCount = 0;
+
+        allCards.forEach((card) => {
+          const cardRole = card.getAttribute('data-role');
+
+          if (persona === 'all' || cardRole === persona) {
+            card.style.display = '';
+            visibleCount++;
+          } else {
+            card.style.display = 'none';
+          }
+        });
+
+        console.log(`Showing ${visibleCount} cards`);
+      }
     }
   </script>
 
