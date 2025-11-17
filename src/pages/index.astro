@@ -114,12 +114,19 @@ const expandItemThumb = (t: string | undefined) => {
       academic: byPersona.academic?.length || 0,
     });
 
-    // Restore saved preference
+    // Restore saved preference or default to executive
     const saved = localStorage.getItem('bfsi-persona-preference');
+    const defaultPersona = 'executive';
+
     if (saved && ['all', 'executive', 'professional', 'academic'].includes(saved)) {
       filter.value = saved;
-      filterResources(); // Apply saved filter
+    } else {
+      filter.value = defaultPersona;
+      localStorage.setItem('bfsi-persona-preference', defaultPersona);
     }
+
+    // Apply initial filter
+    filterResources();
 
     // Handle filter change
     filter.addEventListener('change', () => {
@@ -166,12 +173,19 @@ const expandItemThumb = (t: string | undefined) => {
           <li class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition-all hover:border-neutral-700 hover:ring-neutral-700 hover:bg-neutral-900 relative"
               data-role="${item.role || ''}">
             <a href="/resources/${item.slug}" class="block">
-              <div class="mb-4 aspect-video overflow-hidden rounded-lg bg-neutral-800">
+              <div class="mb-4 aspect-video overflow-hidden rounded-lg bg-neutral-800 relative">
+                <div class="absolute inset-0 flex items-center justify-center text-neutral-600">
+                  <svg class="h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
                 <img 
                   src="${thumbnailUrl}"
                   alt="${item.title}"
-                  class="h-full w-full object-cover transition group-hover:scale-105"
+                  class="relative h-full w-full object-cover transition opacity-0 group-hover:scale-105"
                   loading="lazy"
+                  onload="this.style.opacity='1'"
+                  onerror="this.style.display='none'"
                 />
               </div>
               <h3 class="text-xl font-semibold text-sky-200 group-hover:text-sky-100">

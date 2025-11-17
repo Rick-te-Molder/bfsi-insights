@@ -75,10 +75,12 @@ export default function initResourceFilters() {
           return parsed;
         }
 
-        // If no saved filters, check homepage persona preference
+        // If no saved filters, check homepage persona preference or default to executive
         const personaPref = localStorage.getItem('bfsi-persona-preference');
         if (personaPref && personaPref !== 'all') {
           vals.role = personaPref;
+        } else if (!personaPref) {
+          vals.role = 'executive';
         }
       } catch {
         /* ignore */
