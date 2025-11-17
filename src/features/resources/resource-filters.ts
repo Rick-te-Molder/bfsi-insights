@@ -62,7 +62,7 @@ export default function initResourceFilters() {
   function readFromQuery() {
     const params = new URLSearchParams(location.search);
     const vals: Record<string, string> = Object.fromEntries([
-      ...filters.map(({ key }) => [key, params.get(key) || '']),
+      ...filters.map(({ key }) => [key, params.get(key) || (key === 'role' ? 'all' : '')]),
       ['q', params.get('q') || ''],
     ]);
     const hasAnyParam = Object.values(vals).some((v) => v);
@@ -93,7 +93,7 @@ export default function initResourceFilters() {
     // dropdown filters
     for (const { key } of filters) {
       const v = (vals as any)[key];
-      if (!v) continue;
+      if (!v || v === 'all') continue;
       const next = new Set<number>();
       allowed.forEach((idx) => {
         if ((data as any)[idx][key] === v) next.add(idx);
@@ -177,7 +177,7 @@ export default function initResourceFilters() {
     }),
   );
   clearBtn?.addEventListener('click', () => {
-    setVals({ role: '', industry: '', topic: '', content_type: '', geography: '', q: '' });
+    setVals({ role: 'all', industry: '', topic: '', content_type: '', geography: '', q: '' });
     updateQuery(getVals());
     try {
       localStorage.removeItem(STORAGE_KEY);
