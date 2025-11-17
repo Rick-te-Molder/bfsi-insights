@@ -62,8 +62,8 @@ const isUpdated = isHome
     : false
   : false;
 const candidates = [
-  ...expandItemThumb(item.thumbnail),
   ...findLocalThumbs(item.slug),
+  ...expandItemThumb(item.thumbnail),
   ...(externalThumb(item.url) ? [externalThumb(item.url)] : []),
 ];
 ---

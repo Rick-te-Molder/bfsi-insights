@@ -45,7 +45,9 @@ const findLocalThumbs = (s?: string) => {
 };
 const expandItemThumb = (t?: string) => {
   if (!t) return [] as string[];
-  return /\.(webp|png|jpe?g)$/i.test(t) ? [t] : [`${t}.webp`, `${t}.png`, `${t}.jpg`];
+  if (/\.(webp|png|jpe?g)$/i.test(t)) return [t];
+  if (t.startsWith('http://') || t.startsWith('https://')) return [t];
+  return [`${t}.webp`, `${t}.png`, `${t}.jpg`];
 };
 
 const candidates = [

@@ -90,8 +90,8 @@ const expandItemThumb = (t: string | undefined) => {
       const first = resources?.[0];
       if (!first) return null;
       const candidates = [
-        ...expandItemThumb(first.thumbnail),
         ...(typeof findLocalThumbs === 'function' ? findLocalThumbs(first.slug) : []),
+        ...expandItemThumb(first.thumbnail),
         ...(externalThumb(first.url) ? [externalThumb(first.url)] : []),
       ];
       const href = candidates[0];
