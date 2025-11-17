@@ -121,13 +121,14 @@ const expandItemThumb = (t: string | undefined) => {
       console.error('Filter or grid element not found');
     } else {
       // Restore saved preference or default to executive
+      // Never restore 'all' - always start with a specific persona
       const saved = localStorage.getItem('bfsi-persona-preference');
       const defaultPersona = 'executive';
 
       console.log('Homepage: Saved preference:', saved);
 
-      const validValues = ['all', ...validRoles];
-      if (saved && validValues.includes(saved)) {
+      const specificRoles = validRoles; // executive, professional, researcher
+      if (saved && saved !== 'all' && specificRoles.includes(saved)) {
         filterEl.value = saved;
       } else {
         filterEl.value = defaultPersona;
