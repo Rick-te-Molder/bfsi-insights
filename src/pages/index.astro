@@ -103,8 +103,8 @@ const expandItemThumb = (t: string | undefined) => {
 
   <script define:vars={{ byPersona }}>
     // Persona filter that fetches 6 most recent items per persona
-    const filter = document.getElementById('persona-filter') as HTMLSelectElement;
-    const grid = document.getElementById('resources-grid')!;
+    const filter = document.getElementById('persona-filter');
+    const grid = document.getElementById('resources-grid');
 
     // Debug: Log available resources per persona
     console.log('Persona resources:', {
