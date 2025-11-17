@@ -17,7 +17,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.07322"
+    "thumbnail": "/thumbs/finrptdatasetevaluationsystemandllm-basedmulti-agentframeworkforequityresearchreportgeneration.png"
   },
   {
     "url": "https://arxiv.org/abs/2503.05966",
@@ -37,7 +37,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2503.05966"
+    "thumbnail": "/thumbs/explainingtheunexplainableasystematicreviewofexplainableaiinfinance.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.08082",
@@ -57,7 +57,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.08082"
+    "thumbnail": "/thumbs/prudentialreliabilityoflargelanguagemodelsinreinsurancegovernanceassuranceandcapitalefficiency.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.07585",
@@ -77,7 +77,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.07585"
+    "thumbnail": "/thumbs/llmoutputdriftcross-providervalidationampmitigationforfinancialworkflows.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.08500",
@@ -97,7 +97,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "reasoning",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.08500"
+    "thumbnail": "/thumbs/spear-mmselectiveparameterevaluationandrestorationviamodelmergingforefficientfinancialllmadaptation.png"
   },
   {
     "url": "https://arxiv.org/abs/2509.18101",
@@ -117,7 +117,7 @@
     "geography": "global",
     "use_cases": "regulatory-reporting",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2509.18101"
+    "thumbnail": "/thumbs/acost-benefitanalysisofon-premiselargelanguagemodeldeploymentbreakingevenwithcommercialllmservices.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.07110",
@@ -137,7 +137,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.07110"
+    "thumbnail": "/thumbs/twoheadsarebetterthanonedistillinglargelanguagemodelfeaturesintosmallmodelswithfeaturedecompositiona.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.07669",
@@ -157,7 +157,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.07669"
+    "thumbnail": "/thumbs/makingllmsreliablewhenitmattersmostafive-layerarchitectureforhigh-stakesdecisions.png"
   },
   {
     "url": "https://arxiv.org/abs/2511.07678",
@@ -177,7 +177,7 @@
     "geography": "global",
     "use_cases": "portfolio-analytics",
     "agentic_capabilities": "evaluation",
-    "thumbnail": "https://image.thum.io/get/nojs/width/640/crop/640/https%3A%2F%2Farxiv.org%2Fabs%2F2511.07678"
+    "thumbnail": "/thumbs/aiaforecastertechnicalreport.png"
   },
   {
     "url": "https://arxiv.org/abs/2510.22963",
