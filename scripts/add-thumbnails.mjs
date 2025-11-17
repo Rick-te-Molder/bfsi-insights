@@ -7,34 +7,54 @@ dotenv.config();
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-async function main() {
-  console.log('🖼️  Adding thum.io thumbnail URLs to resources without thumbnails...');
+const sanitizeUrl = (url) => {
+  if (!url) return null;
+  const normalized = url.startsWith('http') ? url : `https://${url}`;
+  return encodeURI(normalized.replace(/^http:\/\//i, 'https://'));
+};
 
-  // Get resources without thumbnails
+const needsThumbnail = (resource) => {
+  if (!resource.thumbnail) return true;
+  return /%(2f|3a)/i.test(resource.thumbnail);
+};
+
+async function main() {
+  console.log(
+    '🖼️  Adding thum.io thumbnail URLs to resources without thumbnails or with encoded placeholders...',
+  );
+
+  // Get resources that need thumbnail fixes
   const { data: resources, error } = await supabase
     .from('kb_resource')
     .select('id, slug, title, url, thumbnail')
-    .eq('status', 'published')
-    .or('thumbnail.is.null,thumbnail.eq.');
+    .eq('status', 'published');
 
   if (error) {
     console.error('Error fetching resources:', error);
     process.exit(1);
   }
 
-  if (resources.length === 0) {
-    console.log('✅ All resources already have thumbnails!');
+  const needingUpdate = resources.filter(needsThumbnail);
+
+  if (needingUpdate.length === 0) {
+    console.log('✅ All resources already have usable thumbnails!');
     return;
   }
 
-  console.log(`📋 Found ${resources.length} resources without thumbnails`);
+  console.log(`📋 Found ${needingUpdate.length} resources needing thumbnail fixes`);
 
   let updated = 0;
   let failed = 0;
 
-  for (const resource of resources) {
+  for (const resource of needingUpdate) {
+    const targetUrl = sanitizeUrl(resource.url);
+    if (!targetUrl) {
+      console.warn(`Skipping ${resource.slug} due to invalid URL (${resource.url})`);
+      continue;
+    }
+
     // Generate thum.io URL
-    const thumbnailUrl = `https://image.thum.io/get/nojs/width/640/crop/640/${encodeURIComponent(resource.url)}`;
+    const thumbnailUrl = `https://image.thum.io/get/nojs/width/640/crop/640/${encodeURIComponent(targetUrl)}`;
 
     console.log(`Updating: ${resource.title}`);
     console.log(`  URL: ${thumbnailUrl}`);
