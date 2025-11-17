@@ -310,6 +310,24 @@ const expandItemThumb = (t: string | undefined) => {
     </div>
   </section>
 
+  <!-- Back to Top Button -->
+  <button
+    id="back-to-top"
+    aria-label="Back to top"
+    class="fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg opacity-0 pointer-events-none transition-opacity duration-300 hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-neutral-950"
+  >
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="2.5"
+      stroke="currentColor"
+      class="h-6 w-6"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"></path>
+    </svg>
+  </button>
+
   <script>
     function enhanceImages(root?: Document | Element) {
       const container = root || document;
