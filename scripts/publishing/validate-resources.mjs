@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseResources } from '../schemas/resource-schema.mjs';
+import { parseResources } from '../../schemas/resource-schema.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,7 +13,7 @@ function readJson(p) {
 }
 
 try {
-  const dataPath = path.join(__dirname, '..', 'src', 'data', 'resources', 'resources.json');
+  const dataPath = path.join(__dirname, '../..', 'src', 'data', 'resources', 'resources.json');
   const data = readJson(dataPath);
   const parsed = parseResources(data);
   const count = parsed.length;
