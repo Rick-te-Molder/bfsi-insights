@@ -79,21 +79,16 @@ export async function getResourceBySlug(slug: string): Promise<Resource | null> 
   return data ? normalizeResource(data) : null;
 }
 
-// Fetch resources with filters
-export async function getFilteredResources(filters: {
-  role?: string;
-  industry?: string;
-  topic?: string;
-  content_type?: string;
-  geography?: string;
-}): Promise<Resource[]> {
+// Fetch resources with filters (dynamic filter support)
+export async function getFilteredResources(filters: Record<string, string>): Promise<Resource[]> {
   let query = supabase.from('kb_resource_pretty').select('*').eq('status', 'published');
 
-  if (filters.role) query = query.eq('role', filters.role);
-  if (filters.industry) query = query.eq('industry', filters.industry);
-  if (filters.topic) query = query.eq('topic', filters.topic);
-  if (filters.content_type) query = query.eq('content_type', filters.content_type);
-  if (filters.geography) query = query.eq('geography', filters.geography);
+  // Dynamically apply all filters
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      query = query.eq(key, value);
+    }
+  });
 
   query = query.order('date_published', { ascending: false });
 

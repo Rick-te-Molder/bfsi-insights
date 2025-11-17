@@ -8,32 +8,22 @@ import fs from 'node:fs';
 // Fetch all resources from Supabase
 const resources = await getAllResources();
 
-// Fetch valid roles from ref_role table
+// Initialize Supabase client
 const supabase = createClient(
   import.meta.env.PUBLIC_SUPABASE_URL,
   import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
 );
-const { data: roles } = await supabase.from('ref_role').select('value, label').order('sort_order');
 
-const roleOptionsRaw = roles || [
-  { value: 'executive', label: 'Executives' },
-  { value: 'professional', label: 'Professionals' },
-  { value: 'researcher', label: 'Researchers' },
-];
+// Fetch filter configuration dynamically from database
+const { data: filterConfig } = await supabase
+  .from('ref_filter_config')
+  .select('column_name, display_label, sort_order')
+  .eq('enabled', true)
+  .order('sort_order');
 
-const roleCounts = resources.reduce<Record<string, number>>((acc, resource) => {
-  const key = resource.role || 'unknown';
-  acc[key] = (acc[key] || 0) + 1;
-  return acc;
-}, {});
+const filters = filterConfig || [];
 
-const roleOptions = roleOptionsRaw.map((role) => ({
-  ...role,
-  count: roleCounts[role.value] || 0,
-  label: `${role.label} (${roleCounts[role.value] || 0})`,
-}));
-
-// Create filter values with counts
+// Create filter values with counts dynamically based on filter config
 const createValuesWithCounts = (field: keyof (typeof resources)[0]) => {
   const counts = new Map<string, number>();
   resources.forEach((r) => {
@@ -45,13 +35,13 @@ const createValuesWithCounts = (field: keyof (typeof resources)[0]) => {
     .sort((a, b) => a.value.localeCompare(b.value));
 };
 
-const values = {
-  role: createValuesWithCounts('role'),
-  industry: createValuesWithCounts('industry'),
-  topic: createValuesWithCounts('topic'),
-  content_type: createValuesWithCounts('content_type'),
-  jurisdiction: createValuesWithCounts('jurisdiction'),
-};
+// Build values object dynamically from filter config
+const values: Record<string, Array<{ value: string; count: number; label: string }>> = {};
+filters.forEach((filter) => {
+  values[filter.column_name] = createValuesWithCounts(
+    filter.column_name as keyof (typeof resources)[0],
+  );
+});
 
 const thumbsDirUrl = new URL('../../public/thumbs/', import.meta.url);
 let thumbFiles: string[] = [];
@@ -102,16 +92,6 @@ const expandItemThumb = (t: string | undefined) => {
     <div class="flex items-center justify-between">
       <h2 class="text-2xl font-semibold tracking-tight">Resources</h2>
       <div class="flex items-center gap-3">
-        <button
-          id="open-sheet"
-          class="sm:hidden rounded-md border border-neutral-700 px-3 py-1 text-sm text-neutral-200 hover:bg-neutral-800"
-          aria-haspopup="dialog"
-          aria-controls="filter-sheet"
-          >Filter <span
-            id="filter-count"
-            class="ml-1 inline-block rounded bg-neutral-800 px-1 text-xs text-neutral-300">0</span
-          ></button
-        >
         <a
           href="/"
           class="text-sm font-medium text-sky-200 underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -121,67 +101,135 @@ const expandItemThumb = (t: string | undefined) => {
     </div>
     <p class="mt-1 text-sm text-neutral-300">Filter by attributes to find relevant items.</p>
     <p id="count" class="mt-1 text-xs text-neutral-300" aria-live="polite"></p>
-    <div id="chips" class="mt-2 flex flex-wrap gap-2"></div>
   </section>
 
-  <section class="mb-6 hidden sm:grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-    <label class="hidden sm:col-span-2 lg:col-span-5 sm:flex flex-col gap-1 text-sm">
+  <!-- Desktop Filters - 2 Column Layout -->
+  <section class="mb-6 hidden sm:grid gap-3 sm:grid-cols-2">
+    <!-- Search - Full Width -->
+    <label class="hidden sm:col-span-2 sm:flex flex-col gap-1 text-sm">
       <span class="text-neutral-300">Search</span>
       <input
         id="q"
         type="search"
-        placeholder="Search title, note, source, authors"
-        class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1"
+        placeholder="Search by title, author, or source..."
+        class="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-base placeholder:text-neutral-500"
       />
     </label>
-    <label class="flex flex-col gap-1 text-sm">
-      <span class="text-neutral-300">View for</span>
-      <select id="f-role" class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1">
-        <option value="all">Everyone ({resources.length})</option>
-        {roleOptions.map((r) => <option value={r.value}>{r.label}</option>)}
-      </select>
-    </label>
-    <label class="flex flex-col gap-1 text-sm">
-      <span class="text-neutral-300">Industry</span>
-      <select id="f-industry" class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1">
-        <option value="">All</option>
-        {values.industry.map((v) => <option value={v.value}>{v.label}</option>)}
-      </select>
-    </label>
-    <label class="flex flex-col gap-1 text-sm">
-      <span class="text-neutral-300">Topic</span>
-      <select id="f-topic" class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1">
-        <option value="">All</option>
-        {values.topic.map((v) => <option value={v.value}>{v.label}</option>)}
-      </select>
-    </label>
-    <label class="flex flex-col gap-1 text-sm">
-      <span class="text-neutral-300">Content type</span>
-      <select
-        id="f-content_type"
-        class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1"
+
+    <!-- Dynamically render first 3 filters (primary filters) -->
+    {
+      filters.slice(0, 3).map((filter) => {
+        const filterValues = values[filter.column_name] || [];
+        const isRole = filter.column_name === 'role';
+
+        return (
+          <label class="flex flex-col gap-1 text-sm">
+            <span class="text-neutral-300">
+              {filter.display_label} <span class="text-neutral-500">({filterValues.length})</span>
+            </span>
+            <select
+              id={`f-${filter.column_name}`}
+              class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5"
+            >
+              <option value={isRole ? 'all' : ''}>
+                {isRole ? `Everyone (${resources.length})` : 'All'}
+              </option>
+              {filterValues.map((v) => (
+                <option value={v.value}>{v.label}</option>
+              ))}
+            </select>
+          </label>
+        );
+      })
+    }
+
+    <!-- Collapsible Advanced Filters -->
+    <div class="sm:col-span-2">
+      <button
+        id="toggle-advanced-filters"
+        type="button"
+        class="flex items-center gap-2 text-sm text-neutral-400 hover:text-neutral-200 transition-colors"
+        aria-expanded="false"
+        aria-controls="advanced-filters"
       >
-        <option value="">All</option>
-        {values.content_type.map((v) => <option value={v.value}>{v.label}</option>)}
-      </select>
-    </label>
-    <label class="flex flex-col gap-1 text-sm">
-      <span class="text-neutral-300">Jurisdiction</span>
-      <select
-        id="f-jurisdiction"
-        class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1"
-      >
-        <option value="">All</option>
-        {values.jurisdiction.map((v) => <option value={v.value}>{v.label}</option>)}
-      </select>
-    </label>
-    <div class="sm:col-span-2 lg:col-span-5 flex justify-end">
+        <svg
+          id="advanced-filters-icon"
+          class="w-4 h-4 transition-transform"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
+          ></path>
+        </svg>
+        <span>More filters</span>
+      </button>
+
+      <div id="advanced-filters" class="hidden mt-3 grid gap-3 sm:grid-cols-2">
+        <!-- Dynamically render remaining filters (advanced filters) -->
+        {
+          filters.slice(3).map((filter) => {
+            const filterValues = values[filter.column_name] || [];
+
+            return (
+              <label class="flex flex-col gap-1 text-sm">
+                <span class="text-neutral-300">
+                  {filter.display_label}{' '}
+                  <span class="text-neutral-500">({filterValues.length})</span>
+                </span>
+                <select
+                  id={`f-${filter.column_name}`}
+                  class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5"
+                >
+                  <option value="">All</option>
+                  {filterValues.map((v) => (
+                    <option value={v.value}>{v.label}</option>
+                  ))}
+                </select>
+              </label>
+            );
+          })
+        }
+      </div>
+    </div>
+
+    <!-- Clear button -->
+    <div class="sm:col-span-2 flex justify-end">
       <button
         id="clear-filters"
-        class="rounded-md border border-neutral-700 px-3 py-1 text-sm text-neutral-200 hover:bg-neutral-800"
-        >Clear all</button
+        class="rounded-md border border-neutral-700 px-4 py-1.5 text-sm text-neutral-200 hover:bg-neutral-800 transition-colors"
       >
+        Clear all
+      </button>
     </div>
+  </section>
+
+  <!-- Mobile panel: search icon and filter button -->
+  <section class="mb-4 sm:hidden">
+    <div class="flex items-center gap-2">
+      <!-- Mobile Search Icon -->
+      <button
+        id="mobile-search-btn"
+        class="flex items-center justify-center w-10 h-10 rounded-lg border border-neutral-700 bg-neutral-900 text-neutral-300 hover:bg-neutral-800 transition-colors"
+        aria-label="Search"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+      </button>
+      <button
+        id="open-sheet"
+        class="flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-neutral-200 hover:bg-neutral-800"
+      >
+        Filters
+      </button>
+      <div class="text-xs text-neutral-400" id="count-mobile" aria-live="polite"></div>
+    </div>
+    <div id="chips" class="mt-2 flex flex-wrap gap-2"></div>
   </section>
 
   <!-- Mobile bottom-sheet for filters -->
@@ -212,56 +260,30 @@ const expandItemThumb = (t: string | undefined) => {
               class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
             />
           </label>
-          <label class="flex flex-col gap-1 text-sm">
-            <span class="text-neutral-300">Role</span>
-            <select
-              id="m-f-role"
-              class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
-            >
-              <option value="all">Everyone ({resources.length})</option>
-              {roleOptions.map((r) => <option value={r.value}>{r.label}</option>)}
-            </select>
-          </label>
-          <label class="flex flex-col gap-1 text-sm">
-            <span class="text-neutral-300">Industry</span>
-            <select
-              id="m-f-industry"
-              class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
-            >
-              <option value="">All</option>
-              {values.industry.map((v) => <option value={v.value}>{v.label}</option>)}
-            </select>
-          </label>
-          <label class="flex flex-col gap-1 text-sm">
-            <span class="text-neutral-300">Topic</span>
-            <select
-              id="m-f-topic"
-              class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
-            >
-              <option value="">All</option>
-              {values.topic.map((v) => <option value={v.value}>{v.label}</option>)}
-            </select>
-          </label>
-          <label class="flex flex-col gap-1 text-sm">
-            <span class="text-neutral-300">Content type</span>
-            <select
-              id="m-f-content_type"
-              class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
-            >
-              <option value="">All</option>
-              {values.content_type.map((v) => <option value={v.value}>{v.label}</option>)}
-            </select>
-          </label>
-          <label class="flex flex-col gap-1 text-sm">
-            <span class="text-neutral-300">Jurisdiction</span>
-            <select
-              id="m-f-jurisdiction"
-              class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
-            >
-              <option value="">All</option>
-              {values.jurisdiction.map((v) => <option value={v.value}>{v.label}</option>)}
-            </select>
-          </label>
+          <!-- Dynamically render mobile filters from database config -->
+          {
+            filters.map((filter) => {
+              const filterValues = values[filter.column_name] || [];
+              const isRole = filter.column_name === 'role';
+
+              return (
+                <label class="flex flex-col gap-1 text-sm">
+                  <span class="text-neutral-300">{filter.display_label}</span>
+                  <select
+                    id={`m-f-${filter.column_name}`}
+                    class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
+                  >
+                    <option value={isRole ? 'all' : ''}>
+                      {isRole ? `Everyone (${resources.length})` : 'All'}
+                    </option>
+                    {filterValues.map((v) => (
+                      <option value={v.value}>{v.label}</option>
+                    ))}
+                  </select>
+                </label>
+              );
+            })
+          }
         </div>
         <div class="mt-4 flex items-center justify-between">
           <button

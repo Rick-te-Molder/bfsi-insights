@@ -217,7 +217,7 @@ async function enrich(options = {}) {
             payload: enrichedPayload,
             thumb_ref: thumbnailUrl,
             prompt_version: 'v3.0-bfsi-filter',
-            model_id: 'gpt-4o-mini',
+            model_id: 'gpt-5.1',
           })
           .eq('id', item.id);
 
@@ -404,7 +404,7 @@ Focus on: WHAT was found, HOW MUCH impact, WHY it matters to BFSI practitioners.
     method: 'POST',
     headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5.1',
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
       temperature: 0.3,

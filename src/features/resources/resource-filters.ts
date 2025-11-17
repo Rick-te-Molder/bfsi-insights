@@ -10,10 +10,20 @@ export default function initResourceFilters() {
   const loadMoreBtn = document.getElementById('load-more-btn') as HTMLButtonElement | null;
   const paginationCount = document.getElementById('pagination-count');
   const paginationContainer = document.getElementById('pagination-container');
-  const filters = ['role', 'industry', 'topic', 'content_type', 'geography'].map((f) => ({
-    key: f,
-    el: $(`f-${f}`) as HTMLSelectElement | null,
+  // Dynamically discover filters from DOM (all selects with id starting with 'f-')
+  const filterElements = Array.from(
+    document.querySelectorAll<HTMLSelectElement>('select[id^="f-"]'),
+  );
+  const filters = filterElements.map((el) => ({
+    key: el.id.replace(/^f-/, ''),
+    el: el,
   }));
+
+  // Fallback to empty array if no filters found
+  if (filters.length === 0) {
+    console.warn('No filters found in DOM');
+    return;
+  }
 
   const STORAGE_KEY = 'resourcesFiltersV1';
   const PAGE_SIZE = 30;
@@ -44,20 +54,22 @@ export default function initResourceFilters() {
     if (badgeEl) badgeEl.textContent = String(activeCount);
   };
 
-  // Build an index of items from the DOM data attributes
+  // Build an index of items from the DOM data attributes dynamically
   const data = Array.from(list.children).map((li) => {
     const el = li as HTMLElement;
-    return {
+    const item: Record<string, string | HTMLElement> = {
       el,
       title: el.querySelector('a')?.textContent?.trim() || '',
       source_name: (el.querySelector('.mt-1') as HTMLElement)?.textContent || '',
       authors: el.getAttribute('data-authors') || '',
-      role: el.getAttribute('data-role') || '',
-      industry: el.getAttribute('data-industry') || '',
-      topic: el.getAttribute('data-topic') || '',
-      content_type: el.getAttribute('data-content_type') || '',
-      geography: el.getAttribute('data-geography') || '',
     };
+
+    // Dynamically add all filter attributes
+    filters.forEach(({ key }) => {
+      item[key] = el.getAttribute(`data-${key}`) || '';
+    });
+
+    return item;
   });
 
   let FuseCtor: any = null;
@@ -285,7 +297,7 @@ export default function initResourceFilters() {
     }),
   );
   clearBtn?.addEventListener('click', () => {
-    setVals({ role: 'all', industry: '', topic: '', content_type: '', geography: '', q: '' });
+    setVals({ role: 'all', industry: '', topic: '', content_type: '', jurisdiction: '', q: '' });
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
@@ -320,7 +332,7 @@ export default function initResourceFilters() {
       industry: document.getElementById('f-industry') as HTMLSelectElement | null,
       topic: document.getElementById('f-topic') as HTMLSelectElement | null,
       content_type: document.getElementById('f-content_type') as HTMLSelectElement | null,
-      geography: document.getElementById('f-geography') as HTMLSelectElement | null,
+      jurisdiction: document.getElementById('f-jurisdiction') as HTMLSelectElement | null,
     } as const;
     const mobile = {
       q: document.getElementById('m-q') as HTMLInputElement | null,
@@ -328,7 +340,7 @@ export default function initResourceFilters() {
       industry: document.getElementById('m-f-industry') as HTMLSelectElement | null,
       topic: document.getElementById('m-f-topic') as HTMLSelectElement | null,
       content_type: document.getElementById('m-f-content_type') as HTMLSelectElement | null,
-      geography: document.getElementById('m-f-geography') as HTMLSelectElement | null,
+      jurisdiction: document.getElementById('m-f-jurisdiction') as HTMLSelectElement | null,
     } as const;
 
     function getDesktopVals() {
@@ -337,7 +349,7 @@ export default function initResourceFilters() {
         industry: desktop.industry?.value || '',
         topic: desktop.topic?.value || '',
         content_type: desktop.content_type?.value || '',
-        geography: desktop.geography?.value || '',
+        jurisdiction: desktop.jurisdiction?.value || '',
         q: desktop.q?.value?.trim() || '',
       };
     }
@@ -346,11 +358,11 @@ export default function initResourceFilters() {
       if (desktop.industry) desktop.industry.value = vals.industry || '';
       if (desktop.topic) desktop.topic.value = vals.topic || '';
       if (desktop.content_type) desktop.content_type.value = vals.content_type || '';
-      if (desktop.geography) desktop.geography.value = vals.geography || '';
+      if (desktop.jurisdiction) desktop.jurisdiction.value = vals.jurisdiction || '';
       if (desktop.q) desktop.q.value = vals.q || '';
     }
     function applyFromDesktop() {
-      ['role', 'industry', 'topic', 'content_type', 'geography'].forEach((k) => {
+      ['role', 'industry', 'topic', 'content_type', 'jurisdiction'].forEach((k) => {
         const el = (desktop as any)[k] as HTMLSelectElement | null;
         if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
       });
@@ -376,7 +388,7 @@ export default function initResourceFilters() {
       if (mobile.industry) mobile.industry.value = v.industry;
       if (mobile.topic) mobile.topic.value = v.topic;
       if (mobile.content_type) mobile.content_type.value = v.content_type;
-      if (mobile.geography) mobile.geography.value = v.geography;
+      if (mobile.jurisdiction) mobile.jurisdiction.value = v.jurisdiction;
       if (mobile.q) mobile.q.value = v.q;
     }
 
@@ -394,7 +406,7 @@ export default function initResourceFilters() {
         industry: '',
         topic: '',
         content_type: '',
-        geography: '',
+        jurisdiction: '',
         q: '',
       };
       setDesktopVals(empty);
@@ -408,7 +420,7 @@ export default function initResourceFilters() {
         industry: mobile.industry?.value || '',
         topic: mobile.topic?.value || '',
         content_type: mobile.content_type?.value || '',
-        geography: mobile.geography?.value || '',
+        jurisdiction: mobile.jurisdiction?.value || '',
         q: mobile.q?.value?.trim() || '',
       };
       setDesktopVals(vals);
@@ -419,4 +431,69 @@ export default function initResourceFilters() {
 
     renderChipsSummary(getDesktopVals());
   }
+
+  // Mobile search button - opens filter sheet with search focused
+  const mobileSearchBtn = document.getElementById('mobile-search-btn');
+  mobileSearchBtn?.addEventListener('click', () => {
+    if (openBtn && sheet) {
+      syncToMobile();
+      sheet.classList.remove('hidden');
+      sheet.setAttribute('aria-hidden', 'false');
+      (document.body as HTMLBodyElement).style.overflow = 'hidden';
+      // Focus search input instead of role
+      const searchInput = document.getElementById('m-q');
+      if (searchInput) {
+        setTimeout(() => searchInput.focus(), 100);
+      }
+    }
+  });
+
+  // Collapsible Advanced Filters
+  const toggleAdvancedBtn = document.getElementById('toggle-advanced-filters');
+  const advancedFilters = document.getElementById('advanced-filters');
+  const advancedIcon = document.getElementById('advanced-filters-icon');
+  const ADVANCED_FILTERS_KEY = 'advanced-filters-expanded';
+
+  function toggleAdvancedFilters() {
+    if (!advancedFilters || !toggleAdvancedBtn || !advancedIcon) return;
+
+    const isExpanded = toggleAdvancedBtn.getAttribute('aria-expanded') === 'true';
+    const newState = !isExpanded;
+    const buttonText = toggleAdvancedBtn.querySelector('span');
+
+    if (newState) {
+      advancedFilters.classList.remove('hidden');
+      advancedIcon.classList.add('rotate-90');
+      toggleAdvancedBtn.setAttribute('aria-expanded', 'true');
+      if (buttonText) buttonText.textContent = 'Less filters';
+    } else {
+      advancedFilters.classList.add('hidden');
+      advancedIcon.classList.remove('rotate-90');
+      toggleAdvancedBtn.setAttribute('aria-expanded', 'false');
+      if (buttonText) buttonText.textContent = 'More filters';
+    }
+
+    // Persist state
+    try {
+      localStorage.setItem(ADVANCED_FILTERS_KEY, String(newState));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // Restore advanced filters state from localStorage
+  try {
+    const savedState = localStorage.getItem(ADVANCED_FILTERS_KEY);
+    if (savedState === 'true' && advancedFilters && toggleAdvancedBtn && advancedIcon) {
+      advancedFilters.classList.remove('hidden');
+      advancedIcon.classList.add('rotate-90');
+      toggleAdvancedBtn.setAttribute('aria-expanded', 'true');
+      const buttonText = toggleAdvancedBtn.querySelector('span');
+      if (buttonText) buttonText.textContent = 'Less filters';
+    }
+  } catch {
+    /* ignore */
+  }
+
+  toggleAdvancedBtn?.addEventListener('click', toggleAdvancedFilters);
 }
