@@ -10,10 +10,10 @@ const allResources = await getAllResources();
 // Get 6 most recent from each persona for client-side filtering
 const executive = allResources.filter((r) => r.role === 'executive').slice(0, 6);
 const professional = allResources.filter((r) => r.role === 'professional').slice(0, 6);
-const academic = allResources.filter((r) => r.role === 'academic').slice(0, 6);
+const researcher = allResources.filter((r) => r.role === 'researcher').slice(0, 6);
 
 // Combine all (deduplicate by id)
-const allByPersona = [...executive, ...professional, ...academic];
+const allByPersona = [...executive, ...professional, ...researcher];
 const latest = Array.from(new Map(allByPersona.map((item) => [item.id, item])).values());
 
 const externalThumb = (u: string | undefined) =>
@@ -85,7 +85,7 @@ const expandItemThumb = (t: string | undefined) => {
           <option value="all">Everyone</option>
           <option value="executive">Executives</option>
           <option value="professional">Professionals</option>
-          <option value="researchers">Researchers</option>
+          <option value="researcher">Researchers</option>
         </select>
         <a
           href="/resources"
@@ -113,7 +113,7 @@ const expandItemThumb = (t: string | undefined) => {
 
       console.log('Homepage: Saved preference:', saved);
 
-      if (saved && ['all', 'executive', 'professional', 'academic'].includes(saved)) {
+      if (saved && ['all', 'executive', 'professional', 'researcher'].includes(saved)) {
         filterEl.value = saved;
       } else {
         filterEl.value = defaultPersona;
