@@ -199,6 +199,11 @@ Return JSON with this EXACT structure. Each tag field must contain EXACTLY ONE s
     "medium": "240-480 characters - Elaborate on HOW and WHY. Include methodology or approach. Add 1-2 specific examples. Connect to BFSI practitioner concerns.",
     "long": "640-1120 characters - Deep dive into implications for BFSI. Include limitations or caveats. Suggest actionable next steps. Compare to existing approaches. Note any regulatory considerations."
   },
+  "persona_scores": {
+    "executive": 0.0-1.0 (strategic relevance, regulatory impact, market shifts, transformation themes),
+    "professional": 0.0-1.0 (operational guidance, technical content, implementation specifics),
+    "academic": 0.0-1.0 (formal methods, empirical results, theory, peer-reviewed rigor)
+  },
   "tags": {
     "role": "<pick ONE from: ${taxonomies.role.join(', ')}>",
     "industry": "<pick ONE most specific from: ${taxonomies.industry.slice(0, 10).join(', ')}...>",

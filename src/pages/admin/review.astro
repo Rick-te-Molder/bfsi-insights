@@ -6,8 +6,30 @@ import Base from '../../layouts/Base.astro';
 <Base title="Review Queue">
   <div class="mx-auto max-w-7xl px-4 py-8">
     <header class="mb-8">
-      <h1 class="text-4xl font-bold">📋 Review Queue</h1>
-      <p class="mt-2 text-neutral-300">Approve or reject discovered resources</p>
+      <div class="flex items-start justify-between">
+        <div>
+          <h1 class="text-4xl font-bold">📋 Review Queue</h1>
+          <p class="mt-2 text-neutral-300">Approve or reject discovered resources</p>
+        </div>
+        <div class="flex gap-3">
+          <select
+            id="persona-filter"
+            class="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm text-neutral-300"
+          >
+            <option value="all">All Personas</option>
+            <option value="executive">Executive</option>
+            <option value="professional">Professional</option>
+            <option value="academic">Academic</option>
+          </select>
+          <select
+            id="sort-filter"
+            class="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm text-neutral-300"
+          >
+            <option value="quality">Sort by Quality</option>
+            <option value="date">Sort by Date</option>
+          </select>
+        </div>
+      </div>
       <div id="stats" class="mt-4 flex gap-4 text-sm">
         <!-- Stats loaded client-side -->
       </div>
