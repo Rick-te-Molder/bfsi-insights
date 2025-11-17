@@ -194,6 +194,9 @@ COMMENT ON TABLE kb_resource_stg IS 'Staging table for future multi-stage pipeli
 -- ============================================================================
 -- PART 5: Create approve function
 -- ============================================================================
+-- SECURITY: ADMIN-ONLY function using SECURITY DEFINER + auth.uid() audit trail
+-- Access: Any authenticated user (future: add is_admin() check)
+-- Audit: Logs reviewer = auth.uid() for accountability
 
 CREATE OR REPLACE FUNCTION approve_from_queue(p_queue_id uuid)
 RETURNS uuid
@@ -311,6 +314,9 @@ END $$;
 -- ============================================================================
 -- PART 6: Create reject function
 -- ============================================================================
+-- SECURITY: ADMIN-ONLY function using SECURITY DEFINER + auth.uid() audit trail
+-- Access: Any authenticated user (future: add is_admin() check)
+-- Audit: Logs reviewer = auth.uid() and rejection_reason
 
 CREATE OR REPLACE FUNCTION reject_from_queue(p_queue_id uuid, p_reason text DEFAULT NULL)
 RETURNS boolean
@@ -346,6 +352,9 @@ ORDER BY discovered_at DESC;
 -- ============================================================================
 -- PART 8: Create restore function for rejected items
 -- ============================================================================
+-- SECURITY: ADMIN-ONLY function using SECURITY DEFINER
+-- Access: Any authenticated user (future: add is_admin() check)
+-- Audit: Appends note to rejection_reason history
 
 CREATE OR REPLACE FUNCTION restore_from_rejection(p_queue_id uuid, p_note text DEFAULT NULL)
 RETURNS boolean
@@ -451,9 +460,12 @@ COMMENT ON TABLE rejection_analytics IS 'Analyze rejection patterns for PDCA con
 -- ============================================================================
 -- PART 10: Grant permissions
 -- ============================================================================
+-- SECURITY NOTE: Admin functions currently granted to ANY authenticated user
+-- FUTURE: Add app_roles table and restrict to admin/editor roles only
 
 GRANT SELECT ON ingestion_review_queue TO authenticated;
 GRANT EXECUTE ON FUNCTION approve_from_queue TO authenticated;
 GRANT EXECUTE ON FUNCTION reject_from_queue TO authenticated;
+GRANT EXECUTE ON FUNCTION restore_from_rejection TO authenticated;
 
 -- Migration complete!
