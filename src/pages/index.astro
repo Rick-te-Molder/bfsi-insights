@@ -66,18 +66,81 @@ const expandItemThumb = (t: string | undefined) => {
   </section>
 
   <section>
-    <div class="mb-4 flex items-center justify-between">
+    <div class="mb-4 flex items-center justify-between flex-wrap gap-3">
       <h3 class="text-xl font-semibold">Latest</h3>
-      <a
-        href="/resources"
-        class="text-sm font-medium text-sky-200 underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-        >Browse all resources →</a
-      >
+      <div class="flex items-center gap-3">
+        <label for="persona-filter" class="text-sm text-neutral-400">View for:</label>
+        <select
+          id="persona-filter"
+          class="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-300 focus:outline-none focus:ring-2 focus:ring-sky-500"
+        >
+          <option value="all">Everyone</option>
+          <option value="executive">Executives</option>
+          <option value="professional">Professionals</option>
+          <option value="academic">Researchers</option>
+        </select>
+        <a
+          href="/resources"
+          class="text-sm font-medium text-sky-200 underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          >Browse all →</a
+        >
+      </div>
     </div>
-    <ul class="grid gap-6 sm:grid-cols-2">
+    <ul id="resources-grid" class="grid gap-6 sm:grid-cols-2">
       {latest.map((item, idx) => <ResourceCard item={item} index={idx} mode="home" />)}
     </ul>
   </section>
+
+  <script>
+    // Persona filter with localStorage persistence
+    const filter = document.getElementById('persona-filter') as HTMLSelectElement;
+    const grid = document.getElementById('resources-grid')!;
+
+    // Restore saved preference
+    const saved = localStorage.getItem('bfsi-persona-preference');
+    if (saved && ['all', 'executive', 'professional', 'academic'].includes(saved)) {
+      filter.value = saved;
+    }
+
+    // Initial filter
+    filterResources();
+
+    // Handle filter change
+    filter.addEventListener('change', () => {
+      localStorage.setItem('bfsi-persona-preference', filter.value);
+      filterResources();
+    });
+
+    function filterResources() {
+      const persona = filter.value;
+      const cards = grid.querySelectorAll('li');
+
+      if (persona === 'all') {
+        cards.forEach((card) => (card.style.display = ''));
+        return;
+      }
+
+      // Hide cards that don't match persona
+      // This is a simple show/hide - role attribute should be added to cards
+      cards.forEach((card) => {
+        const role = card.getAttribute('data-role');
+        if (role === persona || role === 'all') {
+          card.style.display = '';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      // Show message if no cards visible
+      const visibleCount = Array.from(cards).filter(
+        (c) => (c as HTMLElement).style.display !== 'none',
+      ).length;
+      if (visibleCount === 0) {
+        grid.innerHTML =
+          '<li class="col-span-2 rounded-lg border border-neutral-800 bg-neutral-900/60 p-8 text-center text-neutral-400">No resources available for this audience yet. Check back soon!</li>';
+      }
+    }
+  </script>
 
   <script>
     function enhanceImages(root?: Document | HTMLElement) {

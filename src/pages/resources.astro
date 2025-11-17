@@ -113,10 +113,12 @@ const expandItemThumb = (t: string | undefined) => {
       />
     </label>
     <label class="flex flex-col gap-1 text-sm">
-      <span class="text-neutral-300">Role</span>
+      <span class="text-neutral-300">View for</span>
       <select id="f-role" class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1">
-        <option value="">All</option>
-        {values.role.map((v) => <option value={v.value}>{v.label}</option>)}
+        <option value="">Everyone</option>
+        <option value="executive">Executives</option>
+        <option value="professional">Professionals</option>
+        <option value="academic">Researchers</option>
       </select>
     </label>
     <label class="flex flex-col gap-1 text-sm">

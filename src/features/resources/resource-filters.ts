@@ -74,6 +74,12 @@ export default function initResourceFilters() {
           setVals(parsed);
           return parsed;
         }
+
+        // If no saved filters, check homepage persona preference
+        const personaPref = localStorage.getItem('bfsi-persona-preference');
+        if (personaPref && personaPref !== 'all') {
+          vals.role = personaPref;
+        }
       } catch {
         /* ignore */
       }
@@ -133,12 +139,18 @@ export default function initResourceFilters() {
   const initVals = readFromQuery();
   apply(initVals);
   // events
-  filters.forEach(({ el }) =>
+  filters.forEach(({ key, el }) =>
     el?.addEventListener('change', () => {
       const vals = getVals();
       updateQuery(vals);
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(vals));
+
+        // Sync role filter with homepage persona preference
+        if (key === 'role') {
+          const roleVal = vals.role || 'all';
+          localStorage.setItem('bfsi-persona-preference', roleVal);
+        }
       } catch {
         /* ignore */
       }
