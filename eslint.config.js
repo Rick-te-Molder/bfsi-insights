@@ -41,8 +41,8 @@ export default [
       'no-console': 'off',
     },
   },
-  // Ignore generated/build output and types
+  // Ignore generated/build output, types, and archived scripts
   {
-    ignores: ['dist/**', 'node_modules/**', '.astro/**', '**/*.d.ts'],
+    ignores: ['dist/**', 'node_modules/**', '.astro/**', '**/*.d.ts', 'scripts/_archive/**'],
   },
 ];

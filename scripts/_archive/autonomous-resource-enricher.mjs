@@ -7,7 +7,15 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+const supabaseUrl = process.env.PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Missing Supabase credentials');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const BATCH_SIZE = 3; // Process 3 at a time to avoid rate limits
 const DELAY_MS = 2000; // 2 second delay between batches
@@ -18,6 +26,15 @@ const DELAY_MS = 2000; // 2 second delay between batches
 
 async function main() {
   console.log('🚀 Starting autonomous resource enrichment...\n');
+
+  // Launch browser for thumbnail generation
+  console.log('🚀 Launching browser...');
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({
+    viewport: { width: 1200, height: 675 },
+    userAgent:
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  });
 
   // Step 1: Find resources missing summaries
   const { data: resources, error } = await supabase
@@ -70,6 +87,8 @@ async function main() {
         continue;
       }
 
+      // Note: Thumbnail generation removed - now handled by enrich.mjs agent
+
       // Update database
       console.log('   💾 Updating database...');
       const { error: updateError } = await supabase
@@ -120,6 +139,7 @@ async function main() {
       });
   }
 
+  await browser.close();
   console.log('\n✨ Done!');
 }
 

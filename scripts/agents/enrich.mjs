@@ -1,23 +1,30 @@
 #!/usr/bin/env node
 /**
- * Enrichment Agent - Generates summaries and tags using full taxonomies from database
+ * Enrichment Agent - Generates summaries, tags, and thumbnails using full taxonomies from database
  *
  * Usage:
  *   node scripts/enrich.mjs              # Enrich all pending
  *   node scripts/enrich.mjs --limit=5    # Limit to 5 items
  *   node scripts/enrich.mjs --dry-run    # Preview only
  *
- * Requires: OPENAI_API_KEY in .env
+ * Requires: OPENAI_API_KEY, Playwright installed
  * Schema: Pulls taxonomy values from bfsi_industry, bfsi_topic tables
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { chromium } from 'playwright';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const THUMBS_DIR = path.join(__dirname, '../public/thumbs');
 
 // Cache for taxonomy values
 let TAXONOMIES = null;
@@ -199,8 +206,10 @@ async function enrich(options = {}) {
           relevance_confidence: enrichment.relevance_confidence,
         };
 
-        // Generate thumbnail URL using screenshot service
-        const thumbnailUrl = `https://image.thum.io/get/nojs/width/640/crop/640/${encodeURIComponent(item.url)}`;
+        // Generate local thumbnail using Playwright
+        console.log('   📸 Generating thumbnail...');
+        const thumbnailPath = await generateThumbnail(item);
+        const thumbnailUrl = thumbnailPath || null;
 
         const { error: updateError } = await supabase
           .from('ingestion_queue')
@@ -234,6 +243,78 @@ async function enrich(options = {}) {
 
 // TODO: Add Editor Agent for quality validation
 // async function editorReview(item, enrichment) { ... }
+
+async function generateThumbnail(item) {
+  // Check if thumbnail already exists
+  const slug =
+    item.payload.slug ||
+    item.url
+      .split('/')
+      .pop()
+      .replace(/[^a-z0-9-]/gi, '-')
+      .toLowerCase();
+  const localPaths = [
+    path.join(THUMBS_DIR, `${slug}.png`),
+    path.join(THUMBS_DIR, `${slug}.webp`),
+    path.join(THUMBS_DIR, `${slug}.jpg`),
+  ];
+
+  const existingPath = localPaths.find((p) => fs.existsSync(p));
+  if (existingPath) {
+    const basename = path.basename(existingPath);
+    console.log(`   ✓ Thumbnail exists: ${basename}`);
+    return `/thumbs/${basename}`;
+  }
+
+  // Generate new thumbnail
+  try {
+    const browser = await chromium.launch({ headless: true });
+    const context = await browser.newContext({
+      viewport: { width: 1200, height: 675 },
+      userAgent:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    });
+
+    const page = await context.newPage();
+    await page.goto(item.url, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30000,
+    });
+
+    await page.waitForTimeout(2000);
+
+    // Hide cookie banners
+    await page.addStyleTag({
+      content: `
+        [class*="cookie"],
+        [id*="cookie"],
+        [class*="consent"],
+        [class*="banner"],
+        .onetrust-pc-dark-filter,
+        #onetrust-consent-sdk {
+          display: none !important;
+        }
+      `,
+    });
+
+    await page.waitForTimeout(500);
+
+    const screenshotPath = path.join(THUMBS_DIR, `${slug}.png`);
+    await page.screenshot({
+      path: screenshotPath,
+      type: 'png',
+      fullPage: false,
+    });
+
+    await browser.close();
+
+    console.log(`   ✓ Generated: ${slug}.png`);
+    return `/thumbs/${slug}.png`;
+  } catch (error) {
+    console.log(`   ⚠️  Thumbnail failed: ${error.message}`);
+    return null;
+  }
+}
 
 async function generateEnrichment(content, title) {
   if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not set');
