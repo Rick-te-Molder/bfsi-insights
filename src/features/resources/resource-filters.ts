@@ -70,23 +70,36 @@ export default function initResourceFilters() {
     // If no URL params, check localStorage or persona preference
     if (!hasAnyParam) {
       try {
+        // ALWAYS check persona preference first (syncs with homepage)
+        const personaPref = localStorage.getItem('bfsi-persona-preference');
+        console.log('Resources: Read persona preference:', personaPref);
+
+        // Then check saved filters for other fields
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);
           console.log('Resources: Loaded saved filters:', parsed);
-          setVals(parsed);
-          return parsed;
-        }
-
-        // If no saved filters, check homepage persona preference
-        const personaPref = localStorage.getItem('bfsi-persona-preference');
-        console.log('Resources: Read persona preference:', personaPref);
-        if (personaPref && personaPref !== 'all') {
-          vals.role = personaPref;
-        } else if (!personaPref) {
-          vals.role = 'executive';
+          // Use saved filters but override role with persona preference
+          vals.role =
+            personaPref && personaPref !== 'all'
+              ? personaPref
+              : personaPref === 'all'
+                ? 'all'
+                : 'executive';
+          vals.industry = parsed.industry || '';
+          vals.topic = parsed.topic || '';
+          vals.content_type = parsed.content_type || '';
+          vals.geography = parsed.geography || '';
+          vals.q = parsed.q || '';
         } else {
-          vals.role = 'all';
+          // No saved filters - use persona preference or default
+          if (personaPref && personaPref !== 'all') {
+            vals.role = personaPref;
+          } else if (!personaPref) {
+            vals.role = 'executive';
+          } else {
+            vals.role = 'all';
+          }
         }
         console.log('Resources: Setting role to:', vals.role);
       } catch {
