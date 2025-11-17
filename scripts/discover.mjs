@@ -7,7 +7,11 @@
  *   node scripts/discover.mjs --source=arxiv  # Specific source
  *   node scripts/discover.mjs --dry-run    # Preview only
  *
- * Idempotent: url_norm unique constraint prevents duplicates
+ * Behavior:
+ * - New URLs: Added to queue with status='pending'
+ * - Pending/Approved: Skipped (already in pipeline)
+ * - Rejected: Reset to 'pending' for re-evaluation (continuous improvement)
+ * - Published: Skipped (already live)
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -55,20 +59,32 @@ async function discover(options = {}) {
       for (const candidate of candidates) {
         totalFound++;
 
-        const exists = await checkExists(candidate.url);
-        if (exists) {
+        const existsStatus = await checkExists(candidate.url);
+        if (existsStatus === 'skip') {
           console.log(`   ⏭️  Skip: ${candidate.title.substring(0, 50)}...`);
           continue;
         }
 
         if (!dryRun) {
-          const inserted = await insertToQueue(candidate);
-          if (inserted) {
-            console.log(`   ✅ Added: ${candidate.title}`);
-            totalNew++;
+          if (existsStatus === 'retry') {
+            // Update rejected item to pending for retry
+            const restored = await retryRejected(candidate.url);
+            if (restored) {
+              console.log(`   🔄 Retry: ${candidate.title}`);
+              totalNew++;
+            }
+          } else {
+            // Add new item
+            const inserted = await insertToQueue(candidate);
+            if (inserted) {
+              console.log(`   ✅ Added: ${candidate.title}`);
+              totalNew++;
+            }
           }
         } else {
-          console.log(`   [DRY] Would add: ${candidate.title}`);
+          console.log(
+            `   [DRY] Would ${existsStatus === 'retry' ? 'retry' : 'add'}: ${candidate.title}`,
+          );
           totalNew++;
         }
       }
@@ -200,14 +216,17 @@ function parseRSS(xml, source) {
 async function checkExists(url) {
   const urlNorm = normalizeUrl(url);
 
+  // Check queue for pending or approved items (ignore rejected)
   const { data: queueItem } = await supabase
     .from('ingestion_queue')
     .select('id')
     .eq('url_norm', urlNorm)
+    .in('status', ['pending', 'approved']) // Allow retry if rejected
     .maybeSingle();
 
   if (queueItem) return true;
 
+  // Check if already published
   const { data: resourceItem } = await supabase
     .from('kb_resource')
     .select('id')
@@ -215,6 +234,45 @@ async function checkExists(url) {
     .maybeSingle();
 
   return !!resourceItem;
+}
+
+async function retryRejected(url) {
+  const urlNorm = normalizeUrl(url);
+
+  // First, get the current payload
+  const { data: item } = await supabase
+    .from('ingestion_queue')
+    .select('payload')
+    .eq('url_norm', urlNorm)
+    .eq('status', 'rejected')
+    .single();
+
+  if (!item) return false;
+
+  // Clear summary to force re-enrichment
+  const updatedPayload = {
+    ...item.payload,
+    summary: { short: null, medium: null, long: null },
+    tags: {},
+  };
+
+  const { error } = await supabase
+    .from('ingestion_queue')
+    .update({
+      status: 'pending',
+      reviewed_at: null,
+      reviewer: null,
+      rejection_reason: null,
+      payload: updatedPayload,
+    })
+    .eq('url_norm', urlNorm)
+    .eq('status', 'rejected');
+
+  if (error) {
+    console.error(`     Error restoring: ${error.message}`);
+    return false;
+  }
+  return true;
 }
 
 async function insertToQueue(candidate) {
