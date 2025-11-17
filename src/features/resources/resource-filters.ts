@@ -62,32 +62,41 @@ export default function initResourceFilters() {
   function readFromQuery() {
     const params = new URLSearchParams(location.search);
     const vals: Record<string, string> = Object.fromEntries([
-      ...filters.map(({ key }) => [key, params.get(key) || (key === 'role' ? 'all' : '')]),
+      ...filters.map(({ key }) => [key, params.get(key) || '']),
       ['q', params.get('q') || ''],
     ]);
     const hasAnyParam = Object.values(vals).some((v) => v);
+
+    // If no URL params, check localStorage or persona preference
     if (!hasAnyParam) {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);
+          console.log('Resources: Loaded saved filters:', parsed);
           setVals(parsed);
           return parsed;
         }
 
-        // If no saved filters, check homepage persona preference or default to executive
+        // If no saved filters, check homepage persona preference
         const personaPref = localStorage.getItem('bfsi-persona-preference');
         console.log('Resources: Read persona preference:', personaPref);
         if (personaPref && personaPref !== 'all') {
           vals.role = personaPref;
         } else if (!personaPref) {
           vals.role = 'executive';
+        } else {
+          vals.role = 'all';
         }
         console.log('Resources: Setting role to:', vals.role);
       } catch {
         /* ignore */
       }
+    } else {
+      // Set defaults for empty URL params
+      if (!vals.role) vals.role = 'all';
     }
+
     setVals(vals);
     return vals;
   }
