@@ -4,9 +4,19 @@ import { getAllResources } from '../lib/supabase';
 import ResourceCard from '../features/resources/ResourceCard.astro';
 import fs from 'node:fs';
 
-// Fetch latest 6 resources from Supabase
+// Fetch enough resources to ensure we have 6 per persona
 const allResources = await getAllResources();
-const latest = allResources.slice(0, 6);
+
+// Group by persona for efficient filtering
+const byPersona = {
+  all: allResources.slice(0, 6),
+  executive: allResources.filter((r) => r.role === 'executive').slice(0, 6),
+  professional: allResources.filter((r) => r.role === 'professional').slice(0, 6),
+  academic: allResources.filter((r) => r.role === 'academic').slice(0, 6),
+};
+
+// Default to 'all' for server-side render
+const latest = byPersona.all;
 
 const externalThumb = (u: string | undefined) =>
   u ? `https://image.thum.io/get/nojs/width/600/crop/600/${encodeURIComponent(u)}` : null;
@@ -91,23 +101,17 @@ const expandItemThumb = (t: string | undefined) => {
     </ul>
   </section>
 
-  <script>
-    // Persona filter with localStorage persistence
+  <script define:vars={{ byPersona }}>
+    // Persona filter that fetches 6 most recent items per persona
     const filter = document.getElementById('persona-filter') as HTMLSelectElement;
     const grid = document.getElementById('resources-grid')!;
-
-    // Store original cards HTML to prevent loss when showing empty state
-    const originalCards = Array.from(grid.children);
-    let emptyMessage: HTMLElement | null = null;
 
     // Restore saved preference
     const saved = localStorage.getItem('bfsi-persona-preference');
     if (saved && ['all', 'executive', 'professional', 'academic'].includes(saved)) {
       filter.value = saved;
+      filterResources(); // Apply saved filter
     }
-
-    // Initial filter
-    filterResources();
 
     // Handle filter change
     filter.addEventListener('change', () => {
@@ -117,50 +121,40 @@ const expandItemThumb = (t: string | undefined) => {
 
     function filterResources() {
       const persona = filter.value;
+      const resources = byPersona[persona] || byPersona.all;
 
-      // Remove empty message if it exists
-      if (emptyMessage && emptyMessage.parentNode) {
-        emptyMessage.remove();
-        emptyMessage = null;
-      }
-
-      // Restore original cards if they were removed
-      if (
-        grid.children.length === 0 ||
-        (grid.children.length === 1 && grid.children[0].classList.contains('col-span-2'))
-      ) {
-        grid.innerHTML = '';
-        originalCards.forEach((card) => grid.appendChild(card.cloneNode(true)));
-      }
-
-      const cards = Array.from(grid.querySelectorAll('li:not(.col-span-2)')) as HTMLElement[];
-
-      if (persona === 'all') {
-        cards.forEach((card) => (card.style.display = ''));
+      if (resources.length === 0) {
+        grid.innerHTML = `
+          <li class="col-span-2 rounded-lg border border-neutral-800 bg-neutral-900/60 p-8 text-center text-neutral-400">
+            No resources available for this audience yet. Check back soon!
+          </li>
+        `;
         return;
       }
 
-      // Show/hide cards based on persona
-      let visibleCount = 0;
-      cards.forEach((card) => {
-        const role = card.getAttribute('data-role');
-        // Match exact persona or show if no role specified
-        if (role === persona) {
-          card.style.display = '';
-          visibleCount++;
-        } else {
-          card.style.display = 'none';
-        }
-      });
-
-      // Show message if no cards visible
-      if (visibleCount === 0) {
-        emptyMessage = document.createElement('li');
-        emptyMessage.className =
-          'col-span-2 rounded-lg border border-neutral-800 bg-neutral-900/60 p-8 text-center text-neutral-400';
-        emptyMessage.textContent = 'No resources available for this audience yet. Check back soon!';
-        grid.appendChild(emptyMessage);
-      }
+      // Re-render cards for selected persona
+      grid.innerHTML = resources
+        .map(
+          (item) => `
+          <li class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition-all hover:border-neutral-700 hover:ring-neutral-700 hover:bg-neutral-900 relative"
+              data-role="${item.role || ''}">
+            <a href="/resources/${item.slug}" class="block">
+              <h3 class="text-xl font-semibold text-sky-200 group-hover:text-sky-100">
+                ${item.title}
+              </h3>
+              <p class="mt-1 text-sm text-neutral-400">
+                ${item.source_name || ''} • ${new Date(item.publication_date).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })}
+              </p>
+              ${item.summary_short ? `<p class="mt-3 text-sm text-neutral-300 line-clamp-3">${item.summary_short}</p>` : ''}
+              <div class="mt-3 flex flex-wrap gap-2 text-xs">
+                ${item.role ? `<span class="rounded-full bg-purple-500/10 px-2 py-1 text-purple-300">${item.role}</span>` : ''}
+                ${item.content_type ? `<span class="rounded-full bg-blue-500/10 px-2 py-1 text-blue-300">${item.content_type}</span>` : ''}
+              </div>
+            </a>
+          </li>
+        `,
+        )
+        .join('');
     }
   </script>
 
