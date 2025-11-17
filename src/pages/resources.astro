@@ -380,4 +380,73 @@ const expandItemThumb = (t: string | undefined) => {
       mod.default();
     });
   </script>
+
+  <script>
+    // Back to Top - Tesla Performance mode: instant scroll, smooth fade
+    const backToTopBtn = document.getElementById('back-to-top');
+    if (backToTopBtn) {
+      let isVisible = false;
+      const SHOW_THRESHOLD = 400;
+
+      const toggleVisibility = () => {
+        const shouldShow = window.scrollY > SHOW_THRESHOLD;
+        if (shouldShow !== isVisible) {
+          isVisible = shouldShow;
+          if (isVisible) {
+            backToTopBtn.classList.remove('opacity-0', 'pointer-events-none');
+            backToTopBtn.classList.add('opacity-100', 'pointer-events-auto');
+          } else {
+            backToTopBtn.classList.remove('opacity-100', 'pointer-events-auto');
+            backToTopBtn.classList.add('opacity-0', 'pointer-events-none');
+          }
+        }
+      };
+
+      // Smooth fade on scroll
+      let rafId: number | null = null;
+      window.addEventListener(
+        'scroll',
+        () => {
+          if (rafId === null) {
+            rafId = requestAnimationFrame(() => {
+              toggleVisibility();
+              rafId = null;
+            });
+          }
+        },
+        { passive: true },
+      );
+
+      // Tesla-style scroll: acceleration → speed → braking
+      backToTopBtn.addEventListener('click', () => {
+        const startPosition = window.scrollY;
+        const distance = startPosition;
+        const duration = Math.min(800 + distance * 0.3, 1200); // Adaptive duration
+        let startTime: number | null = null;
+
+        // Custom easing: aggressive ease-in-out (Tesla acceleration curve)
+        const easeInOutCubic = (t: number): number => {
+          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        };
+
+        const animateScroll = (currentTime: number) => {
+          if (startTime === null) startTime = currentTime;
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const eased = easeInOutCubic(progress);
+
+          window.scrollTo(0, startPosition - distance * eased);
+
+          if (progress < 1) {
+            requestAnimationFrame(animateScroll);
+          }
+        };
+
+        requestAnimationFrame(animateScroll);
+      });
+
+      // Initial check
+      toggleVisibility();
+    }
+  </script>
 </Base>
