@@ -77,11 +77,13 @@ export default function initResourceFilters() {
 
         // If no saved filters, check homepage persona preference or default to executive
         const personaPref = localStorage.getItem('bfsi-persona-preference');
+        console.log('Resources: Read persona preference:', personaPref);
         if (personaPref && personaPref !== 'all') {
           vals.role = personaPref;
         } else if (!personaPref) {
           vals.role = 'executive';
         }
+        console.log('Resources: Setting role to:', vals.role);
       } catch {
         /* ignore */
       }

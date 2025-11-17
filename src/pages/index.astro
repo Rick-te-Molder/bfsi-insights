@@ -130,6 +130,7 @@ const expandItemThumb = (t: string | undefined) => {
 
     // Handle filter change
     filter.addEventListener('change', () => {
+      console.log('Homepage: Setting persona to', filter.value);
       localStorage.setItem('bfsi-persona-preference', filter.value);
       filterResources();
     });
