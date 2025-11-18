@@ -87,12 +87,12 @@ import Base from '../../layouts/Base.astro';
           return;
         }
 
-        // Load queue data
+        // Load queue data (enriched items ready for review)
         const { data: pending, error: loadError } = await supabase
           .from('ingestion_queue')
           .select('*')
-          .eq('status', 'pending')
-          .order('discovered_at', { ascending: false });
+          .eq('status', 'enriched')
+          .order('fetched_at', { ascending: false });
 
         if (loadError) throw loadError;
 
