@@ -71,12 +71,105 @@ Feel free to check [our documentation](https://docs.astro.build) or jump into ou
 
 ## Workflow Summary
 
-URL:
-https://example.com/your-article
+### Content Ingestion Pipeline
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ 1. DISCOVERY (ingestion_queue)                                 │
+│    • Run: npm run discover -- --source=arxiv --limit=10        │
+│    • Agent scrapes RSS feeds, extracts URLs & basic metadata   │
+│    • Status: pending                                           │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 2. ENRICHMENT (ingestion_queue)                                │
+│    • Run: npm run enrich -- --limit=5                          │
+│    • LLM generates summaries, scores personas, extracts tags   │
+│    • Multi-value support:                                      │
+│      - industries: ["banking", "insurance"] (1-3 values)      │
+│      - topics: ["ai", "risk"] (1-3 values)                   │
+│      - vendors: ["OpenAI", "Anthropic"] (0-n values)         │
+│      - organizations: ["JPMorgan"] (0-n values)               │
+│    • Captures thumbnails using Playwright                      │
+│    • Status: pending → enriched                                │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 3. REVIEW (Supabase UI)                                        │
+│    • Admin reviews complete card with thumbnail                │
+│    • Verifies summaries, tags, quality score                   │
+│    • Actions:                                                  │
+│      - Approve: Change status to 'approved'                    │
+│      - Reject: Change status to 'rejected'                     │
+│      - Edit: Manual refinements before approval                │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 4. PUBLISHING (kb_resource + junction tables)                  │
+│    • Run: npm run publish:approved                             │
+│    • Moves approved items to kb_resource                       │
+│    • Populates junction tables:                                │
+│      - kb_resource_bfsi_industry (0..n)                        │
+│      - kb_resource_bfsi_topic (0..n)                           │
+│      - kb_resource_ag_vendor (0..n, auto-creates)              │
+│      - kb_resource_bfsi_organization (0..n, auto-creates)      │
+│    • Status: approved → published                              │
+└─────────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ 5. BUILD (Static site generation)                              │
+│    • Run: npm run build:resources                              │
+│    • Reads from kb_resource_pretty view (joins junction tables)│
+│    • Generates resources.json for Astro                        │
+│    • Run: npm run build                                        │
+│    • Builds static site to ./dist/                             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Quick Start
+
+```bash
+# 1. Discover new resources
+npm run discover -- --source=arxiv --limit=10
+
+# 2. Enrich pending items
+npm run enrich -- --limit=5
+
+# 3. Review in Supabase UI, approve items
+
+# 4. Publish approved items
+npm run publish:approved --dry-run  # Preview
+npm run publish:approved            # Actually publish
+
+# 5. Build and deploy
+npm run build:resources
+npm run build
+git push
+```
+
+### Multi-Value Dimension Support
+
+Resources can now have **multiple** industries, topics, vendors, and organizations:
+
+- **Junction Tables**: Normalized many-to-many relationships
+- **Backward Compatible**: View returns both scalar (primary) and array (all) values
+- **Auto-Creation**: Vendors and organizations are auto-created when mentioned
+
+Example enrichment output:
+
+```json
+{
+  "tags": {
+    "role": "researcher",
+    "industry": ["banking", "insurance"],
+    "topic": ["ai", "risk", "compliance"]
+  },
+  "vendors": ["OpenAI", "Anthropic"],
+  "organizations": ["JPMorgan", "Goldman Sachs"]
+}
+```
 
 ---
-
-You are a precise metadata extractor and filename generator for the BFSI Insights knowledge base.
 
 OUTPUT
 
