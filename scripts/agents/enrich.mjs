@@ -350,15 +350,13 @@ NOT RELEVANT if:
 - Healthcare, education, retail, etc. as primary domain
 - Generic AI/tech with no BFSI context
 
-Return JSON with this EXACT structure. Each tag field must contain EXACTLY ONE string value (no pipes, no arrays, no multiple values):
+Return JSON with this EXACT structure:
 
 {
   "bfsi_relevant": true or false,
   "relevance_confidence": 0.0-1.0 (0.9+ = very confident, 0.5-0.8 = uncertain, <0.5 = likely not relevant),
   "primary_domain": "banking|insurance|fintech|payments|wealth-management|healthcare|education|manufacturing|other",
   "relevance_reason": "2-3 sentence explanation with specific BFSI connections or why it's not relevant",
-
-{
   "summary": {
     "short": "120-240 characters - Lead with KEY FINDING or MAIN CLAIM. Use concrete numbers/metrics if available. NO 'This paper presents...' language. Format: '[Key Insight]. [Supporting detail].'",
     "medium": "240-480 characters - Elaborate on HOW and WHY. Include methodology or approach. Add 1-2 specific examples. Connect to BFSI practitioner concerns.",
@@ -371,21 +369,25 @@ Return JSON with this EXACT structure. Each tag field must contain EXACTLY ONE s
   },
   "tags": {
     "role": "<pick ONE from: ${taxonomies.role.join(', ')}>",
-    "industry": "<pick ONE most specific from: ${taxonomies.industry.slice(0, 10).join(', ')}...>",
-    "topic": "<pick ONE most specific from: ${taxonomies.topic.slice(0, 10).join(', ')}...>",
     "content_type": "<pick ONE from: ${taxonomies.content_type.join(', ')}>",
     "geography": "<pick ONE from: ${taxonomies.geography.join(', ')}>",
     "use_cases": "<pick ONE from: ${taxonomies.use_cases.join(', ')}>",
-    "agentic_capabilities": "<pick ONE from: ${taxonomies.agentic_capabilities.join(', ')}>"
-  }
+    "agentic_capabilities": "<pick ONE from: ${taxonomies.agentic_capabilities.join(', ')}>",
+    "industry": ["<array of 1-3 most relevant from: ${taxonomies.industry.slice(0, 10).join(', ')}...>"],
+    "topic": ["<array of 1-3 most relevant from: ${taxonomies.topic.slice(0, 10).join(', ')}...>"]
+  },
+  "vendors": ["<array of AI vendor names mentioned, e.g. ['OpenAI', 'Anthropic', 'Google'], or empty array if none>"],
+  "organizations": ["<array of BFSI organization names mentioned, e.g. ['JPMorgan', 'Goldman Sachs'], or empty array if none>"]
 }
 
 CRITICAL RULES:
-1. Each tag field = SINGLE STRING VALUE ONLY (e.g., "researcher", NOT "researcher|executive")
-2. NO pipes (|), NO commas in tag values, NO arrays
-3. Use most specific hierarchical value available
-4. Geography: "global" for worldwide content, specific region if focused
-5. All lowercase, hyphenated format
+1. SINGLE VALUES: role, content_type, geography, use_cases, agentic_capabilities
+2. ARRAYS (1-3 items): industry, topic - pick the MOST relevant, don't include everything
+3. ARRAYS (0-n items): vendors, organizations - only if explicitly mentioned
+4. All lowercase, hyphenated format for slugs
+5. Geography: "global" for worldwide content, specific region if focused
+6. Industry examples: ["banking"], ["banking", "insurance"], ["cross-bfsi"]
+7. Vendor/org names: Use proper capitalization, e.g. "OpenAI" not "openai"
 
 SUMMARY EXAMPLES:
 
@@ -418,13 +420,36 @@ Focus on: WHAT was found, HOW MUCH impact, WHY it matters to BFSI practitioners.
   const data = await response.json();
   const result = JSON.parse(data.choices[0].message.content);
 
-  // Validate: reject if any tag contains pipes (multiple values)
+  // Validate arrays are properly formatted
   const tags = result.tags || {};
-  for (const [key, value] of Object.entries(tags)) {
-    if (typeof value === 'string' && value.includes('|')) {
-      throw new Error(
-        `Invalid tag ${key}: contains multiple values "${value}". Expected single value.`,
-      );
+
+  // Check that arrays are actually arrays
+  if (tags.industry && !Array.isArray(tags.industry)) {
+    result.tags.industry = [tags.industry];
+  }
+  if (tags.topic && !Array.isArray(tags.topic)) {
+    result.tags.topic = [tags.topic];
+  }
+
+  // Ensure vendors and organizations are arrays
+  if (result.vendors && !Array.isArray(result.vendors)) {
+    result.vendors = result.vendors ? [result.vendors] : [];
+  }
+  if (result.organizations && !Array.isArray(result.organizations)) {
+    result.organizations = result.organizations ? [result.organizations] : [];
+  }
+
+  // Reject if single-value fields contain arrays or pipes
+  const singleValueFields = [
+    'role',
+    'content_type',
+    'geography',
+    'use_cases',
+    'agentic_capabilities',
+  ];
+  for (const field of singleValueFields) {
+    if (tags[field] && (Array.isArray(tags[field]) || tags[field].includes('|'))) {
+      throw new Error(`Invalid tag ${field}: must be single value, got "${tags[field]}".`);
     }
   }
 
