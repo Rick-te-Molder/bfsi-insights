@@ -34,9 +34,13 @@ try {
     }
 
     // Industries
-    if (industriesData.data && industriesData.data.length > 0) {
+    if (industriesData.error) {
+      console.error('Error loading industries from DB:', industriesData.error);
+      IndustryEnum = z.enum(['banking', 'financial-services', 'insurance', 'cross-bfsi', 'other']);
+    } else if (industriesData.data && industriesData.data.length > 0) {
       IndustryEnum = z.enum(industriesData.data.map((i) => i.code));
     } else {
+      console.warn('No industries found in database, using fallback');
       IndustryEnum = z.enum(['banking', 'financial-services', 'insurance', 'cross-bfsi', 'other']);
     }
   } else {
