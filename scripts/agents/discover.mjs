@@ -62,7 +62,19 @@ async function discover(options = {}) {
     return { found: 0, new: 0 };
   }
 
-  const sources = source ? allSources.filter((s) => s.slug === source) : allSources;
+  // Filter out premium sources that typically require manual curation
+  const premiumSources = allSources.filter((s) => s.tier === 'premium');
+  const standardSources = allSources.filter((s) => s.tier !== 'premium');
+
+  if (premiumSources.length > 0 && !source) {
+    console.log(`ℹ️  Skipping ${premiumSources.length} premium sources (require manual curation):`);
+    console.log(`   ${premiumSources.map((s) => s.name).join(', ')}`);
+    console.log(
+      `   💡 To curate manually: INSERT INTO ingestion_queue (url, payload) VALUES ('<url>', '{"source": "McKinsey"}'::jsonb);\n`,
+    );
+  }
+
+  const sources = source ? allSources.filter((s) => s.slug === source) : standardSources;
 
   let totalFound = 0,
     totalNew = 0;
