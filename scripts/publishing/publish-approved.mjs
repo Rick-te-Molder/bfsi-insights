@@ -17,6 +17,26 @@ dotenv.config();
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 /**
+ * Match source slug from domain or name
+ */
+async function matchSourceSlug(url, sourceName) {
+  try {
+    const domain = new URL(url).hostname.replace(/^www\./, '');
+
+    const { data } = await supabase
+      .from('ref_source')
+      .select('slug')
+      .or(`domain.eq.${domain},name.ilike.%${sourceName}%`)
+      .limit(1)
+      .single();
+
+    return data?.slug || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Auto-create vendor if it doesn't exist
  */
 async function getOrCreateVendorByName(name) {
@@ -98,7 +118,10 @@ async function publishItem(item, dryRun = false) {
     return { success: true, dryRun: true };
   }
 
-  // 1. Insert into kb_resource
+  // 1. Match source slug from database
+  const source_slug = await matchSourceSlug(item.url, payload.source || payload.source_name);
+
+  // 2. Insert into kb_resource
   const { data: resource, error: insertError } = await supabase
     .from('kb_resource')
     .insert({
@@ -108,6 +131,7 @@ async function publishItem(item, dryRun = false) {
       url: item.url,
       source_name: payload.source || payload.source_name || null,
       source_domain: new URL(item.url).hostname,
+      source_slug: source_slug,
       slug:
         payload.slug ||
         item.url
@@ -138,8 +162,11 @@ async function publishItem(item, dryRun = false) {
 
   const resourceId = resource.id;
   console.log(`   ✅ Inserted kb_resource id=${resourceId}`);
+  if (source_slug) {
+    console.log(`   🏢 Source: ${source_slug}`);
+  }
 
-  // 2. Insert into junction tables
+  // 3. Insert into junction tables
   const junctionErrors = [];
 
   // Industry (support single or array)

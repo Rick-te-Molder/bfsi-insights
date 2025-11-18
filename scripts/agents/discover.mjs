@@ -22,17 +22,31 @@ dotenv.config();
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-const SOURCES = {
-  arxiv: {
-    name: 'arXiv CS.AI',
-    rss: 'http://export.arxiv.org/rss/cs.AI',
-    enabled: true, // Most papers are generic, but enrichment agent filters them
-    keywords: ['multi-agent', 'LLM', 'banking', 'finance', 'insurance'],
-  },
-  // Note: Other RSS feeds (BIS, McKinsey, Deloitte, SSRN) have 404 errors
-  // TODO: Add working BFSI-focused RSS feeds
-  // Alternatively: manually add URLs to ingestion_queue for curation
-};
+/**
+ * Load enabled sources from database
+ */
+async function loadSources() {
+  const { data, error } = await supabase
+    .from('ref_source')
+    .select('slug, name, domain, tier, category, rss_feed')
+    .eq('enabled', true)
+    .not('rss_feed', 'is', null)
+    .order('sort_order');
+
+  if (error) {
+    console.error('Failed to load sources:', error.message);
+    return [];
+  }
+
+  return data.map((s) => ({
+    slug: s.slug,
+    name: s.name,
+    rss: s.rss_feed,
+    tier: s.tier,
+    category: s.category,
+    keywords: ['AI', 'banking', 'financial services', 'insurance', 'fintech'],
+  }));
+}
 
 async function discover(options = {}) {
   const { source, dryRun = false, limit = null } = options;
@@ -40,9 +54,15 @@ async function discover(options = {}) {
   console.log('🔍 Starting discovery...');
   console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}\n`);
 
-  const sources = source
-    ? [SOURCES[source]].filter(Boolean)
-    : Object.values(SOURCES).filter((s) => s.enabled);
+  // Load sources from database
+  const allSources = await loadSources();
+
+  if (allSources.length === 0) {
+    console.log('⚠️  No enabled sources found in database');
+    return { found: 0, new: 0 };
+  }
+
+  const sources = source ? allSources.filter((s) => s.slug === source) : allSources;
 
   let totalFound = 0,
     totalNew = 0;
