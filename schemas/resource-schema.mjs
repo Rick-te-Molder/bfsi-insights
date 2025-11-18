@@ -12,102 +12,43 @@ dotenv.config({ silent: true });
 
 const normalizeArray = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 
-// Fetch valid roles dynamically from ref_role table
-let RoleEnum;
+// Fetch valid taxonomies dynamically from database
+let RoleEnum, IndustryEnum;
 try {
   const supabaseUrl = env.PUBLIC_SUPABASE_URL;
   const supabaseKey = env.SUPABASE_SERVICE_KEY || env.PUBLIC_SUPABASE_ANON_KEY;
 
   if (supabaseUrl && supabaseKey) {
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { data: rolesData } = await supabase.from('ref_role').select('value').order('sort_order');
 
-    if (rolesData && rolesData.length > 0) {
-      RoleEnum = z.enum(rolesData.map((r) => r.value));
+    const [rolesData, industriesData] = await Promise.all([
+      supabase.from('ref_role').select('value').order('sort_order'),
+      supabase.from('bfsi_industry').select('code').order('sort_order'),
+    ]);
+
+    // Roles
+    if (rolesData.data && rolesData.data.length > 0) {
+      RoleEnum = z.enum(rolesData.data.map((r) => r.value));
     } else {
-      // Fallback if database fetch fails
       RoleEnum = z.enum(['executive', 'professional', 'researcher']);
+    }
+
+    // Industries
+    if (industriesData.data && industriesData.data.length > 0) {
+      IndustryEnum = z.enum(industriesData.data.map((i) => i.code));
+    } else {
+      IndustryEnum = z.enum(['banking', 'financial-services', 'insurance', 'cross-bfsi', 'other']);
     }
   } else {
     // Fallback if no credentials
     RoleEnum = z.enum(['executive', 'professional', 'researcher']);
+    IndustryEnum = z.enum(['banking', 'financial-services', 'insurance', 'cross-bfsi', 'other']);
   }
 } catch {
   // Fallback if fetch fails
   RoleEnum = z.enum(['executive', 'professional', 'researcher']);
+  IndustryEnum = z.enum(['banking', 'financial-services', 'insurance', 'cross-bfsi', 'other']);
 }
-
-const IndustryEnum = z.enum([
-  'banking',
-  'banking-retail-banking',
-  'banking-corporate-banking',
-  'banking-lending',
-  'banking-payments',
-  'banking-deposits',
-  'banking-treasury',
-  'banking-capital-markets',
-  'banking-digital-banking',
-  'financial-services',
-  'financial-services-financial-advice',
-  'financial-services-wealth-management',
-  'financial-services-asset-management',
-  'financial-services-leasing',
-  'financial-services-factoring',
-  'financial-services-pension-funds',
-  'financial-services-insurance-brokerage',
-  'insurance',
-  'insurance-health-insurance',
-  'insurance-life-insurance',
-  'insurance-pension-insurance',
-  'insurance-property-and-casualty',
-  'cross-bfsi',
-  'cross-bfsi-infrastructure',
-  'cross-bfsi-shared-services',
-  'cross-bfsi-b2b-platforms',
-]);
-
-const TopicEnum = z.enum([
-  'strategy-and-management',
-  'strategy-and-management-strategy',
-  'strategy-and-management-operating-models',
-  'strategy-and-management-transformation',
-  'strategy-and-management-case-studies',
-  'ecosystem',
-  'ecosystem-vendors',
-  'ecosystem-institutions',
-  'ecosystem-bfsi-sector',
-  'ecosystem-ai-industry',
-  'governance-and-control',
-  'governance-and-control-governance',
-  'governance-and-control-risk-management',
-  'governance-and-control-compliance',
-  'governance-and-control-financial-crime-prevention',
-  'governance-and-control-financial-crime-prevention-kyc',
-  'governance-and-control-financial-crime-prevention-cdd',
-  'governance-and-control-financial-crime-prevention-aml',
-  'governance-and-control-financial-crime-prevention-fraud-detection',
-  'governance-and-control-financial-crime-prevention-sanctions-screening',
-  'governance-and-control-auditing',
-  'governance-and-control-internal-controls',
-  'regulatory-and-standards',
-  'regulatory-and-standards-regulation',
-  'regulatory-and-standards-standards',
-  'regulatory-and-standards-policy',
-  'regulatory-and-standards-guidance',
-  'technology-and-data',
-  'technology-and-data-ai',
-  'technology-and-data-agentic-engineering',
-  'technology-and-data-rag',
-  'technology-and-data-orchestration',
-  'technology-and-data-data-management',
-  'technology-and-data-infrastructure',
-  'technology-and-data-cybersecurity',
-  'technology-and-data-monitoring',
-  'methods-and-approaches',
-  'methods-and-approaches-methodology',
-  'methods-and-approaches-models',
-  'methods-and-approaches-best-practices',
-]);
 
 const UseCasesEnum = z.enum([
   'customer-onboarding',
@@ -164,8 +105,9 @@ export const Resource = z.object({
   role: RoleEnum.optional(),
   industry: IndustryEnum.optional(),
   // Allow string or array for flexibility, transform to array
+  // Topics are dynamic from database, accept any string/array
   topic: z
-    .union([TopicEnum, z.array(TopicEnum)])
+    .union([z.string(), z.array(z.string())])
     .optional()
     .transform(normalizeArray),
   use_cases: UseCasesEnum.optional(),

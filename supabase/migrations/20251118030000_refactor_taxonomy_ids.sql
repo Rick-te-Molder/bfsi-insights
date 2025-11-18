@@ -185,7 +185,8 @@ SELECT
   r.id,
   r.title,
   r.author,
-  r.date_published,
+  r.date_published as publication_date,
+  r.date_published as date_added,  -- Using date_published as fallback
   r.url,
   r.source_name,
   r.source_domain,
@@ -198,6 +199,27 @@ SELECT
   r.geography,
   r.thumbnail,
   r.status,
+  r.tags,
+  r.use_cases,
+  r.agentic_capabilities,
+  
+  -- First industry code (for backward compatibility)
+  (SELECT i.code 
+   FROM kb_resource_bfsi_industry ri
+   JOIN bfsi_industry i ON i.code = ri.industry_code
+   WHERE ri.resource_id = r.id
+   ORDER BY ri.rank
+   LIMIT 1
+  ) as industry,
+  
+  -- First topic code (for backward compatibility)  
+  (SELECT t.code 
+   FROM kb_resource_bfsi_topic rt
+   JOIN bfsi_topic t ON t.code = rt.topic_code
+   WHERE rt.resource_id = r.id
+   ORDER BY rt.rank
+   LIMIT 1
+  ) as topic,
   
   -- Industry array
   COALESCE(
@@ -217,7 +239,7 @@ SELECT
     '{}'
   ) as topics,
   
-  -- Process array (NEW)
+  -- Process array
   COALESCE(
     (SELECT array_agg(p.code ORDER BY rp.rank)
      FROM kb_resource_bfsi_process rp
