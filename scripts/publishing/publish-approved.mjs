@@ -173,9 +173,9 @@ async function publishItem(item, dryRun = false) {
   const industries = Array.isArray(tags.industry) ? tags.industry : [tags.industry].filter(Boolean);
   if (industries.length > 0) {
     const { error } = await supabase.from('kb_resource_bfsi_industry').insert(
-      industries.map((slug, idx) => ({
+      industries.map((code, idx) => ({
         resource_id: resourceId,
-        industry_slug: slug,
+        industry_code: code,
         rank: idx,
       })),
     );
@@ -187,9 +187,9 @@ async function publishItem(item, dryRun = false) {
   const topics = Array.isArray(tags.topic) ? tags.topic : [tags.topic].filter(Boolean);
   if (topics.length > 0) {
     const { error } = await supabase.from('kb_resource_bfsi_topic').insert(
-      topics.map((slug, idx) => ({
+      topics.map((code, idx) => ({
         resource_id: resourceId,
-        topic_slug: slug,
+        topic_code: code,
         rank: idx,
       })),
     );

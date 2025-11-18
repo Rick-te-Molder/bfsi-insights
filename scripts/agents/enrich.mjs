@@ -78,8 +78,8 @@ async function loadTaxonomies() {
   console.log('📚 Loading taxonomies from database...');
 
   const [industries, topics] = await Promise.all([
-    supabase.from('bfsi_industry').select('slug, label, level').order('sort_order'),
-    supabase.from('bfsi_topic').select('slug, label, level').order('sort_order'),
+    supabase.from('bfsi_industry').select('code, name, level').order('sort_order'),
+    supabase.from('bfsi_topic').select('code, name, level').order('sort_order'),
   ]);
 
   if (industries.error || topics.error) {
@@ -99,8 +99,8 @@ async function loadTaxonomies() {
 
   TAXONOMIES = {
     role: rolesData.map((r) => r.value),
-    industry: industries.data.map((i) => i.slug),
-    topic: topics.data.map((t) => t.slug),
+    industry: industries.data.map((i) => i.code),
+    topic: topics.data.map((t) => t.code),
     content_type: [
       'report',
       'white-paper',
