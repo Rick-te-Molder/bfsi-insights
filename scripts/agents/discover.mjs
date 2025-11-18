@@ -26,7 +26,7 @@ const SOURCES = {
   arxiv: {
     name: 'arXiv',
     rss: 'http://export.arxiv.org/rss/cs.AI',
-    enabled: true,
+    enabled: false, // Too generic, mostly non-BFSI papers
     keywords: ['multi-agent', 'LLM', 'banking', 'finance', 'insurance'],
   },
   deloitte: {
@@ -34,6 +34,12 @@ const SOURCES = {
     rss: 'https://www2.deloitte.com/us/en/insights.rss',
     enabled: true,
     keywords: ['AI', 'banking', 'financial services', 'insurance'],
+  },
+  ssrn: {
+    name: 'SSRN Finance',
+    rss: 'https://papers.ssrn.com/sol3/Jeljour_results.cfm?form_name=journalBrowse&journal_id=3446438',
+    enabled: true,
+    keywords: ['AI', 'machine learning', 'fintech', 'banking', 'insurance'],
   },
 };
 
