@@ -465,7 +465,7 @@ export default function initResourceFilters() {
       advancedFilters.classList.remove('hidden');
       advancedIcon.classList.add('rotate-90');
       toggleAdvancedBtn.setAttribute('aria-expanded', 'true');
-      if (buttonText) buttonText.textContent = 'Less filters';
+      if (buttonText) buttonText.textContent = 'Fewer filters';
     } else {
       advancedFilters.classList.add('hidden');
       advancedIcon.classList.remove('rotate-90');
@@ -489,7 +489,7 @@ export default function initResourceFilters() {
       advancedIcon.classList.add('rotate-90');
       toggleAdvancedBtn.setAttribute('aria-expanded', 'true');
       const buttonText = toggleAdvancedBtn.querySelector('span');
-      if (buttonText) buttonText.textContent = 'Less filters';
+      if (buttonText) buttonText.textContent = 'Fewer filters';
     }
   } catch {
     /* ignore */
