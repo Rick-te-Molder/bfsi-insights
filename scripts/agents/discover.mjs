@@ -3,9 +3,10 @@
  * Discovery Agent - Finds new resources and adds to ingestion_queue
  *
  * Usage:
- *   node scripts/discover.mjs              # Run discovery
- *   node scripts/discover.mjs --source=arxiv  # Specific source
- *   node scripts/discover.mjs --dry-run    # Preview only
+ *   node scripts/discover.mjs                    # Run discovery
+ *   node scripts/discover.mjs --source=arxiv     # Specific source
+ *   node scripts/discover.mjs --limit=10         # Limit to 10 items
+ *   node scripts/discover.mjs --dry-run          # Preview only
  *
  * Behavior:
  * - New URLs: Added to queue with status='pending'
@@ -37,7 +38,7 @@ const SOURCES = {
 };
 
 async function discover(options = {}) {
-  const { source, dryRun = false } = options;
+  const { source, dryRun = false, limit = null } = options;
 
   console.log('🔍 Starting discovery...');
   console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}\n`);
@@ -57,6 +58,11 @@ async function discover(options = {}) {
       console.log(`   Found ${candidates.length} potential resources`);
 
       for (const candidate of candidates) {
+        if (limit && totalNew >= limit) {
+          console.log(`   ⚠️  Reached limit of ${limit} new items, stopping discovery`);
+          break;
+        }
+
         totalFound++;
 
         const existsStatus = await checkExists(candidate.url);
@@ -355,6 +361,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   const options = {
     source: args.find((a) => a.startsWith('--source='))?.split('=')[1],
+    limit: parseInt(args.find((a) => a.startsWith('--limit='))?.split('=')[1]) || null,
     dryRun: args.includes('--dry-run'),
   };
 
