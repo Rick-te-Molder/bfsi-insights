@@ -107,14 +107,32 @@ async function discover(options = {}) {
 async function fetchFromSource(source) {
   if (!source.rss) return [];
 
-  const response = await fetch(source.rss, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BFSI-Insights/1.0)' },
-  });
+  // Use realistic browser User-Agent to bypass anti-bot protections
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  try {
+    const response = await fetch(source.rss, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        Accept: 'application/rss+xml, application/xml, text/xml, */*',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      signal: controller.signal,
+    });
 
-  const xml = await response.text();
-  return parseRSS(xml, source);
+    clearTimeout(timeout);
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const xml = await response.text();
+    return parseRSS(xml, source);
+  } catch (error) {
+    clearTimeout(timeout);
+    if (error.name === 'AbortError') throw new Error('Timeout after 30s');
+    throw error;
+  }
 }
 
 function parseRSS(xml, source) {
