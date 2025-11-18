@@ -215,6 +215,7 @@ async function enrich(options = {}) {
         const { error: updateError } = await supabase
           .from('ingestion_queue')
           .update({
+            status: 'enriched',
             payload: enrichedPayload,
             thumb_ref: thumbnailUrl,
             prompt_version: 'v3.0-bfsi-filter',
