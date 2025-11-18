@@ -24,23 +24,29 @@ const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPAB
 
 const SOURCES = {
   arxiv: {
-    name: 'arXiv',
+    name: 'arXiv CS.AI',
     rss: 'http://export.arxiv.org/rss/cs.AI',
     enabled: false, // Too generic, mostly non-BFSI papers
     keywords: ['multi-agent', 'LLM', 'banking', 'finance', 'insurance'],
   },
-  deloitte: {
-    name: 'Deloitte Insights',
-    rss: 'https://www2.deloitte.com/us/en/insights.rss',
+  bis: {
+    name: 'Bank for International Settlements',
+    rss: 'https://www.bis.org/doclist/all.rss',
     enabled: true,
-    keywords: ['AI', 'banking', 'financial services', 'insurance'],
+    keywords: ['AI', 'digital', 'fintech', 'innovation', 'technology'],
   },
-  ssrn: {
-    name: 'SSRN Finance',
-    rss: 'https://papers.ssrn.com/sol3/Jeljour_results.cfm?form_name=journalBrowse&journal_id=3446438',
+  mckinsey: {
+    name: 'McKinsey Insights',
+    rss: 'https://www.mckinsey.com/~/media/mckinsey/featured%20insights/rss/mckinsey.xml',
     enabled: true,
-    keywords: ['AI', 'machine learning', 'fintech', 'banking', 'insurance'],
+    keywords: ['AI', 'banking', 'financial services', 'insurance', 'digital'],
   },
+  // deloitte: {
+  //   name: 'Deloitte Insights',
+  //   rss: 'https://www2.deloitte.com/us/en/insights.rss', // 404 error
+  //   enabled: false,
+  //   keywords: ['AI', 'banking', 'financial services', 'insurance'],
+  // },
 };
 
 async function discover(options = {}) {
