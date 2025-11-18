@@ -1,6 +1,35 @@
 ---
 import Base from '../layouts/Base.astro';
-import externalResources from '../data/external-resources.json';
+import { supabase } from '../lib/supabase';
+
+// Fetch external resources from ref_source table
+const { data: sources, error } = await supabase
+  .from('ref_source')
+  .select('name, domain, description, category, tier')
+  .eq('show_on_external_page', true)
+  .order('tier', { ascending: false }) // Premium first
+  .order('name');
+
+if (error) {
+  console.error('Error fetching external resources:', error);
+}
+
+// Map to format expected by template
+const externalResources = (sources || []).map((source) => ({
+  name: source.name,
+  url: `https://${source.domain}`,
+  description: source.description || '',
+  category:
+    source.category === 'strategy-consulting'
+      ? 'Industry Research'
+      : source.category === 'big4'
+        ? 'Industry Research'
+        : source.category === 'regulator'
+          ? 'Regulatory Bodies'
+          : source.category === 'research'
+            ? 'Academic Research'
+            : 'Other',
+}));
 
 // Group by category
 const grouped = externalResources.reduce(
