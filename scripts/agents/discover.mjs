@@ -26,27 +26,12 @@ const SOURCES = {
   arxiv: {
     name: 'arXiv CS.AI',
     rss: 'http://export.arxiv.org/rss/cs.AI',
-    enabled: false, // Too generic, mostly non-BFSI papers
+    enabled: true, // Most papers are generic, but enrichment agent filters them
     keywords: ['multi-agent', 'LLM', 'banking', 'finance', 'insurance'],
   },
-  bis: {
-    name: 'Bank for International Settlements',
-    rss: 'https://www.bis.org/doclist/all.rss',
-    enabled: true,
-    keywords: ['AI', 'digital', 'fintech', 'innovation', 'technology'],
-  },
-  mckinsey: {
-    name: 'McKinsey Insights',
-    rss: 'https://www.mckinsey.com/~/media/mckinsey/featured%20insights/rss/mckinsey.xml',
-    enabled: true,
-    keywords: ['AI', 'banking', 'financial services', 'insurance', 'digital'],
-  },
-  // deloitte: {
-  //   name: 'Deloitte Insights',
-  //   rss: 'https://www2.deloitte.com/us/en/insights.rss', // 404 error
-  //   enabled: false,
-  //   keywords: ['AI', 'banking', 'financial services', 'insurance'],
-  // },
+  // Note: Other RSS feeds (BIS, McKinsey, Deloitte, SSRN) have 404 errors
+  // TODO: Add working BFSI-focused RSS feeds
+  // Alternatively: manually add URLs to ingestion_queue for curation
 };
 
 async function discover(options = {}) {
