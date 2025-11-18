@@ -23,7 +23,7 @@ try {
 
     const [rolesData, industriesData] = await Promise.all([
       supabase.from('ref_role').select('value').order('sort_order'),
-      supabase.from('bfsi_industry').select('code').order('sort_order'),
+      supabase.from('bfsi_industry').select('code'), // Load all levels, not just top-level
     ]);
 
     // Roles
