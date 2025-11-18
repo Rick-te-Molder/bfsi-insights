@@ -64,7 +64,7 @@ function calculateQualityScore(item, enrichment) {
 
   // Calculate weighted score
   const sourceScore = sourceReputation[item.payload.source] || 0.6;
-  const typeScore = contentTypeWeight[enrichment.tags.content_type] || 0.6;
+  const typeScore = contentTypeWeight[enrichment.tags?.content_type] || 0.6;
 
   const qualityScore =
     sourceScore * 0.35 + typeScore * 0.2 + recencyScore * 0.15 + relevanceConfidence * 0.3;
@@ -154,7 +154,8 @@ async function enrich(options = {}) {
   const { data: items, error } = await supabase
     .from('ingestion_queue')
     .select('*')
-    .eq('status', 'pending')
+    .eq('status', 'fetched')
+    .order('fetched_at', { ascending: false })
     .limit(limit || 100);
   if (error) throw error;
 
