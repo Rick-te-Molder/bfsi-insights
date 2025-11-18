@@ -193,11 +193,10 @@ function fixSummaryLengths(obj) {
   return out;
 }
 
-// Fetch resources from Supabase (reuse client initialized above)
+// Fetch resources from Supabase view (includes junction table data)
 const { data: dbResources, error } = await supabase
-  .from('kb_resource')
+  .from('kb_resource_pretty')
   .select('*')
-  .eq('status', 'published')
   .order('date_added', { ascending: false });
 
 if (error) {
@@ -209,7 +208,7 @@ if (!dbResources || dbResources.length === 0) {
   console.warn('⚠️  No resources found in database. Check:');
   console.warn('   - PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY are set in .env');
   console.warn('   - kb_resource table has rows with status="published"');
-  console.warn('   - Anon key has SELECT permission on kb_resource');
+  console.warn('   - Anon key has SELECT permission on kb_resource_pretty view');
 }
 
 const items = [];

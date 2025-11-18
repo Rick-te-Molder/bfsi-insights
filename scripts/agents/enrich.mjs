@@ -244,6 +244,9 @@ async function enrich(options = {}) {
 // TODO: Add Editor Agent for quality validation
 // async function editorReview(item, enrichment) { ... }
 
+// NOTE: Publishing to kb_resource and junction tables is handled by
+// scripts/publishing/publish-approved.mjs after manual review
+
 async function generateThumbnail(item) {
   // Check if thumbnail already exists
   const slug =
