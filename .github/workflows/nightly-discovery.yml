@@ -30,7 +30,7 @@ jobs:
         env:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node scripts/discover.mjs
+        run: node scripts/agents/discover.mjs
 
       - name: Notify on failure
         if: failure()
@@ -68,7 +68,7 @@ jobs:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: node scripts/enrich.mjs --limit=20
+        run: node scripts/agents/enrich.mjs --limit=20
 
       - name: Summary
         run: |
