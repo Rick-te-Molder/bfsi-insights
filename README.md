@@ -73,7 +73,7 @@ Feel free to check [our documentation](https://docs.astro.build) or jump into ou
 
 ### Content Ingestion Pipeline
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │ 1. DISCOVERY (ingestion_queue)                                 │
 │    • Run: npm run discover -- --source=arxiv --limit=10        │
