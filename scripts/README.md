@@ -2,230 +2,273 @@
 
 Production-grade agentic workflow for automated resource curation.
 
-## 🎯 Workflow Overview
+# BFSI Insights – Scripts
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ 1. DISCOVERY AGENT (agents/discover.mjs)                       │
-│    • Monitors RSS feeds (arXiv, McKinsey, BCG, etc.)           │
-│    • Filters by keywords & relevance                            │
-│    • Adds to ingestion_queue with status='pending'             │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 2. ENRICHMENT AGENT (agents/enrich.mjs)                         │
-│    • Extracts full content from URL                             │
-│    • Generates summaries (short/medium/long) via GPT-4         │
-│    • Auto-tags using taxonomy (industry, topic, role, etc.)    │
-│    • Generates thumbnail via Playwright                         │
-│    • Calculates quality score                                   │
-│    • Updates ingestion_queue with enriched data                 │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 3. MANUAL APPROVAL (Supabase UI)                                │
-│    • Admin reviews complete card with thumbnail                 │
-│    • Verifies summaries, tags, quality score                    │
-│    • Actions:                                                   │
-│      - Approve: INSERT into kb_resource (status='published')   │
-│      - Reject: UPDATE ingestion_queue (status='rejected')      │
-│      - Edit: Manual refinements before approval                 │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 4. PUBLISHING WORKFLOW                                          │
-│    • npm run build:resources (generates resources.json)        │
-│    • npm run build (static site generation)                    │
-│    • git push (deploy to Cloudflare Pages)                     │
-└─────────────────────────────────────────────────────────────────┘
-```
+This directory contains the production-grade agentic ingestion pipeline for BFSI Insights.
+It automates the collection, enrichment, classification and publication of BFSI-relevant content using a controlled taxonomy stored in Supabase.
 
-## 📁 Directory Structure
+The system is designed to be:
+deterministic, auditable, taxonomy-driven, LLM-augmented, and fully static on the frontend.
 
-### `agents/`
+⸻
 
-Core agentic scripts that power the automated workflow.
+# 1. Pipeline Overview
 
-- **`discover.mjs`** - Discovery Agent
-  - Monitors multiple sources (RSS, APIs)
-  - Keyword filtering & relevance scoring
-  - Deduplication against existing resources
-  - Usage: `node scripts/agents/discover.mjs [--source=arxiv] [--dry-run]`
+┌────────────────────────────────────────────────────────────┐
+│ 0. (OPTIONAL) DISCOVERY WORKFLOW │
+│ • Not active today │
+│ • Future: RSS/API discovery adds items to queue │
+└────────────────────────────────────────────────────────────┘
+↓
+┌────────────────────────────────────────────────────────────┐
+│ 1. FETCH QUEUE (agents/fetch-queue.mjs) │
+│ • Loads pending ingestion_queue items │
+│ • Normalises URL, title and minimal metadata │
+│ • Creates agent_run + agent_run_step logs │
+└────────────────────────────────────────────────────────────┘
+↓
+┌────────────────────────────────────────────────────────────┐
+│ 2. ENRICHMENT (agents/enrich.mjs) │
+│ • Extracts full article content │
+│ • Generates short/medium/long summaries (UK English) │
+│ • Auto-tags using **database taxonomies only** │
+│ • Identifies vendors and organisations │
+│ → upserts into ag_vendor and bfsi_organization │
+│ • Generates thumbnails (Playwright) │
+│ • Produces quality metrics │
+│ • Updates ingestion_queue payload │
+│ • Logs run/step/metric events │
+└────────────────────────────────────────────────────────────┘
+↓
+┌────────────────────────────────────────────────────────────┐
+│ 3. MANUAL APPROVAL (Supabase UI) │
+│ • Inspect summaries, taxonomy, thumbnail │
+│ • Approve → INSERT INTO kb_publication │
+│ • Reject → status='rejected' │
+│ • Manual edits allowed prior to approval │
+└────────────────────────────────────────────────────────────┘
+↓
+┌────────────────────────────────────────────────────────────┐
+│ 4. WEBSITE PUBLISHING │
+│ • Website reads directly from Supabase (no JSON build) │
+│ • git push → Cloudflare Pages deploy │
+└────────────────────────────────────────────────────────────┘
 
-- **`enrich.mjs`** - Enrichment Agent
-  - Content extraction & summarization
-  - Taxonomy-based auto-tagging
-  - Thumbnail generation
-  - Quality scoring
-  - Usage: `node scripts/agents/enrich.mjs [--limit=5] [--dry-run]`
+⸻
 
-### `publishing/`
+# 2. Directory Structure
 
-Scripts for building and deploying the site.
+## agents/ – Core Agentic Modules
 
-- **`build-resources.mjs`** - Builds `resources.json` from Supabase
-  - Fetches published resources from `kb_resource` table
-  - Applies schema transformations
-  - Validates taxonomy values
-  - Usage: `npm run build:resources`
+### fetch-queue.mjs
 
-- **`validate-resources.mjs`** - Validates resource data
-  - Schema validation
-  - Required field checks
-  - Taxonomy value validation
-  - Usage: `npm run validate:resources`
+Loads pending queue items and transforms them into normalised enrichment tasks.
 
-### `utilities/`
+node scripts/agents/fetch-queue.mjs --limit=3 --dry-run
 
-Supporting utilities for maintenance and operations.
+### enrich.mjs
 
-- **`generate-thumbnails.mjs`** - Generate missing thumbnails
-  - Scans for resources without local thumbnails
-  - Uses Playwright to capture screenshots
-  - Usage: `npm run generate:thumbnails`
+Full enrichment pipeline:
+• content extraction
+• summarisation (UK English)
+• metadata extraction
+• taxonomy-based tagging (US-English codes)
+• vendor/organisation detection → automatic upsert
+• screenshot generation (thumbnail)
+• metrics + logs
 
-- **`check-links.mjs`** - Validate resource URLs
-  - Checks for broken links
-  - Reports HTTP errors
-  - Usage: `npm run check:links`
+node scripts/agents/enrich.mjs --limit=5 --dry-run
 
-- **`generate-notes.mjs`** - Generate release notes
-  - Usage: `npm run notes`
+### lib/\*
 
-- **`lint-items-no-time.mjs`** - Lint resource files
-  - Usage: `npm run lint:items`
+Shared helper modules:
+• taxonomy.mjs – loads taxonomy from DB (no hard-coded labels)
+• extract.mjs – HTTP/HTML/PDF extraction
+• agent-run.mjs – auditing + observability
+• text.mjs – normalisation + cleaning
 
-- **`filename-helper.mjs`** - Filename utilities
-  - Helps with consistent naming
+⸻
 
-- **`extract-pdf.py`** - PDF content extraction
-  - Extracts text from PDF documents
+### utilities/
 
-### `testing/`
+    •	generate-thumbnails.mjs – regenerate missing thumbnails
+    •	check-links.mjs – check for broken external links
+    •	filename-helper.mjs – standardises filenames
+    •	extract-pdf.py – PDF extraction
+    •	generate-notes.mjs – release notes tool
+    •	lint-items-no-time.mjs – linter
 
-Integration and end-to-end tests.
+### testing/
 
-- **`test-pipeline.mjs`** - Integration tests
-  - Tests complete workflow
-  - Database migrations
-  - Agent functionality
-  - Usage: `node scripts/testing/test-pipeline.mjs`
+    •	test-pipeline.mjs
 
-### `_archive/`
+Integration test for the end-to-end ingestion workflow.
 
-Historical scripts and one-time migrations. Not used in production.
+### \_archive/
 
-## 🚀 Common Workflows
+Retired scripts and one-time migrations.
+Not used in production.
 
-### Daily: Run Discovery & Enrichment
+⸻
 
-```bash
-# Discover new resources
-node scripts/agents/discover.mjs
+# 3. Taxonomy Architecture
 
-# Enrich pending resources
+All classifications are stored and controlled in Supabase.
+The LLM may ONLY assign values that exist in these tables.
+
+No taxonomy values are stored in code.
+
+## Core controlled vocabularies
+
+All curated taxonomies that the LLM is allowed to use:
+
+bfsi_industry – Full BFSI industry hierarchy (multi-level)
+bfsi_process – Process hierarchy (multi-level)
+bfsi_topic – High-level topics (curated by you)
+bfsi_geography – Regions and subregions
+bfsi_role – Executive / Professional / Researcher
+
+## Automatically expanding vocabularies
+
+These tables grow automatically during enrichment:
+
+ag_vendor – Vendors detected in publications (auto-upsert)
+bfsi_organization – Financial institutions detected (auto-upsert)
+
+⸻
+
+# 4. Naming Conventions
+
+## Prefixes
+
+    •	kb_ → publications and sources
+    •	kb_publication
+    •	kb_source
+    •	bfsi_ → BFSI taxonomies
+    •	bfsi_industry
+    •	bfsi_process
+    •	bfsi_topic
+    •	bfsi_geography
+    •	bfsi_organization
+    •	ag_ → agentic AI entities
+    •	ag_vendor
+    •	ag_use_case
+    •	ag_capability
+    •	ingestion_ → ingestion pipeline
+    •	ingestion_queue
+    •	ingestion_error (future)
+
+All schema names use US English.
+
+⸻
+
+# 5. Language Policy (Strict)
+
+Code, database, and tags → US English
+
+Examples:
+• organization
+• behavior
+• modeling
+• bfsi_organization
+• ag_vendor
+
+Summaries and narrative text → UK English
+
+Examples:
+• “organisation”
+• “behaviour”
+• “modelling”
+
+Prompts instruct:
+
+“Use UK English for all summaries and narrative text.
+Use the exact US-English slugs, codes and schema names retrieved from the database for all tags.”
+
+This ensures:
+• human-facing content is UK-English
+• machine-facing metadata is stable and uniform
+
+⸻
+
+# 6. Common Workflows
+
+## Daily
+
+node scripts/agents/fetch-queue.mjs
 node scripts/agents/enrich.mjs
 
-# Review in Supabase UI, approve/reject
-# Then publish:
-npm run build:resources
-npm run build
+# Then approve in Supabase UI
+
 git push
-```
 
-### Weekly: Generate Missing Thumbnails
+## Weekly
 
-```bash
 npm run generate:thumbnails
-npm run build:resources
-npm run build
-```
 
-### Monthly: Validate & Check Links
+## Monthly
 
-```bash
-npm run validate:resources
+npm run validate:publications
 npm run check:links
-```
 
-## 🔧 Configuration
+⸻
 
-### Required Environment Variables
+# 7. Configuration
 
-```bash
-PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_KEY=xxx
-OPENAI_API_KEY=sk-xxx
-```
+Required environment variables:
 
-### Discovery Sources
+PUBLIC_SUPABASE_URL=...
+SUPABASE_SERVICE_KEY=...
+OPENAI_API_KEY=...
 
-Configured in `agents/discover.mjs`:
+All write operations use the service key.
+The public website uses anon with strict RLS.
 
-- arXiv AI/ML/Finance
-- McKinsey Insights
-- BCG Publications
-- Deloitte Insights
-- (Add more in `SOURCES` object)
+⸻
 
-### Taxonomy
+# 8. Troubleshooting
 
-Managed in Supabase tables:
+Nothing in queue
+• ingestion_queue empty
+• RLS issue
+• wrong URL normalisation
+• missing source configuration
 
-- `bfsi_role` - Target roles (executive, professional, researcher)
-- `bfsi_industry` - Industries (banking, insurance, fintech, etc.)
-- `bfsi_topic` - Topics (AI, data, risk, customer-experience, etc.)
-- `bfsi_use_case` - Use cases (fraud-detection, credit-scoring, etc.)
-- `bfsi_agentic_capability` - Capabilities (reasoning, planning, tool-use, etc.)
-- `bfsi_geography` - Regions (global, north-america, europe, etc.)
+Enrichment errors
+• Playwright not installed (npx playwright install)
+• OpenAI key invalid or rate-limited
+• URL blocked or HTML extraction failed
+• Taxonomy missing (agent will refuse to tag)
 
-## 📊 Quality Gates
+Website shows nothing
+• Publication not yet approved
+-Incorrect persona filter
+• Empty role/industry sets in DB
 
-All agents include quality checks:
+⸻
 
-1. **Discovery**: Keyword relevance, source reputation
-2. **Enrichment**: Content length, summary quality, taxonomy coverage
-3. **Validation**: Schema compliance, required fields
-4. **Publishing**: Build success, link validity
+# 9. Monitoring
 
-## 🧹 Maintenance
+The following tables capture full operational telemetry:
+• agent_run
+• agent_run_step
+• agent_run_metric
 
-### Archive Old Scripts
+This allows dashboards for:
+• throughput
+• success/failure rates
+• taxonomy coverage
+• enrichment time
+• summarisation costs
 
-Moved to `_archive/` when no longer needed in production.
+⸻
 
-### Update Taxonomy
+# 10. Future Extensions
 
-Edit Supabase tables directly - agents will pick up changes automatically.
-
-### Monitor Performance
-
-- Discovery: Check `ingestion_queue` growth rate
-- Enrichment: Monitor OpenAI API usage
-- Publishing: Check build times
-
-## 🆘 Troubleshooting
-
-### Discovery finds nothing
-
-- Check RSS feed URLs are accessible
-- Verify keywords in `SOURCES` configuration
-- Check Supabase connection
-
-### Enrichment fails
-
-- Verify OpenAI API key
-- Check rate limits
-- Ensure Playwright is installed: `npx playwright install`
-
-### Build fails
-
-- Run `npm run validate:resources`
-- Check Supabase connection
-- Verify all published resources have required fields
-
-## 📚 Further Reading
-
-- [Supabase Dashboard](https://supabase.com/dashboard)
-- [Astro Documentation](https://docs.astro.build)
-- [Playwright Documentation](https://playwright.dev)
+The pipeline is designed for future expansion without structural changes:
+• Reactivate the Discovery Agent
+• Nightly GitHub Actions
+• Versioned publications
+• Multi-agent reasoning (editor, validator)
+• Semantic BFSI alignment across taxonomies
+• Audit-grade provenance tracking
