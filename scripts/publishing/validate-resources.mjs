@@ -1,30 +1,78 @@
 #!/usr/bin/env node
-import fs from 'node:fs';
+
+/**
+ * Validate resources.json against kb.schema.json
+ *
+ * - Loads canonical JSON schema (schemas/kb.schema.json)
+ * - Loads src/data/resources/resources.json
+ * - Validates each item with AJV
+ * - Prints summary counts
+ */
+
+import fs from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { parseResources } from '../../schemas/resource-schema.mjs';
+import Ajv from 'ajv/dist/2020.js';
+import addFormats from 'ajv-formats';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// ---------------------------------------------------------------------------
+// Paths
+// ---------------------------------------------------------------------------
 
-function readJson(p) {
-  const txt = fs.readFileSync(p, 'utf8');
-  return JSON.parse(txt);
+const ROOT = process.cwd();
+const SCHEMA_PATH = path.join(ROOT, 'schemas', 'kb.schema.json');
+const DATA_PATH = path.join(ROOT, 'src', 'data', 'resources', 'resources.json');
+
+// ---------------------------------------------------------------------------
+// Load schema and data
+// ---------------------------------------------------------------------------
+
+async function loadSchema() {
+  const raw = await fs.readFile(SCHEMA_PATH, 'utf8');
+  return JSON.parse(raw);
 }
 
-try {
-  const dataPath = path.join(__dirname, '../..', 'src', 'data', 'resources', 'resources.json');
-  const data = readJson(dataPath);
-  const parsed = parseResources(data);
-  const count = parsed.length;
-  // simple summary
-  const missingThumbs = parsed.filter((r) => !r.thumbnail).length;
-  const missingDates = parsed.filter((r) => !r.date_published && !r.date_added).length;
-  console.log(`Resources validated: ${count}`);
-  console.log(`Items without thumbnail: ${missingThumbs}`);
-  console.log(`Items missing date (published/added): ${missingDates}`);
-} catch (err) {
-  console.error('Resource validation failed:\n');
-  console.error(err?.message || err);
+async function loadResources() {
+  const raw = await fs.readFile(DATA_PATH, 'utf8');
+  return JSON.parse(raw);
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+
+async function main() {
+  const schema = await loadSchema();
+  const resources = await loadResources();
+
+  const ajv = new Ajv({ strict: false, allErrors: true, validateFormats: 'full' });
+  addFormats(ajv);
+
+  const validate = ajv.compile(schema);
+
+  let okCount = 0;
+  let noThumb = 0;
+  let missingDate = 0;
+
+  for (const [idx, item] of (resources || []).entries()) {
+    const valid = validate(item);
+    if (!valid) {
+      const details = ajv.errorsText(validate.errors, { separator: '\n' });
+      console.error(`❌ Invalid item at index ${idx} (title="${item.title || ''}")`);
+      console.error(details);
+      process.exit(1);
+    }
+
+    okCount += 1;
+    if (!item.thumbnail) noThumb += 1;
+    if (!item.date_published && !item.date_added) missingDate += 1;
+  }
+
+  console.log(`Resources validated: ${okCount}`);
+  console.log(`Items without thumbnail: ${noThumb}`);
+  console.log(`Items missing date (published/added): ${missingDate}`);
+}
+
+main().catch((err) => {
+  console.error('Validation failed with error:', err);
   process.exit(1);
-}
+});
