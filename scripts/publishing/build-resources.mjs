@@ -1,4 +1,16 @@
 #!/usr/bin/env node
+
+/**
+ * Build resources.json from kb_publication_pretty
+ *
+ * - Loads canonical JSON schema (schemas/kb.schema.json)
+ * - Optionally enriches schema.role.enum with values from kb_role
+ * - Fetches published items from kb_publication_pretty
+ * - Normalises / cleans values
+ * - Validates against schema
+ * - Writes src/data/resources/resources.json
+ */
+
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import Ajv from 'ajv/dist/2020.js';
@@ -6,35 +18,37 @@ import addFormats from 'ajv-formats';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 
-// Load .env for local development only
-// In CI/CD, environment variables should be set directly in the platform
-// DO NOT commit .env file to version control (already in .gitignore)
+// ---------------------------------------------------------------------------
+// Environment
+// ---------------------------------------------------------------------------
+
 if (process.env.NODE_ENV !== 'production') {
+  // In CI/CD, env vars come from the platform
   dotenv.config({ silent: true });
 }
 
 const SCHEMA_PATH = 'schemas/kb.schema.json';
 const OUT_FILE = 'src/data/resources/resources.json';
 
-// load canonical schema
+// Load canonical schema
 const schemaRaw = await fs.readFile(SCHEMA_PATH, 'utf8');
 const SCHEMA = JSON.parse(schemaRaw);
 
-// Initialize Supabase client
+// Initialise Supabase client
 const supabaseUrl = process.env.PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase credentials');
+  console.error('Missing Supabase credentials (PUBLIC_SUPABASE_URL / SERVICE_KEY / ANON_KEY).');
   process.exit(1);
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-/**
- * Load roles dynamically from kb_role (if available)
- * Fallback to schema defaults if anything fails.
- */
+// ---------------------------------------------------------------------------
+// Dynamic role loading (kb_role → schema.properties.role.enum)
+// ---------------------------------------------------------------------------
+
 async function loadRolesIntoSchema() {
   try {
     const { data: rolesData, error } = await supabase
@@ -73,13 +87,19 @@ async function loadRolesIntoSchema() {
 
 await loadRolesIntoSchema();
 
-// Use full format validation and rely on ajv-formats defaults (uri, date, date-time)
+// ---------------------------------------------------------------------------
+// AJV validator
+// ---------------------------------------------------------------------------
+
 const ajv = new Ajv({ strict: false, allErrors: true, validateFormats: 'full' });
 addFormats(ajv);
-
 const validate = ajv.compile(SCHEMA);
 
-// map legacy keys -> canonical schema keys
+// ---------------------------------------------------------------------------
+// Normalisation helpers
+// ---------------------------------------------------------------------------
+
+// Legacy key mapping → canonical keys
 function normalizeKeys(input) {
   const legacyMap = {
     usecases: 'use_cases',
@@ -96,7 +116,7 @@ function normalizeKeys(input) {
   return out;
 }
 
-// keep only schema-allowed keys (after normalization)
+// Keep only schema-allowed keys (after normalisation)
 const allowedKeys = new Set(Object.keys(SCHEMA.properties || {}));
 function toCanonicalShape(input) {
   const out = {};
@@ -106,7 +126,7 @@ function toCanonicalShape(input) {
   return out;
 }
 
-// value normalization helpers
+// Enum fields we normalise
 const ENUM_FIELDS = [
   'role',
   'industry',
@@ -116,6 +136,7 @@ const ENUM_FIELDS = [
   'content_type',
   'geography',
 ];
+
 const ENUMS = Object.fromEntries(
   ENUM_FIELDS.map((f) => [f, new Set(SCHEMA.properties?.[f]?.enum || [])]),
 );
@@ -130,16 +151,16 @@ function normalizeEnumField(field, val) {
   const raw = asString(val);
   if (raw == null) return raw;
   const lc = raw.toLowerCase().trim();
-  // if lowercased value is allowed, use it; otherwise keep original to fail validation
+  // If lowercased value is allowed, use it; otherwise keep original to fail validation
   return ENUMS[field].has(lc) ? lc : raw;
 }
 
 /**
  * Authors must always be an array of strings.
  * Accepts:
- * - null/undefined -> []
- * - string -> split on comma, or single-element array
- * - array -> normalized to trimmed strings
+ * - null/undefined   → []
+ * - string           → splits on comma, or single-element array
+ * - array            → normalised to trimmed strings
  */
 function normalizeAuthors(val) {
   if (val == null) return [];
@@ -155,18 +176,17 @@ function normalizeAuthors(val) {
   return parts.length ? parts : [s];
 }
 
+/**
+ * Remove control characters from a string except tab, newline, carriage return.
+ */
 function sanitizeString(s) {
   if (typeof s !== 'string') return s;
-  // Remove control chars except tab (9), newline (10), carriage return (13)
   let cleaned = '';
   for (let i = 0; i < s.length; i++) {
     const code = s.charCodeAt(i);
-    if ((code < 32 && code !== 9 && code !== 10 && code !== 13) || code === 127) {
-      continue; // skip disallowed control character
-    }
+    if ((code < 32 && code !== 9 && code !== 10 && code !== 13) || code === 127) continue;
     cleaned += s[i];
   }
-  // Trim leading/trailing whitespace
   return cleaned.replace(/\s+$/g, '').replace(/^\s+/g, '');
 }
 
@@ -178,17 +198,24 @@ function trimStringFields(obj) {
   return out;
 }
 
+/**
+ * Apply enums, authors-array, and trimming.
+ */
 function normalizeValues(input) {
   let out = trimStringFields(input);
-  // enums as single, canonical strings
+
   for (const f of ENUM_FIELDS) {
     if (f in out) out[f] = normalizeEnumField(f, out[f]);
   }
-  // authors must be array of strings
+
   out.authors = normalizeAuthors(out.authors);
+
   return out;
 }
 
+/**
+ * Ensure summary fields roughly respect target length ranges.
+ */
 function fixSummaryLengths(obj) {
   const ranges = {
     summary_short: { min: 120, max: 240 },
@@ -242,7 +269,10 @@ function fixSummaryLengths(obj) {
   return out;
 }
 
-// Fetch resources from Supabase view (includes junction table data)
+// ---------------------------------------------------------------------------
+// Fetch from kb_publication_pretty and build resources.json
+// ---------------------------------------------------------------------------
+
 const { data: dbResources, error } = await supabase
   .from('kb_publication_pretty')
   .select('*')
@@ -255,15 +285,15 @@ if (error) {
 
 if (!dbResources || dbResources.length === 0) {
   console.warn('⚠️  No resources found in database. Check:');
-  console.warn('   - PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY are set in .env');
-  console.warn('   - kb_publication table has rows with status="published"');
-  console.warn('   - Anon key has SELECT permission on kb_publication_pretty view');
+  console.warn('   - PUBLIC_SUPABASE_URL and keys are set');
+  console.warn('   - kb_publication has rows with status="published"');
+  console.warn('   - Anon/service key has SELECT on kb_publication_pretty');
 }
 
 const items = [];
 
 for (const resource of dbResources || []) {
-  // Pick best URL we have
+  // Pick best URL we have (backward-compatible fallbacks)
   const url =
     resource.canonical_url ||
     resource.source_url ||
@@ -271,7 +301,7 @@ for (const resource of dbResources || []) {
     resource.canonicalUrl ||
     resource.sourceUrl;
 
-  // Prefer an authors/author field if present
+  // Prefer authors/author field if present
   const rawAuthors = resource.authors ?? resource.author ?? null;
 
   // Map database columns to schema format
@@ -295,12 +325,11 @@ for (const resource of dbResources || []) {
     agentic_capabilities: resource.agentic_capabilities,
   };
 
-  // Only include thumbnail if it exists
   if (resource.thumbnail) {
     obj.thumbnail = resource.thumbnail;
   }
 
-  // normalize values, repair summary lengths, and strip extras before validation
+  // Normalise → fix summaries → strip extras → validate
   const normalized = normalizeKeys(obj);
   const withValues = normalizeValues(normalized);
   const withSummariesFixed = fixSummaryLengths(withValues);
@@ -319,6 +348,10 @@ for (const resource of dbResources || []) {
 
   items.push(canonical);
 }
+
+// ---------------------------------------------------------------------------
+// Write resources.json
+// ---------------------------------------------------------------------------
 
 await fs.mkdir(path.dirname(OUT_FILE), { recursive: true });
 await fs.writeFile(OUT_FILE, JSON.stringify(items, null, 2));

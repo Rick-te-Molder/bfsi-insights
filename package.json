@@ -12,7 +12,6 @@
     "lint": "eslint .",
     "lint:items": "node scripts/utilities/lint-items-no-time.mjs",
     "build:resources": "node scripts/publishing/build-resources.mjs",
-    "validate:resources": "node scripts/publishing/validate-resources.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",

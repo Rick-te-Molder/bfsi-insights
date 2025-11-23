@@ -182,32 +182,32 @@ DROP VIEW IF EXISTS kb_resource_pretty CASCADE;
 
 CREATE VIEW kb_resource_pretty AS
 SELECT 
-  r.id,
-  r.title,
-  r.author,
-  r.date_published as publication_date,
-  r.date_published as date_added,  -- Using date_published as fallback
-  r.url,
-  r.source_name,
-  r.source_domain,
-  r.slug,
-  r.summary_short,
-  r.summary_medium,
-  r.summary_long,
-  r.role,
-  r.content_type,
-  r.geography,
-  r.thumbnail,
-  r.status,
-  r.tags,
-  r.use_cases,
-  r.agentic_capabilities,
+  p.id,
+  p.title,
+  p.author,
+  p.date_published as publication_date,
+  p.date_published as date_added,  -- Using date_published as fallback
+  p.url,
+  p.source_name,
+  p.source_domain,
+  p.slug,
+  p.summary_short,
+  p.summary_medium,
+  p.summary_long,
+  p.role,
+  p.content_type,
+  p.geography,
+  p.thumbnail,
+  p.status,
+  p.tags,
+  p.use_cases,
+  p.agentic_capabilities,
   
   -- First industry code (for backward compatibility)
   (SELECT i.code 
    FROM kb_resource_bfsi_industry ri
    JOIN bfsi_industry i ON i.code = ri.industry_code
-   WHERE ri.resource_id = r.id
+   WHERE ri.publication_id = p.id
    ORDER BY ri.rank
    LIMIT 1
   ) as industry,
@@ -216,7 +216,7 @@ SELECT
   (SELECT t.code 
    FROM kb_resource_bfsi_topic rt
    JOIN bfsi_topic t ON t.code = rt.topic_code
-   WHERE rt.resource_id = r.id
+   WHERE rt.publication_id = p.id
    ORDER BY rt.rank
    LIMIT 1
   ) as topic,
@@ -226,7 +226,7 @@ SELECT
     (SELECT array_agg(i.code ORDER BY ri.rank)
      FROM kb_resource_bfsi_industry ri
      JOIN bfsi_industry i ON i.code = ri.industry_code
-     WHERE ri.resource_id = r.id),
+     WHERE ri.publication_id = p.id),
     '{}'
   ) as industries,
   
@@ -235,7 +235,7 @@ SELECT
     (SELECT array_agg(t.code ORDER BY rt.rank)
      FROM kb_resource_bfsi_topic rt
      JOIN bfsi_topic t ON t.code = rt.topic_code
-     WHERE rt.resource_id = r.id),
+     WHERE rt.publication_id = p.id),
     '{}'
   ) as topics,
   
@@ -244,7 +244,7 @@ SELECT
     (SELECT array_agg(p.code ORDER BY rp.rank)
      FROM kb_resource_bfsi_process rp
      JOIN bfsi_process_taxonomy p ON p.code = rp.process_code
-     WHERE rp.resource_id = r.id),
+     WHERE rp.publication_id = p.id),
     '{}'
   ) as processes
   

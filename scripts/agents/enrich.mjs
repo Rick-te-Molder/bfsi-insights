@@ -1,256 +1,383 @@
 #!/usr/bin/env node
 /**
- * Enrichment Agent - Generates summaries, tags, and thumbnails using full taxonomies from database
+ * Enrichment Agent - Generates summaries, tags, and thumbnails using BFSI taxonomies
  *
  * Usage:
- *   node scripts/enrich.mjs              # Enrich all pending
- *   node scripts/enrich.mjs --limit=5    # Limit to 5 items
- *   node scripts/enrich.mjs --dry-run    # Preview only
- *
- * Requires: OPENAI_API_KEY, Playwright installed
- * Schema: Pulls taxonomy values from bfsi_industry, bfsi_topic tables
+ *   node scripts/agents/enrich.mjs
+ *   node scripts/agents/enrich.mjs --limit=5
+ *   node scripts/agents/enrich.mjs --dry-run
  */
+
+import dotenv from 'dotenv';
+dotenv.config();
 
 import { createClient } from '@supabase/supabase-js';
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import dotenv from 'dotenv';
 
-dotenv.config();
+import {
+  startAgentRun,
+  finishAgentRunSuccess,
+  finishAgentRunError,
+  startStep,
+  finishStepSuccess,
+  finishStepError,
+  addMetric,
+} from '../lib/agent-run.mjs';
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+// ---------------------------------------------------------------------------
+// Supabase
+// ---------------------------------------------------------------------------
+
+const supabaseUrl = process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
+
+if (!supabaseUrl) throw new Error('Missing PUBLIC_SUPABASE_URL or SUPABASE_URL');
+if (!supabaseServiceKey) throw new Error('Missing SUPABASE_SERVICE_KEY');
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
+// ---------------------------------------------------------------------------
+// Paths
+// ---------------------------------------------------------------------------
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const THUMBS_DIR = path.join(__dirname, '../public/thumbs');
 
-// Cache for taxonomy values
+// ---------------------------------------------------------------------------
+// Caches
+// ---------------------------------------------------------------------------
+
+/**
+ * TAXONOMIES structure:
+ * {
+ *   role: string[],
+ *   industry: string[],
+ *   topic: string[],
+ *   content_type: string[],
+ *   content_type_weights: Record<string, number>,
+ *   geography: string[],
+ *   use_cases: string[],
+ *   agentic_capabilities: string[],
+ *   source_weights: Record<string, number>
+ * }
+ */
 let TAXONOMIES = null;
 
+// ---------------------------------------------------------------------------
+// Quality score
+// ---------------------------------------------------------------------------
+
 function calculateQualityScore(item, enrichment) {
-  // Source reputation weights
-  const sourceReputation = {
-    McKinsey: 1.0,
-    'Boston Consulting Group': 1.0,
-    'Deloitte Insights': 0.95,
-    'Federal Reserve': 1.0,
-    'Bank for International Settlements': 1.0,
-    Gartner: 0.9,
-    arXiv: 0.7,
-  };
+  const tax = TAXONOMIES || {};
 
-  // Content type weights
-  const contentTypeWeight = {
-    'peer-reviewed-paper': 0.95,
-    'white-paper': 0.9,
-    report: 0.9,
-    'policy-document': 0.95,
-    article: 0.7,
-    presentation: 0.6,
-    webinar: 0.5,
-    dataset: 0.6,
-    website: 0.5,
-  };
+  const sourceWeights = tax.source_weights || {};
+  const contentTypeWeights = tax.content_type_weights || {};
 
-  // Recency (items < 30 days get full weight)
-  const publishedDate = new Date(item.payload.published_at || item.discovered_at);
-  const ageInDays = (Date.now() - publishedDate.getTime()) / (1000 * 60 * 60 * 24);
-  const recencyScore = ageInDays < 30 ? 1.0 : ageInDays < 90 ? 0.9 : ageInDays < 180 ? 0.8 : 0.7;
+  const sourceName =
+    item.payload?.source || item.payload?.source_name || item.payload?.publisher || null;
 
-  // Relevance confidence from LLM
+  const contentType = enrichment.tags?.content_type || null;
+
+  // Default baselines
+  const defaultSourceScore = 0.6;
+  const defaultTypeScore = 0.6;
+
+  const sourceScore =
+    (sourceName && sourceWeights[sourceName]) != null
+      ? sourceWeights[sourceName]
+      : defaultSourceScore;
+
+  const typeScore =
+    (contentType && contentTypeWeights[contentType]) != null
+      ? contentTypeWeights[contentType]
+      : defaultTypeScore;
+
+  // Recency score based on published_at or discovered_at
+  const publishedDate = new Date(item.payload?.published_at || item.discovered_at);
+  const ageDays = (Date.now() - publishedDate.getTime()) / 86400000;
+
+  const recencyScore = ageDays < 30 ? 1.0 : ageDays < 90 ? 0.9 : ageDays < 180 ? 0.8 : 0.7;
+
   const relevanceConfidence = enrichment.relevance_confidence || 0.5;
 
-  // Calculate weighted score
-  const sourceScore = sourceReputation[item.payload.source] || 0.6;
-  const typeScore = contentTypeWeight[enrichment.tags?.content_type] || 0.6;
-
-  const qualityScore =
+  const score =
     sourceScore * 0.35 + typeScore * 0.2 + recencyScore * 0.15 + relevanceConfidence * 0.3;
 
-  return Math.round(qualityScore * 100) / 100; // Round to 2 decimals
+  return Math.round(score * 100) / 100;
 }
+
+// ---------------------------------------------------------------------------
+// Taxonomies
+// ---------------------------------------------------------------------------
 
 async function loadTaxonomies() {
   if (TAXONOMIES) return TAXONOMIES;
 
   console.log('📚 Loading taxonomies from database...');
 
-  const [industries, topics] = await Promise.all([
-    supabase.from('bfsi_industry').select('code, name, level').order('sort_order'),
-    supabase.from('bfsi_topic').select('code, name, level').order('sort_order'),
-  ]);
+  const [industries, topics, roles, publicationTypes, useCases, capabilities, sources] =
+    await Promise.all([
+      supabase.from('bfsi_industry').select('code, name, level').order('sort_order'),
+      supabase.from('bfsi_topic').select('code, name, level').order('sort_order'),
+      supabase.from('kb_role').select('*').order('sort_order'),
+      supabase
+        .from('kb_publication_type')
+        .select('code, quality_weight, sort_order')
+        .order('sort_order'),
+      supabase.from('ag_use_case').select('code').order('code'),
+      supabase.from('ag_capability').select('code').order('code'),
+      supabase.from('kb_source').select('name, tier, category, enabled').eq('enabled', true),
+    ]);
 
-  if (industries.error || topics.error) {
-    throw new Error('Failed to load taxonomies from database');
+  if (industries.error) {
+    throw new Error(`bfsi_industry fetch failed: ${industries.error.message}`);
+  }
+  if (topics.error) {
+    throw new Error(`bfsi_topic fetch failed: ${topics.error.message}`);
+  }
+  if (roles.error) {
+    throw new Error(`kb_role fetch failed: ${roles.error.message}`);
+  }
+  if (publicationTypes.error) {
+    throw new Error(`kb_publication_type fetch failed: ${publicationTypes.error.message}`);
+  }
+  if (useCases.error) {
+    throw new Error(`ag_use_case fetch failed: ${useCases.error.message}`);
+  }
+  if (capabilities.error) {
+    throw new Error(`ag_capability fetch failed: ${capabilities.error.message}`);
+  }
+  if (sources.error) {
+    throw new Error(`kb_source fetch failed: ${sources.error.message}`);
   }
 
-  // Fetch valid roles from ref_role table
-  const { data: rolesData, error: rolesError } = await supabase
-    .from('ref_role')
-    .select('value')
-    .order('sort_order');
+  const industryCodes = (industries.data || []).map((i) => i.code).filter(Boolean);
+  const topicCodes = (topics.data || []).map((t) => t.code).filter(Boolean);
 
-  if (rolesError) {
-    console.error('Error fetching roles:', rolesError);
-    process.exit(1);
+  const roleCodes = (roles.data || [])
+    .map((r) => r.code || r.slug || r.value || r.name)
+    .filter(Boolean);
+
+  const contentTypeCodes = (publicationTypes.data || []).map((t) => t.code).filter(Boolean);
+
+  const contentTypeWeights = Object.fromEntries(
+    (publicationTypes.data || []).map((t) => [
+      t.code,
+      t.quality_weight != null ? t.quality_weight : 0.7,
+    ]),
+  );
+
+  const useCaseCodes = (useCases.data || []).map((u) => u.code).filter(Boolean);
+
+  const capabilityCodes = (capabilities.data || []).map((c) => c.code).filter(Boolean);
+
+  const tierDefaults = {
+    premium: 1.0,
+    standard: 0.85,
+    basic: 0.7,
+  };
+
+  const categoryDefaults = {
+    regulator: 1.0,
+    research: 0.9,
+    'strategy-consulting': 0.95,
+    publication: 0.85,
+  };
+
+  const sourceWeights = {};
+  for (const s of sources.data || []) {
+    const base = tierDefaults[s.tier] ?? 0.7;
+    const catBase = categoryDefaults[s.category] ?? base;
+    // Blend tier and category for a smooth score
+    const weight = (base + catBase) / 2;
+    sourceWeights[s.name] = weight;
   }
 
   TAXONOMIES = {
-    role: rolesData.map((r) => r.value),
-    industry: industries.data.map((i) => i.code),
-    topic: topics.data.map((t) => t.code),
-    content_type: [
-      'report',
-      'white-paper',
-      'peer-reviewed-paper',
-      'article',
-      'presentation',
-      'webinar',
-      'dataset',
-      'website',
-      'policy-document',
-    ],
+    role: roleCodes,
+    industry: industryCodes,
+    topic: topicCodes,
+    content_type: contentTypeCodes,
+    content_type_weights: contentTypeWeights,
+    // Geography is not yet modeled in DB; keep simple list for now
     geography: ['eu', 'uk', 'us', 'nl', 'global', 'other'],
-    use_cases: [
-      'customer-onboarding',
-      'identity-verification',
-      'document-processing',
-      'transaction-monitoring',
-      'credit-assessment',
-      'fraud-detection',
-      'claims-handling',
-      'portfolio-analytics',
-      'regulatory-reporting',
-      'audit-support',
-    ],
-    agentic_capabilities: [
-      'reasoning',
-      'planning',
-      'memory',
-      'tool-use',
-      'collaboration',
-      'autonomy',
-      'evaluation',
-      'monitoring',
-    ],
+    use_cases: useCaseCodes,
+    agentic_capabilities: capabilityCodes,
+    source_weights: sourceWeights,
   };
 
   console.log(
-    `   ✓ Loaded ${TAXONOMIES.industry.length} industries, ${TAXONOMIES.topic.length} topics\n`,
+    `   ✓ Roles:        ${TAXONOMIES.role.length}\n` +
+      `   ✓ Industries:   ${TAXONOMIES.industry.length}\n` +
+      `   ✓ Topics:       ${TAXONOMIES.topic.length}\n` +
+      `   ✓ Types:        ${TAXONOMIES.content_type.length}\n` +
+      `   ✓ Use cases:    ${TAXONOMIES.use_cases.length}\n` +
+      `   ✓ Capabilities: ${TAXONOMIES.agentic_capabilities.length}\n` +
+      `   ✓ Sources:      ${Object.keys(TAXONOMIES.source_weights).length}\n`,
   );
 
   return TAXONOMIES;
 }
 
+// ---------------------------------------------------------------------------
+// Main function
+// ---------------------------------------------------------------------------
+
 async function enrich(options = {}) {
-  const { limit, dryRun = false } = options;
-  console.log('🧠 Starting enrichment...');
-  console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}\n`);
+  let run_id = null;
 
-  await loadTaxonomies();
+  try {
+    const { limit, dryRun = false } = options;
 
-  const { data: items, error } = await supabase
-    .from('ingestion_queue')
-    .select('*')
-    .eq('status', 'fetched')
-    .order('fetched_at', { ascending: false })
-    .limit(limit || 100);
-  if (error) throw error;
+    console.log('🧠 Enrichment starting...');
+    console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}\n`);
 
-  const itemsToEnrich = items.filter((item) => !item.payload?.summary?.short);
-  if (itemsToEnrich.length === 0) {
-    console.log('✅ No items to enrich!');
-    return { enriched: 0 };
-  }
+    const taxonomies = await loadTaxonomies();
 
-  console.log(`Found ${itemsToEnrich.length} items to enrich\n`);
-  let enriched = 0;
+    // Start run
+    run_id = await startAgentRun({
+      agent_name: 'enrich',
+      stage: 'enrichment',
+      model_id: 'gpt-5.1',
+      prompt_version: 'v3.0-bfsi-filter',
+      agent_metadata: { dryRun, limit, taxonomies_hash: Object.keys(taxonomies).length },
+    });
 
-  for (const item of itemsToEnrich) {
-    console.log(`📝 ${item.payload.title.substring(0, 60)}...`);
-    try {
+    // Load fetched items
+    const { data: items, error } = await supabase
+      .from('ingestion_queue')
+      .select('*')
+      .eq('status', 'fetched')
+      .order('fetched_at', { ascending: false })
+      .limit(limit || 100);
+
+    if (error) throw new Error('Failed to load items: ' + error.message);
+
+    const itemsToEnrich = (items || []).filter((i) => !i.payload?.summary?.short);
+
+    if (itemsToEnrich.length === 0) {
+      console.log('No items to enrich');
+      await addMetric(run_id, 'items_found', 0);
+      await finishAgentRunSuccess(run_id);
+      return;
+    }
+
+    console.log(`Found ${itemsToEnrich.length} items\n`);
+
+    let processed = 0;
+    let enriched = 0;
+    let failed = 0;
+
+    for (const item of itemsToEnrich) {
+      processed++;
+      console.log(`📝 ${item.payload.title.substring(0, 60)}...`);
+
       const content = item.payload.description || item.payload.title;
-      const enrichment = await generateEnrichment(content, item.payload.title);
+      const step_id = await startStep(run_id, processed, 'enrich-item', (content || '').length, {
+        queue_id: item.id,
+      });
 
-      // Auto-reject if not BFSI relevant (PDCA improvement)
-      if (enrichment.bfsi_relevant === false) {
-        console.log(`   ⚠️  Not BFSI relevant: ${enrichment.relevance_reason}`);
+      try {
+        const enrichment = await generateEnrichment(content, item.payload.title);
+
+        // Auto-reject
+        if (enrichment.bfsi_relevant === false) {
+          console.log(`   ⚠️ Not BFSI relevant: ${enrichment.relevance_reason}`);
+
+          if (!dryRun) {
+            await supabase
+              .from('ingestion_queue')
+              .update({
+                status: 'rejected',
+                rejection_reason: enrichment.relevance_reason,
+                reviewed_at: new Date().toISOString(),
+              })
+              .eq('id', item.id);
+          }
+
+          await finishStepSuccess(step_id, 0, {
+            mode: 'auto-reject',
+            reason: enrichment.relevance_reason,
+          });
+
+          continue;
+        }
+
         if (!dryRun) {
-          const { error: rejectError } = await supabase
+          // Generate thumbnail
+          const thumbnailPath = await generateThumbnail(item);
+
+          const enrichedPayload = {
+            ...item.payload,
+            summary: enrichment.summary,
+            tags: enrichment.tags,
+            persona_scores: enrichment.persona_scores,
+            quality_score: calculateQualityScore(item, enrichment),
+            relevance_confidence: enrichment.relevance_confidence,
+          };
+
+          const { error: updateError } = await supabase
             .from('ingestion_queue')
             .update({
-              status: 'rejected',
-              rejection_reason: `Auto-rejected: ${enrichment.relevance_reason}`,
-              reviewed_at: new Date().toISOString(),
+              status: 'enriched',
+              payload: enrichedPayload,
+              thumb_ref: thumbnailPath,
+              prompt_version: 'v3.0-bfsi-filter',
+              model_id: 'gpt-5.1',
             })
             .eq('id', item.id);
 
-          if (rejectError) {
-            console.error(`   ❌ Failed to reject: ${rejectError.message}`);
-          } else {
-            console.log(`   ✖️  Auto-rejected`);
+          if (updateError) {
+            await finishStepError(step_id, updateError.message);
+            failed++;
+            continue;
           }
         }
-        continue;
+
+        enriched++;
+
+        await finishStepSuccess(step_id, JSON.stringify(enrichment).length, {
+          role: enrichment.tags.role,
+          industry: enrichment.tags.industry,
+          topic: enrichment.tags.topic,
+          mode: dryRun ? 'dry-run' : 'live',
+        });
+      } catch (err) {
+        failed++;
+        await finishStepError(step_id, err.message || String(err));
       }
 
-      if (!dryRun) {
-        // Store enrichment with metadata
-        const enrichedPayload = {
-          ...item.payload,
-          summary: enrichment.summary,
-          tags: enrichment.tags,
-          persona_scores: enrichment.persona_scores,
-          quality_score: calculateQualityScore(item, enrichment),
-          relevance_confidence: enrichment.relevance_confidence,
-        };
-
-        // Generate local thumbnail using Playwright
-        console.log('   📸 Generating thumbnail...');
-        const thumbnailPath = await generateThumbnail(item);
-        const thumbnailUrl = thumbnailPath || null;
-
-        const { error: updateError } = await supabase
-          .from('ingestion_queue')
-          .update({
-            status: 'enriched',
-            payload: enrichedPayload,
-            thumb_ref: thumbnailUrl,
-            prompt_version: 'v3.0-bfsi-filter',
-            model_id: 'gpt-5.1',
-          })
-          .eq('id', item.id);
-
-        if (updateError) {
-          console.error(`   ❌ Failed to update: ${updateError.message}`);
-        } else {
-          console.log(
-            `   ✅ ${enrichment.tags.role} | ${enrichment.tags.industry} | ${enrichment.tags.topic}`,
-          );
-        }
-      } else {
-        console.log(`   [DRY] ${enrichment.summary.short.substring(0, 60)}...`);
-      }
-      enriched++;
-      await new Promise((r) => setTimeout(r, 1000));
-    } catch (error) {
-      console.error(`   ❌ ${error.message}`);
+      // small spacing delay
+      await new Promise((r) => setTimeout(r, 800));
     }
+
+    console.log(`\n📊 Enriched ${enriched}/${itemsToEnrich.length}`);
+
+    await addMetric(run_id, 'items_found', itemsToEnrich.length);
+    await addMetric(run_id, 'processed', processed);
+    await addMetric(run_id, 'success', enriched);
+    await addMetric(run_id, 'failed', failed);
+
+    await finishAgentRunSuccess(run_id);
+  } catch (err) {
+    console.error('❌ Enrichment failed:', err.message);
+    if (run_id) {
+      await finishAgentRunError(run_id, err.message || String(err));
+    }
+    throw err;
   }
-  console.log(`\n📊 Enriched ${enriched}/${itemsToEnrich.length}`);
-  return { enriched };
 }
 
-// TODO: Add Editor Agent for quality validation
-// async function editorReview(item, enrichment) { ... }
-
-// NOTE: Publishing to kb_resource and junction tables is handled by
-// scripts/publishing/publish-approved.mjs after manual review
+// ---------------------------------------------------------------------------
+// Thumbnail generation
+// ---------------------------------------------------------------------------
 
 async function generateThumbnail(item) {
-  // Check if thumbnail already exists
   const slug =
     item.payload.slug ||
     item.url
@@ -258,158 +385,62 @@ async function generateThumbnail(item) {
       .pop()
       .replace(/[^a-z0-9-]/gi, '-')
       .toLowerCase();
-  const localPaths = [
-    path.join(THUMBS_DIR, `${slug}.png`),
-    path.join(THUMBS_DIR, `${slug}.webp`),
-    path.join(THUMBS_DIR, `${slug}.jpg`),
-  ];
 
-  const existingPath = localPaths.find((p) => fs.existsSync(p));
-  if (existingPath) {
-    const basename = path.basename(existingPath);
-    console.log(`   ✓ Thumbnail exists: ${basename}`);
-    return `/thumbs/${basename}`;
+  const paths = [`${slug}.png`, `${slug}.jpg`, `${slug}.webp`].map((name) =>
+    path.join(THUMBS_DIR, name),
+  );
+
+  const existing = paths.find((p) => fs.existsSync(p));
+  if (existing) {
+    return `/thumbs/${path.basename(existing)}`;
   }
 
-  // Generate new thumbnail
   try {
     const browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({
       viewport: { width: 1200, height: 675 },
-      userAgent:
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     });
-
     const page = await context.newPage();
+
     await page.goto(item.url, {
       waitUntil: 'domcontentloaded',
       timeout: 30000,
     });
 
-    await page.waitForTimeout(2000);
-
-    // Hide cookie banners
-    await page.addStyleTag({
-      content: `
-        [class*="cookie"],
-        [id*="cookie"],
-        [class*="consent"],
-        [class*="banner"],
-        .onetrust-pc-dark-filter,
-        #onetrust-consent-sdk {
-          display: none !important;
-        }
-      `,
-    });
-
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1500);
 
     const screenshotPath = path.join(THUMBS_DIR, `${slug}.png`);
     await page.screenshot({
       path: screenshotPath,
-      type: 'png',
       fullPage: false,
     });
 
     await browser.close();
 
-    console.log(`   ✓ Generated: ${slug}.png`);
     return `/thumbs/${slug}.png`;
-  } catch (error) {
-    console.log(`   ⚠️  Thumbnail failed: ${error.message}`);
+  } catch (err) {
+    console.log(`   ⚠️ Thumbnail error: ${err.message}`);
     return null;
   }
 }
 
+// ---------------------------------------------------------------------------
+// LLM enrichment
+// ---------------------------------------------------------------------------
+
 async function generateEnrichment(content, title) {
-  if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY not set');
+  if (!OPENAI_API_KEY) throw new Error('OPENAI_API_KEY missing');
 
   const taxonomies = await loadTaxonomies();
 
-  const prompt = `You are a BFSI AI analyst. Analyze this resource and return ONLY valid JSON.
-
-CRITICAL BFSI RELEVANCE CHECK:
-
-Title: ${title}
-Content: ${content}
-
-This content is ONLY relevant if it meets ONE of these criteria:
-
-1. PRIMARY FOCUS: Main topic is banking, insurance, or financial services
-   ✓ Examples: "AI for credit scoring", "LLMs in banking", "Fraud detection in payments"
-   ✗ Counter: "AI in education with example of student loans"
-
-2. DIRECT APPLICATION: Technology/method with clear, specific BFSI use case
-   ✓ Examples: "RAG for contract analysis" (BFSI uses contracts), "Multi-agent systems for trading"
-   ✗ Counter: "RAG systems" (generic, no BFSI context)
-
-3. REGULATORY/INDUSTRY: BFSI regulations, industry reports, standards
-   ✓ Examples: "Basel III implementation", "GDPR for banks", "ISO 20022 adoption"
-
-NOT RELEVANT if:
-- BFSI mentioned only as passing example
-- "Finance" means funding/budgeting, not financial services
-- Healthcare, education, retail, etc. as primary domain
-- Generic AI/tech with no BFSI context
-
-Return JSON with this EXACT structure:
-
-{
-  "bfsi_relevant": true or false,
-  "relevance_confidence": 0.0-1.0 (0.9+ = very confident, 0.5-0.8 = uncertain, <0.5 = likely not relevant),
-  "primary_domain": "banking|insurance|fintech|payments|wealth-management|healthcare|education|manufacturing|other",
-  "relevance_reason": "2-3 sentence explanation with specific BFSI connections or why it's not relevant",
-  "summary": {
-    "short": "120-240 characters - Lead with KEY FINDING or MAIN CLAIM. Use concrete numbers/metrics if available. NO 'This paper presents...' language. Format: '[Key Insight]. [Supporting detail].'",
-    "medium": "240-480 characters - Elaborate on HOW and WHY. Include methodology or approach. Add 1-2 specific examples. Connect to BFSI practitioner concerns.",
-    "long": "640-1120 characters - Deep dive into implications for BFSI. Include limitations or caveats. Suggest actionable next steps. Compare to existing approaches. Note any regulatory considerations."
-  },
-  "persona_scores": {
-    "executive": 0.0-1.0 (strategic relevance, regulatory impact, market shifts, transformation themes),
-    "professional": 0.0-1.0 (operational guidance, technical content, implementation specifics),
-    "researcher": 0.0-1.0 (formal methods, empirical results, theory, peer-reviewed rigor)
-  },
-  "tags": {
-    "role": "<pick ONE from: ${taxonomies.role.join(', ')}>",
-    "content_type": "<pick ONE from: ${taxonomies.content_type.join(', ')}>",
-    "geography": "<pick ONE from: ${taxonomies.geography.join(', ')}>",
-    "use_cases": "<pick ONE from: ${taxonomies.use_cases.join(', ')}>",
-    "agentic_capabilities": "<pick ONE from: ${taxonomies.agentic_capabilities.join(', ')}>",
-    "industry": ["<array of 1-3 most relevant from: ${taxonomies.industry.slice(0, 10).join(', ')}...>"],
-    "topic": ["<array of 1-3 most relevant from: ${taxonomies.topic.slice(0, 10).join(', ')}...>"]
-  },
-  "vendors": ["<array of AI vendor names mentioned, e.g. ['OpenAI', 'Anthropic', 'Google'], or empty array if none>"],
-  "organizations": ["<array of BFSI organization names mentioned, e.g. ['JPMorgan', 'Goldman Sachs'], or empty array if none>"]
-}
-
-CRITICAL RULES:
-1. SINGLE VALUES: role, content_type, geography, use_cases, agentic_capabilities
-2. ARRAYS (1-3 items): industry, topic - pick the MOST relevant, don't include everything
-3. ARRAYS (0-n items): vendors, organizations - only if explicitly mentioned
-4. All lowercase, hyphenated format for slugs
-5. Geography: "global" for worldwide content, specific region if focused
-6. Industry examples: ["banking"], ["banking", "insurance"], ["cross-bfsi"]
-7. Vendor/org names: Use proper capitalization, e.g. "OpenAI" not "openai"
-
-SUMMARY EXAMPLES:
-
-BAD (generic description):
-"This paper explores the use of AI in banking and presents a framework for implementation."
-
-GOOD (specific insight):
-"Shows 43% cost reduction in customer service using 3-agent LLM workflow. Key: agent coordination reduces hallucinations by 67%."
-
-BAD (vague):
-"The report discusses digital transformation in financial services."
-
-GOOD (actionable):
-"Banks adopting API-first architecture see 3x faster product launches. Critical success factor: legacy system integration strategy."
-
-Focus on: WHAT was found, HOW MUCH impact, WHY it matters to BFSI practitioners.`;
+  const prompt = generatePrompt(title, content, taxonomies);
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
+    headers: {
+      Authorization: `Bearer ${OPENAI_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({
       model: 'gpt-5.1',
       messages: [{ role: 'user', content: prompt }],
@@ -418,60 +449,134 @@ Focus on: WHAT was found, HOW MUCH impact, WHY it matters to BFSI practitioners.
     }),
   });
 
-  if (!response.ok) throw new Error(`OpenAI API error: ${response.status}`);
+  if (!response.ok) throw new Error(`OpenAI API error ${response.status}`);
+
   const data = await response.json();
   const result = JSON.parse(data.choices[0].message.content);
 
-  // Validate arrays are properly formatted
-  const tags = result.tags || {};
-
-  // Check that arrays are actually arrays
-  if (tags.industry && !Array.isArray(tags.industry)) {
-    result.tags.industry = [tags.industry];
-  }
-  if (tags.topic && !Array.isArray(tags.topic)) {
-    result.tags.topic = [tags.topic];
+  // Normalise scalar vs array fields
+  if (result.tags?.industry && !Array.isArray(result.tags.industry)) {
+    result.tags.industry = [result.tags.industry];
   }
 
-  // Ensure vendors and organizations are arrays
+  if (result.tags?.topic && !Array.isArray(result.tags.topic)) {
+    result.tags.topic = [result.tags.topic];
+  }
+
   if (result.vendors && !Array.isArray(result.vendors)) {
     result.vendors = result.vendors ? [result.vendors] : [];
   }
+
   if (result.organizations && !Array.isArray(result.organizations)) {
     result.organizations = result.organizations ? [result.organizations] : [];
-  }
-
-  // Reject if single-value fields contain arrays or pipes
-  const singleValueFields = [
-    'role',
-    'content_type',
-    'geography',
-    'use_cases',
-    'agentic_capabilities',
-  ];
-  for (const field of singleValueFields) {
-    if (tags[field] && (Array.isArray(tags[field]) || tags[field].includes('|'))) {
-      throw new Error(`Invalid tag ${field}: must be single value, got "${tags[field]}".`);
-    }
   }
 
   return result;
 }
 
+// ---------------------------------------------------------------------------
+// Prompt helper
+// ---------------------------------------------------------------------------
+
+function generatePrompt(title, content, taxonomies) {
+  const safeContent = typeof content === 'string' ? content.slice(0, 8000) : String(content || '');
+
+  return `
+You are a senior BFSI and agentic AI analyst.
+
+You receive:
+- A TITLE of a resource
+- A CONTENT snippet (possibly partial)
+- Canonical taxonomies for:
+  - role: ${taxonomies.role.join(', ')}
+  - industry: ${taxonomies.industry.join(', ')}
+  - topic: ${taxonomies.topic.join(', ')}
+  - content_type: ${taxonomies.content_type.join(', ')}
+  - geography: ${taxonomies.geography.join(', ')}
+  - use_cases: ${taxonomies.use_cases.join(', ')}
+  - agentic_capabilities: ${taxonomies.agentic_capabilities.join(', ')}
+
+Your tasks:
+1. Decide if this resource is BFSI-relevant.
+2. If relevant, assign:
+   - role (single value from taxonomies.role)
+   - industry (one or more codes from taxonomies.industry)
+   - topic (one or more codes from taxonomies.topic)
+   - content_type (single code from taxonomies.content_type)
+   - geography (single value from taxonomies.geography)
+   - use_cases (zero or more codes from taxonomies.use_cases)
+   - agentic_capabilities (zero or more codes from taxonomies.agentic_capabilities)
+3. Generate summaries:
+   - summary_short: ~120–240 chars
+   - summary_medium: ~240–480 chars
+   - summary_long: ~640–1120 chars, suitable for the detail page
+4. Produce persona relevance scores in [0,1]:
+   - persona_scores.executive
+   - persona_scores.professional
+   - persona_scores.researcher
+5. Provide:
+   - relevance_confidence in [0,1]
+   - relevance_reason as a short explanation
+
+Input TITLE:
+${title}
+
+Input CONTENT:
+${safeContent}
+
+Respond as a single JSON object with this structure:
+
+{
+  "bfsi_relevant": true | false,
+  "relevance_reason": "short string",
+  "relevance_confidence": 0.0–1.0,
+  "summary": {
+    "short": "string",
+    "medium": "string",
+    "long": "string"
+  },
+  "tags": {
+    "role": "code from taxonomies.role",
+    "industry": ["industry-code", "..."],
+    "topic": ["topic-code", "..."],
+    "content_type": "code from taxonomies.content_type",
+    "geography": "value from taxonomies.geography",
+    "use_cases": ["use-case-code", "..."],
+    "agentic_capabilities": ["capability-code", "..."]
+  },
+  "persona_scores": {
+    "executive": 0.0–1.0,
+    "professional": 0.0–1.0,
+    "researcher": 0.0–1.0
+  },
+  "vendors": ["optional vendor names, if clearly mentioned"],
+  "organizations": ["optional BFSI organizations mentioned"]
+}
+
+Only output valid JSON.
+`;
+}
+
+// ---------------------------------------------------------------------------
+// CLI
+// ---------------------------------------------------------------------------
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
-  enrich({
-    limit: parseInt(args.find((a) => a.startsWith('--limit='))?.split('=')[1]) || null,
-    dryRun: args.includes('--dry-run'),
-  })
+
+  const limit = parseInt(args.find((a) => a.startsWith('--limit='))?.split('=')[1], 10) || null;
+  const dryRun = args.includes('--dry-run');
+
+  enrich({ limit, dryRun })
     .then(() => {
-      console.log('\n✨ Complete!');
-      process.exit(0);
+      console.log('\n✨ Enrichment complete');
     })
-    .catch((error) => {
-      console.error('\n❌ Failed:', error);
+    .catch((err) => {
+      console.error('\n❌ Enrichment failed:', err);
       process.exit(1);
     });
 }
+
+// ---------------------------------------------------------------------------
 
 export default enrich;

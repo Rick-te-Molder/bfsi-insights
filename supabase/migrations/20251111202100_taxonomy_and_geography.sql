@@ -145,7 +145,7 @@ WITH RECURSIVE industry_tree AS (
     i.parent_slug,
     i.level,
     i.sort_order,
-    COUNT(r.id) as direct_count
+    COUNT(p.id) as direct_count
   FROM bfsi_industry i
   LEFT JOIN kb_resource r ON r.industry = i.slug
   GROUP BY i.slug, i.label, i.parent_slug, i.level, i.sort_order
@@ -191,7 +191,7 @@ WITH RECURSIVE topic_tree AS (
     t.parent_slug,
     t.level,
     t.sort_order,
-    COUNT(r.id) as direct_count
+    COUNT(p.id) as direct_count
   FROM bfsi_topic t
   LEFT JOIN kb_resource r ON r.topic = t.slug
   GROUP BY t.slug, t.label, t.parent_slug, t.level, t.sort_order

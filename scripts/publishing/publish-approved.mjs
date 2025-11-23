@@ -1,91 +1,109 @@
 #!/usr/bin/env node
+
 /**
- * Publish Approved Resources
+ * Publish Approved Items
  *
- * Moves approved items from ingestion_queue to kb_resource
- * and populates junction tables for multi-value dimensions.
+ * Moves approved rows from ingestion_queue → kb_publication
+ * and populates all junction tables (industry, topic, vendor, org, process).
  *
  * Usage:
  *   node scripts/publishing/publish-approved.mjs [--dry-run] [--limit=10]
  */
 
-import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-/**
- * Match source slug from domain or name
- */
+// -------------------------------------------------------------
+// Utility helpers
+// -------------------------------------------------------------
+
+function normaliseSlug(str) {
+  if (!str) return null;
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+function safeArray(x) {
+  if (!x) return [];
+  return Array.isArray(x) ? x : [x];
+}
+
+function safeString(x) {
+  if (x == null) return null;
+  return String(x).trim();
+}
+
+// -------------------------------------------------------------
+// Match kb_source entry from URL or source_name
+// -------------------------------------------------------------
 async function matchSourceSlug(url, sourceName) {
   try {
     const domain = new URL(url).hostname.replace(/^www\./, '');
+    const sourceNameLc = (sourceName || '').toLowerCase();
 
     const { data } = await supabase
-      .from('ref_source')
-      .select('slug')
-      .or(`domain.eq.${domain},name.ilike.%${sourceName}%`)
+      .from('kb_source')
+      .select('code')
+      .or(`domain.eq.${domain},name.ilike.%${sourceNameLc}%`)
       .limit(1)
       .single();
 
-    return data?.slug || null;
+    return data?.code || null;
   } catch {
     return null;
   }
 }
 
-/**
- * Auto-create vendor if it doesn't exist
- */
-async function getOrCreateVendorByName(name) {
+// -------------------------------------------------------------
+// Auto-create vendor on demand
+// -------------------------------------------------------------
+async function getOrCreateVendor(name) {
   if (!name) return null;
 
-  const slug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+  const slug = normaliseSlug(name);
 
   const { data: existing } = await supabase
     .from('ag_vendor')
     .select('id')
     .or(`name_norm.eq.${name.toLowerCase()},slug.eq.${slug}`)
-    .single();
+    .maybeSingle();
 
   if (existing) return existing.id;
 
   const { data: newVendor, error } = await supabase
     .from('ag_vendor')
-    .insert({ name, slug: slug || `vendor-${Date.now()}` })
+    .insert({ name, slug })
     .select('id')
     .single();
 
   if (error) {
-    console.warn(`   ⚠️  Failed to create vendor "${name}": ${error.message}`);
+    console.warn(`   ⚠ Failed to create vendor "${name}": ${error.message}`);
     return null;
   }
 
-  console.log(`   ✨ Auto-created vendor: ${name}`);
+  console.log(`   ✨ Created vendor: ${name}`);
   return newVendor.id;
 }
 
-/**
- * Auto-create BFSI organization if it doesn't exist
- */
-async function getOrCreateOrganizationByName(name) {
+// -------------------------------------------------------------
+// Auto-create BFSI organization
+// -------------------------------------------------------------
+async function getOrCreateOrg(name) {
   if (!name) return null;
 
-  const slug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+  const slug = normaliseSlug(name);
 
   const { data: existing } = await supabase
     .from('bfsi_organization')
     .select('id')
     .eq('slug', slug)
-    .single();
+    .maybeSingle();
 
   if (existing) return existing.id;
 
@@ -96,49 +114,43 @@ async function getOrCreateOrganizationByName(name) {
     .single();
 
   if (error) {
-    console.warn(`   ⚠️  Failed to create organization "${name}": ${error.message}`);
+    console.warn(`   ⚠ Failed to create org "${name}": ${error.message}`);
     return null;
   }
 
-  console.log(`   ✨ Auto-created organization: ${name}`);
+  console.log(`   ✨ Created organization: ${name}`);
   return newOrg.id;
 }
 
-/**
- * Publish a single approved item to kb_resource + junction tables
- */
+// -------------------------------------------------------------
+// Publish one item
+// -------------------------------------------------------------
 async function publishItem(item, dryRun = false) {
-  const payload = item.payload;
+  const payload = item.payload || {};
   const tags = payload.tags || {};
 
-  console.log(`📄 ${payload.title?.substring(0, 60)}...`);
+  console.log(`📄 ${safeString(payload.title)?.slice(0, 70)}`);
 
   if (dryRun) {
-    console.log(`   [DRY RUN] Would publish with: industry=${tags.industry}, topic=${tags.topic}`);
+    console.log(`   [DRY RUN] Would publish.`);
     return { success: true, dryRun: true };
   }
 
-  // 1. Match source slug from database
-  const source_slug = await matchSourceSlug(item.url, payload.source || payload.source_name);
+  // ---- 1. Source matching ----
+  const sourceSlug = await matchSourceSlug(item.url, payload.source || payload.source_name);
 
-  // 2. Insert into kb_resource
-  const { data: resource, error: insertError } = await supabase
-    .from('kb_resource')
+  // ---- 2. Insert publication ----
+  const { data: inserted, error: insertError } = await supabase
+    .from('kb_publication')
     .insert({
-      title: payload.title,
-      author: payload.authors?.join?.(', ') || payload.authors || null,
+      title: safeString(payload.title),
+      author: safeArray(payload.authors).join(', '),
       date_published: payload.published_at || payload.date_published || null,
-      url: item.url,
+      url: safeString(item.url),
       source_name: payload.source || payload.source_name || null,
       source_domain: new URL(item.url).hostname,
-      source_slug: source_slug,
-      slug:
-        payload.slug ||
-        item.url
-          .split('/')
-          .pop()
-          .toLowerCase()
-          .replace(/[^a-z0-9-]/g, '-'),
+      source_slug: sourceSlug,
+      slug: payload.slug || normaliseSlug(item.url.split('/').pop()) || `item-${Date.now()}`,
       summary_short: payload.summary?.short || null,
       summary_medium: payload.summary?.medium || null,
       summary_long: payload.summary?.long || null,
@@ -156,136 +168,126 @@ async function publishItem(item, dryRun = false) {
     .single();
 
   if (insertError) {
-    console.error(`   ❌ Failed to insert: ${insertError.message}`);
-    return { success: false, error: insertError.message };
+    console.error(`   ❌ Insert failed: ${insertError.message}`);
+    return { success: false };
   }
 
-  const resourceId = resource.id;
-  console.log(`   ✅ Inserted kb_resource id=${resourceId}`);
-  if (source_slug) {
-    console.log(`   🏢 Source: ${source_slug}`);
-  }
+  const publicationId = inserted.id;
+  console.log(`   ✅ Published as id=${publicationId}`);
 
-  // 3. Insert into junction tables
+  // ---- 3. Junction tables ----
   const junctionErrors = [];
 
-  // Industry (support single or array)
-  const industries = Array.isArray(tags.industry) ? tags.industry : [tags.industry].filter(Boolean);
+  // INDUSTRY
+  const industries = safeArray(tags.industry).filter(Boolean);
   if (industries.length > 0) {
-    const { error } = await supabase.from('kb_resource_bfsi_industry').insert(
+    const { error } = await supabase.from('kb_publication_bfsi_industry').insert(
       industries.map((code, idx) => ({
-        resource_id: resourceId,
+        publication_id: publicationId,
         industry_code: code,
         rank: idx,
       })),
     );
-    if (error) junctionErrors.push(`Industry: ${error.message}`);
-    else console.log(`   ✓ Linked ${industries.length} industries`);
+    if (error) junctionErrors.push(error.message);
   }
 
-  // Topic (support single or array)
-  const topics = Array.isArray(tags.topic) ? tags.topic : [tags.topic].filter(Boolean);
+  // TOPIC
+  const topics = safeArray(tags.topic).filter(Boolean);
   if (topics.length > 0) {
-    const { error } = await supabase.from('kb_resource_bfsi_topic').insert(
+    const { error } = await supabase.from('kb_publication_bfsi_topic').insert(
       topics.map((code, idx) => ({
-        resource_id: resourceId,
+        publication_id: publicationId,
         topic_code: code,
         rank: idx,
       })),
     );
-    if (error) junctionErrors.push(`Topic: ${error.message}`);
-    else console.log(`   ✓ Linked ${topics.length} topics`);
+    if (error) junctionErrors.push(error.message);
   }
 
-  // Vendors (auto-create if needed)
-  const vendors = payload.vendors || [];
-  if (vendors.length > 0) {
-    for (const [idx, vendorName] of vendors.entries()) {
-      const vendorId = await getOrCreateVendorByName(vendorName);
-      if (vendorId) {
-        await supabase
-          .from('kb_resource_ag_vendor')
-          .insert({ resource_id: resourceId, vendor_id: vendorId, rank: idx });
-      }
+  // VENDORS
+  const vendors = safeArray(payload.vendors);
+  for (const [idx, name] of vendors.entries()) {
+    const vid = await getOrCreateVendor(name);
+    if (vid) {
+      await supabase
+        .from('kb_publication_ag_vendor')
+        .insert({ publication_id: publicationId, vendor_id: vid, rank: idx });
     }
-    console.log(`   ✓ Linked ${vendors.length} vendors`);
   }
 
-  // Organizations (auto-create if needed)
-  const organizations = payload.organizations || [];
-  if (organizations.length > 0) {
-    for (const [idx, orgName] of organizations.entries()) {
-      const orgId = await getOrCreateOrganizationByName(orgName);
-      if (orgId) {
-        await supabase
-          .from('kb_resource_bfsi_organization')
-          .insert({ resource_id: resourceId, organization_id: orgId, rank: idx });
-      }
+  // ORGANIZATIONS
+  const orgs = safeArray(payload.organizations);
+  for (const [idx, name] of orgs.entries()) {
+    const oid = await getOrCreateOrg(name);
+    if (oid) {
+      await supabase.from('kb_publication_bfsi_organization').insert({
+        publication_id: publicationId,
+        organization_id: oid,
+        rank: idx,
+      });
     }
-    console.log(`   ✓ Linked ${organizations.length} organizations`);
   }
 
-  // 3. Mark queue item as published
+  if (junctionErrors.length > 0) {
+    console.warn(`   ⚠ Junction warnings: ${junctionErrors.join(', ')}`);
+  }
+
+  // ---- 4. Mark queue item as published ----
   await supabase
     .from('ingestion_queue')
     .update({ status: 'published', reviewed_at: new Date().toISOString() })
     .eq('id', item.id);
 
-  if (junctionErrors.length > 0) {
-    console.warn(`   ⚠️  Junction table warnings: ${junctionErrors.join(', ')}`);
-  }
-
-  return { success: true, resourceId, junctionErrors };
+  return { success: true, publicationId };
 }
 
+// -------------------------------------------------------------
+// Main
+// -------------------------------------------------------------
 async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
   const limit = parseInt(args.find((a) => a.startsWith('--limit='))?.split('=')[1]) || 100;
 
-  console.log('🚀 Publishing approved resources...');
-  console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}\n`);
+  console.log(`🚀 Publishing approved items (${dryRun ? 'DRY RUN' : 'LIVE'})\n`);
 
-  // Fetch approved items
   const { data: items, error } = await supabase
     .from('ingestion_queue')
     .select('*')
     .eq('status', 'approved')
-    .limit(limit)
-    .order('reviewed_at', { ascending: true });
+    .order('reviewed_at', { ascending: true })
+    .limit(limit);
 
   if (error) {
-    console.error('❌ Failed to fetch approved items:', error.message);
+    console.error('❌ Cannot load approved items:', error.message);
     process.exit(1);
   }
 
-  if (!items || items.length === 0) {
-    console.log('✅ No approved items to publish');
+  if (!items?.length) {
+    console.log('✓ Nothing to publish');
     return;
   }
 
-  console.log(`Found ${items.length} approved items\n`);
+  console.log(`Found ${items.length} items\n`);
 
   let published = 0;
   let failed = 0;
 
   for (const item of items) {
     const result = await publishItem(item, dryRun);
-    if (result.success) {
-      published++;
-    } else {
-      failed++;
-    }
-    await new Promise((r) => setTimeout(r, 100)); // Rate limit
+    if (result.success) published++;
+    else failed++;
+
+    await new Promise((r) => setTimeout(r, 120)); // rate limit safety
   }
 
-  console.log(`\n📊 Summary:`);
+  console.log(`\n📊 Summary`);
   console.log(`   Published: ${published}`);
-  console.log(`   Failed: ${failed}`);
+  console.log(`   Failed:    ${failed}`);
 
   if (!dryRun) {
-    console.log(`\n✨ Complete! Run 'npm run build:resources' to rebuild the site.`);
+    console.log(`\n✨ Done. You may now run: npm run build:resources`);
   }
 }
 
-main().catch(console.error);
+main().catch((e) => console.error(e));
