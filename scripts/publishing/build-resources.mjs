@@ -31,14 +31,14 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Fetch valid roles from ref_role table and update schema dynamically
+// Fetch valid roles from kb_role table and update schema dynamically
 const { data: rolesData, error: rolesError } = await supabase
-  .from('ref_role')
+  .from('kb_role')
   .select('value')
   .order('sort_order');
 
 if (rolesError) {
-  console.warn('Could not fetch roles from ref_role, using schema defaults:', rolesError.message);
+  console.warn('Could not fetch roles from kb_role, using schema defaults:', rolesError.message);
 } else if (rolesData && rolesData.length > 0) {
   // Update schema with dynamic roles
   SCHEMA.properties.role.enum = rolesData.map((r) => r.value);
@@ -195,7 +195,7 @@ function fixSummaryLengths(obj) {
 
 // Fetch resources from Supabase view (includes junction table data)
 const { data: dbResources, error } = await supabase
-  .from('kb_resource_pretty')
+  .from('kb_publication_pretty')
   .select('*')
   .order('date_added', { ascending: false });
 
@@ -207,8 +207,8 @@ if (error) {
 if (!dbResources || dbResources.length === 0) {
   console.warn('⚠️  No resources found in database. Check:');
   console.warn('   - PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY are set in .env');
-  console.warn('   - kb_resource table has rows with status="published"');
-  console.warn('   - Anon key has SELECT permission on kb_resource_pretty view');
+  console.warn('   - kb_publication table has rows with status="published"');
+  console.warn('   - Anon key has SELECT permission on kb_publication_pretty view');
 }
 
 const items = [];
@@ -216,7 +216,10 @@ const items = [];
 for (const resource of dbResources || []) {
   // Map database columns to schema format
   const obj = {
-    url: resource.url,
+    // Canonical URL for the item (schema requires `url`)
+    url: resource.canonical_url,
+    // Keep original source URL as a separate field if schema supports it
+    source_url: resource.source_url,
     title: resource.title,
     slug: resource.slug,
     source_name: resource.source_name,
@@ -250,7 +253,9 @@ for (const resource of dbResources || []) {
     const details = ajv.errorsText(validate.errors, { separator: '\n' });
     const extra = Object.keys(withValues).filter((k) => !allowedKeys.has(k));
     console.error(
-      `Invalid: ${resource.title}\n${details}${extra.length ? `\nExtra keys: ${extra.join(', ')}` : ''}`,
+      `Invalid: ${resource.title}\n${details}${
+        extra.length ? `\nExtra keys: ${extra.join(', ')}` : ''
+      }`,
     );
     process.exit(1);
   }
