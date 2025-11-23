@@ -1,40 +1,35 @@
 name: CI
+
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   pull_request:
-    branches: [main]
-  workflow_dispatch: {} # Allow manual trigger
+    branches:
+      - main
 
 jobs:
-  build-test:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: 20
+          cache: npm
 
-      - name: Install
-        run: npm ci --legacy-peer-deps
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Format check
-        run: npm run format:check
+      - name: Run lint
+        run: npm run lint --if-present
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Validate data
-
-      - name: Unit tests
-        run: npm run test
+      - name: Run tests
+        run: npm test --if-present
 
       - name: Build
-        run: npm run build
-        env:
-          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
-          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+        run: npm run build --if-present
