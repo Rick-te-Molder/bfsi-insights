@@ -16,7 +16,7 @@ if (process.env.NODE_ENV !== 'production') {
 const SCHEMA_PATH = 'schemas/kb.schema.json';
 const OUT_FILE = 'src/data/resources/resources.json';
 
-// Load canonical schema
+// load canonical schema
 const schemaRaw = await fs.readFile(SCHEMA_PATH, 'utf8');
 const SCHEMA = JSON.parse(schemaRaw);
 
@@ -31,19 +31,47 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Fetch valid roles from kb_role table and update schema dynamically
-const { data: rolesData, error: rolesError } = await supabase
-  .from('kb_role')
-  .select('code')
-  .order('sort_order');
+/**
+ * Load roles dynamically from kb_role (if available)
+ * Fallback to schema defaults if anything fails.
+ */
+async function loadRolesIntoSchema() {
+  try {
+    const { data: rolesData, error } = await supabase
+      .from('kb_role')
+      .select('*')
+      .order('sort_order', { ascending: true });
 
-if (rolesError) {
-  console.warn('Could not fetch roles from kb_role, using schema defaults:', rolesError.message);
-} else if (rolesData && rolesData.length > 0) {
-  // Update schema with dynamic roles
-  SCHEMA.properties.role.enum = rolesData.map((r) => r.code);
-  console.log('✓ Loaded roles from database:', SCHEMA.properties.role.enum.join(', '));
+    if (error) {
+      console.warn('Could not fetch roles from kb_role, using schema defaults:', error.message);
+      return;
+    }
+    if (!rolesData || rolesData.length === 0) return;
+
+    const sample = rolesData[0];
+    const key = ['code', 'value', 'slug', 'name', 'id'].find((k) => k in sample);
+
+    if (!key) {
+      console.warn(
+        'kb_role has no usable column among code/value/slug/name/id, using schema defaults.',
+      );
+      return;
+    }
+
+    const values = rolesData
+      .map((r) => (r[key] == null ? null : String(r[key]).trim()))
+      .filter(Boolean);
+
+    if (!values.length) return;
+
+    SCHEMA.properties.role.enum = values;
+    console.log('✓ Loaded roles from database:', SCHEMA.properties.role.enum.join(', '));
+  } catch (e) {
+    console.warn('Error loading roles from kb_role, using schema defaults:', e.message);
+  }
 }
+
+await loadRolesIntoSchema();
 
 // Use full format validation and rely on ajv-formats defaults (uri, date, date-time)
 const ajv = new Ajv({ strict: false, allErrors: true, validateFormats: 'full' });
@@ -106,14 +134,25 @@ function normalizeEnumField(field, val) {
   return ENUMS[field].has(lc) ? lc : raw;
 }
 
+/**
+ * Authors must always be an array of strings.
+ * Accepts:
+ * - null/undefined -> []
+ * - string -> split on comma, or single-element array
+ * - array -> normalized to trimmed strings
+ */
 function normalizeAuthors(val) {
-  if (Array.isArray(val)) return val.map((x) => String(x).trim()).filter(Boolean);
-  if (val == null) return val;
-  // authors stored as comma-separated string
-  return String(val)
+  if (val == null) return [];
+  if (Array.isArray(val)) {
+    return val.map((x) => String(x).trim()).filter(Boolean);
+  }
+  const s = String(val).trim();
+  if (!s) return [];
+  const parts = s
     .split(',')
-    .map((p) => p.trim())
+    .map((x) => x.trim())
     .filter(Boolean);
+  return parts.length ? parts : [s];
 }
 
 function sanitizeString(s) {
@@ -146,7 +185,7 @@ function normalizeValues(input) {
     if (f in out) out[f] = normalizeEnumField(f, out[f]);
   }
   // authors must be array of strings
-  if ('authors' in out) out.authors = normalizeAuthors(out.authors);
+  out.authors = normalizeAuthors(out.authors);
   return out;
 }
 
@@ -224,25 +263,26 @@ if (!dbResources || dbResources.length === 0) {
 const items = [];
 
 for (const resource of dbResources || []) {
-  // Robust URL selection: canonical_url → url → source_url
-  const candidateUrl = resource.canonical_url || resource.url || resource.source_url || null;
+  // Pick best URL we have
+  const url =
+    resource.canonical_url ||
+    resource.source_url ||
+    resource.url ||
+    resource.canonicalUrl ||
+    resource.sourceUrl;
 
-  if (!candidateUrl || typeof candidateUrl !== 'string' || !candidateUrl.trim()) {
-    console.warn(
-      `Skipping resource without usable URL: id=${resource.id ?? 'n/a'} title="${resource.title ?? 'N/A'}"`,
-    );
-    continue;
-  }
+  // Prefer an authors/author field if present
+  const rawAuthors = resource.authors ?? resource.author ?? null;
 
   // Map database columns to schema format
   const obj = {
-    url: candidateUrl.trim(),
+    url,
     title: resource.title,
     slug: resource.slug,
-    source_name: resource.source_name,
-    date_published: resource.publication_date,
+    source_name: resource.source_name || resource.source || null,
+    date_published: resource.date_published || resource.publication_date || null,
     date_added: resource.date_added,
-    authors: resource.author,
+    authors: rawAuthors,
     summary_short: resource.summary_short,
     summary_medium: resource.summary_medium,
     summary_long: resource.summary_long,
