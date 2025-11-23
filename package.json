@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "npm run validate:resources && npm run build:resources && astro build",
+    "build": "npm run build:resources && astro build",
     "preview": "astro preview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
