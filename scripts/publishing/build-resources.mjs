@@ -16,7 +16,7 @@ if (process.env.NODE_ENV !== 'production') {
 const SCHEMA_PATH = 'schemas/kb.schema.json';
 const OUT_FILE = 'src/data/resources/resources.json';
 
-// load canonical schema
+// Load canonical schema
 const schemaRaw = await fs.readFile(SCHEMA_PATH, 'utf8');
 const SCHEMA = JSON.parse(schemaRaw);
 
@@ -34,14 +34,14 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // Fetch valid roles from kb_role table and update schema dynamically
 const { data: rolesData, error: rolesError } = await supabase
   .from('kb_role')
-  .select('value')
+  .select('code')
   .order('sort_order');
 
 if (rolesError) {
   console.warn('Could not fetch roles from kb_role, using schema defaults:', rolesError.message);
 } else if (rolesData && rolesData.length > 0) {
   // Update schema with dynamic roles
-  SCHEMA.properties.role.enum = rolesData.map((r) => r.value);
+  SCHEMA.properties.role.enum = rolesData.map((r) => r.code);
   console.log('✓ Loaded roles from database:', SCHEMA.properties.role.enum.join(', '));
 }
 
@@ -91,11 +91,13 @@ const ENUM_FIELDS = [
 const ENUMS = Object.fromEntries(
   ENUM_FIELDS.map((f) => [f, new Set(SCHEMA.properties?.[f]?.enum || [])]),
 );
+
 function asString(v) {
   if (v == null) return v;
   if (Array.isArray(v)) return v.length ? String(v[0]) : undefined;
   return typeof v === 'string' ? v : String(v);
 }
+
 function normalizeEnumField(field, val) {
   const raw = asString(val);
   if (raw == null) return raw;
@@ -103,14 +105,20 @@ function normalizeEnumField(field, val) {
   // if lowercased value is allowed, use it; otherwise keep original to fail validation
   return ENUMS[field].has(lc) ? lc : raw;
 }
+
 function normalizeAuthors(val) {
   if (Array.isArray(val)) return val.map((x) => String(x).trim()).filter(Boolean);
   if (val == null) return val;
-  return [String(val).trim()].filter(Boolean);
+  // authors stored as comma-separated string
+  return String(val)
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
 }
+
 function sanitizeString(s) {
   if (typeof s !== 'string') return s;
-  // Remove control chars except tab (9), newline (10), carriage return (13) without using control-char regex
+  // Remove control chars except tab (9), newline (10), carriage return (13)
   let cleaned = '';
   for (let i = 0; i < s.length; i++) {
     const code = s.charCodeAt(i);
@@ -122,6 +130,7 @@ function sanitizeString(s) {
   // Trim leading/trailing whitespace
   return cleaned.replace(/\s+$/g, '').replace(/^\s+/g, '');
 }
+
 function trimStringFields(obj) {
   const out = { ...obj };
   for (const k of Object.keys(out)) {
@@ -129,6 +138,7 @@ function trimStringFields(obj) {
   }
   return out;
 }
+
 function normalizeValues(input) {
   let out = trimStringFields(input);
   // enums as single, canonical strings
@@ -214,18 +224,25 @@ if (!dbResources || dbResources.length === 0) {
 const items = [];
 
 for (const resource of dbResources || []) {
+  // Robust URL selection: canonical_url → url → source_url
+  const candidateUrl = resource.canonical_url || resource.url || resource.source_url || null;
+
+  if (!candidateUrl || typeof candidateUrl !== 'string' || !candidateUrl.trim()) {
+    console.warn(
+      `Skipping resource without usable URL: id=${resource.id ?? 'n/a'} title="${resource.title ?? 'N/A'}"`,
+    );
+    continue;
+  }
+
   // Map database columns to schema format
   const obj = {
-    // Canonical URL for the item (schema requires `url`)
-    url: resource.canonical_url,
-    // Keep original source URL as a separate field if schema supports it
-    source_url: resource.source_url,
+    url: candidateUrl.trim(),
     title: resource.title,
     slug: resource.slug,
     source_name: resource.source_name,
     date_published: resource.publication_date,
     date_added: resource.date_added,
-    authors: resource.author ? resource.author.split(', ') : [],
+    authors: resource.author,
     summary_short: resource.summary_short,
     summary_medium: resource.summary_medium,
     summary_long: resource.summary_long,
