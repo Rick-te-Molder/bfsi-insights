@@ -2,44 +2,49 @@
 import Base from '../layouts/Base.astro';
 import { supabase } from '../lib/supabase';
 
-// Fetch external resources from ref_source table
+// ------------------------------------------------------------
+// Load data
+// ------------------------------------------------------------
 const { data: sources, error } = await supabase
   .from('ref_source')
   .select('name, domain, description, category, tier')
   .eq('show_on_external_page', true)
-  .order('tier', { ascending: false }) // Premium first
+  .order('tier', { ascending: false }) // premium / high-value first
   .order('name');
 
 if (error) {
-  console.error('Error fetching external resources:', error);
+  console.error('Failed to fetch external resources:', error);
 }
 
-// Map to format expected by template
-const externalResources = (sources || []).map((source) => ({
-  name: source.name,
-  url: `https://${source.domain}`,
-  description: source.description || '',
-  category:
-    source.category === 'strategy-consulting'
-      ? 'Industry Research'
-      : source.category === 'big4'
-        ? 'Industry Research'
-        : source.category === 'regulator'
-          ? 'Regulatory Bodies'
-          : source.category === 'research'
-            ? 'Academic Research'
-            : 'Other',
+// ------------------------------------------------------------
+// Category normalization
+// ------------------------------------------------------------
+const CATEGORY_MAP: Record<string, string> = {
+  'strategy-consulting': 'Industry Research',
+  big4: 'Industry Research',
+  regulator: 'Regulatory Bodies',
+  research: 'Academic Research',
+};
+
+// ------------------------------------------------------------
+// Transform raw Supabase rows → view model
+// ------------------------------------------------------------
+const externalResources = (sources ?? []).map((s) => ({
+  name: s.name,
+  url: s.domain ? `https://${s.domain}` : '',
+  description: s.description ?? '',
+  category: CATEGORY_MAP[s.category] ?? 'Other',
 }));
 
+// ------------------------------------------------------------
 // Group by category
-const grouped = externalResources.reduce(
-  (acc, resource) => {
-    if (!acc[resource.category]) acc[resource.category] = [];
-    acc[resource.category].push(resource);
-    return acc;
-  },
-  {} as Record<string, typeof externalResources>,
-);
+// ------------------------------------------------------------
+const grouped: Record<string, typeof externalResources> = {};
+
+for (const res of externalResources) {
+  if (!grouped[res.category]) grouped[res.category] = [];
+  grouped[res.category].push(res);
+}
 
 const categories = Object.keys(grouped).sort();
 ---
@@ -49,7 +54,7 @@ const categories = Object.keys(grouped).sort();
     <header class="mb-8">
       <h1 class="text-3xl font-bold tracking-tight">External Resources</h1>
       <p class="mt-2 text-neutral-300">
-        Curated knowledge bases and content-rich websites for BFSI and Agentic AI research.
+        Curated knowledge bases and high-quality content for BFSI and Agentic AI research.
       </p>
     </header>
 
@@ -59,19 +64,19 @@ const categories = Object.keys(grouped).sort();
           <section>
             <h2 class="mb-4 text-xl font-semibold text-neutral-200">{category}</h2>
             <div class="space-y-4">
-              {grouped[category].map((resource) => (
+              {grouped[category].map((res) => (
                 <div class="rounded-lg border border-neutral-800 bg-neutral-900/40 p-4 transition-colors hover:border-neutral-700">
                   <h3 class="font-medium">
                     <a
-                      href={resource.url}
+                      href={res.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       class="text-sky-300 underline-offset-2 hover:underline"
                     >
-                      {resource.name} →
+                      {res.name} →
                     </a>
                   </h3>
-                  <p class="mt-1 text-sm text-neutral-300">{resource.description}</p>
+                  <p class="mt-1 text-sm text-neutral-300">{res.description}</p>
                 </div>
               ))}
             </div>

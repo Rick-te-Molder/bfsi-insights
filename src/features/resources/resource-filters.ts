@@ -1,5 +1,4 @@
 export default function initResourceFilters() {
-  const $ = (id: string) => document.getElementById(id);
   const list = document.getElementById('list');
   const empty = document.getElementById('empty');
   const clearBtn = document.getElementById('clear-filters');
@@ -10,61 +9,51 @@ export default function initResourceFilters() {
   const loadMoreBtn = document.getElementById('load-more-btn') as HTMLButtonElement | null;
   const paginationCount = document.getElementById('pagination-count');
   const paginationContainer = document.getElementById('pagination-container');
-  // Dynamically discover filters from DOM (all selects with id starting with 'f-')
+
+  const STORAGE_KEY = 'resourcesFiltersV1';
+  const PAGE_SIZE = 30;
+  const ADVANCED_FILTERS_KEY = 'advanced-filters-expanded';
+
+  if (!list) return;
+
+  // Discover all select filters with id starting with "f-"
   const filterElements = Array.from(
     document.querySelectorAll<HTMLSelectElement>('select[id^="f-"]'),
   );
+
   const filters = filterElements.map((el) => ({
     key: el.id.replace(/^f-/, ''),
-    el: el,
+    el,
   }));
 
-  // Fallback to empty array if no filters found
   if (filters.length === 0) {
     console.warn('No filters found in DOM');
     return;
   }
 
-  const STORAGE_KEY = 'resourcesFiltersV1';
-  const PAGE_SIZE = 30;
+  type FilterValues = Record<string, string> & { q: string };
+
+  interface IndexedItem {
+    el: HTMLElement;
+    title: string;
+    source_name: string;
+    authors: string;
+    [key: string]: string | HTMLElement;
+  }
+
   let currentPage = 1;
 
-  if (!list) return;
-
-  const renderChipsSummary = (vals: Record<string, string>) => {
-    if (!chipsEl) return;
-    chipsEl.innerHTML = '';
-    const entries = Object.entries(vals).filter(([k, v]) => k !== 'q' && v && v !== 'all');
-    entries.forEach(([k, v]) => {
-      const button = document.createElement('button');
-      button.className =
-        'rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-200 hover:bg-neutral-800';
-      const displayValue = v.charAt(0).toUpperCase() + v.slice(1);
-      button.textContent = `${k.replace('_', ' ')}: ${displayValue} ✕`;
-      button.addEventListener('click', () => {
-        const current = getVals();
-        current[k] = '';
-        setVals(current);
-        apply(current);
-        renderChipsSummary(current);
-      });
-      chipsEl.appendChild(button);
-    });
-    const activeCount = entries.length + (vals.q?.trim() ? 1 : 0);
-    if (badgeEl) badgeEl.textContent = String(activeCount);
-  };
-
-  // Build an index of items from the DOM data attributes dynamically
-  const data = Array.from(list.children).map((li) => {
-    const el = li as HTMLElement;
-    const item: Record<string, string | HTMLElement> = {
+  // Build an index of items from the DOM data attributes
+  const data: IndexedItem[] = Array.from(list.children).map((node) => {
+    const el = node as HTMLElement;
+    const item: IndexedItem = {
       el,
       title: el.querySelector('a')?.textContent?.trim() || '',
-      source_name: (el.querySelector('.mt-1') as HTMLElement)?.textContent || '',
+      source_name: (el.querySelector('.mt-1') as HTMLElement | null)?.textContent || '',
       authors: el.getAttribute('data-authors') || '',
     };
 
-    // Dynamically add all filter attributes
+    // Attach all filter attributes (e.g. data-role, data-industry, ...)
     filters.forEach(({ key }) => {
       item[key] = el.getAttribute(`data-${key}`) || '';
     });
@@ -72,81 +61,143 @@ export default function initResourceFilters() {
     return item;
   });
 
+  // Optional Fuse.js for better text search
   let FuseCtor: any = null;
   (async () => {
     try {
       const mod = await import('fuse.js');
       FuseCtor = (mod as any)?.default || null;
     } catch {
-      // optional
+      // Fuse is optional; simple substring search fallback below
     }
   })();
 
-  function getVals() {
-    const vals: Record<string, string> = {};
-    filters.forEach(({ key, el }) => (vals[key] = (el as HTMLSelectElement)?.value || ''));
+  function getVals(): FilterValues {
+    const vals: FilterValues = { q: '' };
+    filters.forEach(({ key, el }) => {
+      vals[key] = el.value || '';
+    });
     vals.q = qEl?.value?.trim() || '';
     return vals;
   }
-  function setVals(vals: Record<string, string>) {
+
+  function setVals(vals: FilterValues) {
     filters.forEach(({ key, el }) => {
-      if (el) el.value = vals[key] || '';
+      el.value = vals[key] || '';
     });
     if (qEl) qEl.value = vals.q || '';
   }
-  function updateQuery(vals: Record<string, string>) {
+
+  function updateQuery(vals: FilterValues) {
     const params = new URLSearchParams();
-    for (const [k, v] of Object.entries(vals)) if (v && k !== 'q') params.set(k, v);
+
+    for (const [k, v] of Object.entries(vals)) {
+      if (v && k !== 'q') params.set(k, v);
+    }
     if (vals.q) params.set('q', vals.q);
     if (currentPage > 1) params.set('page', String(currentPage));
+
     const qs = params.toString();
     const url = qs ? `${location.pathname}?${qs}` : location.pathname;
     history.replaceState(null, '', url);
   }
-  function readFromQuery() {
-    const params = new URLSearchParams(location.search);
-    const vals: Record<string, string> = Object.fromEntries([
-      ...filters.map(({ key }) => [key, params.get(key) || '']),
-      ['q', params.get('q') || ''],
-    ]);
 
-    // Read page from URL
+  function renderChipsSummary(vals: FilterValues) {
+    if (!chipsEl) return;
+
+    chipsEl.innerHTML = '';
+
+    const entries = Object.entries(vals).filter(
+      ([key, value]) => key !== 'q' && value && value !== 'all',
+    );
+
+    entries.forEach(([key, value]) => {
+      const button = document.createElement('button');
+      button.className =
+        'rounded-full border border-neutral-700 px-2 py-0.5 text-xs text-neutral-200 hover:bg-neutral-800';
+      const displayValue = value.charAt(0).toUpperCase() + value.slice(1);
+      button.textContent = `${key.replace('_', ' ')}: ${displayValue} ✕`;
+      button.addEventListener('click', () => {
+        const current = getVals();
+        current[key] = '';
+        setVals(current);
+        apply(current, true);
+        renderChipsSummary(current);
+      });
+      chipsEl.appendChild(button);
+    });
+
+    const activeCount = entries.length + (vals.q?.trim() ? 1 : 0);
+    if (badgeEl) badgeEl.textContent = String(activeCount);
+  }
+
+  function updatePaginationUI(visible: number, total: number) {
+    if (!loadMoreBtn || !paginationCount || !paginationContainer) return;
+
+    const hasMore = visible < total;
+
+    if (total === 0) {
+      paginationContainer.classList.add('hidden');
+      return;
+    }
+
+    paginationContainer.classList.remove('hidden');
+    paginationCount.textContent = `Showing ${visible} of ${total} resources`;
+
+    if (hasMore) {
+      loadMoreBtn.classList.remove('hidden');
+      loadMoreBtn.disabled = false;
+    } else {
+      loadMoreBtn.classList.add('hidden');
+    }
+  }
+
+  function readFromQuery(): FilterValues {
+    const params = new URLSearchParams(location.search);
+
+    const vals: FilterValues = {
+      q: params.get('q') || '',
+    };
+
+    filters.forEach(({ key }) => {
+      vals[key] = params.get(key) || '';
+    });
+
+    // Page from URL
     const pageParam = params.get('page');
     if (pageParam) {
       const parsed = parseInt(pageParam, 10);
-      if (!isNaN(parsed) && parsed > 0) {
+      if (!Number.isNaN(parsed) && parsed > 0) {
         currentPage = parsed;
       }
     }
 
     const hasAnyParam = Object.values(vals).some((v) => v);
 
-    // If no URL params, check localStorage or persona preference
+    // If no URL params, use persona preference / saved filters
     if (!hasAnyParam) {
       try {
-        // ALWAYS check persona preference first (syncs with homepage)
         const personaPref = localStorage.getItem('bfsi-persona-preference');
         console.log('Resources: Read persona preference:', personaPref);
 
-        // Then check saved filters for other fields
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
-          const parsed = JSON.parse(saved);
+          const parsed = JSON.parse(saved) as FilterValues;
           console.log('Resources: Loaded saved filters:', parsed);
-          // Use saved filters but override role with persona preference
+
           vals.role =
             personaPref && personaPref !== 'all'
               ? personaPref
               : personaPref === 'all'
                 ? 'all'
                 : 'executive';
+
           vals.industry = parsed.industry || '';
           vals.topic = parsed.topic || '';
           vals.content_type = parsed.content_type || '';
           vals.geography = parsed.geography || '';
           vals.q = parsed.q || '';
         } else {
-          // No saved filters - use persona preference or default
           if (personaPref && personaPref !== 'all') {
             vals.role = personaPref;
           } else if (!personaPref) {
@@ -155,37 +206,41 @@ export default function initResourceFilters() {
             vals.role = 'all';
           }
         }
+
         console.log('Resources: Setting role to:', vals.role);
       } catch {
-        /* ignore */
+        // ignore
       }
-    } else {
-      // Set defaults for empty URL params
-      if (!vals.role) vals.role = 'all';
+    } else if (!vals.role) {
+      // If URL has params but no role, default to "all"
+      vals.role = 'all';
     }
 
     setVals(vals);
     return vals;
   }
-  function apply(vals = getVals(), resetPage = false) {
-    // Reset to page 1 when filters change
+
+  function apply(vals: FilterValues = getVals(), resetPage = false): number {
     if (resetPage) {
       currentPage = 1;
     }
 
     let visible = 0;
-    let allowed = new Set(data.map((_, i) => i));
-    // dropdown filters
+    let allowed = new Set<number>(data.map((_, i) => i));
+
+    // Dropdown filters
     for (const { key } of filters) {
-      const v = (vals as any)[key];
-      if (!v || v === 'all') continue;
+      const value = vals[key];
+      if (!value || value === 'all') continue;
+
       const next = new Set<number>();
       allowed.forEach((idx) => {
-        if ((data as any)[idx][key] === v) next.add(idx);
+        if (data[idx][key] === value) next.add(idx);
       });
       allowed = next;
     }
-    // text search
+
+    // Text search
     if (vals.q) {
       if (FuseCtor) {
         const fuse = new FuseCtor(data, {
@@ -197,134 +252,132 @@ export default function initResourceFilters() {
             { name: 'authors', weight: 0.2 },
           ],
         });
+
         const res = fuse.search(vals.q);
         const ids = new Set(res.map((r: any) => r.refIndex));
         allowed = new Set([...allowed].filter((i) => ids.has(i)));
       } else {
         const q = vals.q.toLowerCase();
-        const match = (d: any) =>
+        const match = (d: IndexedItem) =>
           d.title.toLowerCase().includes(q) ||
           d.source_name.toLowerCase().includes(q) ||
           d.authors.toLowerCase().includes(q);
-        allowed = new Set([...allowed].filter((i) => match((data as any)[i])));
+
+        allowed = new Set([...allowed].filter((i) => match(data[i])));
       }
     }
-    // Paginate: only show up to currentPage * PAGE_SIZE items
+
+    // Pagination
     const filteredIndices = Array.from(allowed);
     const totalFiltered = filteredIndices.length;
     const visibleCount = Math.min(currentPage * PAGE_SIZE, totalFiltered);
     const visibleIndices = new Set(filteredIndices.slice(0, visibleCount));
 
-    // render
-    data.forEach((d, i) => {
-      const isFiltered = allowed.has(i);
-      const isPaginated = visibleIndices.has(i);
-      d.el.classList.toggle('hidden', !isPaginated);
-      if (isPaginated) visible++;
+    data.forEach((item, index) => {
+      const isVisible = visibleIndices.has(index);
+      item.el.classList.toggle('hidden', !isVisible);
+      if (isVisible) visible++;
     });
 
-    // Update UI
     if (empty) empty.classList.toggle('hidden', totalFiltered !== 0);
     if (countEl) countEl.textContent = `Showing ${visible} of ${list.children.length}`;
 
-    // Update pagination controls
     updatePaginationUI(visible, totalFiltered);
     updateQuery(vals);
 
     return visible;
   }
 
-  function updatePaginationUI(visible: number, total: number) {
-    if (!loadMoreBtn || !paginationCount || !paginationContainer) return;
-
-    const hasMore = visible < total;
-
-    if (total === 0) {
-      // No results - hide pagination
-      paginationContainer.classList.add('hidden');
-    } else {
-      paginationContainer.classList.remove('hidden');
-      paginationCount.textContent = `Showing ${visible} of ${total} resources`;
-
-      if (hasMore) {
-        loadMoreBtn.classList.remove('hidden');
-        loadMoreBtn.disabled = false;
-      } else {
-        loadMoreBtn.classList.add('hidden');
-      }
-    }
-  }
-
-  // init from query
+  // Initialise from query / storage
   const initVals = readFromQuery();
   apply(initVals);
   renderChipsSummary(initVals);
-  // events
-  filters.forEach(({ key, el }) =>
-    el?.addEventListener('change', () => {
+
+  // Filter change events
+  filters.forEach(({ key, el }) => {
+    el.addEventListener('change', () => {
       const vals = getVals();
+
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(vals));
-
-        // Sync role filter with homepage persona preference
         if (key === 'role') {
           const roleVal = vals.role || 'all';
           localStorage.setItem('bfsi-persona-preference', roleVal);
         }
       } catch {
-        /* ignore */
+        // ignore
       }
-      apply(vals, true); // Reset page when filter changes
+
+      apply(vals, true);
       renderChipsSummary(vals);
-    }),
-  );
+    });
+  });
+
+  // Debounced search
   const debounced = (() => {
-    let t: any;
+    let t: number | undefined;
     return (fn: () => void) => {
-      clearTimeout(t);
-      t = setTimeout(fn, 250);
+      if (t) window.clearTimeout(t);
+      t = window.setTimeout(fn, 250);
     };
   })();
+
   qEl?.addEventListener('input', () =>
     debounced(() => {
       const vals = getVals();
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(vals));
       } catch {
-        /* ignore */
+        // ignore
       }
-      apply(vals, true); // Reset page when search changes
+      apply(vals, true);
+      renderChipsSummary(vals);
     }),
   );
+
+  // Clear filters
   clearBtn?.addEventListener('click', () => {
-    setVals({ role: 'all', industry: '', topic: '', content_type: '', jurisdiction: '', q: '' });
+    const cleared: FilterValues = {
+      role: 'all',
+      industry: '',
+      topic: '',
+      content_type: '',
+      jurisdiction: '',
+      geography: '',
+      q: '',
+    };
+
+    setVals(cleared);
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
-      /* ignore */
+      // ignore
     }
-    apply(getVals(), true); // Reset page when clearing
+    apply(getVals(), true);
     renderChipsSummary(getVals());
   });
 
-  // Load More button
+  // Load More
   loadMoreBtn?.addEventListener('click', () => {
     currentPage++;
     apply(getVals(), false);
 
-    // Smooth scroll to first new item
-    const visibleItems = Array.from(list.children).filter((el) => !el.classList.contains('hidden'));
+    const visibleItems = Array.from(list.children).filter(
+      (el) => !(el as HTMLElement).classList.contains('hidden'),
+    );
     const firstNewItem = visibleItems[(currentPage - 1) * PAGE_SIZE];
     if (firstNewItem) {
-      firstNewItem.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      (firstNewItem as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   });
 
-  // Mobile bottom-sheet controls
+  // Mobile bottom-sheet filters
   const openBtn = document.getElementById('open-sheet');
   const sheet = document.getElementById('filter-sheet');
   const backdrop = document.getElementById('sheet-backdrop');
   const closeBtn = document.getElementById('close-sheet');
+  const mobileSearchBtn = document.getElementById('mobile-search-btn');
+
   if (openBtn && sheet) {
     const desktop = {
       q: document.getElementById('q') as HTMLInputElement | null,
@@ -334,6 +387,7 @@ export default function initResourceFilters() {
       content_type: document.getElementById('f-content_type') as HTMLSelectElement | null,
       jurisdiction: document.getElementById('f-jurisdiction') as HTMLSelectElement | null,
     } as const;
+
     const mobile = {
       q: document.getElementById('m-q') as HTMLInputElement | null,
       role: document.getElementById('m-f-role') as HTMLSelectElement | null,
@@ -343,7 +397,7 @@ export default function initResourceFilters() {
       jurisdiction: document.getElementById('m-f-jurisdiction') as HTMLSelectElement | null,
     } as const;
 
-    function getDesktopVals() {
+    function getDesktopVals(): FilterValues {
       return {
         role: desktop.role?.value || '',
         industry: desktop.industry?.value || '',
@@ -353,7 +407,8 @@ export default function initResourceFilters() {
         q: desktop.q?.value?.trim() || '',
       };
     }
-    function setDesktopVals(vals: Record<string, string>) {
+
+    function setDesktopVals(vals: FilterValues) {
       if (desktop.role) desktop.role.value = vals.role || '';
       if (desktop.industry) desktop.industry.value = vals.industry || '';
       if (desktop.topic) desktop.topic.value = vals.topic || '';
@@ -361,27 +416,7 @@ export default function initResourceFilters() {
       if (desktop.jurisdiction) desktop.jurisdiction.value = vals.jurisdiction || '';
       if (desktop.q) desktop.q.value = vals.q || '';
     }
-    function applyFromDesktop() {
-      ['role', 'industry', 'topic', 'content_type', 'jurisdiction'].forEach((k) => {
-        const el = (desktop as any)[k] as HTMLSelectElement | null;
-        if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
-      });
-      if (desktop.q) desktop.q.dispatchEvent(new Event('input', { bubbles: true }));
-      renderChipsSummary(getDesktopVals());
-    }
-    function openSheet() {
-      syncToMobile();
-      sheet.classList.remove('hidden');
-      sheet.setAttribute('aria-hidden', 'false');
-      (document.body as HTMLBodyElement).style.overflow = 'hidden';
-      mobile.role?.focus();
-    }
-    function closeSheet() {
-      sheet.classList.add('hidden');
-      sheet.setAttribute('aria-hidden', 'true');
-      (document.body as HTMLBodyElement).style.overflow = '';
-      (openBtn as HTMLElement).focus();
-    }
+
     function syncToMobile() {
       const v = getDesktopVals();
       if (mobile.role) mobile.role.value = v.role;
@@ -392,16 +427,42 @@ export default function initResourceFilters() {
       if (mobile.q) mobile.q.value = v.q;
     }
 
+    function applyFromDesktop() {
+      ['role', 'industry', 'topic', 'content_type', 'jurisdiction'].forEach((k) => {
+        const el = (desktop as any)[k] as HTMLSelectElement | null;
+        if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      if (desktop.q) desktop.q.dispatchEvent(new Event('input', { bubbles: true }));
+      renderChipsSummary(getDesktopVals());
+    }
+
+    function openSheet() {
+      syncToMobile();
+      sheet.classList.remove('hidden');
+      sheet.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      mobile.role?.focus();
+    }
+
+    function closeSheet() {
+      sheet.classList.add('hidden');
+      sheet.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      (openBtn as HTMLElement).focus();
+    }
+
     openBtn.addEventListener('click', openSheet);
     closeBtn?.addEventListener('click', closeSheet);
     backdrop?.addEventListener('click', closeSheet);
+
     window.addEventListener('keydown', (e) => {
-      if ((e as KeyboardEvent).key === 'Escape' && sheet && !sheet.classList.contains('hidden'))
+      if ((e as KeyboardEvent).key === 'Escape' && !sheet.classList.contains('hidden')) {
         closeSheet();
+      }
     });
 
     document.getElementById('m-clear')?.addEventListener('click', () => {
-      const empty = {
+      const emptyVals: FilterValues = {
         role: '',
         industry: '',
         topic: '',
@@ -409,13 +470,14 @@ export default function initResourceFilters() {
         jurisdiction: '',
         q: '',
       };
-      setDesktopVals(empty);
-      currentPage = 1; // Reset page when clearing filters
+      setDesktopVals(emptyVals);
+      currentPage = 1;
       applyFromDesktop();
       closeSheet();
     });
+
     document.getElementById('m-apply')?.addEventListener('click', () => {
-      const vals = {
+      const vals: FilterValues = {
         role: mobile.role?.value || '',
         industry: mobile.industry?.value || '',
         topic: mobile.topic?.value || '',
@@ -424,35 +486,30 @@ export default function initResourceFilters() {
         q: mobile.q?.value?.trim() || '',
       };
       setDesktopVals(vals);
-      currentPage = 1; // Reset page when applying mobile filters
+      currentPage = 1;
       applyFromDesktop();
       closeSheet();
+    });
+
+    // Mobile search button opens sheet with search focused
+    mobileSearchBtn?.addEventListener('click', () => {
+      syncToMobile();
+      sheet.classList.remove('hidden');
+      sheet.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      const searchInput = document.getElementById('m-q') as HTMLInputElement | null;
+      if (searchInput) {
+        setTimeout(() => searchInput.focus(), 100);
+      }
     });
 
     renderChipsSummary(getDesktopVals());
   }
 
-  // Mobile search button - opens filter sheet with search focused
-  const mobileSearchBtn = document.getElementById('mobile-search-btn');
-  mobileSearchBtn?.addEventListener('click', () => {
-    if (openBtn && sheet) {
-      syncToMobile();
-      sheet.classList.remove('hidden');
-      sheet.setAttribute('aria-hidden', 'false');
-      (document.body as HTMLBodyElement).style.overflow = 'hidden';
-      // Focus search input instead of role
-      const searchInput = document.getElementById('m-q');
-      if (searchInput) {
-        setTimeout(() => searchInput.focus(), 100);
-      }
-    }
-  });
-
   // Collapsible Advanced Filters
   const toggleAdvancedBtn = document.getElementById('toggle-advanced-filters');
   const advancedFilters = document.getElementById('advanced-filters');
   const advancedIcon = document.getElementById('advanced-filters-icon');
-  const ADVANCED_FILTERS_KEY = 'advanced-filters-expanded';
 
   function toggleAdvancedFilters() {
     if (!advancedFilters || !toggleAdvancedBtn || !advancedIcon) return;
@@ -473,15 +530,14 @@ export default function initResourceFilters() {
       if (buttonText) buttonText.textContent = 'More filters';
     }
 
-    // Persist state
     try {
       localStorage.setItem(ADVANCED_FILTERS_KEY, String(newState));
     } catch {
-      /* ignore */
+      // ignore
     }
   }
 
-  // Restore advanced filters state from localStorage
+  // Restore advanced filters state
   try {
     const savedState = localStorage.getItem(ADVANCED_FILTERS_KEY);
     if (savedState === 'true' && advancedFilters && toggleAdvancedBtn && advancedIcon) {
@@ -492,7 +548,7 @@ export default function initResourceFilters() {
       if (buttonText) buttonText.textContent = 'Fewer filters';
     }
   } catch {
-    /* ignore */
+    // ignore
   }
 
   toggleAdvancedBtn?.addEventListener('click', toggleAdvancedFilters);

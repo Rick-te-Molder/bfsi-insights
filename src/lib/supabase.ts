@@ -9,50 +9,72 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Type definitions for our resources
+// ------------------------------------------------------------
+// Resource type based on kb_publication_pretty view
+// ------------------------------------------------------------
 export interface Resource {
   id: string;
   slug: string;
   title: string;
-  authors: string[];
-  date_published: string;
-  date_added: string;
-  last_edited: string;
+  authors: string[]; // always array
   url: string;
-  source_name: string;
-  source_domain: string;
+  source_name: string | null;
+  date_published: string | null;
+  date_added: string | null;
   thumbnail: string | null;
-  summary_short: string;
-  summary_medium: string;
-  summary_long: string;
-  note: string;
-  role: string;
-  content_type: string;
-  geography: string;
-  industry: string;
-  topic: string;
-  use_cases: string;
-  agentic_capabilities: string;
-  tags: string[];
+
+  summary_short: string | null;
+  summary_medium: string | null;
+  summary_long: string | null;
+
+  role: string | null;
+  content_type: string | null;
+  geography: string | null;
+
+  industry: string | null;
+  topic: string | null;
+  industries?: string[];
+  topics?: string[];
+  processes?: string[];
+
+  use_cases: string | null;
+  agentic_capabilities: string | null;
+
   status: string;
-  internal_notes: string | null;
 }
 
-// Helper to normalize authors field (DB stores as string, component expects array)
-function normalizeResource(resource: any): Resource {
+// ------------------------------------------------------------
+// Normalize authors: DB stores as "John Doe, Jane Smith"
+// ------------------------------------------------------------
+function normalizeAuthors(raw: unknown): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map((x) => String(x).trim()).filter(Boolean);
+
+  return String(raw)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+// ------------------------------------------------------------
+// Normalize a single resource row
+// ------------------------------------------------------------
+function normalizeResource(row: any): Resource {
   return {
-    ...resource,
-    authors: resource.authors ? resource.authors.split(',').map((a: string) => a.trim()) : [],
+    ...row,
+    authors: normalizeAuthors(row.authors),
   };
 }
 
+// ------------------------------------------------------------
 // Fetch all published resources
+// ------------------------------------------------------------
 export async function getAllResources(): Promise<Resource[]> {
   const { data, error } = await supabase
-    .from('kb_resource_pretty')
+    .from('kb_publication_pretty')
     .select('*')
     .eq('status', 'published')
-    .order('date_published', { ascending: false });
+    .order('date_added', { ascending: false });
 
   if (error) {
     console.error('Error fetching resources:', error);
@@ -62,37 +84,38 @@ export async function getAllResources(): Promise<Resource[]> {
   return (data || []).map(normalizeResource);
 }
 
+// ------------------------------------------------------------
 // Fetch a single resource by slug
+// ------------------------------------------------------------
 export async function getResourceBySlug(slug: string): Promise<Resource | null> {
   const { data, error } = await supabase
-    .from('kb_resource_pretty')
+    .from('kb_publication_pretty')
     .select('*')
     .eq('slug', slug)
     .eq('status', 'published')
     .single();
 
   if (error) {
-    console.error(`Error fetching resource ${slug}:`, error);
+    console.error(`Error fetching resource with slug "${slug}":`, error.message);
     return null;
   }
 
   return data ? normalizeResource(data) : null;
 }
 
-// Fetch resources with filters (dynamic filter support)
+// ------------------------------------------------------------
+// Fetch resources using arbitrary filters
+// ------------------------------------------------------------
 export async function getFilteredResources(filters: Record<string, string>): Promise<Resource[]> {
-  let query = supabase.from('kb_resource_pretty').select('*').eq('status', 'published');
+  let query = supabase.from('kb_publication_pretty').select('*').eq('status', 'published');
 
-  // Dynamically apply all filters
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value) {
+  for (const [key, value] of Object.entries(filters)) {
+    if (value != null && value !== '') {
       query = query.eq(key, value);
     }
-  });
+  }
 
-  query = query.order('date_published', { ascending: false });
-
-  const { data, error } = await query;
+  const { data, error } = await query.order('date_added', { ascending: false });
 
   if (error) {
     console.error('Error fetching filtered resources:', error);
