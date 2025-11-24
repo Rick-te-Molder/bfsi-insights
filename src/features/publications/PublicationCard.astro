@@ -35,7 +35,14 @@ try {
   const thumbsDirUrl = new URL('../../../public/thumbs/', import.meta.url);
   const dirPath = thumbsDirUrl.pathname;
   thumbFiles = fs.readdirSync(dirPath).filter((f) => /\.(webp|png|jpe?g)$/i.test(f));
-} catch {
+  if (index === 0) {
+    console.log(`[BUILD] Found ${thumbFiles.length} thumbnails in ${dirPath}`);
+    console.log(`[BUILD] First 5 files:`, thumbFiles.slice(0, 5));
+  }
+} catch (err) {
+  if (index === 0) {
+    console.error(`[BUILD] Failed to read thumbs directory:`, err);
+  }
   thumbFiles = [];
 }
 
@@ -83,15 +90,20 @@ const isUpdated =
       })()
     : false;
 
-const candidates = [...findLocalThumbs(item.slug), ...expandItemThumb(item.thumbnail)];
+const localThumbs = findLocalThumbs(item.slug);
+const itemThumbs = expandItemThumb(item.thumbnail);
+const candidates = [...localThumbs, ...itemThumbs];
 const hasImage = candidates.length > 0;
 
-// Debug: log first few items
+// Debug: log first few items during BUILD
 if (index < 3) {
-  console.log(
-    `Card ${index} - slug: ${item.slug}, hasImage: ${hasImage}, candidates:`,
-    candidates.slice(0, 3),
-  );
+  console.log(`[BUILD] Card ${index}:`);
+  console.log(`  slug: ${item.slug}`);
+  console.log(`  thumbnail field: ${item.thumbnail}`);
+  console.log(`  localThumbs found: ${localThumbs.length}`, localThumbs);
+  console.log(`  itemThumbs: ${itemThumbs.length}`, itemThumbs);
+  console.log(`  hasImage: ${hasImage}`);
+  console.log(`  candidates:`, candidates.slice(0, 3));
 }
 ---
 
