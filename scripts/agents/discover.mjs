@@ -27,7 +27,7 @@ const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPAB
  */
 async function loadSources() {
   const { data, error } = await supabase
-    .from('ref_source')
+    .from('kb_source')
     .select('slug, name, domain, tier, category, rss_feed')
     .eq('enabled', true)
     .not('rss_feed', 'is', null)

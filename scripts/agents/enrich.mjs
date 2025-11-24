@@ -125,10 +125,7 @@ async function loadTaxonomies() {
       supabase.from('bfsi_industry').select('code, name, level').order('sort_order'),
       supabase.from('bfsi_topic').select('code, name, level').order('sort_order'),
       supabase.from('kb_role').select('*').order('sort_order'),
-      supabase
-        .from('kb_publication_type')
-        .select('code, quality_weight, sort_order')
-        .order('sort_order'),
+      supabase.from('kb_publication_type').select('code, sort_order').order('sort_order'),
       supabase.from('ag_use_case').select('code').order('code'),
       supabase.from('ag_capability').select('code').order('code'),
       supabase.from('kb_source').select('name, tier, category, enabled').eq('enabled', true),
@@ -165,11 +162,9 @@ async function loadTaxonomies() {
 
   const contentTypeCodes = (publicationTypes.data || []).map((t) => t.code).filter(Boolean);
 
+  // Use default weight of 0.7 for all content types since quality_weight column doesn't exist
   const contentTypeWeights = Object.fromEntries(
-    (publicationTypes.data || []).map((t) => [
-      t.code,
-      t.quality_weight != null ? t.quality_weight : 0.7,
-    ]),
+    (publicationTypes.data || []).map((t) => [t.code, 0.7]),
   );
 
   const useCaseCodes = (useCases.data || []).map((u) => u.code).filter(Boolean);
