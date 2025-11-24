@@ -83,11 +83,12 @@ const isUpdated =
       })()
     : false;
 
-const localThumbs = findLocalThumbs(item.slug);
+// Only use thumbnails if explicitly set in database
+const hasImage = !!item.thumbnail;
 const itemThumbs = expandItemThumb(item.thumbnail);
+const localThumbs = hasImage ? findLocalThumbs(item.slug) : [];
 // Put database thumbnail first, then local guesses as fallback
 const candidates = [...itemThumbs, ...localThumbs];
-const hasImage = candidates.length > 0;
 ---
 
 <li
