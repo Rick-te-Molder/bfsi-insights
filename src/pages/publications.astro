@@ -393,24 +393,11 @@ const expandItemThumb = (t: string | undefined) => {
     function enhanceImages(root) {
       const container = root || document;
       const imgs = Array.from(container.querySelectorAll('li.group img'));
-      console.log('[enhanceImages] Found', imgs.length, 'images');
 
-      imgs.forEach((img, i) => {
-        if (i < 3)
-          console.log(
-            '[enhanceImages] Image',
-            i,
-            'src:',
-            img.src,
-            'complete:',
-            img.complete,
-            'naturalWidth:',
-            img.naturalWidth,
-          );
+      imgs.forEach((img) => {
         const placeholder = img.previousElementSibling;
 
         const onload = () => {
-          console.log('[enhanceImages] Image loaded:', img.src.slice(-50));
           img.classList.remove('opacity-0');
           if (placeholder && placeholder instanceof HTMLElement) {
             placeholder.style.display = 'none';
@@ -418,7 +405,6 @@ const expandItemThumb = (t: string | undefined) => {
         };
 
         const onerror = () => {
-          console.log('[enhanceImages] Image error:', img.src.slice(-50), 'trying next');
           const n = img.dataset?.next || '';
           if (n) {
             const parts = n.split('|');
