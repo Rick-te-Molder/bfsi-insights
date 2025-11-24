@@ -150,7 +150,7 @@ Run these checks in **Supabase Studio SQL Editor**:
 SELECT schemaname, tablename, rowsecurity
 FROM pg_tables
 WHERE schemaname = 'public'
-AND tablename IN ('kb_publication', 'ingestion_queue', 'kb_resource_stg');
+AND tablename IN ('kb_publication', 'ingestion_queue');
 ```
 
 Expected: `rowsecurity = true` for all tables
