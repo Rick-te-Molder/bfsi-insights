@@ -480,7 +480,7 @@ function generatePrompt(title, content, taxonomies) {
 You are a senior BFSI and agentic AI analyst.
 
 You receive:
-- A TITLE of a resource
+- A TITLE of a publication
 - A CONTENT snippet (possibly partial)
 - Canonical taxonomies for:
   - role: ${taxonomies.role.join(', ')}
@@ -492,7 +492,7 @@ You receive:
   - agentic_capabilities: ${taxonomies.agentic_capabilities.join(', ')}
 
 Your tasks:
-1. Decide if this resource is BFSI-relevant.
+1. Decide if this publication is BFSI-relevant.
 2. If relevant, assign:
    - role (single value from taxonomies.role)
    - industry (one or more codes from taxonomies.industry)
