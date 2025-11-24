@@ -149,6 +149,7 @@ const hasImage = candidates.length > 0;
             class="relative w-full rounded-md border border-neutral-800 bg-neutral-800/40"
             style="aspect-ratio: 16 / 9; overflow: hidden;"
           >
+            <div class="absolute inset-0 rounded-md border border-neutral-800 bg-neutral-800/40" />
             <img
               src={candidates[0]}
               data-next={candidates.slice(1).join('|')}
@@ -160,7 +161,7 @@ const hasImage = candidates.length > 0;
               decoding="async"
               referrerpolicy="no-referrer"
               sizes="(min-width: 1024px) 560px, (min-width: 640px) 480px, 100vw"
-              class="absolute inset-0 w-full h-full object-cover"
+              class="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
             />
           </div>
         ) : (
