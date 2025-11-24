@@ -24,5 +24,7 @@ export default defineConfig({
   site: 'https://www.bfsiinsights.com',
   output: 'static',
   integrations: [tailwind()],
-  vite: { plugins: [emitHeadersFile()] },
+  vite: {
+    plugins: [emitHeadersFile()],
+  },
 });
