@@ -46,7 +46,7 @@
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "astro-eslint-parser": "^1.0.2",
-    "eslint": "^9.38.0",
+    "eslint": "^9.39.1",
     "eslint-plugin-astro": "^1.0.2",
     "globals": "^14.0.0",
     "happy-dom": "^20.0.10",
