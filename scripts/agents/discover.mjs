@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Discovery Agent - Finds new resources and adds to ingestion_queue
+ * Discovery Agent - Finds new publications and adds to ingestion_queue
  *
  * Usage:
  *   node scripts/discover.mjs                    # Run discovery
@@ -84,7 +84,7 @@ async function discover(options = {}) {
 
     try {
       const candidates = await fetchFromSource(src);
-      console.log(`   Found ${candidates.length} potential resources`);
+      console.log(`   Found ${candidates.length} potential publications`);
 
       for (const candidate of candidates) {
         if (limit && totalNew >= limit) {
@@ -375,7 +375,7 @@ async function insertToQueue(candidate) {
     .from('ingestion_queue')
     .insert({
       url: candidate.url,
-      content_type: 'resource',
+      content_type: 'publication',
       payload,
       payload_schema_version: 1,
       status: 'pending',
