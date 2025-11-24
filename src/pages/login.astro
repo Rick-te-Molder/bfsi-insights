@@ -1,4 +1,5 @@
 ---
+export const prerender = false;
 import Base from '../layouts/Base.astro';
 ---
 
@@ -72,73 +73,73 @@ import Base from '../layouts/Base.astro';
       import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
     );
 
-    const form = document.getElementById('login-form') as HTMLFormElement;
-    const emailInput = document.getElementById('email') as HTMLInputElement;
-    const passwordInput = document.getElementById('password') as HTMLInputElement;
-    const errorDiv = document.getElementById('error') as HTMLDivElement;
-    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
-    const btnText = document.getElementById('btn-text') as HTMLSpanElement;
-    const btnLoading = document.getElementById('btn-loading') as HTMLSpanElement;
+    const form = document.getElementById('login-form');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const errorDiv = document.getElementById('error');
+    const submitBtn = document.getElementById('submit-btn');
+    const btnText = document.getElementById('btn-text');
+    const btnLoading = document.getElementById('btn-loading');
 
-    function showError(message: string) {
-      errorDiv.textContent = message;
-      errorDiv.classList.remove('hidden');
-    }
-
-    function hideError() {
-      errorDiv.classList.add('hidden');
-      errorDiv.textContent = '';
-    }
-
-    function setLoading(isLoading: boolean) {
-      submitBtn.disabled = isLoading;
-      if (isLoading) {
-        btnText.classList.add('hidden');
-        btnLoading.classList.remove('hidden');
-      } else {
-        btnText.classList.remove('hidden');
-        btnLoading.classList.add('hidden');
+    if (form && emailInput && passwordInput && errorDiv && submitBtn && btnText && btnLoading) {
+      function showError(message) {
+        errorDiv.textContent = message;
+        errorDiv.classList.remove('hidden');
       }
-    }
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      hideError();
-      setLoading(true);
-
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
-
-      try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) {
-          showError(error.message);
-          setLoading(false);
-          return;
-        }
-
-        if (!data.session) {
-          showError('No session returned. Please try again.');
-          setLoading(false);
-          return;
-        }
-
-        // Set cookies with proper attributes
-        const cookieOptions = 'path=/; max-age=604800; samesite=lax';
-        document.cookie = `sb-access-token=${data.session.access_token}; ${cookieOptions}`;
-        document.cookie = `sb-refresh-token=${data.session.refresh_token}; ${cookieOptions}`;
-
-        // Redirect to admin review
-        window.location.href = '/admin/review';
-      } catch (err) {
-        showError('An unexpected error occurred. Please try again.');
-        setLoading(false);
-        console.error('Login error:', err);
+      function hideError() {
+        errorDiv.classList.add('hidden');
+        errorDiv.textContent = '';
       }
-    });
+
+      function setLoading(isLoading) {
+        submitBtn.disabled = isLoading;
+        if (isLoading) {
+          btnText.classList.add('hidden');
+          btnLoading.classList.remove('hidden');
+        } else {
+          btnText.classList.remove('hidden');
+          btnLoading.classList.add('hidden');
+        }
+      }
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideError();
+        setLoading(true);
+
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (error) {
+            showError(error.message);
+            setLoading(false);
+            return;
+          }
+
+          if (!data.session) {
+            showError('No session returned. Please try again.');
+            setLoading(false);
+            return;
+          }
+
+          const cookieOptions = 'path=/; max-age=604800; samesite=lax';
+          document.cookie = `sb-access-token=${data.session.access_token}; ${cookieOptions}`;
+          document.cookie = `sb-refresh-token=${data.session.refresh_token}; ${cookieOptions}`;
+
+          window.location.href = '/admin/review';
+        } catch (err) {
+          showError('An unexpected error occurred. Please try again.');
+          setLoading(false);
+          console.error('Login error:', err);
+        }
+      });
+    }
   </script>
 </Base>

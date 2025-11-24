@@ -1,6 +1,6 @@
 ---
+export const prerender = false;
 import Base from '../../layouts/Base.astro';
-// Client-side only - no server-side auth or data fetching
 ---
 
 <Base title="Review Queue">
@@ -9,7 +9,7 @@ import Base from '../../layouts/Base.astro';
       <div class="flex items-start justify-between">
         <div>
           <h1 class="text-4xl font-bold">📋 Review Queue</h1>
-          <p class="mt-2 text-neutral-300">Approve or reject discovered resources</p>
+          <p class="mt-2 text-neutral-300">Approve or reject discovered publications</p>
         </div>
         <div class="flex gap-3">
           <select
@@ -30,9 +30,8 @@ import Base from '../../layouts/Base.astro';
           </select>
         </div>
       </div>
-      <div id="stats" class="mt-4 flex gap-4 text-sm">
-        <!-- Stats loaded client-side -->
-      </div>
+
+      <div id="stats" class="mt-4 flex gap-4 text-sm"></div>
     </header>
 
     <div
@@ -56,9 +55,7 @@ import Base from '../../layouts/Base.astro';
       </code>
     </div>
 
-    <div id="items-container" class="space-y-6">
-      <!-- Items loaded client-side -->
-    </div>
+    <div id="items-container" class="space-y-6"></div>
   </div>
 
   <script>
@@ -70,38 +67,40 @@ import Base from '../../layouts/Base.astro';
     );
 
     async function loadQueue() {
-      const loading = document.getElementById('loading')!;
-      const error = document.getElementById('error')!;
-      const statsDiv = document.getElementById('stats')!;
-      const unenrichedNotice = document.getElementById('unenriched-notice')!;
-      const container = document.getElementById('items-container')!;
+      const loading = document.getElementById('loading');
+      const errorBox = document.getElementById('error');
+      const statsDiv = document.getElementById('stats');
+      const unenrichedNotice = document.getElementById('unenriched-notice');
+      const container = document.getElementById('items-container');
 
       try {
-        // Check auth
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const sessionRes = await supabase.auth.getSession();
+        const session = sessionRes?.data?.session;
 
         if (!session) {
           window.location.href = '/login';
           return;
         }
 
-        // Load queue data (enriched items ready for review)
-        const { data: pending, error: loadError } = await supabase
+        const result = await supabase
           .from('ingestion_queue')
           .select('*')
           .eq('status', 'enriched')
           .order('fetched_at', { ascending: false });
 
-        if (loadError) throw loadError;
+        if (result.error) throw result.error;
 
         loading.classList.add('hidden');
+        const pending = result.data || [];
 
-        const enriched = (pending || []).filter((item) => item.payload?.summary?.short);
-        const notEnriched = (pending || []).filter((item) => !item.payload?.summary?.short);
+        const enriched = pending.filter(
+          (x) => x.payload && x.payload.summary && x.payload.summary.short,
+        );
+        const notEnriched = pending.filter(
+          (x) => !(x.payload && x.payload.summary && x.payload.summary.short),
+        );
 
-        // Update stats
+        // Stats
         statsDiv.innerHTML = `
           <span class="rounded-full bg-sky-500/10 px-3 py-1 text-sky-300">
             ${enriched.length} ready to review
@@ -112,7 +111,7 @@ import Base from '../../layouts/Base.astro';
         `;
 
         if (notEnriched.length > 0) {
-          document.getElementById('unenriched-count')!.textContent = `⏳ ${notEnriched.length}`;
+          document.getElementById('unenriched-count').textContent = '⏳ ' + notEnriched.length;
           unenrichedNotice.classList.remove('hidden');
         }
 
@@ -122,92 +121,79 @@ import Base from '../../layouts/Base.astro';
           return;
         }
 
-        // Render items
         container.innerHTML = enriched
           .map(
             (item) => `
-          <article class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 transition hover:border-neutral-700" data-item-id="${item.id}">
-            <div class="flex items-start justify-between gap-4">
-              <div class="flex-1">
-                <h2 class="text-2xl font-semibold text-sky-200">${item.payload.title}</h2>
-                <div class="mt-2 flex flex-wrap gap-2 text-sm text-neutral-400">
-                  <span>🔗 ${item.payload.source}</span>
-                  <span>📅 ${new Date(item.payload.published_at).toLocaleDateString()}</span>
+            <article class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 transition hover:border-neutral-700" data-item-id="${item.id}">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1">
+                  <h2 class="text-2xl font-semibold text-sky-200">${item.payload.title}</h2>
+                  <div class="mt-2 flex flex-wrap gap-2 text-sm text-neutral-400">
+                    <span>🔗 ${item.payload.source}</span>
+                    <span>📅 ${new Date(item.payload.published_at).toLocaleDateString()}</span>
+                  </div>
+                  ${item.payload.summary.short ? `<p class="mt-4 text-neutral-300">${item.payload.summary.short}</p>` : ''}
+                  <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="mt-4 inline-block text-sm text-sky-400 hover:text-sky-300">View original →</a>
                 </div>
-                ${item.payload.summary?.short ? `<p class="mt-4 text-neutral-300">${item.payload.summary.short}</p>` : ''}
-                <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="mt-4 inline-block text-sm text-sky-400 hover:text-sky-300">View original →</a>
+
+                <div class="flex flex-col gap-2">
+                  <button class="approve-btn rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-500 transition" data-id="${item.id}">✓ Approve</button>
+                  <button class="reject-btn rounded-lg bg-red-600 px-6 py-2 font-semibold text-white hover:bg-red-500 transition" data-id="${item.id}">✗ Reject</button>
+                </div>
               </div>
-              <div class="flex flex-col gap-2">
-                <button class="approve-btn rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-500 transition" data-id="${item.id}">✓ Approve</button>
-                <button class="reject-btn rounded-lg bg-red-600 px-6 py-2 font-semibold text-white hover:bg-red-500 transition" data-id="${item.id}">✗ Reject</button>
-              </div>
-            </div>
-          </article>
-        `,
+            </article>
+          `,
           )
           .join('');
 
-        // Setup event handlers with delegation
         container.addEventListener('click', async (e) => {
-          const target = e.target as HTMLElement;
+          const target = e.target;
 
+          // Approve
           if (target.classList.contains('approve-btn')) {
             const id = target.dataset.id;
-            if (!id) return;
+            const article = document.querySelector('[data-item-id="' + id + '"]');
 
-            const article = document.querySelector(`[data-item-id="${id}"]`);
-            if (!article) return;
-
-            try {
-              // Call Supabase RPC directly (has admin check built-in)
-              const { error } = await supabase.rpc('approve_from_queue', { p_queue_id: id });
-
-              if (error) {
-                alert('Approval failed: ' + error.message);
-              } else {
-                article.classList.add('opacity-50');
-                target.textContent = '✓ Approved!';
-                target.disabled = true;
-                setTimeout(() => article.remove(), 1000);
-              }
-            } catch (err) {
-              alert('Request failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+            const result = await supabase.rpc('approve_from_queue', { p_queue_id: id });
+            if (result.error) {
+              alert('Approval failed: ' + result.error.message);
+              return;
             }
-          } else if (target.classList.contains('reject-btn')) {
-            const id = target.dataset.id;
-            if (!id) return;
 
+            article.classList.add('opacity-50');
+            target.textContent = '✓ Approved!';
+            target.disabled = true;
+            setTimeout(() => article.remove(), 1000);
+          }
+
+          // Reject
+          if (target.classList.contains('reject-btn')) {
+            const id = target.dataset.id;
             const reason = prompt('Reason for rejection (optional):');
             if (reason === null) return;
 
-            const article = document.querySelector(`[data-item-id="${id}"]`);
-            if (!article) return;
+            const article = document.querySelector('[data-item-id="' + id + '"]');
 
-            try {
-              // Call Supabase RPC directly (has admin check built-in)
-              const { error } = await supabase.rpc('reject_from_queue', {
-                p_queue_id: id,
-                p_reason: reason || null,
-              });
+            const result = await supabase.rpc('reject_from_queue', {
+              p_queue_id: id,
+              p_reason: reason || null,
+            });
 
-              if (error) {
-                alert('Error: ' + error.message);
-              } else {
-                article.classList.add('opacity-50');
-                target.textContent = '✗ Rejected';
-                target.disabled = true;
-                setTimeout(() => article.remove(), 1000);
-              }
-            } catch (err) {
-              alert('Failed to reject: ' + (err instanceof Error ? err.message : 'Unknown error'));
+            if (result.error) {
+              alert('Error: ' + result.error.message);
+              return;
             }
+
+            article.classList.add('opacity-50');
+            target.textContent = '✗ Rejected';
+            target.disabled = true;
+            setTimeout(() => article.remove(), 1000);
           }
         });
       } catch (err) {
         loading.classList.add('hidden');
-        error.classList.remove('hidden');
-        error.querySelector('p')!.textContent =
-          err instanceof Error ? err.message : 'Failed to load queue';
+        errorBox.classList.remove('hidden');
+        errorBox.querySelector('p').textContent = err.message || 'Failed to load queue';
       }
     }
 

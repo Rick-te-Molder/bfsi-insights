@@ -1,13 +1,13 @@
 ---
+export const prerender = false;
 import Base from '../../layouts/Base.astro';
-// Client-side only
 ---
 
 <Base title="Rejected Items">
   <div class="mx-auto max-w-7xl px-4 py-8">
     <header class="mb-8">
       <h1 class="text-4xl font-bold">🗑️ Rejected Items</h1>
-      <p class="mt-2 text-neutral-300">Review and restore previously rejected resources</p>
+      <p class="mt-2 text-neutral-300">Review and restore previously rejected publications</p>
       <div id="stats" class="mt-4 flex gap-4 text-sm">
         <a
           href="/admin/review"
@@ -44,16 +44,19 @@ import Base from '../../layouts/Base.astro';
     );
 
     async function loadRejected() {
-      const loading = document.getElementById('loading')!;
-      const error = document.getElementById('error')!;
-      const statsDiv = document.getElementById('stats')!;
-      const container = document.getElementById('items-container')!;
+      const loading = document.getElementById('loading');
+      const errorBox = document.getElementById('error');
+      const statsDiv = document.getElementById('stats');
+      const container = document.getElementById('items-container');
+
+      if (!loading || !errorBox || !statsDiv || !container) {
+        return;
+      }
 
       try {
         // Check auth
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        const sessionRes = await supabase.auth.getSession();
+        const session = sessionRes && sessionRes.data && sessionRes.data.session;
 
         if (!session) {
           window.location.href = '/login';
@@ -61,20 +64,27 @@ import Base from '../../layouts/Base.astro';
         }
 
         // Load rejected items
-        const { data: rejected, error: loadError } = await supabase
+        const result = await supabase
           .from('ingestion_queue')
           .select('*')
           .eq('status', 'rejected')
           .order('reviewed_at', { ascending: false });
 
-        if (loadError) throw loadError;
+        if (result.error) {
+          throw result.error;
+        }
+
+        const rejected = result.data || [];
 
         loading.classList.add('hidden');
 
         // Add count to stats
-        statsDiv.innerHTML += `<span class="rounded-full bg-red-500/10 px-3 py-1 text-red-300">${rejected?.length || 0} rejected items</span>`;
+        statsDiv.innerHTML +=
+          '<span class="rounded-full bg-red-500/10 px-3 py-1 text-red-300">' +
+          rejected.length +
+          ' rejected items</span>';
 
-        if (!rejected || rejected.length === 0) {
+        if (rejected.length === 0) {
           container.innerHTML =
             '<div class="rounded-lg border border-neutral-800 bg-neutral-900/60 p-8 text-center"><p class="text-neutral-400">✨ No rejected items!</p></div>';
           return;
@@ -91,13 +101,26 @@ import Base from '../../layouts/Base.astro';
                 <div class="mt-2 flex flex-wrap gap-2 text-sm text-neutral-400">
                   <span>🔗 ${item.payload.source}</span>
                   <span>📅 ${new Date(item.payload.published_at).toLocaleDateString()}</span>
-                  <span class="text-red-400">✖ Rejected: ${new Date(item.reviewed_at).toLocaleDateString()}</span>
+                  <span class="text-red-400">✖ Rejected: ${new Date(
+                    item.reviewed_at,
+                  ).toLocaleDateString()}</span>
                 </div>
-                ${item.rejection_reason ? `<div class="mt-3 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2"><p class="text-sm font-medium text-red-300">Rejection reason:</p><p class="text-sm text-red-200">${item.rejection_reason}</p></div>` : ''}
-                <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="mt-4 inline-block text-sm text-sky-400 hover:text-sky-300">View original →</a>
+                ${
+                  item.rejection_reason
+                    ? `<div class="mt-3 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2">
+                         <p class="text-sm font-medium text-red-300">Rejection reason:</p>
+                         <p class="text-sm text-red-200">${item.rejection_reason}</p>
+                       </div>`
+                    : ''
+                }
+                <a href="${
+                  item.url
+                }" target="_blank" rel="noopener noreferrer" class="mt-4 inline-block text-sm text-sky-400 hover:text-sky-300">View original →</a>
               </div>
               <div class="flex flex-col gap-2">
-                <button class="restore-btn rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-500 transition" data-id="${item.id}">↺ Restore</button>
+                <button class="restore-btn rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-500 transition" data-id="${
+                  item.id
+                }">↺ Restore</button>
               </div>
             </div>
           </article>
@@ -107,48 +130,54 @@ import Base from '../../layouts/Base.astro';
 
         // Event delegation for restore buttons
         container.addEventListener('click', async (e) => {
-          const target = e.target as HTMLElement;
+          const target = e.target;
+          if (!(target instanceof HTMLElement)) return;
 
           if (target.classList.contains('restore-btn')) {
             const id = target.dataset.id;
             if (!id) return;
 
-            const note = prompt('Optional note for restoration (why you changed your mind):');
+            const note = window.prompt(
+              'Optional note for restoration (why you changed your mind):',
+            );
             if (note === null) return;
 
-            const article = document.querySelector(`[data-item-id="${id}"]`);
-            if (!article) return;
+            const article = document.querySelector('[data-item-id="' + id + '"]');
+            if (!(article instanceof HTMLElement)) return;
 
             try {
-              // Call Supabase RPC directly (has admin check built-in)
-              const { error } = await supabase.rpc('restore_from_rejection', {
+              const rpcResult = await supabase.rpc('restore_from_rejection', {
                 p_queue_id: id,
                 p_note: note || null,
               });
 
-              if (error) {
-                alert('Error: ' + error.message);
-              } else {
-                article.classList.add('opacity-50');
-                target.textContent = '✓ Restored!';
-                target.disabled = true;
-                setTimeout(() => {
-                  article.remove();
-                  if (document.querySelectorAll('[data-item-id]').length === 0) {
-                    window.location.reload();
-                  }
-                }, 1000);
+              if (rpcResult.error) {
+                window.alert('Error: ' + rpcResult.error.message);
+                return;
               }
+
+              article.classList.add('opacity-50');
+              target.textContent = '✓ Restored!';
+              target.disabled = true;
+
+              setTimeout(() => {
+                article.remove();
+                if (document.querySelectorAll('[data-item-id]').length === 0) {
+                  window.location.reload();
+                }
+              }, 1000);
             } catch (err) {
-              alert('Failed to restore: ' + (err instanceof Error ? err.message : 'Unknown error'));
+              const msg = err instanceof Error ? err.message : 'Failed to restore: unknown error';
+              window.alert('Failed to restore: ' + msg);
             }
           }
         });
       } catch (err) {
         loading.classList.add('hidden');
-        error.classList.remove('hidden');
-        error.querySelector('p')!.textContent =
-          err instanceof Error ? err.message : 'Failed to load rejected items';
+        errorBox.classList.remove('hidden');
+        const p = errorBox.querySelector('p');
+        const msg = err instanceof Error ? err.message : 'Failed to load rejected items';
+        if (p) p.textContent = msg;
       }
     }
 
