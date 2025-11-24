@@ -44,41 +44,50 @@ function initPublicationModal() {
       li.getAttribute('data-geography') || '',
     ].filter(Boolean);
 
-    const m = document.getElementById('modal')!;
+    const m = document.getElementById('modal');
+    if (!m) return;
+
     lastFocus = document.activeElement;
     m.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
 
-    const titleA = document.getElementById('modal-title-link') as HTMLAnchorElement;
-    titleA.textContent = title;
-    titleA.href = link;
+    const titleA = document.getElementById('modal-title-link') as HTMLAnchorElement | null;
+    if (titleA) {
+      titleA.textContent = title;
+      titleA.href = link;
+    }
 
-    const metaEl = document.getElementById('modal-meta') as HTMLElement;
-    metaEl.textContent = meta;
-    metaEl.style.display = meta && meta.trim() ? '' : 'none';
+    const metaEl = document.getElementById('modal-meta');
+    if (metaEl) {
+      metaEl.textContent = meta;
+      metaEl.style.display = meta && meta.trim() ? '' : 'none';
+    }
 
     const noteHtml = linkify(note.replace(/\(more\)\s*$/, ''));
-    const noteEl = document.getElementById('modal-note') as HTMLElement;
-    noteEl.innerHTML = noteHtml;
+    const noteEl = document.getElementById('modal-note');
+    if (noteEl) noteEl.innerHTML = noteHtml;
 
-    const tagsEl = document.getElementById('modal-tags') as HTMLElement;
-    tagsEl.innerHTML = '';
-    tags.forEach((t) => {
-      const b = document.createElement('span');
-      b.className =
-        'rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300';
-      b.textContent = t;
-      tagsEl.appendChild(b);
-    });
+    const tagsEl = document.getElementById('modal-tags');
+    if (tagsEl) {
+      tagsEl.innerHTML = '';
+      tags.forEach((t) => {
+        const b = document.createElement('span');
+        b.className =
+          'rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300';
+        b.textContent = t;
+        tagsEl.appendChild(b);
+      });
+    }
 
     const viewA = document.getElementById('modal-view-details') as HTMLAnchorElement | null;
     if (viewA) viewA.setAttribute('href', slug ? `/${slug}` : link);
-    const a = document.getElementById('modal-link') as HTMLAnchorElement;
-    a.href = external || link;
-    const srcEl = document.getElementById('modal-source') as HTMLElement | null;
+    const a = document.getElementById('modal-link') as HTMLAnchorElement | null;
+    if (a) a.href = external || link;
+    const srcEl = document.getElementById('modal-source');
     if (srcEl) srcEl.textContent = sourceName || 'original';
 
-    const mi = document.getElementById('modal-img') as HTMLImageElement;
+    const mi = document.getElementById('modal-img') as HTMLImageElement | null;
+    if (!mi) return;
     const makeCandidates = () => {
       const slug = li.getAttribute('data-slug') || '';
       const thumb = li.getAttribute('data-thumbnail') || '';
@@ -95,7 +104,7 @@ function initPublicationModal() {
       mi.src = cand[0];
       mi.dataset.next = cand.slice(1).join('|');
     } else if (img) {
-      mi.src = (img as any).currentSrc || img.src;
+      mi.src = img.currentSrc || img.src;
       mi.dataset.next = img.dataset.next || '';
     }
     mi.onerror = () => {
@@ -103,26 +112,28 @@ function initPublicationModal() {
       if (nx) mi.src = nx;
     };
 
-    const closeBtn = document.getElementById('modal-close') as HTMLButtonElement;
-    closeBtn.focus();
+    const closeBtn = document.getElementById('modal-close') as HTMLButtonElement | null;
+    if (closeBtn) closeBtn.focus();
     focusTrapHandler = (e: FocusEvent) => {
       if (!m.contains(e.target as Node)) {
         e.stopPropagation();
-        closeBtn.focus();
+        if (closeBtn) closeBtn.focus();
       }
     };
     window.addEventListener('focusin', focusTrapHandler);
   }
 
   function closeModal() {
-    const m = document.getElementById('modal')!;
+    const m = document.getElementById('modal');
+    if (!m) return;
+
     m.classList.add('hidden');
     document.body.style.overflow = '';
     if (focusTrapHandler) window.removeEventListener('focusin', focusTrapHandler);
-    if (lastFocus && (lastFocus as any).focus) (lastFocus as any).focus();
+    if (lastFocus && lastFocus instanceof HTMLElement) lastFocus.focus();
   }
 
-  (window as any).openModalFrom = openModalFrom;
+  (window as Window & { openModalFrom: typeof openModalFrom }).openModalFrom = openModalFrom;
   document.getElementById('modal-close')?.addEventListener('click', closeModal);
   document.getElementById('modal-backdrop')?.addEventListener('click', closeModal);
   window.addEventListener('keydown', (e: KeyboardEvent) => {

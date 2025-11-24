@@ -1,10 +1,14 @@
 ---
 import fs from 'node:fs';
 
-const props = Astro.props as any;
-const item = props.item;
-const index = props.index ?? 0;
-const isHome = props.mode === 'home';
+interface Props {
+  item: any;
+  index?: number;
+  mode?: string;
+}
+
+const { item, index = 0, mode } = Astro.props as Props;
+const isHome = mode === 'home';
 const isFirst = Number(index) === 0;
 
 const fmt = (iso?: string) =>
@@ -63,15 +67,21 @@ const role = item.role || '';
 const industry = item.industry || '';
 const geography = item.geography || '';
 
-const isNew = isHome
-  ? (Date.now() - new Date(item.date_added as any).getTime()) / 86400000 <= 7
-  : false;
+const isNew =
+  isHome && item.date_added
+    ? (() => {
+        const date = new Date(item.date_added);
+        return !isNaN(date.getTime()) && (Date.now() - date.getTime()) / 86400000 <= 7;
+      })()
+    : false;
 
-const isUpdated = isHome
-  ? item.last_edited
-    ? (Date.now() - new Date(item.last_edited as any).getTime()) / 86400000 <= 7 && !isNew
-    : false
-  : false;
+const isUpdated =
+  isHome && item.last_edited && !isNew
+    ? (() => {
+        const date = new Date(item.last_edited);
+        return !isNaN(date.getTime()) && (Date.now() - date.getTime()) / 86400000 <= 7;
+      })()
+    : false;
 
 const candidates = [...findLocalThumbs(item.slug), ...expandItemThumb(item.thumbnail)];
 const hasImage = candidates.length > 0;

@@ -32,37 +32,44 @@ function openModalFrom(li: HTMLElement) {
     li.getAttribute('data-geography') || '',
   ].filter(Boolean);
 
-  const modal = document.getElementById('modal')!;
+  const modal = document.getElementById('modal');
+  if (!modal) return;
+
   lastFocus = document.activeElement;
   modal.classList.remove('hidden');
-  (document.body as HTMLBodyElement).style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
 
-  const titleEl = document.getElementById('modal-title-text') as HTMLElement;
-  titleEl.textContent = title;
+  const titleEl = document.getElementById('modal-title-text');
+  if (titleEl) titleEl.textContent = title;
 
-  const metaEl = document.getElementById('modal-meta') as HTMLElement;
-  metaEl.textContent = meta;
-  metaEl.style.display = meta && meta.trim() ? '' : 'none';
+  const metaEl = document.getElementById('modal-meta');
+  if (metaEl) {
+    metaEl.textContent = meta;
+    metaEl.style.display = meta && meta.trim() ? '' : 'none';
+  }
 
   const summaryHtml = linkify(summary.replace(/\(more\)\s*$/, ''));
-  const summaryEl = document.getElementById('modal-summary') as HTMLElement;
-  summaryEl.innerHTML = summaryHtml;
+  const summaryEl = document.getElementById('modal-summary');
+  if (summaryEl) summaryEl.innerHTML = summaryHtml;
 
-  const tagsEl = document.getElementById('modal-tags') as HTMLElement;
-  tagsEl.innerHTML = '';
-  tags.forEach((t) => {
-    const b = document.createElement('span');
-    b.className =
-      'rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300';
-    b.textContent = t;
-    tagsEl.appendChild(b);
-  });
+  const tagsEl = document.getElementById('modal-tags');
+  if (tagsEl) {
+    tagsEl.innerHTML = '';
+    tags.forEach((t) => {
+      const b = document.createElement('span');
+      b.className =
+        'rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300';
+      b.textContent = t;
+      tagsEl.appendChild(b);
+    });
+  }
 
-  const viewA = document.getElementById('modal-view-details') as HTMLAnchorElement;
-  viewA.href = slug ? `/${slug}` : link;
+  const viewA = document.getElementById('modal-view-details') as HTMLAnchorElement | null;
+  if (viewA) viewA.href = slug ? `/${slug}` : link;
 
   const img = li.querySelector('img') as HTMLImageElement | null;
-  const modalImg = document.getElementById('modal-img') as HTMLImageElement;
+  const modalImg = document.getElementById('modal-img') as HTMLImageElement | null;
+  if (!modalImg) return;
 
   const slugVal = li.getAttribute('data-slug') || '';
   const thumb = li.getAttribute('data-thumbnail') || '';
@@ -91,13 +98,13 @@ function openModalFrom(li: HTMLElement) {
     if (nx) modalImg.src = nx;
   };
 
-  const closeBtn = document.getElementById('modal-close') as HTMLButtonElement;
-  closeBtn.focus();
+  const closeBtn = document.getElementById('modal-close') as HTMLButtonElement | null;
+  if (closeBtn) closeBtn.focus();
 
   focusTrapHandler = (e: FocusEvent) => {
     if (!modal.contains(e.target as Node)) {
       e.stopPropagation();
-      closeBtn.focus();
+      if (closeBtn) closeBtn.focus();
     }
   };
 
@@ -105,12 +112,14 @@ function openModalFrom(li: HTMLElement) {
 }
 
 function closeModal() {
-  const modal = document.getElementById('modal')!;
+  const modal = document.getElementById('modal');
+  if (!modal) return;
+
   modal.classList.add('hidden');
-  (document.body as HTMLBodyElement).style.overflow = '';
+  document.body.style.overflow = '';
 
   if (focusTrapHandler) window.removeEventListener('focusin', focusTrapHandler);
-  if (lastFocus && (lastFocus as any).focus) (lastFocus as any).focus();
+  if (lastFocus && lastFocus instanceof HTMLElement) lastFocus.focus();
 }
 
 export default function initPublicationModal() {
