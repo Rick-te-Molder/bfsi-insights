@@ -31,17 +31,17 @@ if (!fs.existsSync(THUMBS_DIR)) {
 async function main() {
   console.log('🖼️  Starting thumbnail generation...');
 
-  // Get resources that need thumbnails
-  const resources = await getResourcesNeedingThumbnails();
+  // Get publications that need thumbnails
+  const publications = await getResourcesNeedingThumbnails();
 
-  if (resources.length === 0) {
-    console.log('✅ All resources already have thumbnails!');
+  if (publications.length === 0) {
+    console.log('✅ All publications already have thumbnails!');
     return;
   }
 
-  console.log(`📋 Found ${resources.length} resources needing thumbnails:`);
-  resources.forEach((r, i) => {
-    console.log(`   ${i + 1}. ${r.title}`);
+  console.log(`📋 Found ${publications.length} publications needing thumbnails:`);
+  publications.forEach((p, i) => {
+    console.log(`   ${i + 1}. ${p.title}`);
   });
   console.log('');
 
@@ -55,15 +55,15 @@ async function main() {
 
   const results = [];
 
-  // Process each resource
-  for (let i = 0; i < resources.length; i++) {
-    const resource = resources[i];
-    console.log(`[${i + 1}/${resources.length}] Processing: ${resource.title}`);
-    console.log(`   URL: ${resource.url}`);
+  // Process each publication
+  for (let i = 0; i < publications.length; i++) {
+    const publication = publications[i];
+    console.log(`[${i + 1}/${publications.length}] Processing: ${publication.title}`);
+    console.log(`   URL: ${publication.url}`);
 
     try {
-      const success = await generateThumbnail(context, resource);
-      results.push({ resource, success });
+      const success = await generateThumbnail(context, publication);
+      results.push({ publication, success });
 
       if (success) {
         console.log('   ✅ Thumbnail generated successfully');
@@ -72,11 +72,11 @@ async function main() {
       }
     } catch (error) {
       console.log(`   ❌ Error: ${error.message}`);
-      results.push({ resource, success: false, error: error.message });
+      results.push({ publication, success: false, error: error.message });
     }
 
     // Small delay between requests
-    if (i < resources.length - 1) {
+    if (i < publications.length - 1) {
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
   }
@@ -95,18 +95,18 @@ async function main() {
   console.log(`❌ Failed: ${failed}`);
 
   if (failed > 0) {
-    console.log('\nFailed resources:');
+    console.log('\nFailed publications:');
     results
       .filter((r) => !r.success)
-      .forEach(({ resource, error }) => {
-        console.log(`• ${resource.title} (${error || 'Unknown error'})`);
+      .forEach(({ publication, error }) => {
+        console.log(`• ${publication.title} (${error || 'Unknown error'})`);
       });
   }
 
   console.log('\n✨ Done!');
 }
 
-async function generateThumbnail(context, resource) {
+async function generateThumbnail(context, publication) {
   const page = await context.newPage();
 
   try {
@@ -115,7 +115,7 @@ async function generateThumbnail(context, resource) {
 
     // Navigate to the page
     console.log('   📥 Loading page...');
-    await page.goto(resource.url, {
+    await page.goto(publication.url, {
       waitUntil: 'domcontentloaded',
       timeout: 20000,
     });
@@ -154,7 +154,7 @@ async function generateThumbnail(context, resource) {
 
     // Take screenshot
     console.log('   📸 Taking screenshot...');
-    const screenshotPath = path.join(THUMBS_DIR, `${resource.slug}.png`);
+    const screenshotPath = path.join(THUMBS_DIR, `${publication.slug}.png`);
 
     await page.screenshot({
       path: screenshotPath,
@@ -162,14 +162,14 @@ async function generateThumbnail(context, resource) {
       type: 'png',
     });
 
-    console.log(`   💾 Saved: ${resource.slug}.png`);
+    console.log(`   💾 Saved: ${publication.slug}.png`);
 
     // Update database with thumbnail path
-    const thumbnailPath = `/thumbs/${resource.slug}.png`;
+    const thumbnailPath = `/thumbs/${publication.slug}.png`;
     const { error: updateError } = await supabase
       .from('kb_publication')
       .update({ thumbnail: thumbnailPath })
-      .eq('slug', resource.slug);
+      .eq('slug', publication.slug);
 
     if (updateError) {
       console.log(`   ⚠️  Database update failed: ${updateError.message}`);
@@ -189,22 +189,22 @@ async function generateThumbnail(context, resource) {
 async function getResourcesNeedingThumbnails() {
   const { data, error } = await supabase
     .from('kb_publication')
-    .select('slug, title, external_url, thumbnail')
+    .select('slug, title, source_url, thumbnail')
     .eq('status', 'published')
     .is('thumbnail', null)
     .order('date_added', { ascending: false });
 
   if (error) {
-    console.error('Error fetching resources:', error);
+    console.error('Error fetching publications:', error);
     return [];
   }
 
-  // Map external_url to url for consistency
-  return data.map((resource) => ({
-    slug: resource.slug,
-    title: resource.title,
-    url: resource.external_url,
-    thumbnail: resource.thumbnail,
+  // Map to expected format with url property
+  return data.map((pub) => ({
+    slug: pub.slug,
+    title: pub.title,
+    url: pub.source_url,
+    thumbnail: pub.thumbnail,
   }));
 }
 
