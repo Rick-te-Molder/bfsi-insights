@@ -1,4 +1,6 @@
 ---
+export const prerender = false;
+
 import Base from '../../layouts/Base.astro';
 ---
 
@@ -14,7 +16,6 @@ import Base from '../../layouts/Base.astro';
         >
           ← Back to review queue
         </a>
-        <!-- Count loaded client-side -->
       </div>
     </header>
 
@@ -29,9 +30,7 @@ import Base from '../../layouts/Base.astro';
       <p class="text-red-300"></p>
     </div>
 
-    <div id="items-container" class="space-y-6">
-      <!-- Items loaded client-side -->
-    </div>
+    <div id="items-container" class="space-y-6"></div>
   </div>
 
   <script>
@@ -48,12 +47,10 @@ import Base from '../../layouts/Base.astro';
       const statsDiv = document.getElementById('stats');
       const container = document.getElementById('items-container');
 
-      if (!loading || !errorBox || !statsDiv || !container) {
-        return;
-      }
+      if (!loading || !errorBox || !statsDiv || !container) return;
 
       try {
-        // Check auth
+        // Auth check
         const sessionRes = await supabase.auth.getSession();
         const session = sessionRes && sessionRes.data && sessionRes.data.session;
 
@@ -69,106 +66,103 @@ import Base from '../../layouts/Base.astro';
           .eq('status', 'rejected')
           .order('reviewed_at', { ascending: false });
 
-        if (result.error) {
-          throw result.error;
-        }
+        if (result.error) throw result.error;
 
         const rejected = result.data || [];
-
         loading.classList.add('hidden');
 
-        // Add count to stats
-        statsDiv.innerHTML +=
-          '<span class="rounded-full bg-red-500/10 px-3 py-1 text-red-300">' +
-          rejected.length +
-          ' rejected items</span>';
+        // Count in header
+        statsDiv.innerHTML += `
+          <span class="rounded-full bg-red-500/10 px-3 py-1 text-red-300">
+            ${rejected.length} rejected items
+          </span>
+        `;
 
         if (rejected.length === 0) {
-          container.innerHTML =
-            '<div class="rounded-lg border border-neutral-800 bg-neutral-900/60 p-8 text-center"><p class="text-neutral-400">✨ No rejected items!</p></div>';
+          container.innerHTML = `
+            <div class="rounded-lg border border-neutral-800 bg-neutral-900/60 p-8 text-center">
+              <p class="text-neutral-400">✨ No rejected items!</p>
+            </div>
+          `;
           return;
         }
 
-        // Render items
+        // Render
         container.innerHTML = rejected
           .map(
             (item) => `
-          <article class="rounded-xl border border-red-800/40 bg-neutral-900/60 p-6 transition hover:border-red-700/60" data-item-id="${item.id}">
-            <div class="flex items-start justify-between gap-4">
-              <div class="flex-1">
-                <h2 class="text-2xl font-semibold text-neutral-200">${item.payload.title}</h2>
-                <div class="mt-2 flex flex-wrap gap-2 text-sm text-neutral-400">
-                  <span>🔗 ${item.payload.source}</span>
-                  <span>📅 ${new Date(item.payload.published_at).toLocaleDateString()}</span>
-                  <span class="text-red-400">✖ Rejected: ${new Date(
-                    item.reviewed_at,
-                  ).toLocaleDateString()}</span>
+            <article class="rounded-xl border border-red-800/40 bg-neutral-900/60 p-6 transition hover:border-red-700/60" data-item-id="${item.id}">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex-1">
+                  <h2 class="text-2xl font-semibold text-neutral-200">${item.payload.title}</h2>
+                  <div class="mt-2 flex flex-wrap gap-2 text-sm text-neutral-400">
+                    <span>🔗 ${item.payload.source}</span>
+                    <span>📅 ${new Date(item.payload.published_at).toLocaleDateString()}</span>
+                    <span class="text-red-400">✖ Rejected: ${new Date(item.reviewed_at).toLocaleDateString()}</span>
+                  </div>
+                  ${
+                    item.rejection_reason
+                      ? `<div class="mt-3 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2">
+                           <p class="text-sm font-medium text-red-300">Rejection reason:</p>
+                           <p class="text-sm text-red-200">${item.rejection_reason}</p>
+                         </div>`
+                      : ''
+                  }
+                  <a href="${item.url}" target="_blank" rel="noopener noreferrer"
+                     class="mt-4 inline-block text-sm text-sky-400 hover:text-sky-300">
+                     View original →
+                  </a>
                 </div>
-                ${
-                  item.rejection_reason
-                    ? `<div class="mt-3 rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2">
-                         <p class="text-sm font-medium text-red-300">Rejection reason:</p>
-                         <p class="text-sm text-red-200">${item.rejection_reason}</p>
-                       </div>`
-                    : ''
-                }
-                <a href="${
-                  item.url
-                }" target="_blank" rel="noopener noreferrer" class="mt-4 inline-block text-sm text-sky-400 hover:text-sky-300">View original →</a>
+                <div class="flex flex-col gap-2">
+                  <button class="restore-btn rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-500 transition" data-id="${item.id}">
+                    ↺ Restore
+                  </button>
+                </div>
               </div>
-              <div class="flex flex-col gap-2">
-                <button class="restore-btn rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-500 transition" data-id="${
-                  item.id
-                }">↺ Restore</button>
-              </div>
-            </div>
-          </article>
-        `,
+            </article>
+          `,
           )
           .join('');
 
-        // Event delegation for restore buttons
+        // Restore handler
         container.addEventListener('click', async (e) => {
           const target = e.target;
           if (!(target instanceof HTMLElement)) return;
+          if (!target.classList.contains('restore-btn')) return;
 
-          if (target.classList.contains('restore-btn')) {
-            const id = target.dataset.id;
-            if (!id) return;
+          const id = target.dataset.id;
+          if (!id) return;
 
-            const note = window.prompt(
-              'Optional note for restoration (why you changed your mind):',
-            );
-            if (note === null) return;
+          const note = window.prompt('Optional note for restoration (why you changed your mind):');
+          if (note === null) return;
 
-            const article = document.querySelector('[data-item-id="' + id + '"]');
-            if (!(article instanceof HTMLElement)) return;
+          const article = document.querySelector(`[data-item-id="${id}"]`);
+          if (!(article instanceof HTMLElement)) return;
 
-            try {
-              const rpcResult = await supabase.rpc('restore_from_rejection', {
-                p_queue_id: id,
-                p_note: note || null,
-              });
+          try {
+            const rpcResult = await supabase.rpc('restore_from_rejection', {
+              p_queue_id: id,
+              p_note: note || null,
+            });
 
-              if (rpcResult.error) {
-                window.alert('Error: ' + rpcResult.error.message);
-                return;
-              }
-
-              article.classList.add('opacity-50');
-              target.textContent = '✓ Restored!';
-              target.disabled = true;
-
-              setTimeout(() => {
-                article.remove();
-                if (document.querySelectorAll('[data-item-id]').length === 0) {
-                  window.location.reload();
-                }
-              }, 1000);
-            } catch (err) {
-              const msg = err instanceof Error ? err.message : 'Failed to restore: unknown error';
-              window.alert('Failed to restore: ' + msg);
+            if (rpcResult.error) {
+              window.alert('Error: ' + rpcResult.error.message);
+              return;
             }
+
+            article.classList.add('opacity-50');
+            target.textContent = '✓ Restored!';
+            target.disabled = true;
+
+            setTimeout(() => {
+              article.remove();
+              if (!document.querySelector('[data-item-id]')) {
+                window.location.reload();
+              }
+            }, 1000);
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Unknown error';
+            window.alert('Failed to restore: ' + msg);
           }
         });
       } catch (err) {

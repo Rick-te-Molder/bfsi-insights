@@ -1,5 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
+
+export const prerender = false;
 ---
 
 <Base title="Review Queue">
@@ -72,6 +74,10 @@ import Base from '../../layouts/Base.astro';
       const unenrichedNotice = document.getElementById('unenriched-notice');
       const container = document.getElementById('items-container');
 
+      if (!loading || !errorBox || !statsDiv || !unenrichedNotice || !container) {
+        return;
+      }
+
       try {
         const sessionRes = await supabase.auth.getSession();
         const session = sessionRes?.data?.session;
@@ -110,7 +116,10 @@ import Base from '../../layouts/Base.astro';
         `;
 
         if (notEnriched.length > 0) {
-          document.getElementById('unenriched-count').textContent = '⏳ ' + notEnriched.length;
+          const unenrichedCount = document.getElementById('unenriched-count');
+          if (unenrichedCount) {
+            unenrichedCount.textContent = '⏳ ' + notEnriched.length;
+          }
           unenrichedNotice.classList.remove('hidden');
         }
 
@@ -131,13 +140,23 @@ import Base from '../../layouts/Base.astro';
                     <span>🔗 ${item.payload.source}</span>
                     <span>📅 ${new Date(item.payload.published_at).toLocaleDateString()}</span>
                   </div>
-                  ${item.payload.summary.short ? `<p class="mt-4 text-neutral-300">${item.payload.summary.short}</p>` : ''}
-                  <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="mt-4 inline-block text-sm text-sky-400 hover:text-sky-300">View original →</a>
+                  ${
+                    item.payload.summary.short
+                      ? `<p class="mt-4 text-neutral-300">${item.payload.summary.short}</p>`
+                      : ''
+                  }
+                  <a href="${
+                    item.url
+                  }" target="_blank" rel="noopener noreferrer" class="mt-4 inline-block text-sm text-sky-400 hover:text-sky-300">View original →</a>
                 </div>
 
                 <div class="flex flex-col gap-2">
-                  <button class="approve-btn rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-500 transition" data-id="${item.id}">✓ Approve</button>
-                  <button class="reject-btn rounded-lg bg-red-600 px-6 py-2 font-semibold text-white hover:bg-red-500 transition" data-id="${item.id}">✗ Reject</button>
+                  <button class="approve-btn rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-500 transition" data-id="${
+                    item.id
+                  }">✓ Approve</button>
+                  <button class="reject-btn rounded-lg bg-red-600 px-6 py-2 font-semibold text-white hover:bg-red-500 transition" data-id="${
+                    item.id
+                  }">✗ Reject</button>
                 </div>
               </div>
             </article>
@@ -147,11 +166,15 @@ import Base from '../../layouts/Base.astro';
 
         container.addEventListener('click', async (e) => {
           const target = e.target;
+          if (!(target instanceof HTMLElement)) return;
 
           // Approve
           if (target.classList.contains('approve-btn')) {
             const id = target.dataset.id;
+            if (!id) return;
+
             const article = document.querySelector('[data-item-id="' + id + '"]');
+            if (!(article instanceof HTMLElement)) return;
 
             const result = await supabase.rpc('approve_from_queue', { p_queue_id: id });
             if (result.error) {
@@ -161,17 +184,20 @@ import Base from '../../layouts/Base.astro';
 
             article.classList.add('opacity-50');
             target.textContent = '✓ Approved!';
-            target.disabled = true;
+            target.setAttribute('disabled', 'true');
             setTimeout(() => article.remove(), 1000);
           }
 
           // Reject
           if (target.classList.contains('reject-btn')) {
             const id = target.dataset.id;
-            const reason = prompt('Reason for rejection (optional):');
+            if (!id) return;
+
+            const reason = window.prompt('Reason for rejection (optional):');
             if (reason === null) return;
 
             const article = document.querySelector('[data-item-id="' + id + '"]');
+            if (!(article instanceof HTMLElement)) return;
 
             const result = await supabase.rpc('reject_from_queue', {
               p_queue_id: id,
@@ -185,14 +211,18 @@ import Base from '../../layouts/Base.astro';
 
             article.classList.add('opacity-50');
             target.textContent = '✗ Rejected';
-            target.disabled = true;
+            target.setAttribute('disabled', 'true');
             setTimeout(() => article.remove(), 1000);
           }
         });
       } catch (err) {
-        loading.classList.add('hidden');
-        errorBox.classList.remove('hidden');
-        errorBox.querySelector('p').textContent = err.message || 'Failed to load queue';
+        if (loading) loading.classList.add('hidden');
+        if (errorBox) {
+          errorBox.classList.remove('hidden');
+          const p = errorBox.querySelector('p');
+          const msg = err instanceof Error ? err.message : 'Failed to load queue';
+          if (p) p.textContent = msg;
+        }
       }
     }
 
