@@ -1,4 +1,4 @@
-name: Nightly Resource Discovery
+name: Nightly Publication Discovery
 
 on:
   schedule:
