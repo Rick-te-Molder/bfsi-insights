@@ -23,13 +23,13 @@ This document describes the security architecture, access controls, and operatio
 
 ### Public Access (Anon Key)
 
-| Resource                  | Read | Write | Notes                 |
-| ------------------------- | ---- | ----- | --------------------- |
-| `kb_resource` (published) | ✅   | ❌    | Public resources only |
-| `bfsi_industry`           | ✅   | ❌    | Taxonomy data         |
-| `bfsi_topic`              | ✅   | ❌    | Taxonomy data         |
-| `ref_role`                | ✅   | ❌    | Persona types         |
-| `regulation`              | ✅   | ❌    | Regulatory data       |
+| Resource                     | Read | Write | Notes                    |
+| ---------------------------- | ---- | ----- | ------------------------ |
+| `kb_publication` (published) | ✅   | ❌    | Public publications only |
+| `bfsi_industry`              | ✅   | ❌    | Taxonomy data            |
+| `bfsi_topic`                 | ✅   | ❌    | Taxonomy data            |
+| `ref_role`                   | ✅   | ❌    | Persona types            |
+| `regulation`                 | ✅   | ❌    | Regulatory data          |
 
 ### Authenticated Access (User Token)
 
@@ -150,7 +150,7 @@ Run these checks in **Supabase Studio SQL Editor**:
 SELECT schemaname, tablename, rowsecurity
 FROM pg_tables
 WHERE schemaname = 'public'
-AND tablename IN ('kb_resource', 'ingestion_queue', 'kb_resource_stg');
+AND tablename IN ('kb_publication', 'ingestion_queue', 'kb_resource_stg');
 ```
 
 Expected: `rowsecurity = true` for all tables
@@ -159,7 +159,7 @@ Expected: `rowsecurity = true` for all tables
 
 ```sql
 SELECT * FROM ingestion_review_queue LIMIT 5;
-SELECT COUNT(*) FROM kb_resource WHERE status = 'published';
+SELECT COUNT(*) FROM kb_publication WHERE status = 'published';
 ```
 
 Expected: Returns data
@@ -174,11 +174,11 @@ SELECT * FROM ingestion_queue;
 Expected: No rows (RLS blocks access)
 
 ```sql
-SELECT * FROM kb_resource WHERE status = 'published' LIMIT 5;
+SELECT * FROM kb_publication WHERE status = 'published' LIMIT 5;
 RESET ROLE;
 ```
 
-Expected: Returns published resources
+Expected: Returns published publications
 
 ---
 
@@ -244,7 +244,7 @@ SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'anthropic_key
 1. **Immediate** (within 5 minutes): Reset keys in Supabase Dashboard
 2. **Review** (within 30 minutes): Check Supabase Dashboard → Logs for unauthorized access
 3. **Rotate** (within 1 hour): Update local `.env`, CF Pages, GitHub Secrets (see Section 3)
-4. **Audit** (within 24 hours): Review recent changes to `kb_resource`, `ingestion_queue`
+4. **Audit** (within 24 hours): Review recent changes to `kb_publication`, `ingestion_queue`
 5. **Document**: Log incident with timeline and lessons learned
 
 ### If Suspicious Activity Detected
