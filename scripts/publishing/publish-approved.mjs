@@ -286,7 +286,7 @@ async function main() {
   console.log(`   Failed:    ${failed}`);
 
   if (!dryRun) {
-    console.log(`\n✨ Done. You may now run: npm run build:resources`);
+    console.log(`\n✨ Done. Publications are now live on the website.`);
   }
 }
 
