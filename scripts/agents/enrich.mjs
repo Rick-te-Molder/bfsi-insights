@@ -243,17 +243,29 @@ async function enrich(options = {}) {
       agent_metadata: { dryRun, limit, taxonomies_hash: Object.keys(taxonomies).length },
     });
 
-    // Load pending items from ingestion_queue
+    // Load pending and fetched items from ingestion_queue
     const { data: items, error } = await supabase
       .from('ingestion_queue')
       .select('*')
-      .eq('status', 'pending')
+      .in('status', ['pending', 'fetched'])
       .order('discovered_at', { ascending: false })
       .limit(limit || 100);
 
     if (error) throw new Error('Failed to load items: ' + error.message);
 
-    const itemsToEnrich = (items || []).filter((i) => !i.payload?.summary?.short);
+    // Filter: must not have summary AND must have content (title or description)
+    const itemsToEnrich = (items || []).filter(
+      (i) => !i.payload?.summary?.short && (i.payload?.title || i.payload?.description),
+    );
+
+    const itemsNeedingFetch = (items || []).filter(
+      (i) => !i.payload?.title && !i.payload?.description,
+    );
+
+    if (itemsNeedingFetch.length > 0) {
+      console.log(`⚠️  ${itemsNeedingFetch.length} items need content fetching first`);
+      console.log('   Run: node scripts/agents/fetch-queue.mjs\n');
+    }
 
     if (itemsToEnrich.length === 0) {
       console.log('No items to enrich');
@@ -270,15 +282,16 @@ async function enrich(options = {}) {
 
     for (const item of itemsToEnrich) {
       processed++;
-      console.log(`📝 ${item.payload.title.substring(0, 60)}...`);
+      const displayTitle = item.payload?.title || item.url || 'Unknown';
+      console.log(`📝 ${displayTitle.substring(0, 60)}...`);
 
-      const content = item.payload.description || item.payload.title;
+      const content = item.payload?.description || item.payload?.title || item.url;
       const step_id = await startStep(run_id, processed, 'enrich-item', (content || '').length, {
         queue_id: item.id,
       });
 
       try {
-        const enrichment = await generateEnrichment(content, item.payload.title);
+        const enrichment = await generateEnrichment(content, displayTitle);
 
         // Auto-reject
         if (enrichment.bfsi_relevant === false) {

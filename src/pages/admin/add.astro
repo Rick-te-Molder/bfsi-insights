@@ -1,0 +1,229 @@
+---
+export const prerender = true;
+
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="Add Publication">
+  <div class="mx-auto max-w-3xl px-4 py-8">
+    <header class="mb-8">
+      <h1 class="text-4xl font-bold">➕ Add Publication</h1>
+      <p class="mt-2 text-neutral-300">Manually add a URL to the ingestion queue</p>
+    </header>
+
+    <!-- Success Message -->
+    <div
+      id="success-message"
+      class="mb-6 hidden rounded-lg border border-green-500/20 bg-green-500/5 p-4"
+    >
+      <p class="text-green-300">✅ <span id="success-text"></span></p>
+    </div>
+
+    <!-- Error Message -->
+    <div
+      id="error-message"
+      class="mb-6 hidden rounded-lg border border-red-500/20 bg-red-500/5 p-4"
+    >
+      <p class="text-red-300">❌ <span id="error-text"></span></p>
+    </div>
+
+    <!-- Form -->
+    <form id="add-url-form" class="space-y-6">
+      <div>
+        <label for="url" class="block text-sm font-medium text-neutral-300 mb-2">
+          Publication URL <span class="text-red-400">*</span>
+        </label>
+        <input
+          type="url"
+          id="url"
+          name="url"
+          required
+          placeholder="https://example.com/article"
+          class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-3 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+        />
+        <p class="mt-1 text-xs text-neutral-500">Enter the full URL of the publication</p>
+      </div>
+
+      <div>
+        <label for="notes" class="block text-sm font-medium text-neutral-300 mb-2">
+          Notes (optional)
+        </label>
+        <textarea
+          id="notes"
+          name="notes"
+          rows="3"
+          placeholder="Why are you adding this? Any context..."
+          class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-3 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+        ></textarea>
+      </div>
+
+      <div class="flex gap-3">
+        <button
+          type="submit"
+          id="submit-btn"
+          class="rounded-lg bg-sky-600 px-6 py-3 font-medium text-white hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Add to Queue
+        </button>
+        <a
+          href="/admin/review"
+          class="rounded-lg border border-neutral-700 px-6 py-3 font-medium text-neutral-300 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-500/20"
+        >
+          Go to Review Queue
+        </a>
+      </div>
+    </form>
+
+    <!-- Instructions -->
+    <div class="mt-12 rounded-lg border border-neutral-800 bg-neutral-900/60 p-6">
+      <h2 class="text-lg font-semibold mb-3">📋 What happens next?</h2>
+      <ol class="space-y-3 text-sm text-neutral-400">
+        <li>
+          <strong class="text-neutral-300">1. URL Added:</strong> The URL is added to the ingestion queue
+          with status <code class="text-amber-400">pending</code>
+        </li>
+        <li>
+          <strong class="text-neutral-300">2. Fetch Content:</strong> Execute
+          <code class="rounded bg-neutral-800 px-2 py-1 text-sky-400"
+            >node scripts/agents/fetch-queue.mjs</code
+          >
+          to download and extract the article content
+        </li>
+        <li>
+          <strong class="text-neutral-300">3. Enrich:</strong> Execute
+          <code class="rounded bg-neutral-800 px-2 py-1 text-sky-400"
+            >node scripts/agents/enrich.mjs</code
+          >
+          to generate summaries and tags
+        </li>
+        <li>
+          <strong class="text-neutral-300">4. Review:</strong> Once enriched, it will appear in the
+          <a href="/admin/review" class="text-sky-400 hover:underline">Review Queue</a> for approval
+        </li>
+        <li>
+          <strong class="text-neutral-300">5. Publish:</strong> Approve it to publish to the website
+        </li>
+      </ol>
+      <div class="mt-4 rounded bg-neutral-800/50 p-3 border border-neutral-700">
+        <p class="text-xs font-semibold text-neutral-300 mb-2">⚡ Quick command:</p>
+        <code class="text-xs text-green-400">
+          node scripts/agents/fetch-queue.mjs && node scripts/agents/enrich.mjs
+        </code>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+
+    const supabase = createClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    );
+
+    const form = document.getElementById('add-url-form') as HTMLFormElement;
+    const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+    const urlInput = document.getElementById('url') as HTMLInputElement;
+    const notesInput = document.getElementById('notes') as HTMLTextAreaElement;
+    const successMessage = document.getElementById('success-message');
+    const successText = document.getElementById('success-text');
+    const errorMessage = document.getElementById('error-message');
+    const errorText = document.getElementById('error-text');
+
+    // Check authentication
+    async function checkAuth() {
+      const sessionRes = await supabase.auth.getSession();
+      const session = sessionRes?.data?.session;
+
+      if (!session) {
+        window.location.href = '/login';
+      }
+    }
+
+    checkAuth();
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const url = urlInput.value.trim();
+      const notes = notesInput.value.trim();
+
+      if (!url) {
+        showError('Please enter a URL');
+        return;
+      }
+
+      // Validate URL format
+      try {
+        new URL(url);
+      } catch {
+        showError('Please enter a valid URL (must include http:// or https://)');
+        return;
+      }
+
+      // Disable form
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Adding...';
+      hideMessages();
+
+      try {
+        // Insert into ingestion_queue
+        const { error } = await supabase.from('ingestion_queue').insert({
+          url: url,
+          status: 'pending',
+          payload: {
+            manual_submission: true,
+            notes: notes || null,
+            submitted_at: new Date().toISOString(),
+          },
+          content_type: 'resource',
+        });
+
+        if (error) {
+          // Check for duplicate URL
+          if (error.code === '23505' || error.message.includes('duplicate')) {
+            showError('This URL is already in the queue');
+          } else {
+            showError(error.message || 'Failed to add URL');
+          }
+          return;
+        }
+
+        // Success!
+        showSuccess('URL added to queue! Next: run fetch-queue.mjs then enrich.mjs to process it.');
+        urlInput.value = '';
+        notesInput.value = '';
+      } catch (err) {
+        showError(err instanceof Error ? err.message : 'An unexpected error occurred');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Add to Queue';
+      }
+    });
+
+    function showSuccess(message: string) {
+      if (successMessage && successText) {
+        successText.textContent = message;
+        successMessage.classList.remove('hidden');
+      }
+      if (errorMessage) {
+        errorMessage.classList.add('hidden');
+      }
+    }
+
+    function showError(message: string) {
+      if (errorMessage && errorText) {
+        errorText.textContent = message;
+        errorMessage.classList.remove('hidden');
+      }
+      if (successMessage) {
+        successMessage.classList.add('hidden');
+      }
+    }
+
+    function hideMessages() {
+      if (successMessage) successMessage.classList.add('hidden');
+      if (errorMessage) errorMessage.classList.add('hidden');
+    }
+  </script>
+</Base>

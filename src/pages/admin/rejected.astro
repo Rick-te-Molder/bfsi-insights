@@ -7,16 +7,28 @@ import Base from '../../layouts/Base.astro';
 <Base title="Rejected Items">
   <div class="mx-auto max-w-7xl px-4 py-8">
     <header class="mb-8">
-      <h1 class="text-4xl font-bold">🗑️ Rejected Items</h1>
-      <p class="mt-2 text-neutral-300">Review and restore previously rejected publications</p>
-      <div id="stats" class="mt-4 flex gap-4 text-sm">
-        <a
-          href="/admin/review"
-          class="rounded-full bg-sky-500/10 px-3 py-1 text-sky-300 hover:bg-sky-500/20"
-        >
-          ← Back to review queue
-        </a>
+      <div class="flex items-start justify-between">
+        <div>
+          <h1 class="text-4xl font-bold">🗑️ Rejected Items</h1>
+          <p class="mt-2 text-neutral-300">Review and restore previously rejected publications</p>
+        </div>
+        <div class="flex gap-3">
+          <a
+            href="/admin/add"
+            class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+          >
+            ➕ Add URL
+          </a>
+          <a
+            href="/admin/review"
+            class="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-500/20"
+          >
+            📋 Review Queue
+          </a>
+        </div>
       </div>
+
+      <div id="stats" class="mt-4 flex gap-4 text-sm"></div>
     </header>
 
     <div
