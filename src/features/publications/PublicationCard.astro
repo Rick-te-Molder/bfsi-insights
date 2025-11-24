@@ -6,13 +6,19 @@ const item = props.item;
 const index = props.index ?? 0;
 const isHome = props.mode === 'home';
 const isFirst = Number(index) === 0;
+
 const fmt = (iso?: string) =>
   iso
-    ? new Date(iso).toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' })
+    ? new Date(iso).toLocaleDateString('en-GB', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
     : '';
+
 const asArr = (v: any) => (Array.isArray(v) ? v : v ? [v] : []);
 
-// Helpers (server-side local discovery + client-safe fallbacks)
+// Thumbnail helpers
 const expandItemThumb = (t?: string) => {
   if (!t) return [];
   if (/\.(webp|png|jpe?g)$/i.test(t)) return [t];
@@ -28,12 +34,18 @@ try {
 } catch {
   thumbFiles = [];
 }
+
 const findLocalThumbs = (slug?: string) => {
   if (!slug) return [] as string[];
-  if (!thumbFiles.length)
+
+  // If we couldn't read the directory, fall back to generic guesses
+  if (!thumbFiles.length) {
     return [`/thumbs/${slug}.webp`, `/thumbs/${slug}.png`, `/thumbs/${slug}.jpg`];
+  }
+
   const extPriority: Record<string, number> = { '.png': 0, '.webp': 1, '.jpg': 2, '.jpeg': 2 };
   const getExt = (f: string) => (f.match(/\.[^.]+$/)?.[0] || '').toLowerCase();
+
   const files = thumbFiles.filter((f) => f.includes(slug));
   files.sort((a, b) => {
     const pa = extPriority[getExt(a)] ?? 99;
@@ -41,6 +53,7 @@ const findLocalThumbs = (slug?: string) => {
     if (pa !== pb) return pa - pb;
     return a.localeCompare(b);
   });
+
   return files.map((f) => `/thumbs/${f}`);
 };
 
@@ -48,16 +61,20 @@ const topic = asArr(item.topic);
 const content_type = asArr(item.content_type);
 const role = item.role || '';
 const industry = item.industry || '';
-const jurisdiction = item.jurisdiction || '';
+const geography = item.geography || '';
+
 const isNew = isHome
   ? (Date.now() - new Date(item.date_added as any).getTime()) / 86400000 <= 7
   : false;
+
 const isUpdated = isHome
   ? item.last_edited
     ? (Date.now() - new Date(item.last_edited as any).getTime()) / 86400000 <= 7 && !isNew
     : false
   : false;
+
 const candidates = [...findLocalThumbs(item.slug), ...expandItemThumb(item.thumbnail)];
+const hasImage = candidates.length > 0;
 ---
 
 <li
@@ -67,7 +84,7 @@ const candidates = [...findLocalThumbs(item.slug), ...expandItemThumb(item.thumb
   data-industry={industry}
   data-topic={topic[0] || ''}
   data-content_type={content_type[0] || ''}
-  data-jurisdiction={jurisdiction}
+  data-geography={geography}
   data-authors={Array.isArray(item.authors) ? item.authors.join(', ') : item.authors || ''}
   data-slug={item.slug}
   data-url={item.url}
@@ -80,9 +97,7 @@ const candidates = [...findLocalThumbs(item.slug), ...expandItemThumb(item.thumb
     class="absolute inset-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 z-10"
     aria-label={`View details for ${item.title}`}
     tabindex="0"
-    data-card-link
-  >
-  </a>
+    data-card-link></a>
 
   <div class="relative z-20 pointer-events-none">
     <div class="flex items-center gap-2">
@@ -104,6 +119,7 @@ const candidates = [...findLocalThumbs(item.slug), ...expandItemThumb(item.thumb
         )
       }
     </div>
+
     <div class="relative mt-1 text-sm text-neutral-200">
       {
         item.date_published && (
@@ -117,12 +133,12 @@ const candidates = [...findLocalThumbs(item.slug), ...expandItemThumb(item.thumb
     </div>
 
     <div class="relative mt-2">
-      <div
-        class="relative w-full rounded-md border border-neutral-800 bg-neutral-800/40"
-        style="aspect-ratio: 16 / 9; overflow: hidden;"
-      >
-        {
-          candidates.length ? (
+      {
+        hasImage ? (
+          <div
+            class="relative w-full rounded-md border border-neutral-800 bg-neutral-800/40"
+            style="aspect-ratio: 16 / 9; overflow: hidden;"
+          >
             <img
               src={candidates[0]}
               data-next={candidates.slice(1).join('|')}
@@ -136,9 +152,16 @@ const candidates = [...findLocalThumbs(item.slug), ...expandItemThumb(item.thumb
               sizes="(min-width: 1024px) 560px, (min-width: 640px) 480px, 100vw"
               class="absolute inset-0 w-full h-full object-cover"
             />
-          ) : null
-        }
-      </div>
+          </div>
+        ) : (
+          <div class="relative w-full rounded-md border border-neutral-800 bg-neutral-900/80 px-4 py-10 flex items-center justify-center">
+            <p class="text-xs text-neutral-500 text-center">
+              Thumbnail not available yet. Full publication preview below.
+            </p>
+          </div>
+        )
+      }
+
       {
         item.summary_short && (
           <div class="relative mt-3">
@@ -170,9 +193,11 @@ const candidates = [...findLocalThumbs(item.slug), ...expandItemThumb(item.thumb
           </div>
         )
       }
+
       <div class="mt-3 text-xs text-neutral-200 flex flex-wrap gap-2">
         {role && <span>{role}</span>}
         {content_type.length ? <span>· {content_type[0]}</span> : null}
+        {geography && <span>· {geography}</span>}
       </div>
     </div>
   </div>

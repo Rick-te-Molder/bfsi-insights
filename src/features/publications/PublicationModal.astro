@@ -1,5 +1,6 @@
 <div id="modal" class="fixed inset-0 z-50 hidden">
   <div id="modal-backdrop" class="absolute inset-0 bg-black/70"></div>
+
   <div
     role="dialog"
     aria-modal="true"
@@ -9,37 +10,52 @@
     <div
       class="relative mt-10 w-full max-w-3xl rounded-2xl border border-neutral-800 bg-neutral-950 shadow-xl"
     >
+      <!-- Close -->
       <div class="absolute right-3 top-3 flex items-center gap-3">
-        <span class="text-xs text-neutral-500"
-          >Press <kbd
+        <span class="text-xs text-neutral-500">
+          Press
+          <kbd
             class="rounded border border-neutral-700 bg-neutral-800 px-1.5 py-0.5 text-neutral-400"
             >ESC</kbd
-          > to close</span
-        >
+          >
+          to close
+        </span>
+
         <button
           id="modal-close"
           aria-label="Close"
-          class="rounded p-2 text-neutral-300 hover:text-white">✕</button
+          class="rounded p-2 text-neutral-300 hover:text-white"
         >
+          ✕
+        </button>
       </div>
+
+      <!-- Content -->
       <div class="p-6">
         <h3 id="modal-title" class="text-2xl font-semibold pr-32">
           <span id="modal-title-text" class="text-sky-200"></span>
         </h3>
-        <div class="mt-2 text-sm text-neutral-400" id="modal-meta"></div>
+
+        <div id="modal-meta" class="mt-2 text-sm text-neutral-400"></div>
+
+        <!-- Tags container -->
         <div id="modal-tags" class="mt-4 flex flex-wrap gap-2 text-xs"></div>
+
+        <!-- Summary (from summary_medium or summary_long) -->
         <div
-          id="modal-note"
+          id="modal-summary"
           class="mt-4 text-base text-neutral-200 prose prose-invert prose-sm max-w-none"
         >
         </div>
+
+        <!-- Button -->
         <div class="mt-6">
           <a
             id="modal-view-details"
             class="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-sky-500 transition-colors"
             href="#"
           >
-            View full details
+            View full publication
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
               ></path>

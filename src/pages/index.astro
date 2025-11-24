@@ -1,30 +1,43 @@
 ---
 import Base from '../layouts/Base.astro';
-import { getAllResources } from '../lib/supabase';
+import { getAllPublications } from '../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
-import ResourceCard from '../features/resources/ResourceCard.astro';
+import PublicationCard from '../features/publications/PublicationCard.astro';
 import fs from 'node:fs';
 
-// Fetch enough resources to ensure we have 6 per persona
-const allResources = await getAllResources();
+// Fetch enough publications to ensure we have 6 per persona
+const allPublications = await getAllPublications();
 
-// Fetch valid roles from ref_role table
+// Supabase client for role metadata
 const supabase = createClient(
   import.meta.env.PUBLIC_SUPABASE_URL,
   import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
 );
-const { data: roles } = await supabase.from('ref_role').select('value, label').order('sort_order');
 
-const roleOptions = roles || [
-  { value: 'executive', label: 'Executives' },
-  { value: 'professional', label: 'Professionals' },
-  { value: 'researcher', label: 'Researchers' },
-];
+// Load roles from kb_role
+const { data: rolesData, error: rolesError } = await supabase
+  .from('kb_role')
+  .select('code, label')
+  .order('sort_order', { ascending: true });
+
+if (rolesError) {
+  throw new Error(`Failed to load roles from kb_role: ${rolesError.message}`);
+}
+
+if (!rolesData || rolesData.length === 0) {
+  throw new Error('kb_role returned no roles; expected at least executive/professional/researcher');
+}
+
+const roleOptions = rolesData.map((r) => ({
+  value: r.code,
+  label: r.label,
+}));
+
 const validRoles = roleOptions.map((r) => r.value);
 
-// Get 6 most recent from each persona for client-side filtering (dynamically based on ref_role)
+// Get 6 most recent from each persona
 const byRole = Object.fromEntries(
-  validRoles.map((role) => [role, allResources.filter((r) => r.role === role).slice(0, 6)]),
+  validRoles.map((role) => [role, allPublications.filter((p) => p.role === role).slice(0, 6)]),
 );
 
 const roleOptionsWithCounts = roleOptions.map((option) => ({
@@ -32,22 +45,31 @@ const roleOptionsWithCounts = roleOptions.map((option) => ({
   count: byRole[option.value]?.length ?? 0,
 }));
 
-// Combine all (deduplicate by id)
+// Combine all, dedupe
 const allByPersona = Object.values(byRole).flat();
 const latest = Array.from(new Map(allByPersona.map((item) => [item.id, item])).values());
 
+// Thumbnails
 const thumbsDirUrl = new URL('../../public/thumbs/', import.meta.url);
 let thumbFiles: string[] = [];
+
 try {
   const dirPath = thumbsDirUrl.pathname;
   thumbFiles = fs.readdirSync(dirPath).filter((f) => /\.(webp|png|jpe?g)$/i.test(f));
 } catch {
   thumbFiles = [];
 }
+
 const findLocalThumbs = (slug: string) => {
   if (!slug) return [];
-  const extPriority: Record<string, number> = { '.png': 0, '.webp': 1, '.jpg': 2, '.jpeg': 2 };
+  const extPriority: Record<string, number> = {
+    '.png': 0,
+    '.webp': 1,
+    '.jpg': 2,
+    '.jpeg': 2,
+  };
   const getExt = (f: string) => (f.match(/\.[^.]+$/)?.[0] || '').toLowerCase();
+
   const files = thumbFiles.filter((f) => f.includes(slug));
   files.sort((a, b) => {
     const pa = extPriority[getExt(a)] ?? 99;
@@ -55,6 +77,7 @@ const findLocalThumbs = (slug: string) => {
     if (pa !== pb) return pa - pb;
     return a.localeCompare(b);
   });
+
   return files.map((f) => `/thumbs/${f}`);
 };
 
@@ -71,8 +94,10 @@ const expandItemThumb = (t: string | undefined) => {
     (() => {
       const first = latest?.[0];
       if (!first) return null;
+
       const candidates = [...findLocalThumbs(first.slug), ...expandItemThumb(first.thumbnail)];
       const href = candidates[0];
+
       return href ? (
         <Fragment slot="head">
           <link rel="preload" as="image" href={href} />
@@ -80,6 +105,8 @@ const expandItemThumb = (t: string | undefined) => {
       ) : null;
     })()
   }
+
+  <!-- Hero -->
   <section class="mb-8 text-center">
     <h2 class="text-3xl font-bold tracking-tight">BFSI Insights</h2>
     <p class="mt-2 text-neutral-300">
@@ -88,11 +115,14 @@ const expandItemThumb = (t: string | undefined) => {
     </p>
   </section>
 
+  <!-- Latest Publications -->
   <section>
     <div class="mb-4 flex items-center justify-between flex-wrap gap-3">
       <h3 class="text-xl font-semibold">Latest</h3>
+
       <div class="flex items-center gap-3">
         <label for="persona-filter" class="text-sm text-neutral-400">View for:</label>
+
         <select
           id="persona-filter"
           class="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-300 focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -106,34 +136,34 @@ const expandItemThumb = (t: string | undefined) => {
             ))
           }
         </select>
+
         <a
-          href="/resources"
+          href="/publications"
           class="text-sm font-medium text-sky-200 underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          >Browse all →</a
         >
+          Browse all →
+        </a>
       </div>
     </div>
-    <ul id="resources-grid" class="grid gap-6 sm:grid-cols-2">
-      {latest.map((item, idx) => <ResourceCard item={item} index={idx} mode="home" />)}
+
+    <ul id="publications-grid" class="grid gap-6 sm:grid-cols-2">
+      {latest.map((item, idx) => <PublicationCard item={item} index={idx} mode="home" />)}
     </ul>
   </section>
 
+  <!-- Persona filter -->
   <script define:vars={{ validRoles }}>
-    // Persona filter using show/hide on server-rendered cards
     const filterEl = document.getElementById('persona-filter');
-    const gridEl = document.getElementById('resources-grid');
+    const gridEl = document.getElementById('publications-grid');
 
     if (!filterEl || !gridEl) {
-      console.error('Filter or grid element not found');
+      console.error('Filter or grid not found');
     } else {
-      // Restore saved preference or default to executive
-      // Never restore 'all' - always start with a specific persona
       const saved = localStorage.getItem('bfsi-persona-preference');
       const defaultPersona = 'executive';
 
-      console.log('Homepage: Saved preference:', saved);
+      const specificRoles = validRoles;
 
-      const specificRoles = validRoles; // executive, professional, researcher
       if (saved && saved !== 'all' && specificRoles.includes(saved)) {
         filterEl.value = saved;
       } else {
@@ -141,87 +171,71 @@ const expandItemThumb = (t: string | undefined) => {
         localStorage.setItem('bfsi-persona-preference', defaultPersona);
       }
 
-      console.log('Homepage: Set filter to:', filterEl.value);
+      filterPublications();
 
-      // Apply initial filter
-      filterResources();
-
-      // Handle filter change
       filterEl.addEventListener('change', () => {
-        console.log('Homepage: Setting persona to', filterEl.value);
         localStorage.setItem('bfsi-persona-preference', filterEl.value);
-        filterResources();
+        filterPublications();
       });
 
-      function filterResources() {
+      function filterPublications() {
         const persona = filterEl.value;
 
-        console.log(`Filtering to ${persona}:`, persona);
-
-        // Show/hide cards based on persona
         const allCards = Array.from(gridEl.children);
-        let visibleCount = 0;
 
         allCards.forEach((card) => {
           const cardRole = card.getAttribute('data-role');
 
           if (persona === 'all' || cardRole === persona) {
             card.style.display = '';
-            visibleCount++;
           } else {
             card.style.display = 'none';
           }
         });
-
-        console.log(`Showing ${visibleCount} cards`);
       }
     }
   </script>
 
+  <!-- Image enhancement -->
   <script>
     function enhanceImages(root) {
       const container = root || document;
       const imgs = Array.from(container.querySelectorAll('li.group img'));
+
       imgs.forEach((img) => {
         const placeholder = img.previousElementSibling;
+
         const onload = () => {
           img.classList.remove('opacity-0');
-          if (placeholder && placeholder instanceof HTMLElement) {
-            placeholder.style.display = 'none';
-          }
+          if (placeholder && placeholder instanceof HTMLElement) placeholder.style.display = 'none';
         };
+
         const onerror = () => {
           const n = img.dataset?.next || '';
           if (n) {
             const parts = n.split('|');
             const nx = parts.shift();
+            img.dataset.next = parts.join('|');
             if (nx) {
-              img.dataset.next = parts.join('|');
               img.src = nx;
               return;
             }
           }
           img.style.display = 'none';
-          if (placeholder && placeholder instanceof HTMLElement) {
-            placeholder.style.display = 'none';
-          }
+          if (placeholder && placeholder instanceof HTMLElement) placeholder.style.display = 'none';
         };
+
         img.addEventListener('load', onload, { once: true });
         img.addEventListener('error', onerror);
+
         if (img.complete) {
-          if (img.naturalWidth > 0) {
-            onload();
-          } else {
-            onerror();
-          }
+          if (img.naturalWidth > 0) onload();
+          else onerror();
         }
       });
     }
 
-    if (document.readyState !== 'loading') {
-      enhanceImages();
-    } else {
-      window.addEventListener('DOMContentLoaded', () => enhanceImages());
-    }
+    if (document.readyState !== 'loading') enhanceImages();
+    else window.addEventListener('DOMContentLoaded', () => enhanceImages());
   </script>
 </Base>

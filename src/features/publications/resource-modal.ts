@@ -111,7 +111,7 @@ function closeModal() {
   if (lastFocus && (lastFocus as any).focus) (lastFocus as any).focus();
 }
 
-export default function initResourceModal() {
+export default function initPublicationModal() {
   (window as any).openModalFrom = openModalFrom;
   document.getElementById('modal-close')?.addEventListener('click', closeModal);
   document.getElementById('modal-backdrop')?.addEventListener('click', closeModal);

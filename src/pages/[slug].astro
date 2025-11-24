@@ -4,27 +4,27 @@ import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import { marked } from 'marked';
 import { fmt } from '../lib/fmt';
-import { getAllResources, getResourceBySlug } from '../lib/supabase';
+import { getAllPublications, getPublicationBySlug } from '../lib/supabase';
 
 // ------------------------------------------------------------
 // Static paths
 // ------------------------------------------------------------
 export async function getStaticPaths() {
-  const resources = await getAllResources();
-  return resources.map((item) => ({ params: { slug: item.slug } }));
+  const publications = await getAllPublications();
+  return publications.map((item) => ({ params: { slug: item.slug } }));
 }
 
 // ------------------------------------------------------------
-// Load resource for this slug
+// Load publication for this slug
 // ------------------------------------------------------------
 const { slug } = Astro.params;
 if (!slug) {
   throw new Error('Missing slug param');
 }
 
-const item = await getResourceBySlug(slug);
+const item = await getPublicationBySlug(slug);
 if (!item) {
-  throw new Error(`Resource not found for slug: ${slug}`);
+  throw new Error(`Publication not found for slug: ${slug}`);
 }
 
 const title = item.title;
@@ -84,7 +84,7 @@ const ogImage = thumbCandidates[0];
     <Breadcrumbs
       segments={[
         { label: 'Home', href: '/' },
-        { label: 'Resources', href: '/resources' },
+        { label: 'Publications', href: '/publications' },
         { label: item.title },
       ]}
     />

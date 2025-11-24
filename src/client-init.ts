@@ -10,8 +10,8 @@ function linkify(text?: string): string {
   });
 }
 
-// Import and inline resource-modal
-function initResourceModal() {
+// Import and inline publication-modal
+function initPublicationModal() {
   let lastFocus: Element | null = null;
   let focusTrapHandler: ((e: FocusEvent) => void) | null = null;
 
@@ -218,7 +218,7 @@ function initResourceModal() {
   });
 }
 
-// Inline resource-filters - simplified version
+// Inline publication-filters - simplified version
 function initResourceFilters() {
   // Implementation loaded from separate script on resources page only
 }
@@ -257,7 +257,7 @@ function enhanceImages(root: Document | Element = document) {
 }
 
 function init() {
-  initResourceModal();
+  initPublicationModal();
   enhanceImages();
   if (document.getElementById('list')) initResourceFilters();
 }

@@ -10,9 +10,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // ------------------------------------------------------------
-// Resource type based on kb_publication_pretty view
+// Publication type based on kb_publication_pretty view
 // ------------------------------------------------------------
-export interface Resource {
+export interface Publication {
   id: string;
   slug: string;
   title: string;
@@ -48,7 +48,9 @@ export interface Resource {
 // ------------------------------------------------------------
 function normalizeAuthors(raw: unknown): string[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw.map((x) => String(x).trim()).filter(Boolean);
+  if (Array.isArray(raw)) {
+    return raw.map((x) => String(x).trim()).filter(Boolean);
+  }
 
   return String(raw)
     .split(',')
@@ -57,9 +59,9 @@ function normalizeAuthors(raw: unknown): string[] {
 }
 
 // ------------------------------------------------------------
-// Normalize a single resource row
+// Normalize a single publication row
 // ------------------------------------------------------------
-function normalizeResource(row: any): Resource {
+function normalizePublication(row: any): Publication {
   return {
     ...row,
     authors: normalizeAuthors(row.authors),
@@ -67,9 +69,9 @@ function normalizeResource(row: any): Resource {
 }
 
 // ------------------------------------------------------------
-// Fetch all published resources
+// Fetch all published publications
 // ------------------------------------------------------------
-export async function getAllResources(): Promise<Resource[]> {
+export async function getAllPublications(): Promise<Publication[]> {
   const { data, error } = await supabase
     .from('kb_publication_pretty')
     .select('*')
@@ -77,17 +79,17 @@ export async function getAllResources(): Promise<Resource[]> {
     .order('date_added', { ascending: false });
 
   if (error) {
-    console.error('Error fetching resources:', error);
+    console.error('Error fetching publications:', error);
     return [];
   }
 
-  return (data || []).map(normalizeResource);
+  return (data || []).map(normalizePublication);
 }
 
 // ------------------------------------------------------------
-// Fetch a single resource by slug
+// Fetch a single publication by slug
 // ------------------------------------------------------------
-export async function getResourceBySlug(slug: string): Promise<Resource | null> {
+export async function getPublicationBySlug(slug: string): Promise<Publication | null> {
   const { data, error } = await supabase
     .from('kb_publication_pretty')
     .select('*')
@@ -96,17 +98,19 @@ export async function getResourceBySlug(slug: string): Promise<Resource | null> 
     .single();
 
   if (error) {
-    console.error(`Error fetching resource with slug "${slug}":`, error.message);
+    console.error(`Error fetching publication with slug "${slug}":`, error.message);
     return null;
   }
 
-  return data ? normalizeResource(data) : null;
+  return data ? normalizePublication(data) : null;
 }
 
 // ------------------------------------------------------------
-// Fetch resources using arbitrary filters
+// Fetch publications using arbitrary filters
 // ------------------------------------------------------------
-export async function getFilteredResources(filters: Record<string, string>): Promise<Resource[]> {
+export async function getFilteredPublications(
+  filters: Record<string, string>,
+): Promise<Publication[]> {
   let query = supabase.from('kb_publication_pretty').select('*').eq('status', 'published');
 
   for (const [key, value] of Object.entries(filters)) {
@@ -118,9 +122,9 @@ export async function getFilteredResources(filters: Record<string, string>): Pro
   const { data, error } = await query.order('date_added', { ascending: false });
 
   if (error) {
-    console.error('Error fetching filtered resources:', error);
+    console.error('Error fetching filtered publications:', error);
     return [];
   }
 
-  return (data || []).map(normalizeResource);
+  return (data || []).map(normalizePublication);
 }

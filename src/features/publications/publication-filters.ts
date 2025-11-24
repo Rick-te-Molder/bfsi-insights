@@ -1,4 +1,4 @@
-export default function initResourceFilters() {
+export default function initPublicationFilters() {
   const list = document.getElementById('list');
   const empty = document.getElementById('empty');
   const clearBtn = document.getElementById('clear-filters');
@@ -10,13 +10,12 @@ export default function initResourceFilters() {
   const paginationCount = document.getElementById('pagination-count');
   const paginationContainer = document.getElementById('pagination-container');
 
-  const STORAGE_KEY = 'resourcesFiltersV1';
+  const STORAGE_KEY = 'publicationFiltersV1';
   const PAGE_SIZE = 30;
   const ADVANCED_FILTERS_KEY = 'advanced-filters-expanded';
 
   if (!list) return;
 
-  // Discover all select filters with id starting with "f-"
   const filterElements = Array.from(
     document.querySelectorAll<HTMLSelectElement>('select[id^="f-"]'),
   );
@@ -43,7 +42,6 @@ export default function initResourceFilters() {
 
   let currentPage = 1;
 
-  // Build an index of items from the DOM data attributes
   const data: IndexedItem[] = Array.from(list.children).map((node) => {
     const el = node as HTMLElement;
     const item: IndexedItem = {
@@ -53,7 +51,6 @@ export default function initResourceFilters() {
       authors: el.getAttribute('data-authors') || '',
     };
 
-    // Attach all filter attributes (e.g. data-role, data-industry, ...)
     filters.forEach(({ key }) => {
       item[key] = el.getAttribute(`data-${key}`) || '';
     });
@@ -61,14 +58,13 @@ export default function initResourceFilters() {
     return item;
   });
 
-  // Optional Fuse.js for better text search
   let FuseCtor: any = null;
   (async () => {
     try {
       const mod = await import('fuse.js');
       FuseCtor = (mod as any)?.default || null;
     } catch {
-      // Fuse is optional; simple substring search fallback below
+      // optional
     }
   })();
 
@@ -142,7 +138,7 @@ export default function initResourceFilters() {
     }
 
     paginationContainer.classList.remove('hidden');
-    paginationCount.textContent = `Showing ${visible} of ${total} resources`;
+    paginationCount.textContent = `Showing ${visible} of ${total} publications`;
 
     if (hasMore) {
       loadMoreBtn.classList.remove('hidden');
@@ -163,7 +159,6 @@ export default function initResourceFilters() {
       vals[key] = params.get(key) || '';
     });
 
-    // Page from URL
     const pageParam = params.get('page');
     if (pageParam) {
       const parsed = parseInt(pageParam, 10);
@@ -174,16 +169,13 @@ export default function initResourceFilters() {
 
     const hasAnyParam = Object.values(vals).some((v) => v);
 
-    // If no URL params, use persona preference / saved filters
     if (!hasAnyParam) {
       try {
         const personaPref = localStorage.getItem('bfsi-persona-preference');
-        console.log('Resources: Read persona preference:', personaPref);
-
         const saved = localStorage.getItem(STORAGE_KEY);
+
         if (saved) {
           const parsed = JSON.parse(saved) as FilterValues;
-          console.log('Resources: Loaded saved filters:', parsed);
 
           vals.role =
             personaPref && personaPref !== 'all'
@@ -206,13 +198,10 @@ export default function initResourceFilters() {
             vals.role = 'all';
           }
         }
-
-        console.log('Resources: Setting role to:', vals.role);
       } catch {
         // ignore
       }
     } else if (!vals.role) {
-      // If URL has params but no role, default to "all"
       vals.role = 'all';
     }
 
@@ -228,7 +217,6 @@ export default function initResourceFilters() {
     let visible = 0;
     let allowed = new Set<number>(data.map((_, i) => i));
 
-    // Dropdown filters
     for (const { key } of filters) {
       const value = vals[key];
       if (!value || value === 'all') continue;
@@ -240,7 +228,6 @@ export default function initResourceFilters() {
       allowed = next;
     }
 
-    // Text search
     if (vals.q) {
       if (FuseCtor) {
         const fuse = new FuseCtor(data, {
@@ -267,7 +254,6 @@ export default function initResourceFilters() {
       }
     }
 
-    // Pagination
     const filteredIndices = Array.from(allowed);
     const totalFiltered = filteredIndices.length;
     const visibleCount = Math.min(currentPage * PAGE_SIZE, totalFiltered);
@@ -288,12 +274,10 @@ export default function initResourceFilters() {
     return visible;
   }
 
-  // Initialise from query / storage
   const initVals = readFromQuery();
   apply(initVals);
   renderChipsSummary(initVals);
 
-  // Filter change events
   filters.forEach(({ key, el }) => {
     el.addEventListener('change', () => {
       const vals = getVals();
@@ -304,16 +288,13 @@ export default function initResourceFilters() {
           const roleVal = vals.role || 'all';
           localStorage.setItem('bfsi-persona-preference', roleVal);
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
 
       apply(vals, true);
       renderChipsSummary(vals);
     });
   });
 
-  // Debounced search
   const debounced = (() => {
     let t: number | undefined;
     return (fn: () => void) => {
@@ -327,22 +308,18 @@ export default function initResourceFilters() {
       const vals = getVals();
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(vals));
-      } catch {
-        // ignore
-      }
+      } catch {}
       apply(vals, true);
       renderChipsSummary(vals);
     }),
   );
 
-  // Clear filters
   clearBtn?.addEventListener('click', () => {
     const cleared: FilterValues = {
       role: 'all',
       industry: '',
       topic: '',
       content_type: '',
-      jurisdiction: '',
       geography: '',
       q: '',
     };
@@ -350,14 +327,12 @@ export default function initResourceFilters() {
     setVals(cleared);
     try {
       localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
-    }
+    } catch {}
+
     apply(getVals(), true);
     renderChipsSummary(getVals());
   });
 
-  // Load More
   loadMoreBtn?.addEventListener('click', () => {
     currentPage++;
     apply(getVals(), false);
@@ -371,7 +346,7 @@ export default function initResourceFilters() {
     }
   });
 
-  // Mobile bottom-sheet filters
+  /* Mobile Sheet */
   const openBtn = document.getElementById('open-sheet');
   const sheet = document.getElementById('filter-sheet');
   const backdrop = document.getElementById('sheet-backdrop');
@@ -385,7 +360,7 @@ export default function initResourceFilters() {
       industry: document.getElementById('f-industry') as HTMLSelectElement | null,
       topic: document.getElementById('f-topic') as HTMLSelectElement | null,
       content_type: document.getElementById('f-content_type') as HTMLSelectElement | null,
-      jurisdiction: document.getElementById('f-jurisdiction') as HTMLSelectElement | null,
+      geography: document.getElementById('f-geography') as HTMLSelectElement | null,
     } as const;
 
     const mobile = {
@@ -394,7 +369,7 @@ export default function initResourceFilters() {
       industry: document.getElementById('m-f-industry') as HTMLSelectElement | null,
       topic: document.getElementById('m-f-topic') as HTMLSelectElement | null,
       content_type: document.getElementById('m-f-content_type') as HTMLSelectElement | null,
-      jurisdiction: document.getElementById('m-f-jurisdiction') as HTMLSelectElement | null,
+      geography: document.getElementById('m-f-geography') as HTMLSelectElement | null,
     } as const;
 
     function getDesktopVals(): FilterValues {
@@ -403,7 +378,7 @@ export default function initResourceFilters() {
         industry: desktop.industry?.value || '',
         topic: desktop.topic?.value || '',
         content_type: desktop.content_type?.value || '',
-        jurisdiction: desktop.jurisdiction?.value || '',
+        geography: desktop.geography?.value || '',
         q: desktop.q?.value?.trim() || '',
       };
     }
@@ -413,7 +388,7 @@ export default function initResourceFilters() {
       if (desktop.industry) desktop.industry.value = vals.industry || '';
       if (desktop.topic) desktop.topic.value = vals.topic || '';
       if (desktop.content_type) desktop.content_type.value = vals.content_type || '';
-      if (desktop.jurisdiction) desktop.jurisdiction.value = vals.jurisdiction || '';
+      if (desktop.geography) desktop.geography.value = vals.geography || '';
       if (desktop.q) desktop.q.value = vals.q || '';
     }
 
@@ -423,12 +398,12 @@ export default function initResourceFilters() {
       if (mobile.industry) mobile.industry.value = v.industry;
       if (mobile.topic) mobile.topic.value = v.topic;
       if (mobile.content_type) mobile.content_type.value = v.content_type;
-      if (mobile.jurisdiction) mobile.jurisdiction.value = v.jurisdiction;
+      if (mobile.geography) mobile.geography.value = v.geography;
       if (mobile.q) mobile.q.value = v.q;
     }
 
     function applyFromDesktop() {
-      ['role', 'industry', 'topic', 'content_type', 'jurisdiction'].forEach((k) => {
+      ['role', 'industry', 'topic', 'content_type', 'geography'].forEach((k) => {
         const el = (desktop as any)[k] as HTMLSelectElement | null;
         if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
       });
@@ -467,7 +442,7 @@ export default function initResourceFilters() {
         industry: '',
         topic: '',
         content_type: '',
-        jurisdiction: '',
+        geography: '',
         q: '',
       };
       setDesktopVals(emptyVals);
@@ -482,7 +457,7 @@ export default function initResourceFilters() {
         industry: mobile.industry?.value || '',
         topic: mobile.topic?.value || '',
         content_type: mobile.content_type?.value || '',
-        jurisdiction: mobile.jurisdiction?.value || '',
+        geography: mobile.geography?.value || '',
         q: mobile.q?.value?.trim() || '',
       };
       setDesktopVals(vals);
@@ -491,7 +466,6 @@ export default function initResourceFilters() {
       closeSheet();
     });
 
-    // Mobile search button opens sheet with search focused
     mobileSearchBtn?.addEventListener('click', () => {
       syncToMobile();
       sheet.classList.remove('hidden');
@@ -506,7 +480,6 @@ export default function initResourceFilters() {
     renderChipsSummary(getDesktopVals());
   }
 
-  // Collapsible Advanced Filters
   const toggleAdvancedBtn = document.getElementById('toggle-advanced-filters');
   const advancedFilters = document.getElementById('advanced-filters');
   const advancedIcon = document.getElementById('advanced-filters-icon');
@@ -532,12 +505,9 @@ export default function initResourceFilters() {
 
     try {
       localStorage.setItem(ADVANCED_FILTERS_KEY, String(newState));
-    } catch {
-      // ignore
-    }
+    } catch {}
   }
 
-  // Restore advanced filters state
   try {
     const savedState = localStorage.getItem(ADVANCED_FILTERS_KEY);
     if (savedState === 'true' && advancedFilters && toggleAdvancedBtn && advancedIcon) {
@@ -547,9 +517,7 @@ export default function initResourceFilters() {
       const buttonText = toggleAdvancedBtn.querySelector('span');
       if (buttonText) buttonText.textContent = 'Fewer filters';
     }
-  } catch {
-    // ignore
-  }
+  } catch {}
 
   toggleAdvancedBtn?.addEventListener('click', toggleAdvancedFilters);
 }

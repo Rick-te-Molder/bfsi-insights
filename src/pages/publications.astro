@@ -1,20 +1,20 @@
 ---
 import Base from '../layouts/Base.astro';
-import { getAllResources } from '../lib/supabase';
+import { getAllPublications } from '../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
-import ResourceCard from '../features/resources/ResourceCard.astro';
+import PublicationCard from '../features/publications/PublicationCard.astro';
 import fs from 'node:fs';
 
-// Fetch all resources from Supabase
-const resources = await getAllResources();
+// Fetch all publications
+const publications = await getAllPublications();
 
-// Initialize Supabase client
+// Supabase client for dynamic filter config
 const supabase = createClient(
   import.meta.env.PUBLIC_SUPABASE_URL,
   import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
 );
 
-// Fetch filter configuration dynamically from database
+// Load filter configuration
 const { data: filterConfig } = await supabase
   .from('ref_filter_config')
   .select('column_name, display_label, sort_order')
@@ -23,38 +23,52 @@ const { data: filterConfig } = await supabase
 
 const filters = filterConfig || [];
 
-// Create filter values with counts dynamically based on filter config
-const createValuesWithCounts = (field: keyof (typeof resources)[0]) => {
+// Build filter value lists + counts
+const createValuesWithCounts = (field: keyof (typeof publications)[0]) => {
   const counts = new Map<string, number>();
-  resources.forEach((r) => {
-    const val = r[field];
+
+  publications.forEach((p) => {
+    const val = p[field];
     if (val) counts.set(String(val), (counts.get(String(val)) || 0) + 1);
   });
+
   return Array.from(counts.entries())
-    .map(([value, count]) => ({ value, count, label: `${value} (${count})` }))
+    .map(([value, count]) => ({
+      value,
+      count,
+      label: `${value} (${count})`,
+    }))
     .sort((a, b) => a.value.localeCompare(b.value));
 };
 
-// Build values object dynamically from filter config
 const values: Record<string, Array<{ value: string; count: number; label: string }>> = {};
 filters.forEach((filter) => {
   values[filter.column_name] = createValuesWithCounts(
-    filter.column_name as keyof (typeof resources)[0],
+    filter.column_name as keyof (typeof publications)[0],
   );
 });
 
+// Thumbnail handling
 const thumbsDirUrl = new URL('../../public/thumbs/', import.meta.url);
 let thumbFiles: string[] = [];
+
 try {
   const dirPath = thumbsDirUrl.pathname;
   thumbFiles = fs.readdirSync(dirPath).filter((f) => /\.(webp|png|jpe?g)$/i.test(f));
 } catch {
   thumbFiles = [];
 }
+
 const findLocalThumbs = (slug: string) => {
   if (!slug) return [];
-  const extPriority: Record<string, number> = { '.png': 0, '.webp': 1, '.jpg': 2, '.jpeg': 2 };
+  const extPriority: Record<string, number> = {
+    '.png': 0,
+    '.webp': 1,
+    '.jpg': 2,
+    '.jpeg': 2,
+  };
   const getExt = (f: string) => (f.match(/\.[^.]+$/)?.[0] || '').toLowerCase();
+
   const files = thumbFiles.filter((f) => f.includes(slug));
   files.sort((a, b) => {
     const pa = extPriority[getExt(a)] ?? 99;
@@ -62,6 +76,7 @@ const findLocalThumbs = (slug: string) => {
     if (pa !== pb) return pa - pb;
     return a.localeCompare(b);
   });
+
   return files.map((f) => `/thumbs/${f}`);
 };
 
@@ -71,16 +86,15 @@ const expandItemThumb = (t: string | undefined) => {
 };
 ---
 
-<Base title="Resources · BFSI Insights">
+<Base title="Publications · BFSI Insights">
   {
     (() => {
-      const first = resources?.[0];
+      const first = publications?.[0];
       if (!first) return null;
-      const candidates = [
-        ...(typeof findLocalThumbs === 'function' ? findLocalThumbs(first.slug) : []),
-        ...expandItemThumb(first.thumbnail),
-      ];
+
+      const candidates = [...findLocalThumbs(first.slug), ...expandItemThumb(first.thumbnail)];
       const href = candidates[0];
+
       return href ? (
         <Fragment slot="head">
           <link rel="preload" as="image" href={href} />
@@ -88,35 +102,42 @@ const expandItemThumb = (t: string | undefined) => {
       ) : null;
     })()
   }
+
+  <!-- Header -->
   <section class="mb-6">
     <div class="flex items-center justify-between">
-      <h2 class="text-2xl font-semibold tracking-tight">Resources</h2>
+      <h2 class="text-2xl font-semibold tracking-tight">Publications</h2>
       <div class="flex items-center gap-3">
         <a
           href="/"
           class="text-sm font-medium text-sky-200 underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-          >Home</a
         >
+          Home
+        </a>
       </div>
     </div>
-    <p class="mt-1 text-sm text-neutral-300">Filter by attributes to find relevant items.</p>
+
+    <p class="mt-1 text-sm text-neutral-300">
+      Filter publications by attributes to find relevant items.
+    </p>
+
     <p id="count" class="mt-1 text-xs text-neutral-300" aria-live="polite"></p>
   </section>
 
-  <!-- Desktop Filters - 2 Column Layout -->
+  <!-- Desktop Filters -->
   <section class="mb-6 hidden sm:grid gap-3 sm:grid-cols-2">
-    <!-- Search - Full Width -->
+    <!-- Search -->
     <label class="hidden sm:col-span-2 sm:flex flex-col gap-1 text-sm">
       <span class="text-neutral-300">Search</span>
       <input
         id="q"
         type="search"
-        placeholder="Search by title, author, or source..."
+        placeholder="Search by title, author, or source…"
         class="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-base placeholder:text-neutral-500"
       />
     </label>
 
-    <!-- Dynamically render first 3 filters (primary filters) -->
+    <!-- First three primary filters -->
     {
       filters.slice(0, 3).map((filter) => {
         const filterValues = values[filter.column_name] || [];
@@ -125,15 +146,18 @@ const expandItemThumb = (t: string | undefined) => {
         return (
           <label class="flex flex-col gap-1 text-sm">
             <span class="text-neutral-300">
-              {filter.display_label} <span class="text-neutral-500">({filterValues.length})</span>
+              {filter.display_label}
+              <span class="text-neutral-500">({filterValues.length})</span>
             </span>
+
             <select
               id={`f-${filter.column_name}`}
               class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5"
             >
               <option value={isRole ? 'all' : ''}>
-                {isRole ? `Everyone (${resources.length})` : 'All'}
+                {isRole ? `Everyone (${publications.length})` : 'All'}
               </option>
+
               {filterValues.map((v) => (
                 <option value={v.value}>{v.label}</option>
               ))}
@@ -143,7 +167,7 @@ const expandItemThumb = (t: string | undefined) => {
       })
     }
 
-    <!-- Collapsible Advanced Filters -->
+    <!-- Advanced Filters Toggle -->
     <div class="sm:col-span-2">
       <button
         id="toggle-advanced-filters"
@@ -166,7 +190,6 @@ const expandItemThumb = (t: string | undefined) => {
       </button>
 
       <div id="advanced-filters" class="hidden mt-3 grid gap-3 sm:grid-cols-2">
-        <!-- Dynamically render remaining filters (advanced filters) -->
         {
           filters.slice(3).map((filter) => {
             const filterValues = values[filter.column_name] || [];
@@ -174,9 +197,10 @@ const expandItemThumb = (t: string | undefined) => {
             return (
               <label class="flex flex-col gap-1 text-sm">
                 <span class="text-neutral-300">
-                  {filter.display_label}{' '}
+                  {filter.display_label}
                   <span class="text-neutral-500">({filterValues.length})</span>
                 </span>
+
                 <select
                   id={`f-${filter.column_name}`}
                   class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5"
@@ -193,7 +217,7 @@ const expandItemThumb = (t: string | undefined) => {
       </div>
     </div>
 
-    <!-- Clear button -->
+    <!-- Clear -->
     <div class="sm:col-span-2 flex justify-end">
       <button
         id="clear-filters"
@@ -204,10 +228,9 @@ const expandItemThumb = (t: string | undefined) => {
     </div>
   </section>
 
-  <!-- Mobile panel: search icon and filter button -->
+  <!-- Mobile search and filter buttons -->
   <section class="mb-4 sm:hidden">
     <div class="flex items-center gap-2">
-      <!-- Mobile Search Icon -->
       <button
         id="mobile-search-btn"
         class="flex items-center justify-center w-10 h-10 rounded-lg border border-neutral-700 bg-neutral-900 text-neutral-300 hover:bg-neutral-800 transition-colors"
@@ -221,20 +244,24 @@ const expandItemThumb = (t: string | undefined) => {
             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
         </svg>
       </button>
+
       <button
         id="open-sheet"
         class="flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-neutral-200 hover:bg-neutral-800"
       >
         Filters
       </button>
-      <div class="text-xs text-neutral-400" id="count-mobile" aria-live="polite"></div>
+
+      <div id="count-mobile" class="text-xs text-neutral-400" aria-live="polite"></div>
     </div>
+
     <div id="chips" class="mt-2 flex flex-wrap gap-2"></div>
   </section>
 
-  <!-- Mobile bottom-sheet for filters -->
-  <div id="filter-sheet" class="fixed inset-0 z-50 hidden sm:hidden" aria-hidden="true">
+  <!-- Mobile filter sheet -->
+  <div id="filter-sheet" class="fixed inset-0 z-50 hidden sm:hidden">
     <div id="sheet-backdrop" class="absolute inset-0 bg-black/70"></div>
+
     <div
       role="dialog"
       aria-modal="true"
@@ -246,21 +273,27 @@ const expandItemThumb = (t: string | undefined) => {
           <h3 id="sheet-title" class="text-lg font-semibold">Filters</h3>
           <button
             id="close-sheet"
+            class="rounded p-2 text-neutral-300 hover:text-white"
             aria-label="Close"
-            class="rounded p-2 text-neutral-300 hover:text-white">✕</button
           >
+            ✕
+          </button>
         </div>
+
+        <!-- Mobile search -->
+        <label class="flex flex-col gap-1 mt-3 text-sm">
+          <span class="text-neutral-300">Search</span>
+
+          <input
+            id="m-q"
+            type="search"
+            placeholder="Search title, summary, source, authors…"
+            class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
+          />
+        </label>
+
+        <!-- Mobile filters -->
         <div class="mt-3 grid gap-3">
-          <label class="flex flex-col gap-1 text-sm">
-            <span class="text-neutral-300">Search</span>
-            <input
-              id="m-q"
-              type="search"
-              placeholder="Search title, note, source, authors"
-              class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
-            />
-          </label>
-          <!-- Dynamically render mobile filters from database config -->
           {
             filters.map((filter) => {
               const filterValues = values[filter.column_name] || [];
@@ -269,13 +302,15 @@ const expandItemThumb = (t: string | undefined) => {
               return (
                 <label class="flex flex-col gap-1 text-sm">
                   <span class="text-neutral-300">{filter.display_label}</span>
+
                   <select
                     id={`m-f-${filter.column_name}`}
                     class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
                   >
                     <option value={isRole ? 'all' : ''}>
-                      {isRole ? `Everyone (${resources.length})` : 'All'}
+                      {isRole ? `Everyone (${publications.length})` : 'All'}
                     </option>
+
                     {filterValues.map((v) => (
                       <option value={v.value}>{v.label}</option>
                     ))}
@@ -285,22 +320,27 @@ const expandItemThumb = (t: string | undefined) => {
             })
           }
         </div>
+
         <div class="mt-4 flex items-center justify-between">
           <button
             id="m-clear"
             class="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
-            >Clear all</button
           >
+            Clear all
+          </button>
+
           <button
             id="m-apply"
             class="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
-            >Apply</button
           >
+            Apply
+          </button>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- Publications list -->
   <section>
     <div
       id="empty"
@@ -308,31 +348,27 @@ const expandItemThumb = (t: string | undefined) => {
       role="status"
       aria-live="polite"
     >
-      No results match the selected filters.
+      No publications match the selected filters.
     </div>
+
     <ul id="list" class="grid gap-6 sm:grid-cols-2">
-      {
-        resources.map((item, idx) => {
-          return <ResourceCard item={item} index={idx} />;
-        })
-      }
+      {publications.map((item, idx) => <PublicationCard item={item} index={idx} />)}
     </ul>
 
-    <!-- Pagination Controls -->
+    <!-- Pagination -->
     <div id="pagination-container" class="mt-8 flex flex-col items-center gap-4">
-      <p id="pagination-count" class="text-sm text-neutral-400">
-        <!-- Dynamically populated -->
-      </p>
+      <p id="pagination-count" class="text-sm text-neutral-400"></p>
+
       <button
         id="load-more-btn"
         class="rounded-md bg-sky-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-neutral-950 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        Show more results
+        Show more publications
       </button>
     </div>
   </section>
 
-  <!-- Back to Top Button -->
+  <!-- Back to Top -->
   <button
     id="back-to-top"
     aria-label="Back to top"
@@ -350,18 +386,22 @@ const expandItemThumb = (t: string | undefined) => {
     </svg>
   </button>
 
+  <!-- Image enhancement -->
   <script>
-    function enhanceImages(root?: Document | Element) {
+    function enhanceImages(root) {
       const container = root || document;
-      const imgs = Array.from(container.querySelectorAll('li.group img')) as HTMLImageElement[];
+      const imgs = Array.from(container.querySelectorAll('li.group img'));
+
       imgs.forEach((img) => {
         const placeholder = img.previousElementSibling;
+
         const onload = () => {
           img.classList.remove('opacity-0');
           if (placeholder && placeholder instanceof HTMLElement) {
             placeholder.style.display = 'none';
           }
         };
+
         const onerror = () => {
           const n = img.dataset?.next || '';
           if (n) {
@@ -378,34 +418,32 @@ const expandItemThumb = (t: string | undefined) => {
             placeholder.style.display = 'none';
           }
         };
+
         img.addEventListener('load', onload, { once: true });
         img.addEventListener('error', onerror);
+
         if (img.complete) {
-          if (img.naturalWidth > 0) {
-            onload();
-          } else {
-            onerror();
-          }
+          if (img.naturalWidth > 0) onload();
+          else onerror();
         }
       });
     }
 
-    if (document.readyState !== 'loading') {
-      enhanceImages();
-    } else {
-      window.addEventListener('DOMContentLoaded', () => enhanceImages());
-    }
+    if (document.readyState !== 'loading') enhanceImages();
+    else window.addEventListener('DOMContentLoaded', () => enhanceImages());
   </script>
 
+  <!-- Filters JS -->
   <script>
-    import('../features/resources/resource-filters.ts').then((mod) => {
+    import('../features/publications/publication-filters.ts').then((mod) => {
       mod.default();
     });
   </script>
 
+  <!-- Back to Top interaction -->
   <script>
-    // Back to Top - Tesla Performance mode: instant scroll, smooth fade
     const backToTopBtn = document.getElementById('back-to-top');
+
     if (backToTopBtn) {
       let isVisible = false;
       const SHOW_THRESHOLD = 400;
@@ -414,6 +452,7 @@ const expandItemThumb = (t: string | undefined) => {
         const shouldShow = window.scrollY > SHOW_THRESHOLD;
         if (shouldShow !== isVisible) {
           isVisible = shouldShow;
+
           if (isVisible) {
             backToTopBtn.classList.remove('opacity-0', 'pointer-events-none');
             backToTopBtn.classList.add('opacity-100', 'pointer-events-auto');
@@ -424,8 +463,7 @@ const expandItemThumb = (t: string | undefined) => {
         }
       };
 
-      // Smooth fade on scroll
-      let rafId: number | null = null;
+      let rafId = null;
       window.addEventListener(
         'scroll',
         () => {
@@ -439,35 +477,30 @@ const expandItemThumb = (t: string | undefined) => {
         { passive: true },
       );
 
-      // Tesla-style scroll: acceleration → speed → braking
+      // Tesla-style scroll
       backToTopBtn.addEventListener('click', () => {
         const startPosition = window.scrollY;
         const distance = startPosition;
-        const duration = Math.min(800 + distance * 0.3, 1200); // Adaptive duration
-        let startTime: number | null = null;
+        const duration = Math.min(800 + distance * 0.3, 1200);
+        let startTime = null;
 
-        // Custom easing: aggressive ease-in-out (Tesla acceleration curve)
-        const easeInOutCubic = (t: number): number => {
-          return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-        };
+        const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
-        const animateScroll = (currentTime: number) => {
+        const animateScroll = (currentTime) => {
           if (startTime === null) startTime = currentTime;
+
           const elapsed = currentTime - startTime;
           const progress = Math.min(elapsed / duration, 1);
           const eased = easeInOutCubic(progress);
 
           window.scrollTo(0, startPosition - distance * eased);
 
-          if (progress < 1) {
-            requestAnimationFrame(animateScroll);
-          }
+          if (progress < 1) requestAnimationFrame(animateScroll);
         };
 
         requestAnimationFrame(animateScroll);
       });
 
-      // Initial check
       toggleVisibility();
     }
   </script>

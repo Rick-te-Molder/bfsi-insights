@@ -1,12 +1,12 @@
-import { getAllResources } from '../lib/supabase';
+import { getAllPublications } from '../lib/supabase';
 
 export async function GET() {
-  const resources = await getAllResources();
-  const latest = resources.slice(0, 20).map((item) => ({
+  const publications = await getAllPublications();
+  const latest = publications.slice(0, 20).map((item) => ({
     title: item.title,
     url: item.url,
     date_added: item.date_added,
-    last_edited: item.last_edited,
+    last_edited: (item as any).last_edited, // keep if present in view, otherwise remove
     source_name: item.source_name,
     role: item.role,
     industry: item.industry,
