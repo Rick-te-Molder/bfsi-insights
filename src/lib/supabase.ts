@@ -76,7 +76,7 @@ export async function getAllPublications(): Promise<Publication[]> {
     .from('kb_publication_pretty')
     .select('*')
     .eq('status', 'published')
-    .order('date_added', { ascending: false });
+    .order('date_published', { ascending: false });
 
   if (error) {
     console.error('Error fetching publications:', error);
