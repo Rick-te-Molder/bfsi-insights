@@ -1,4 +1,4 @@
-// Thumbnail and preview helpers for resources
+// Thumbnail and preview helpers for publications
 
 function isHttpUrl(value?: string): boolean {
   return !!value && /^https?:\/\//i.test(value);

@@ -15,7 +15,7 @@ const { data: sources, error } = await supabase
   .order('name');
 
 if (error) {
-  console.error('Failed to fetch external resources:', error);
+  console.error('Failed to fetch external sources:', error);
 }
 
 // ------------------------------------------------------------
@@ -31,7 +31,7 @@ const CATEGORY_MAP: Record<string, string> = {
 // ------------------------------------------------------------
 // Transform raw Supabase rows → view model
 // ------------------------------------------------------------
-const externalResources = (sources ?? []).map((s) => ({
+const externalSources = (sources ?? []).map((s) => ({
   name: s.name,
   url: s.domain ? `https://${s.domain}` : '',
   description: s.description ?? '',
@@ -41,9 +41,9 @@ const externalResources = (sources ?? []).map((s) => ({
 // ------------------------------------------------------------
 // Group by category
 // ------------------------------------------------------------
-const grouped: Record<string, typeof externalResources> = {};
+const grouped: Record<string, typeof externalSources> = {};
 
-for (const res of externalResources) {
+for (const res of externalSources) {
   if (!grouped[res.category]) grouped[res.category] = [];
   grouped[res.category].push(res);
 }

@@ -1,6 +1,6 @@
 # Scripts Directory
 
-Production-grade agentic workflow for automated resource curation.
+Production-grade agentic workflow for automated publication curation.
 
 # BFSI Insights – Scripts
 

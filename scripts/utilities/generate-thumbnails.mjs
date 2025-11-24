@@ -32,7 +32,7 @@ async function main() {
   console.log('🖼️  Starting thumbnail generation...');
 
   // Get publications that need thumbnails
-  const publications = await getResourcesNeedingThumbnails();
+  const publications = await getPublicationsNeedingThumbnails();
 
   if (publications.length === 0) {
     console.log('✅ All publications already have thumbnails!');
@@ -186,7 +186,7 @@ async function generateThumbnail(context, publication) {
   }
 }
 
-async function getResourcesNeedingThumbnails() {
+async function getPublicationsNeedingThumbnails() {
   const { data, error } = await supabase
     .from('kb_publication')
     .select('slug, title, source_url, thumbnail')

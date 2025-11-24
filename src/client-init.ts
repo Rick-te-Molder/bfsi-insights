@@ -230,8 +230,8 @@ function initPublicationModal() {
 }
 
 // Inline publication-filters - simplified version
-function initResourceFilters() {
-  // Implementation loaded from separate script on resources page only
+function initPublicationFilters() {
+  // Implementation loaded from separate script on publications page only
 }
 
 function enhanceImages(root: Document | Element = document) {
@@ -270,7 +270,7 @@ function enhanceImages(root: Document | Element = document) {
 function init() {
   initPublicationModal();
   enhanceImages();
-  if (document.getElementById('list')) initResourceFilters();
+  if (document.getElementById('list')) initPublicationFilters();
 }
 
 if (document.readyState !== 'loading') {
