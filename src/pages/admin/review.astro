@@ -180,12 +180,17 @@ import Base from '../../layouts/Base.astro';
             const article = document.querySelector('[data-item-id="' + id + '"]');
             if (!(article instanceof HTMLElement)) return;
 
+            // Get current user for audit trail
+            const session = (await supabase.auth.getSession()).data.session;
+            const userId = session?.user?.id;
+
             // Update status directly (no RPC function needed)
             const { error } = await supabase
               .from('ingestion_queue')
               .update({
                 status: 'approved',
                 approved_at: new Date().toISOString(),
+                reviewer: userId,
               })
               .eq('id', id)
               .eq('status', 'enriched');
@@ -213,13 +218,25 @@ import Base from '../../layouts/Base.astro';
             const article = document.querySelector('[data-item-id="' + id + '"]');
             if (!(article instanceof HTMLElement)) return;
 
-            const result = await supabase.rpc('reject_from_queue', {
-              p_queue_id: id,
-              p_reason: reason || null,
-            });
+            // Get current user for audit trail
+            const session = (await supabase.auth.getSession()).data.session;
+            const userId = session?.user?.id;
 
-            if (result.error) {
-              alert('Error: ' + result.error.message);
+            // Update status directly
+            const { error } = await supabase
+              .from('ingestion_queue')
+              .update({
+                status: 'rejected',
+                rejection_reason: reason || null,
+                reviewed_at: new Date().toISOString(),
+                reviewer: userId,
+              })
+              .eq('id', id)
+              .eq('status', 'enriched');
+
+            if (error) {
+              alert('Rejection failed: ' + error.message);
+              console.error('Rejection error:', error);
               return;
             }
 
