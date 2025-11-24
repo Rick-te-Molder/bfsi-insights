@@ -40,27 +40,6 @@ function safeString(x) {
 }
 
 // -------------------------------------------------------------
-// Match kb_source entry from URL or source_name
-// -------------------------------------------------------------
-async function matchSourceSlug(url, sourceName) {
-  try {
-    const domain = new URL(url).hostname.replace(/^www\./, '');
-    const sourceNameLc = (sourceName || '').toLowerCase();
-
-    const { data } = await supabase
-      .from('kb_source')
-      .select('code')
-      .or(`domain.eq.${domain},name.ilike.%${sourceNameLc}%`)
-      .limit(1)
-      .single();
-
-    return data?.code || null;
-  } catch {
-    return null;
-  }
-}
-
-// -------------------------------------------------------------
 // Auto-create vendor on demand
 // -------------------------------------------------------------
 async function getOrCreateVendor(name) {
@@ -136,20 +115,16 @@ async function publishItem(item, dryRun = false) {
     return { success: true, dryRun: true };
   }
 
-  // ---- 1. Source matching ----
-  const sourceSlug = await matchSourceSlug(item.url, payload.source || payload.source_name);
-
-  // ---- 2. Insert publication ----
+  // ---- 1. Insert publication ----
   const { data: inserted, error: insertError } = await supabase
     .from('kb_publication')
     .insert({
       title: safeString(payload.title),
       author: safeArray(payload.authors).join(', '),
       date_published: payload.published_at || payload.date_published || null,
-      url: safeString(item.url),
+      source_url: safeString(item.url),
       source_name: payload.source || payload.source_name || null,
       source_domain: new URL(item.url).hostname,
-      source_slug: sourceSlug,
       slug: payload.slug || normaliseSlug(item.url.split('/').pop()) || `item-${Date.now()}`,
       summary_short: payload.summary?.short || null,
       summary_medium: payload.summary?.medium || null,
