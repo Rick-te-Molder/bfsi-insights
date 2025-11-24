@@ -108,10 +108,17 @@ async function publishItem(item, dryRun = false) {
   const payload = item.payload || {};
   const tags = payload.tags || {};
 
+  // Validate required fields
+  if (!payload.title) {
+    console.log(`📄 undefined`);
+    console.error(`   ❌ Skipped: Missing title`);
+    return { success: false };
+  }
+
   console.log(`📄 ${safeString(payload.title)?.slice(0, 70)}`);
 
   if (dryRun) {
-    console.log(`   [DRY RUN] Would publish.`);
+    console.log(`   [DRY RUN] Would publish: ${payload.title}`);
     return { success: true, dryRun: true };
   }
 
@@ -134,7 +141,6 @@ async function publishItem(item, dryRun = false) {
       geography: tags.geography || 'global',
       thumbnail: item.thumb_ref || null,
       status: 'published',
-      tags: payload.tags || null,
       use_cases: tags.use_cases || null,
       agentic_capabilities: tags.agentic_capabilities || null,
       origin_queue_id: item.id,
