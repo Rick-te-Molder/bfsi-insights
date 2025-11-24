@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase';
 // Load data
 // ------------------------------------------------------------
 const { data: sources, error } = await supabase
-  .from('ref_source')
+  .from('kb_source')
   .select('name, domain, description, category, tier')
   .eq('show_on_external_page', true)
   .order('tier', { ascending: false }) // premium / high-value first

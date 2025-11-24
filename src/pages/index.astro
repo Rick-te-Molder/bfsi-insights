@@ -19,7 +19,7 @@ const supabase = createClient(
 // Load roles from kb_role
 const { data: rolesData, error: rolesError } = await supabase
   .from('kb_role')
-  .select('code, label')
+  .select('name, label')
   .order('sort_order', { ascending: true });
 
 if (rolesError) {
@@ -31,7 +31,7 @@ if (!rolesData || rolesData.length === 0) {
 }
 
 const roleOptions = rolesData.map((r) => ({
-  value: r.code,
+  value: r.name,
   label: r.label,
 }));
 
