@@ -312,13 +312,13 @@ async function checkExists(url) {
   if (queueItem) return true;
 
   // Check if already published
-  const { data: resourceItem } = await supabase
-    .from('kb_resource')
+  const { data: publicationItem } = await supabase
+    .from('kb_publication')
     .select('id')
     .eq('canonical_url', urlNorm)
     .maybeSingle();
 
-  return !!resourceItem;
+  return !!publicationItem;
 }
 
 async function retryRejected(url) {
