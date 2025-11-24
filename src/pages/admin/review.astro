@@ -129,6 +129,10 @@ import Base from '../../layouts/Base.astro';
           return;
         }
 
+        // Debug: Log first item to check data structure
+        console.log('🔍 Debug - First item:', enriched[0]);
+        console.log('🔍 Debug - First item.id:', enriched[0].id, '| Type:', typeof enriched[0].id);
+
         container.innerHTML = enriched
           .map(
             (item) => `
@@ -175,6 +179,13 @@ import Base from '../../layouts/Base.astro';
 
             const article = document.querySelector('[data-item-id="' + id + '"]');
             if (!(article instanceof HTMLElement)) return;
+
+            // Debug: Check ID type and value
+            console.log('🔍 Debug - ID type:', typeof id, '| Value:', id, '| Length:', id.length);
+            console.log(
+              '🔍 Debug - Is UUID format?',
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
+            );
 
             const result = await supabase.rpc('approve_from_queue', { p_queue_id: id });
             if (result.error) {
