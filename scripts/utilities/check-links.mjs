@@ -1,8 +1,11 @@
 #!/usr/bin/env node
-import fs from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 
-const FILE = 'src/data/resources/resources.json';
+dotenv.config();
+
+const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 const CONCURRENCY = 5;
 const TIMEOUT_MS = 15000;
 const RETRIES = 3;
@@ -76,9 +79,28 @@ async function check(url) {
 }
 
 async function main() {
-  const raw = await fs.readFile(FILE, 'utf8');
-  const items = JSON.parse(raw);
-  const urls = items.map((i) => i.url).filter(Boolean);
+  console.log('🔗 Checking links for published publications...\n');
+
+  // Fetch all published publications from Supabase
+  const { data: publications, error } = await supabase
+    .from('kb_publication')
+    .select('id, slug, title, source_url')
+    .eq('status', 'published');
+
+  if (error) {
+    console.error('Failed to fetch publications:', error.message);
+    process.exit(1);
+  }
+
+  if (!publications || publications.length === 0) {
+    console.log('No published publications found.');
+    return;
+  }
+
+  console.log(`Checking ${publications.length} publications...\n`);
+  const urls = publications
+    .map((p) => ({ url: p.source_url, title: p.title, slug: p.slug }))
+    .filter((p) => p.url);
   const failures = [];
   const softFailures = [];
 
@@ -86,13 +108,14 @@ async function main() {
   const workers = Array.from({ length: CONCURRENCY }, async () => {
     while (idx < urls.length) {
       const current = idx++;
-      const url = urls[current];
+      const item = urls[current];
+      const url = item.url;
       if (shouldSkip(url)) continue;
       const res = await check(url);
       if (!res.ok) {
-        if (SOFT_FAIL_DOMAINS.some((re) => re.test(url)))
-          softFailures.push({ url, error: res.error });
-        else failures.push({ url, error: res.error });
+        const failureData = { url, title: item.title, slug: item.slug, error: res.error };
+        if (SOFT_FAIL_DOMAINS.some((re) => re.test(url))) softFailures.push(failureData);
+        else failures.push(failureData);
       }
     }
   });
@@ -100,16 +123,27 @@ async function main() {
 
   if (failures.length || softFailures.length) {
     if (failures.length) {
-      console.error(`Broken links (${failures.length}):`);
-      for (const f of failures) console.error(` - ${f.url} :: ${f.error}`);
+      console.error(`\n❌ Broken links (${failures.length}):`);
+      for (const f of failures) {
+        console.error(`   ${f.title}`);
+        console.error(`   URL: ${f.url}`);
+        console.error(`   Error: ${f.error}`);
+        console.error(`   Slug: ${f.slug}`);
+        console.error('');
+      }
     }
     if (softFailures.length) {
-      console.warn(`Soft-failed links (${softFailures.length}) [non-blocking]:`);
-      for (const f of softFailures) console.warn(` - ${f.url} :: ${f.error}`);
+      console.warn(`\n⚠️  Soft-failed links (${softFailures.length}) [non-blocking]:`);
+      for (const f of softFailures) {
+        console.warn(`   ${f.title}`);
+        console.warn(`   URL: ${f.url}`);
+        console.warn(`   Error: ${f.error}`);
+        console.warn('');
+      }
     }
     process.exit(failures.length ? 1 : 0);
   } else {
-    console.log(`All ${urls.length} links OK`);
+    console.log(`\n✅ All ${urls.length} links OK`);
   }
 }
 
