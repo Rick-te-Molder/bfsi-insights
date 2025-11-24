@@ -85,6 +85,14 @@ const isUpdated =
 
 const candidates = [...findLocalThumbs(item.slug), ...expandItemThumb(item.thumbnail)];
 const hasImage = candidates.length > 0;
+
+// Debug: log first few items
+if (index < 3) {
+  console.log(
+    `Card ${index} - slug: ${item.slug}, hasImage: ${hasImage}, candidates:`,
+    candidates.slice(0, 3),
+  );
+}
 ---
 
 <li
@@ -101,6 +109,8 @@ const hasImage = candidates.length > 0;
   data-source_name={item.source_name || ''}
   data-thumbnail={item.thumbnail || ''}
   data-summary-medium={item.summary_medium || ''}
+  data-has-image={hasImage ? 'true' : 'false'}
+  data-candidates={candidates.join('|')}
 >
   <a
     href={`/${item.slug}`}
@@ -149,7 +159,6 @@ const hasImage = candidates.length > 0;
             class="relative w-full rounded-md border border-neutral-800 bg-neutral-800/40"
             style="aspect-ratio: 16 / 9; overflow: hidden;"
           >
-            <div class="absolute inset-0 rounded-md border border-neutral-800 bg-neutral-800/40" />
             <img
               src={candidates[0]}
               data-next={candidates.slice(1).join('|')}
@@ -161,7 +170,9 @@ const hasImage = candidates.length > 0;
               decoding="async"
               referrerpolicy="no-referrer"
               sizes="(min-width: 1024px) 560px, (min-width: 640px) 480px, 100vw"
-              class="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
+              class="absolute inset-0 w-full h-full object-cover"
+              onload="console.log('Image loaded:', this.src)"
+              onerror="console.error('Image failed:', this.src, 'trying next:', this.dataset.next)"
             />
           </div>
         ) : (
