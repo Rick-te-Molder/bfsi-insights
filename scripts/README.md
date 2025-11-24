@@ -109,10 +109,10 @@ Shared helper modules:
 
     •	generate-thumbnails.mjs – regenerate missing thumbnails
     •	check-links.mjs – check for broken external links
+    •	test-rss-feeds.mjs – validate RSS feeds in kb_source
+    •	debug-scraper.mjs – inspect page structure for scraping
     •	filename-helper.mjs – standardises filenames
     •	extract-pdf.py – PDF extraction
-    •	generate-notes.mjs – release notes tool
-    •	lint-items-no-time.mjs – linter
 
 ### testing/
 
