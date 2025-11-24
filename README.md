@@ -73,79 +73,80 @@ Feel free to check [our documentation](https://docs.astro.build) or jump into ou
 
 ### Content Ingestion Pipeline
 
+**Autonomous Nightly Pipeline** (✅ Operational for 4/15 sources)
+
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│ 1. DISCOVERY (ingestion_queue)                                 │
-│    • Run: npm run discover -- --source=arxiv --limit=10        │
-│    • Agent scrapes RSS feeds, extracts URLs & basic metadata   │
-│    • Status: pending                                           │
+│ 1. DISCOVERY ✅ (Runs nightly at 2 AM UTC)                     │
+│    • Scrapes RSS feeds from kb_source table                    │
+│    • Active: 4/15 sources (McKinsey, Deloitte, BIS, arXiv)    │
+│    • Adds to ingestion_queue with status='pending'             │
+│    • Manual run: npm run discover                             │
 └─────────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ 2. ENRICHMENT (ingestion_queue)                                │
-│    • Run: npm run enrich -- --limit=5                          │
-│    • LLM generates summaries, scores personas, extracts tags   │
-│    • Multi-value support:                                      │
-│      - industries: ["banking", "insurance"] (1-3 values)      │
-│      - topics: ["ai", "risk"] (1-3 values)                   │
-│      - vendors: ["OpenAI", "Anthropic"] (0-n values)         │
-│      - organizations: ["JPMorgan"] (0-n values)               │
-│    • Captures thumbnails using Playwright                      │
+│ 2. ENRICHMENT ✅ (Runs nightly, limit 20/night)                │
+│    • AI extracts content, generates summaries (UK English)     │
+│    • Tags with controlled taxonomy (US English slugs):         │
+│      - role, industry, topic, content_type, geography          │
+│      - use_cases, agentic_capabilities                         │
+│    • Detects vendors & organizations (auto-upsert)             │
+│    • Generates thumbnails (Playwright)                         │
 │    • Status: pending → enriched                                │
+│    • Manual run: npm run enrich                               │
 └─────────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ 3. REVIEW (Supabase UI)                                        │
-│    • Admin reviews complete card with thumbnail                │
-│    • Verifies summaries, tags, quality score                   │
+│ 3. MANUAL REVIEW (Admin UI at /admin/review)                   │
+│    • Human quality gate (prevents false positives)            │
+│    • Review summaries, tags, thumbnail                         │
 │    • Actions:                                                  │
-│      - Approve: Change status to 'approved'                    │
-│      - Reject: Change status to 'rejected'                     │
-│      - Edit: Manual refinements before approval                │
+│      - Approve → Inserts into kb_publication (published)      │
+│      - Reject → Marks as rejected for learning                 │
+│      - Edit → Manual refinements before approval              │
 └─────────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│ 4. PUBLISHING (kb_resource + junction tables)                  │
-│    • Run: npm run publish:approved                             │
-│    • Moves approved items to kb_resource                       │
-│    • Populates junction tables:                                │
-│      - kb_resource_bfsi_industry (0..n)                        │
-│      - kb_resource_bfsi_topic (0..n)                           │
-│      - kb_resource_ag_vendor (0..n, auto-creates)              │
-│      - kb_resource_bfsi_organization (0..n, auto-creates)      │
-│    • Status: approved → published                              │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 5. BUILD (Static site generation)                              │
-│    • Run: npm run build:resources                              │
-│    • Reads from kb_resource_pretty view (joins junction tables)│
-│    • Generates resources.json for Astro                        │
-│    • Run: npm run build                                        │
-│    • Builds static site to ./dist/                             │
+│ 4. AUTO-PUBLISH (No manual step)                               │
+│    • Website queries kb_publication directly (Supabase)        │
+│    • Publications appear immediately after approval            │
+│    • Deployment: git push → Cloudflare Pages                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+**Coverage Status:**
+
+- ✅ McKinsey, Deloitte, BIS, arXiv (RSS operational)
+- ❌ 11 sources missing RSS feeds (see scripts/README.md for details)
 
 ### Quick Start
 
-```bash
-# 1. Discover new resources
-npm run discover -- --source=arxiv --limit=10
+**For Manual Testing:**
 
-# 2. Enrich pending items
+```bash
+# 1. Discover new publications (or wait for nightly run)
+npm run discover -- --limit=10
+
+# 2. Enrich pending items (or wait for nightly run)
 npm run enrich -- --limit=5
 
-# 3. Review in Supabase UI, approve items
+# 3. Review and approve
+# Open: https://your-domain.com/admin/review
+# Click "Approve" for quality publications
 
-# 4. Publish approved items
-npm run publish:approved --dry-run  # Preview
-npm run publish:approved            # Actually publish
+# 4. Publications appear immediately on site
+# (No manual publish step needed)
 
-# 5. Build and deploy
-npm run build:resources
+# 5. Deploy code changes
 npm run build
-git push
+git push  # Auto-deploys to Cloudflare Pages
 ```
+
+**Nightly Automation:**
+
+- Discovery runs at 2 AM UTC (GitHub Actions)
+- Enrichment processes up to 20 items/night
+- You only need to review and approve in admin UI
 
 ### Multi-Value Dimension Support
 

@@ -14,21 +14,22 @@ deterministic, auditable, taxonomy-driven, LLM-augmented, and fully static on th
 
 # 1. Pipeline Overview
 
+## Autonomous Pipeline (Runs Nightly)
+
 ┌────────────────────────────────────────────────────────────┐
-│ 0. (OPTIONAL) DISCOVERY WORKFLOW │
-│ • Not active today │
-│ • Future: RSS/API discovery adds items to queue │
+│ 1. DISCOVERY (agents/discover.mjs) - OPERATIONAL ✅ │
+│ • Scrapes RSS feeds from kb_source table │
+│ • Currently active: 4/15 sources (McKinsey, Deloitte, │
+│ BIS, arXiv) │
+│ • Missing RSS feeds: 11 sources (BCG, Bain, PwC, EY, │
+│ KPMG, FT, Economist, FD, ECB, Fed, SSRN) │
+│ • Adds new publications to ingestion_queue │
+│ • Status: pending │
+│ • Runs: Nightly at 2 AM UTC via GitHub Actions │
 └────────────────────────────────────────────────────────────┘
 ↓
 ┌────────────────────────────────────────────────────────────┐
-│ 1. FETCH QUEUE (agents/fetch-queue.mjs) │
-│ • Loads pending ingestion_queue items │
-│ • Normalises URL, title and minimal metadata │
-│ • Creates agent_run + agent_run_step logs │
-└────────────────────────────────────────────────────────────┘
-↓
-┌────────────────────────────────────────────────────────────┐
-│ 2. ENRICHMENT (agents/enrich.mjs) │
+│ 2. ENRICHMENT (agents/enrich.mjs) - OPERATIONAL ✅ │
 │ • Extracts full article content │
 │ • Generates short/medium/long summaries (UK English) │
 │ • Auto-tags using **database taxonomies only** │
@@ -37,21 +38,36 @@ deterministic, auditable, taxonomy-driven, LLM-augmented, and fully static on th
 │ • Generates thumbnails (Playwright) │
 │ • Produces quality metrics │
 │ • Updates ingestion_queue payload │
+│ • Status: pending → enriched │
+│ • Runs: Nightly at 2 AM UTC (limit 20/night) │
 │ • Logs run/step/metric events │
 └────────────────────────────────────────────────────────────┘
 ↓
 ┌────────────────────────────────────────────────────────────┐
-│ 3. MANUAL APPROVAL (Supabase UI) │
+│ 3. MANUAL REVIEW (Admin UI: /admin/review) │
+│ • Human quality gate (prevents false positives) │
 │ • Inspect summaries, taxonomy, thumbnail │
-│ • Approve → INSERT INTO kb_publication │
+│ • Approve → Calls approve_from_queue() function │
+│ → Inserts into kb_publication with status='published' │
 │ • Reject → status='rejected' │
 │ • Manual edits allowed prior to approval │
 └────────────────────────────────────────────────────────────┘
 ↓
 ┌────────────────────────────────────────────────────────────┐
-│ 4. WEBSITE PUBLISHING │
-│ • Website reads directly from Supabase (no JSON build) │
+│ 4. WEBSITE AUTO-PUBLISH │
+│ • Frontend queries kb_publication directly │
+│ • No build step required (live from Supabase) │
 │ • git push → Cloudflare Pages deploy │
+└────────────────────────────────────────────────────────────┘
+
+## Manual Ingestion (Optional)
+
+┌────────────────────────────────────────────────────────────┐
+│ FETCH QUEUE (agents/fetch-queue.mjs) - OPTIONAL │
+│ • For manually added URLs in ingestion_queue │
+│ • Normalizes URL, title, and minimal metadata │
+│ • Use case: One-off important articles not in RSS │
+│ • Then proceeds to step 2 (Enrichment) above │
 └────────────────────────────────────────────────────────────┘
 
 ⸻
