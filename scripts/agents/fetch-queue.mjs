@@ -128,7 +128,7 @@ async function fetchQueue(options = {}) {
             .from('ingestion_queue')
             .update({
               status: 'fetched',
-              content_type: 'resource',
+              content_type: 'publication',
               payload: updatedPayload,
               fetched_at: new Date().toISOString(),
             })
