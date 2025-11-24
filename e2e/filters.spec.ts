@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Resources filters', () => {
+test.describe('Publications filters', () => {
   test('applies a filter and updates list', async ({ page }) => {
-    await page.goto('/resources');
+    await page.goto('/publications');
 
     const list = page.locator('#list li.group');
     await expect(list.first()).toBeVisible();
