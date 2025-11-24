@@ -163,6 +163,20 @@ async function generateThumbnail(context, resource) {
     });
 
     console.log(`   💾 Saved: ${resource.slug}.png`);
+
+    // Update database with thumbnail path
+    const thumbnailPath = `/thumbs/${resource.slug}.png`;
+    const { error: updateError } = await supabase
+      .from('kb_publication')
+      .update({ thumbnail: thumbnailPath })
+      .eq('slug', resource.slug);
+
+    if (updateError) {
+      console.log(`   ⚠️  Database update failed: ${updateError.message}`);
+    } else {
+      console.log(`   ✅ Database updated with thumbnail path`);
+    }
+
     return true;
   } catch (error) {
     console.log(`   ⚠️  Screenshot failed: ${error.message}`);
@@ -174,7 +188,7 @@ async function generateThumbnail(context, resource) {
 
 async function getResourcesNeedingThumbnails() {
   const { data, error } = await supabase
-    .from('kb_resource')
+    .from('kb_publication_pretty')
     .select('slug, title, url, thumbnail')
     .eq('status', 'published')
     .order('date_added', { ascending: false });
