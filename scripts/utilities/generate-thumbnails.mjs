@@ -188,9 +188,10 @@ async function generateThumbnail(context, resource) {
 
 async function getResourcesNeedingThumbnails() {
   const { data, error } = await supabase
-    .from('kb_publication_pretty')
-    .select('slug, title, url, thumbnail')
+    .from('kb_publication')
+    .select('slug, title, external_url, thumbnail')
     .eq('status', 'published')
+    .is('thumbnail', null)
     .order('date_added', { ascending: false });
 
   if (error) {
@@ -198,24 +199,13 @@ async function getResourcesNeedingThumbnails() {
     return [];
   }
 
-  // Filter resources that don't have thumbnails or have external thumbnails
-  const needingThumbnails = data.filter((resource) => {
-    // Check if local thumbnail file exists
-    const localPaths = [
-      path.join(THUMBS_DIR, `${resource.slug}.png`),
-      path.join(THUMBS_DIR, `${resource.slug}.webp`),
-      path.join(THUMBS_DIR, `${resource.slug}.jpg`),
-    ];
-
-    const hasLocalThumbnail = localPaths.some((p) => fs.existsSync(p));
-
-    // Need thumbnail if:
-    // 1. No local file exists AND
-    // 2. No thumbnail field OR thumbnail field is external URL
-    return !hasLocalThumbnail && (!resource.thumbnail || resource.thumbnail.startsWith('http'));
-  });
-
-  return needingThumbnails;
+  // Map external_url to url for consistency
+  return data.map((resource) => ({
+    slug: resource.slug,
+    title: resource.title,
+    url: resource.external_url,
+    thumbnail: resource.thumbnail,
+  }));
 }
 
 main().catch((error) => {
