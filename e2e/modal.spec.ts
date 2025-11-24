@@ -18,7 +18,7 @@ async function closeModal(page: any) {
   }
 }
 
-test.describe('Resource modal', () => {
+test.describe('Publication modal', () => {
   test('opens from card click on index', async ({ page }) => {
     await page.goto('/');
     await openFirstCard(page);
@@ -26,15 +26,15 @@ test.describe('Resource modal', () => {
     await closeModal(page);
   });
 
-  test('opens from card click on resources', async ({ page }) => {
-    await page.goto('/resources');
+  test('opens from card click on publications', async ({ page }) => {
+    await page.goto('/publications');
     await openFirstCard(page);
     await expectModalOpen(page);
     await closeModal(page);
   });
 
   test('opens from read more button when present', async ({ page }) => {
-    await page.goto('/resources');
+    await page.goto('/publications');
     const readMore = page.locator('[data-open-modal]');
     if (await readMore.count()) {
       await readMore.first().click();
