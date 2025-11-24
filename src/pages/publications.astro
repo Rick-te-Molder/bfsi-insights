@@ -2,13 +2,13 @@
 export const prerender = true;
 
 import Base from '../layouts/Base.astro';
-import { getAllPubliculations } from '../lib/supabase';
+import { getAllPublications } from '../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import PublicationCard from '../features/publications/PublicationCard.astro';
 import fs from 'node:fs';
 
 // Fetch all publications
-const publications = await getAllPubliculations();
+const publications = await getAllPublications();
 
 // Supabase client for dynamic filter config
 const supabase = createClient(
