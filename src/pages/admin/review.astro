@@ -180,23 +180,26 @@ import Base from '../../layouts/Base.astro';
             const article = document.querySelector('[data-item-id="' + id + '"]');
             if (!(article instanceof HTMLElement)) return;
 
-            // Debug: Check ID type and value
-            console.log('🔍 Debug - ID type:', typeof id, '| Value:', id, '| Length:', id.length);
-            console.log(
-              '🔍 Debug - Is UUID format?',
-              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
-            );
+            // Update status directly (no RPC function needed)
+            const { error } = await supabase
+              .from('ingestion_queue')
+              .update({
+                status: 'approved',
+                approved_at: new Date().toISOString(),
+              })
+              .eq('id', id)
+              .eq('status', 'enriched');
 
-            const result = await supabase.rpc('approve_from_queue', { p_queue_id: id });
-            if (result.error) {
-              alert('Approval failed: ' + result.error.message);
+            if (error) {
+              alert('Approval failed: ' + error.message);
+              console.error('Approval error:', error);
               return;
             }
 
             article.classList.add('opacity-50');
-            target.textContent = '✓ Approved!';
+            target.textContent = '✓ Approved! (Run publish script)';
             target.setAttribute('disabled', 'true');
-            setTimeout(() => article.remove(), 1000);
+            setTimeout(() => article.remove(), 1500);
           }
 
           // Reject
