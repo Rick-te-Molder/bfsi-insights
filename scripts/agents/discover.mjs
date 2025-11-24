@@ -17,6 +17,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { scrapeWebsite } from './lib/scrapers.mjs';
 
 dotenv.config();
 
@@ -28,9 +29,9 @@ const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPAB
 async function loadSources() {
   const { data, error } = await supabase
     .from('kb_source')
-    .select('slug, name, domain, tier, category, rss_feed')
+    .select('slug, name, domain, tier, category, rss_feed, scraper_config')
     .eq('enabled', true)
-    .not('rss_feed', 'is', null)
+    .or('rss_feed.not.is.null,scraper_config.not.is.null')
     .order('sort_order');
 
   if (error) {
@@ -42,6 +43,7 @@ async function loadSources() {
     slug: s.slug,
     name: s.name,
     rss: s.rss_feed,
+    scraper_config: s.scraper_config,
     tier: s.tier,
     category: s.category,
     keywords: ['AI', 'banking', 'financial services', 'insurance', 'fintech'],
@@ -137,8 +139,31 @@ async function discover(options = {}) {
 }
 
 async function fetchFromSource(source) {
-  if (!source.rss) return [];
+  // Try RSS first (fast and reliable)
+  if (source.rss) {
+    try {
+      return await fetchRSS(source);
+    } catch (error) {
+      console.log(`   ⚠️  RSS failed: ${error.message}`);
+      // Fall through to scraping if RSS fails
+    }
+  }
 
+  // Fall back to web scraping (slower but works when RSS unavailable)
+  if (source.scraper_config) {
+    console.log(`   🌐 Using web scraper...`);
+    try {
+      return await scrapeWebsite(source);
+    } catch (error) {
+      console.log(`   ⚠️  Scraping failed: ${error.message}`);
+      return [];
+    }
+  }
+
+  return [];
+}
+
+async function fetchRSS(source) {
   // Use realistic browser User-Agent to bypass anti-bot protections
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
