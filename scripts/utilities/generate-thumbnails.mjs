@@ -29,10 +29,18 @@ if (!fs.existsSync(THUMBS_DIR)) {
 }
 
 async function main() {
+  // Parse command line arguments
+  const args = process.argv.slice(2);
+  const limitArg = args.find((a) => a.startsWith('--limit='));
+  const limit = limitArg ? parseInt(limitArg.split('=')[1]) : null;
+
   console.log('🖼️  Starting thumbnail generation...');
+  if (limit) {
+    console.log(`   Limit: ${limit} publications`);
+  }
 
   // Get publications that need thumbnails
-  const publications = await getPublicationsNeedingThumbnails();
+  const publications = await getPublicationsNeedingThumbnails(limit);
 
   if (publications.length === 0) {
     console.log('✅ All publications already have thumbnails!');
@@ -186,13 +194,19 @@ async function generateThumbnail(context, publication) {
   }
 }
 
-async function getPublicationsNeedingThumbnails() {
-  const { data, error } = await supabase
+async function getPublicationsNeedingThumbnails(limit = null) {
+  let query = supabase
     .from('kb_publication')
     .select('slug, title, source_url, thumbnail')
     .eq('status', 'published')
     .is('thumbnail', null)
     .order('date_added', { ascending: false });
+
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Error fetching publications:', error);
