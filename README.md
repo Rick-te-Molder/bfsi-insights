@@ -15,7 +15,7 @@ bfsi-insights/
 ├── scripts/          # Build and maintenance scripts
 ├── src/
 │   ├── components/   # Reusable UI components
-│   ├── data/         # Resource data (items/, resources.json)
+│   ├── data/         # Publication data (from Supabase)
 │   ├── features/     # Feature-specific components
 │   ├── layouts/      # Page layouts
 │   ├── lib/          # Utility functions
@@ -32,8 +32,7 @@ bfsi-insights/
 - `src/pages/` — Astro looks for `.astro` or `.md` files here. Each page is exposed as a route based on its file name.
 - `src/components/` and `src/features/` — Reusable Astro/React/Vue/Svelte/Preact components.
 - `public/` — Static assets like images and favicons.
-- `src/data/resources/items/` — Canonical store for resource items (per-item JSONs). Run `scripts/build-resources.mjs` to regenerate `resources.json`.
-- `scripts/` — Includes utilities like `generate-notes.mjs` to fill per-item notes from URLs.
+- `scripts/` — Build and maintenance utilities including discovery, enrichment, and thumbnail generation agents.
 
 ## Getting Started
 
@@ -46,8 +45,8 @@ Add this to an RSS reader (Feedly/Reeder) or automate via Zapier/IFTTT. The JSON
 
 ### Quality gates
 
-- Link checker: runs on CI (and nightly) to detect broken external links in `src/data/resources/resources.json`.
-- Lighthouse CI: enforces ≥95 for Performance, Accessibility, Best Practices, and SEO on `/` and `/resources`. Reports are uploaded as CI artifacts.
+- Link checker: runs nightly to detect broken external links in published publications.
+- Lighthouse CI: enforces ≥95 for Performance, Accessibility, Best Practices, and SEO on `/` and `/publications`. Reports are uploaded as CI artifacts.
 
 Local commands:
 
@@ -150,7 +149,7 @@ git push  # Auto-deploys to Cloudflare Pages
 
 ### Multi-Value Dimension Support
 
-Resources can now have **multiple** industries, topics, vendors, and organizations:
+Publications can now have **multiple** industries, topics, vendors, and organizations:
 
 - **Junction Tables**: Normalized many-to-many relationships
 - **Backward Compatible**: View returns both scalar (primary) and array (all) values
