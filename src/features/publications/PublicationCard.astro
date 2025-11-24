@@ -35,14 +35,7 @@ try {
   const thumbsDirUrl = new URL('../../../public/thumbs/', import.meta.url);
   const dirPath = thumbsDirUrl.pathname;
   thumbFiles = fs.readdirSync(dirPath).filter((f) => /\.(webp|png|jpe?g)$/i.test(f));
-  if (index === 0) {
-    console.log(`[BUILD] Found ${thumbFiles.length} thumbnails in ${dirPath}`);
-    console.log(`[BUILD] First 5 files:`, thumbFiles.slice(0, 5));
-  }
-} catch (err) {
-  if (index === 0) {
-    console.error(`[BUILD] Failed to read thumbs directory:`, err);
-  }
+} catch {
   thumbFiles = [];
 }
 
@@ -92,19 +85,9 @@ const isUpdated =
 
 const localThumbs = findLocalThumbs(item.slug);
 const itemThumbs = expandItemThumb(item.thumbnail);
-const candidates = [...localThumbs, ...itemThumbs];
+// Put database thumbnail first, then local guesses as fallback
+const candidates = [...itemThumbs, ...localThumbs];
 const hasImage = candidates.length > 0;
-
-// Debug: log first few items during BUILD
-if (index < 3) {
-  console.log(`[BUILD] Card ${index}:`);
-  console.log(`  slug: ${item.slug}`);
-  console.log(`  thumbnail field: ${item.thumbnail}`);
-  console.log(`  localThumbs found: ${localThumbs.length}`, localThumbs);
-  console.log(`  itemThumbs: ${itemThumbs.length}`, itemThumbs);
-  console.log(`  hasImage: ${hasImage}`);
-  console.log(`  candidates:`, candidates.slice(0, 3));
-}
 ---
 
 <li
@@ -121,8 +104,6 @@ if (index < 3) {
   data-source_name={item.source_name || ''}
   data-thumbnail={item.thumbnail || ''}
   data-summary-medium={item.summary_medium || ''}
-  data-has-image={hasImage ? 'true' : 'false'}
-  data-candidates={candidates.join('|')}
 >
   <a
     href={`/${item.slug}`}
@@ -171,6 +152,7 @@ if (index < 3) {
             class="relative w-full rounded-md border border-neutral-800 bg-neutral-800/40"
             style="aspect-ratio: 16 / 9; overflow: hidden;"
           >
+            <div class="absolute inset-0 rounded-md bg-neutral-800/40" />
             <img
               src={candidates[0]}
               data-next={candidates.slice(1).join('|')}
@@ -182,9 +164,7 @@ if (index < 3) {
               decoding="async"
               referrerpolicy="no-referrer"
               sizes="(min-width: 1024px) 560px, (min-width: 640px) 480px, 100vw"
-              class="absolute inset-0 w-full h-full object-cover"
-              onload="console.log('Image loaded:', this.src)"
-              onerror="console.error('Image failed:', this.src, 'trying next:', this.dataset.next)"
+              class="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
             />
           </div>
         ) : (
