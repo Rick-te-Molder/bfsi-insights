@@ -243,12 +243,12 @@ async function enrich(options = {}) {
       agent_metadata: { dryRun, limit, taxonomies_hash: Object.keys(taxonomies).length },
     });
 
-    // Load fetched items
+    // Load pending items from ingestion_queue
     const { data: items, error } = await supabase
       .from('ingestion_queue')
       .select('*')
-      .eq('status', 'fetched')
-      .order('fetched_at', { ascending: false })
+      .eq('status', 'pending')
+      .order('discovered_at', { ascending: false })
       .limit(limit || 100);
 
     if (error) throw new Error('Failed to load items: ' + error.message);
