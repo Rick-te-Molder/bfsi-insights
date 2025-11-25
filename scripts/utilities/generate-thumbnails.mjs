@@ -21,7 +21,7 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const THUMBS_DIR = path.join(__dirname, '../public/thumbs');
+const THUMBS_DIR = path.join(__dirname, '../../public/thumbs');
 
 // Ensure thumbs directory exists
 if (!fs.existsSync(THUMBS_DIR)) {
