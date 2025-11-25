@@ -167,6 +167,38 @@ import Base from '../../layouts/Base.astro';
       hideMessages();
 
       try {
+        // Normalize URL (strip query params, lowercase)
+        const urlObj = new URL(url);
+        const urlNorm = (urlObj.origin + urlObj.pathname).toLowerCase();
+
+        // Check for duplicates in queue
+        const { data: queueDup } = await supabase
+          .from('ingestion_queue')
+          .select('id, url, status')
+          .eq('url_norm', urlNorm)
+          .maybeSingle();
+
+        if (queueDup) {
+          showError(
+            `This URL is already in the queue with status: ${queueDup.status}. Original URL: ${queueDup.url}`,
+          );
+          return;
+        }
+
+        // Check for duplicates in published publications
+        const { data: pubDup } = await supabase
+          .from('kb_publication')
+          .select('id, slug, title')
+          .eq('source_url', urlNorm)
+          .maybeSingle();
+
+        if (pubDup) {
+          showError(
+            `This URL is already published: "${pubDup.title}". View at /publications/${pubDup.slug}`,
+          );
+          return;
+        }
+
         // Insert into ingestion_queue
         const { error } = await supabase.from('ingestion_queue').insert({
           url: url,
