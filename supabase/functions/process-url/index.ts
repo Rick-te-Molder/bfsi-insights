@@ -41,9 +41,30 @@ serve(async (req) => {
       });
     }
 
-    // 2. Fetch content from URL
+    // 2. Fetch content from URL with timeout
     console.log(`Fetching content from: ${queueItem.url}`);
-    const content = await fetchContent(queueItem.url);
+    let content;
+    try {
+      content = await fetchContent(queueItem.url);
+    } catch (fetchErr) {
+      console.error('Fetch error:', fetchErr);
+      // Mark as failed so user can retry
+      await supabase
+        .from('ingestion_queue')
+        .update({
+          status: 'failed',
+          rejection_reason: `Failed to fetch: ${fetchErr.message}`,
+        })
+        .eq('id', queueId);
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Failed to fetch content: ${fetchErr.message}. Site may be blocking requests.`,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
 
     // 3. Enrich with AI
     console.log('Enriching with OpenAI...');
@@ -93,22 +114,37 @@ serve(async (req) => {
   }
 });
 
-// Fetch content from URL
+// Fetch content from URL with timeout
 async function fetchContent(url: string) {
-  const response = await fetch(url, {
-    headers: {
-      'User-Agent':
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const html = await response.text();
+    return parseHtml(html, url);
+  } catch (error) {
+    clearTimeout(timeout);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout after 30s');
+    }
+    throw error;
   }
-
-  const html = await response.text();
-  return parseHtml(html, url);
 }
 
 function parseHtml(html: string, url: string) {

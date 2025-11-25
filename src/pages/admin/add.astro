@@ -163,11 +163,12 @@ import Base from '../../layouts/Base.astro';
         const urlObj = new URL(url);
         const urlNorm = (urlObj.origin + urlObj.pathname).toLowerCase();
 
-        // Check for duplicates in queue
+        // Check for duplicates in queue (allow retry if failed)
         const { data: queueDup } = await supabase
           .from('ingestion_queue')
           .select('id, url, status')
           .eq('url_norm', urlNorm)
+          .in('status', ['pending', 'enriched', 'fetched']) // Allow retry if failed/rejected
           .maybeSingle();
 
         if (queueDup) {
@@ -240,19 +241,21 @@ import Base from '../../layouts/Base.astro';
           if (result.success) {
             if (result.status === 'enriched') {
               showSuccess(`✅ ${result.title} - Ready for review!`);
-            } else {
-              showError(`⚠️ ${result.title} - Rejected: ${result.reason}`);
+
+              urlInput.value = '';
+              notesInput.value = '';
+
+              // Redirect to review queue after 2 seconds
+              setTimeout(() => {
+                window.location.href = '/admin/review';
+              }, 2000);
+            } else if (result.status === 'rejected') {
+              showError(`⚠️ ${result.title} - Not BFSI relevant: ${result.reason}`);
             }
-
-            urlInput.value = '';
-            notesInput.value = '';
-
-            // Redirect to review queue after 2 seconds
-            setTimeout(() => {
-              window.location.href = '/admin/review';
-            }, 2000);
           } else {
-            showError(`Processing failed: ${result.error || 'Unknown error'}`);
+            showError(
+              `❌ ${result.error || 'Unknown error'}. You can retry after fixing the issue.`,
+            );
           }
         } catch (processErr) {
           showError(
