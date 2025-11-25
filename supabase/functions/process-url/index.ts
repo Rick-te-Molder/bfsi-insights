@@ -77,7 +77,8 @@ serve(async (req) => {
       description: content.description,
       published_at: content.date || new Date().toISOString(),
       summary: enrichment.summary,
-      tags: enrichment.tags,
+      industry_codes: enrichment.industry_codes || [],
+      topic_codes: enrichment.topic_codes || [],
       persona_scores: enrichment.persona_scores,
     };
 
@@ -182,10 +183,49 @@ function extractTitleFromUrl(url: string): string {
   }
 }
 
+// Load taxonomy from database
+let TAXONOMY_CACHE: {
+  industries: Array<{ code: string; name: string }>;
+  topics: Array<{ code: string; name: string }>;
+} | null = null;
+
+async function loadTaxonomy() {
+  if (TAXONOMY_CACHE) return TAXONOMY_CACHE;
+
+  const supabaseUrl = Deno.env.get('PUBLIC_SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+  const [industriesRes, topicsRes] = await Promise.all([
+    fetch(`${supabaseUrl}/rest/v1/bfsi_industry?select=code,name&order=sort_order`, {
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+      },
+    }),
+    fetch(`${supabaseUrl}/rest/v1/bfsi_topic?select=code,name&order=sort_order`, {
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+      },
+    }),
+  ]);
+
+  const industries = await industriesRes.json();
+  const topics = await topicsRes.json();
+
+  TAXONOMY_CACHE = { industries, topics };
+  return TAXONOMY_CACHE;
+}
+
 // Generate enrichment using OpenAI
 async function generateEnrichment(title: string, description: string) {
   const openaiKey = Deno.env.get('OPENAI_API_KEY')!;
   const content = description || title;
+
+  // Load taxonomy
+  const taxonomy = await loadTaxonomy();
+  const industryList = taxonomy.industries.map((i) => `${i.code}: ${i.name}`).join('\n');
+  const topicList = taxonomy.topics.map((t) => `${t.code}: ${t.name}`).join('\n');
 
   const prompt = `You are an expert curator for a BFSI (Banking, Financial Services, Insurance) knowledge base.
 
@@ -200,14 +240,20 @@ Provide:
    - SHORT: 120-150 characters, one punchy sentence highlighting the main value
    - MEDIUM: 250-300 characters, two sentences explaining what and why it matters
    - LONG: 500-600 characters, comprehensive paragraph with key insights, claims the authors make, key figures mentioned and concrete implications for BFSI
-3. Up to 5 relevant tags (e.g., "AI", "Risk Management", "RegTech")
-4. Persona relevance scores (0-1) based on content depth and actionability
+3. Select 1-3 relevant INDUSTRY codes from this list:
+${industryList}
+
+4. Select 1-2 relevant TOPIC codes from this list:
+${topicList}
+
+5. Persona relevance scores (0-1) based on content depth and actionability
 
 IMPORTANT:
 - Each summary must be progressively MORE detailed, not repetitive
 - Use concrete, specific language - avoid generic phrases
 - Focus on actionable insights and business value
 - NO marketing fluff or empty statements
+- Use ONLY the codes from the lists above
 
 Respond as JSON:
 {
@@ -219,7 +265,8 @@ Respond as JSON:
     "medium": "string (250-300 chars)",
     "long": "string (500-600 chars)"
   },
-  "tags": ["tag1", "tag2"],
+  "industry_codes": ["code1", "code2"],
+  "topic_codes": ["code1", "code2"],
   "persona_scores": {
     "executive": 0.0-1.0,
     "professional": 0.0-1.0,
