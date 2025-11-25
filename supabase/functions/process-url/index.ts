@@ -189,17 +189,25 @@ async function generateEnrichment(title: string, description: string) {
 
   const prompt = `You are an expert curator for a BFSI (Banking, Financial Services, Insurance) knowledge base.
 
-Analyze this article and determine if it's relevant to BFSI professionals (executives, practitioners, researchers).
+Analyze this article and determine if it's relevant to BFSI professionals.
 
 Title: ${title}
 Content: ${content}
 
 Provide:
-1. Is this BFSI-relevant? (true/false)
-2. Relevance reason (short explanation)
-3. Three summaries: short (~150 chars), medium (~300 chars), long (~600 chars)
-4. Up to 5 tags (e.g., "AI", "Risk Management", "Compliance")
-5. Persona relevance scores (0-1): executive, professional, researcher
+1. BFSI relevance assessment (true/false with reason)
+2. Three DISTINCT summaries with STRICT character limits:
+   - SHORT: 120-150 characters, one punchy sentence highlighting the main value
+   - MEDIUM: 250-300 characters, two sentences explaining what and why it matters
+   - LONG: 500-600 characters, comprehensive paragraph with key insights and implications
+3. Up to 5 relevant tags (e.g., "AI", "Risk Management", "RegTech")
+4. Persona relevance scores (0-1) based on content depth and actionability
+
+IMPORTANT:
+- Each summary must be progressively MORE detailed, not repetitive
+- Use concrete, specific language - avoid generic phrases
+- Focus on actionable insights and business value
+- NO marketing fluff or empty statements
 
 Respond as JSON:
 {
@@ -207,9 +215,9 @@ Respond as JSON:
   "relevance_reason": "string",
   "relevance_confidence": 0.0-1.0,
   "summary": {
-    "short": "string",
-    "medium": "string",
-    "long": "string"
+    "short": "string (120-150 chars)",
+    "medium": "string (250-300 chars)",
+    "long": "string (500-600 chars)"
   },
   "tags": ["tag1", "tag2"],
   "persona_scores": {
