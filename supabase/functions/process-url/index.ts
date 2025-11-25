@@ -192,7 +192,7 @@ let TAXONOMY_CACHE: {
 async function loadTaxonomy() {
   if (TAXONOMY_CACHE) return TAXONOMY_CACHE;
 
-  const supabaseUrl = Deno.env.get('PUBLIC_SUPABASE_URL')!;
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || Deno.env.get('PUBLIC_SUPABASE_URL')!;
   const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
   const [industriesRes, topicsRes] = await Promise.all([
