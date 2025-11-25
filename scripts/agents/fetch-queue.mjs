@@ -127,7 +127,7 @@ async function fetchQueue(options = {}) {
           const { error: updateError } = await supabase
             .from('ingestion_queue')
             .update({
-              status: 'fetched',
+              status: 'pending',
               content_type: 'publication',
               payload: updatedPayload,
               fetched_at: new Date().toISOString(),

@@ -168,7 +168,7 @@ import Base from '../../layouts/Base.astro';
           .from('ingestion_queue')
           .select('id, url, status')
           .eq('url_norm', urlNorm)
-          .in('status', ['pending', 'enriched', 'fetched']) // Allow retry if failed/rejected
+          .in('status', ['pending', 'enriched']) // Allow retry if failed/rejected
           .maybeSingle();
 
         if (queueDup) {

@@ -247,7 +247,7 @@ async function enrich(options = {}) {
     const { data: items, error } = await supabase
       .from('ingestion_queue')
       .select('*')
-      .in('status', ['pending', 'fetched'])
+      .in('status', ['pending'])
       .order('discovered_at', { ascending: false })
       .limit(limit || 100);
 
