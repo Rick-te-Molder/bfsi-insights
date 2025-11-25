@@ -1,6 +1,6 @@
 # BFSI Insights
 
-Agentic AI insights for executives and professionals in banking, financial services and insurance.
+Agentic AI insights for executives, professionals, and researchers in banking, financial services and insurance.
 
 ## 🚀 Project Structure
 

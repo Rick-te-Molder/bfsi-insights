@@ -7,7 +7,7 @@ export const GET: APIRoute = async ({ site }) => {
 
   const feedTitle = 'BFSI Insights – Latest Publications';
   const feedDescription =
-    'Agentic AI insights for executives and professionals in banking, financial services and insurance.';
+    'Agentic AI insights for executives, professionals, and researchers in banking, financial services and insurance.';
 
   const items = [...publications]
     .filter((item) => item.date_added)
