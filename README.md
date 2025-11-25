@@ -8,31 +8,43 @@ Inside of your Astro project, you'll see the following folders:
 
 ```
 bfsi-insights/
-├── .github/          # CI/CD workflows
+├── .github/          # CI/CD workflows (nightly discovery, link checks)
 ├── .vscode/          # Editor configuration
+├── docs/             # Project documentation
+├── e2e/              # End-to-end tests (Playwright)
 ├── public/           # Static assets (favicons, thumbnails)
-├── schemas/          # JSON schemas for validation
+│   └── thumbs/       # Publication thumbnails (generated)
 ├── scripts/          # Build and maintenance scripts
+│   ├── agents/       # Discovery, enrichment agents
+│   ├── lib/          # Shared agent utilities
+│   ├── publishing/   # Publishing utilities
+│   └── utilities/    # Thumbnail generation, etc.
 ├── src/
 │   ├── components/   # Reusable UI components
-│   ├── data/         # Publication data (from Supabase)
+│   ├── data/         # Static data files
 │   ├── features/     # Feature-specific components
 │   ├── layouts/      # Page layouts
-│   ├── lib/          # Utility functions
+│   ├── lib/          # Utility functions (Supabase client, media helpers)
 │   ├── pages/        # Route pages (.astro files)
-│   ├── shared/       # Shared utilities
-│   ├── styles/       # Global styles
-│   └── types/        # TypeScript type definitions
-├── supabase/         # Database configuration (if used)
-└── dist/             # Build output
+│   └── styles/       # Global styles (Tailwind CSS)
+├── supabase/         # Supabase backend (core infrastructure)
+│   ├── functions/    # Edge Functions (process-url for instant enrichment)
+│   └── migrations/   # Database schema + PL/pgSQL functions
+├── tests/            # Unit/integration tests
+└── dist/             # Build output (gitignored)
 ```
 
 **Key directories:**
 
 - `src/pages/` — Astro looks for `.astro` or `.md` files here. Each page is exposed as a route based on its file name.
-- `src/components/` and `src/features/` — Reusable Astro/React/Vue/Svelte/Preact components.
-- `public/` — Static assets like images and favicons.
-- `scripts/` — Build and maintenance utilities including discovery, enrichment, and thumbnail generation agents.
+- `src/components/` and `src/features/` — Reusable Astro components (no React/Vue/Svelte).
+- `src/lib/` — Core utilities (Supabase client, media helpers, shared functions).
+- `public/thumbs/` — Generated thumbnails served by Astro.
+- `scripts/agents/` — Discovery and enrichment automation (runs nightly via GitHub Actions).
+- `scripts/utilities/` — Thumbnail generation (Playwright), maintenance scripts.
+- `supabase/functions/` — Edge Functions for instant URL processing (process-url).
+- `supabase/migrations/` — Database schema, tables, views, and PL/pgSQL functions.
+- `e2e/` and `tests/` — Playwright end-to-end tests and unit tests.
 
 ## Getting Started
 
