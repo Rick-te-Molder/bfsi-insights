@@ -79,36 +79,28 @@ import Base from '../../layouts/Base.astro';
       <h2 class="text-lg font-semibold mb-3">📋 What happens next?</h2>
       <ol class="space-y-3 text-sm text-neutral-400">
         <li>
-          <strong class="text-neutral-300">1. URL Added:</strong> The URL is added to the ingestion queue
-          with status <code class="text-amber-400">pending</code>
+          <strong class="text-neutral-300">1. URL Added:</strong> The URL is inserted into the ingestion
+          queue
         </li>
         <li>
-          <strong class="text-neutral-300">2. Fetch Content:</strong> Execute
-          <code class="rounded bg-neutral-800 px-2 py-1 text-sky-400"
-            >node scripts/agents/fetch-queue.mjs</code
-          >
-          to download and extract the article content
+          <strong class="text-neutral-300">2. Instant Processing:</strong> Edge Function automatically:
+          <ul class="mt-2 ml-4 space-y-1 text-xs">
+            <li>• Fetches content from the URL</li>
+            <li>• Generates AI summaries and tags</li>
+            <li>• Checks BFSI relevance</li>
+          </ul>
         </li>
         <li>
-          <strong class="text-neutral-300">3. Enrich:</strong> Execute
-          <code class="rounded bg-neutral-800 px-2 py-1 text-sky-400"
-            >node scripts/agents/enrich.mjs</code
-          >
-          to generate summaries and tags
+          <strong class="text-neutral-300">3. Review:</strong> If relevant, it appears in the
+          <a href="/admin/review" class="text-sky-400 hover:underline">Review Queue</a>
         </li>
         <li>
-          <strong class="text-neutral-300">4. Review:</strong> Once enriched, it will appear in the
-          <a href="/admin/review" class="text-sky-400 hover:underline">Review Queue</a> for approval
-        </li>
-        <li>
-          <strong class="text-neutral-300">5. Publish:</strong> Approve it to publish to the website
+          <strong class="text-neutral-300">4. Publish:</strong> Approve it to go live immediately!
         </li>
       </ol>
       <div class="mt-4 rounded bg-neutral-800/50 p-3 border border-neutral-700">
-        <p class="text-xs font-semibold text-neutral-300 mb-2">⚡ Quick command:</p>
-        <code class="text-xs text-green-400">
-          node scripts/agents/fetch-queue.mjs && node scripts/agents/enrich.mjs
-        </code>
+        <p class="text-xs font-semibold text-neutral-300 mb-2">⚡ Processing time:</p>
+        <p class="text-xs text-neutral-400">Usually completes in 5-15 seconds</p>
       </div>
     </div>
   </div>
@@ -200,16 +192,20 @@ import Base from '../../layouts/Base.astro';
         }
 
         // Insert into ingestion_queue
-        const { error } = await supabase.from('ingestion_queue').insert({
-          url: url,
-          status: 'pending',
-          payload: {
-            manual_submission: true,
-            notes: notes || null,
-            submitted_at: new Date().toISOString(),
-          },
-          content_type: 'resource',
-        });
+        const { data: insertedItem, error } = await supabase
+          .from('ingestion_queue')
+          .insert({
+            url: url,
+            status: 'pending',
+            payload: {
+              manual_submission: true,
+              notes: notes || null,
+              submitted_at: new Date().toISOString(),
+            },
+            content_type: 'resource',
+          })
+          .select('id')
+          .single();
 
         if (error) {
           // Check for duplicate URL
@@ -221,10 +217,48 @@ import Base from '../../layouts/Base.astro';
           return;
         }
 
-        // Success!
-        showSuccess('URL added to queue! Next: run fetch-queue.mjs then enrich.mjs to process it.');
-        urlInput.value = '';
-        notesInput.value = '';
+        // Success! Now trigger immediate processing via Edge Function
+        submitBtn.textContent = 'Processing...';
+        showSuccess('✅ URL added! Processing now (fetch → enrich)...');
+
+        try {
+          // Call Edge Function to process immediately
+          const processResponse = await fetch(
+            `${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/process-url`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${import.meta.env.PUBLIC_SUPABASE_ANON_KEY}`,
+              },
+              body: JSON.stringify({ queueId: insertedItem.id }),
+            },
+          );
+
+          const result = await processResponse.json();
+
+          if (result.success) {
+            if (result.status === 'enriched') {
+              showSuccess(`✅ ${result.title} - Ready for review!`);
+            } else {
+              showError(`⚠️ ${result.title} - Rejected: ${result.reason}`);
+            }
+
+            urlInput.value = '';
+            notesInput.value = '';
+
+            // Redirect to review queue after 2 seconds
+            setTimeout(() => {
+              window.location.href = '/admin/review';
+            }, 2000);
+          } else {
+            showError(`Processing failed: ${result.error || 'Unknown error'}`);
+          }
+        } catch (processErr) {
+          showError(
+            `Processing failed: ${processErr instanceof Error ? processErr.message : 'Unknown error'}`,
+          );
+        }
       } catch (err) {
         showError(err instanceof Error ? err.message : 'An unexpected error occurred');
       } finally {
