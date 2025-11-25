@@ -124,12 +124,12 @@ async function generateThumbnail(context, publication) {
     // Navigate to the page
     console.log('   📥 Loading page...');
     await page.goto(publication.url, {
-      waitUntil: 'domcontentloaded',
-      timeout: 20000,
+      waitUntil: 'networkidle',
+      timeout: 30000,
     });
 
-    // Wait a bit for dynamic content to load
-    await page.waitForTimeout(2000);
+    // Wait for page to be fully rendered
+    await page.waitForTimeout(3000);
 
     // Hide cookie banners and popups with CSS
     await page.addStyleTag({
