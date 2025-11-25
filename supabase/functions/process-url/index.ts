@@ -199,7 +199,7 @@ Provide:
 2. Three DISTINCT summaries with STRICT character limits:
    - SHORT: 120-150 characters, one punchy sentence highlighting the main value
    - MEDIUM: 250-300 characters, two sentences explaining what and why it matters
-   - LONG: 500-600 characters, comprehensive paragraph with key insights and implications
+   - LONG: 500-600 characters, comprehensive paragraph with key insights, claims the authors make, key figures mentioned and concrete implications for BFSI
 3. Up to 5 relevant tags (e.g., "AI", "Risk Management", "RegTech")
 4. Persona relevance scores (0-1) based on content depth and actionability
 
