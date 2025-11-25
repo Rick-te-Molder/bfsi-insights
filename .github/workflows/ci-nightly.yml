@@ -26,8 +26,16 @@ jobs:
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
 
+      - name: Debug - Check env vars
+        run: |
+          echo "PUBLIC_SUPABASE_URL is set: ${{ secrets.PUBLIC_SUPABASE_URL != '' }}"
+          echo "SUPABASE_SERVICE_KEY is set: ${{ secrets.SUPABASE_SERVICE_KEY != '' }}"
+
       - name: Check external links
         run: npm run check:links
+        env:
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
       - name: Upload link-check report
         if: always()
