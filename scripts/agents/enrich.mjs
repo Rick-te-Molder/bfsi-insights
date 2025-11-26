@@ -120,16 +120,25 @@ async function loadTaxonomies() {
 
   console.log('📚 Loading taxonomies from database...');
 
-  const [industries, topics, roles, publicationTypes, useCases, capabilities, sources] =
-    await Promise.all([
-      supabase.from('bfsi_industry').select('code, name, level').order('sort_order'),
-      supabase.from('bfsi_topic').select('code, name, level').order('sort_order'),
-      supabase.from('kb_role').select('*').order('sort_order'),
-      supabase.from('kb_publication_type').select('code, sort_order').order('sort_order'),
-      supabase.from('ag_use_case').select('code').order('code'),
-      supabase.from('ag_capability').select('code').order('code'),
-      supabase.from('kb_source').select('name, tier, category, enabled').eq('enabled', true),
-    ]);
+  const [
+    industries,
+    topics,
+    roles,
+    publicationTypes,
+    useCases,
+    capabilities,
+    sources,
+    geographies,
+  ] = await Promise.all([
+    supabase.from('bfsi_industry').select('code, name, level').order('sort_order'),
+    supabase.from('bfsi_topic').select('code, name, level').order('sort_order'),
+    supabase.from('kb_role').select('*').order('sort_order'),
+    supabase.from('kb_publication_type').select('code, sort_order').order('sort_order'),
+    supabase.from('ag_use_case').select('code').order('code'),
+    supabase.from('ag_capability').select('code').order('code'),
+    supabase.from('kb_source').select('name, tier, category, enabled').eq('enabled', true),
+    supabase.from('kb_geography').select('code').order('sort_order'),
+  ]);
 
   if (industries.error) {
     throw new Error(`bfsi_industry fetch failed: ${industries.error.message}`);
@@ -152,6 +161,9 @@ async function loadTaxonomies() {
   if (sources.error) {
     throw new Error(`kb_source fetch failed: ${sources.error.message}`);
   }
+  if (geographies.error) {
+    throw new Error(`kb_geography fetch failed: ${geographies.error.message}`);
+  }
 
   const industryCodes = (industries.data || []).map((i) => i.code).filter(Boolean);
   const topicCodes = (topics.data || []).map((t) => t.code).filter(Boolean);
@@ -170,6 +182,8 @@ async function loadTaxonomies() {
   const useCaseCodes = (useCases.data || []).map((u) => u.code).filter(Boolean);
 
   const capabilityCodes = (capabilities.data || []).map((c) => c.code).filter(Boolean);
+
+  const geographyCodes = (geographies.data || []).map((g) => g.code).filter(Boolean);
 
   const tierDefaults = {
     premium: 1.0,
@@ -199,8 +213,7 @@ async function loadTaxonomies() {
     topic: topicCodes,
     content_type: contentTypeCodes,
     content_type_weights: contentTypeWeights,
-    // Geography is not yet modeled in DB; keep simple list for now
-    geography: ['eu', 'uk', 'us', 'nl', 'global', 'other'],
+    geography: geographyCodes,
     use_cases: useCaseCodes,
     agentic_capabilities: capabilityCodes,
     source_weights: sourceWeights,
@@ -211,6 +224,7 @@ async function loadTaxonomies() {
       `   ✓ Industries:   ${TAXONOMIES.industry.length}\n` +
       `   ✓ Topics:       ${TAXONOMIES.topic.length}\n` +
       `   ✓ Types:        ${TAXONOMIES.content_type.length}\n` +
+      `   ✓ Geographies:  ${TAXONOMIES.geography.length}\n` +
       `   ✓ Use cases:    ${TAXONOMIES.use_cases.length}\n` +
       `   ✓ Capabilities: ${TAXONOMIES.agentic_capabilities.length}\n` +
       `   ✓ Sources:      ${Object.keys(TAXONOMIES.source_weights).length}\n`,
@@ -323,6 +337,10 @@ async function enrich(options = {}) {
           const enrichedPayload = {
             ...item.payload,
             summary: enrichment.summary,
+            // New format: arrays instead of object
+            industry_codes: enrichment.tags.industry ? [enrichment.tags.industry] : [],
+            topic_codes: enrichment.tags.topic ? [enrichment.tags.topic] : [],
+            // Keep tags for backward compatibility
             tags: enrichment.tags,
             persona_scores: enrichment.persona_scores,
             quality_score: calculateQualityScore(item, enrichment),

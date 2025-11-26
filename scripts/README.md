@@ -12,6 +12,39 @@ deterministic, auditable, taxonomy-driven, LLM-augmented, and fully static on th
 
 ⸻
 
+# ⚠️ Known Technical Debt
+
+## Duplicate Enrichment Logic
+
+**Problem**: AI enrichment logic is duplicated between:
+
+- `supabase/functions/process-url/index.ts` (Edge Function, Deno) - used for manual URL submissions
+- `scripts/agents/enrich.mjs` (Script, Node.js) - used for batch enrichment
+
+**Impact**:
+
+- ~200 lines of duplicate code (OpenAI prompts, taxonomy loading, response parsing)
+- Risk of inconsistent behavior if only one gets updated
+- Different payload formats (unified as of 2025-11-26, but fragile)
+
+**Current Mitigation**:
+
+- Both now use consistent format: `industry_codes[]`, `topic_codes[]`, `persona_scores`
+- Tests should validate format consistency
+
+**Future Solution Options**:
+
+1. **Publish shared package** - Extract to npm package, import in both Deno and Node
+2. **Deno-compatible module** - Use JSR or npm with Deno compatibility
+3. **Accept duplication** - Keep separate, enforce consistency via integration tests
+
+**Note**:
+
+- Edge Functions cannot generate thumbnails (no Playwright/browser automation), so `enrich.mjs` will always be needed for full enrichment with thumbnails.
+- All taxonomies (industries, topics, roles, geographies, etc.) are loaded from Supabase tables, ensuring consistency.
+
+⸻
+
 # 1. Pipeline Overview
 
 ## Autonomous Pipeline (Runs Nightly)

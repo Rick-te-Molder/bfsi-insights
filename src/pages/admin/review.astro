@@ -93,16 +93,25 @@ import Base from '../../layouts/Base.astro';
           return;
         }
 
-        const result = await supabase
-          .from('ingestion_queue')
-          .select('*')
-          .eq('status', 'enriched')
-          .order('fetched_at', { ascending: false });
+        // Load taxonomy for code-to-label mapping
+        const [queueResult, industriesResult, topicsResult] = await Promise.all([
+          supabase
+            .from('ingestion_queue')
+            .select('*')
+            .eq('status', 'enriched')
+            .order('fetched_at', { ascending: false }),
+          supabase.from('bfsi_industry').select('code, name').order('sort_order'),
+          supabase.from('bfsi_topic').select('code, name').order('sort_order'),
+        ]);
 
-        if (result.error) throw result.error;
+        if (queueResult.error) throw queueResult.error;
+
+        // Create lookup maps
+        const industryMap = new Map((industriesResult.data || []).map((i) => [i.code, i.name]));
+        const topicMap = new Map((topicsResult.data || []).map((t) => [t.code, t.name]));
 
         loading.classList.add('hidden');
-        const pending = result.data || [];
+        const pending = queueResult.data || [];
 
         const enriched = pending.filter(
           (x) => x.payload && x.payload.summary && x.payload.summary.short,
@@ -136,38 +145,192 @@ import Base from '../../layouts/Base.astro';
         }
 
         container.innerHTML = enriched
-          .map(
-            (item) => `
-            <article class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 transition hover:border-neutral-700" data-item-id="${item.id}">
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex-1">
-                  <h2 class="text-2xl font-semibold text-sky-200">${item.payload.title}</h2>
-                  <div class="mt-2 flex flex-wrap gap-2 text-sm text-neutral-400">
-                    <span>🔗 ${item.payload.source}</span>
-                    <span>📅 ${new Date(item.payload.published_at).toLocaleDateString()}</span>
+          .map((item) => {
+            const payload = item.payload;
+            const summary = payload.summary || {};
+            const personaScores = payload.persona_scores || {};
+            const industryCodes = payload.industry_codes || [];
+            const topicCodes = payload.topic_codes || [];
+
+            // Validate summary lengths
+            const shortLen = summary.short?.length || 0;
+            const mediumLen = summary.medium?.length || 0;
+            const longLen = summary.long?.length || 0;
+
+            const shortValid = shortLen >= 120 && shortLen <= 150;
+            const mediumValid = mediumLen >= 250 && mediumLen <= 300;
+            const longValid = longLen >= 500 && longLen <= 600;
+
+            const thumbnailUrl = item.thumb_ref
+              ? `${import.meta.env.PUBLIC_SUPABASE_URL}/storage/v1/object/public/thumbnails/${item.thumb_ref}`
+              : null;
+
+            return `
+            <article class="rounded-xl border border-neutral-800 bg-neutral-900/60 transition hover:border-neutral-700" data-item-id="${item.id}">
+              <div class="flex gap-6 p-6">
+                <!-- Thumbnail -->
+                ${
+                  thumbnailUrl
+                    ? `
+                <div class="flex-shrink-0">
+                  <img src="${thumbnailUrl}" alt="Thumbnail" class="w-48 h-32 object-cover rounded-lg border border-neutral-700" loading="lazy" />
+                </div>
+                `
+                    : ''
+                }
+                
+                <!-- Main Content -->
+                <div class="flex-1 min-w-0">
+                  <!-- Header -->
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="flex-1">
+                      <h2 class="text-2xl font-semibold text-sky-200 break-words">${payload.title}</h2>
+                      <div class="mt-2 flex flex-wrap gap-2 text-sm text-neutral-400">
+                        <span>� ${new Date(payload.published_at).toLocaleDateString()}</span>
+                        <span>•</span>
+                        <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="text-sky-400 hover:text-sky-300 hover:underline">View original →</a>
+                      </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex flex-col gap-2 flex-shrink-0">
+                      <button class="approve-btn rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-500 transition whitespace-nowrap" data-id="${item.id}">✓ Approve</button>
+                      <button class="reject-btn rounded-lg bg-red-600 px-6 py-2 font-semibold text-white hover:bg-red-500 transition whitespace-nowrap" data-id="${item.id}">✗ Reject</button>
+                    </div>
                   </div>
+
+                  <!-- Summaries -->
+                  <div class="mt-4 space-y-3">
+                    <div>
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="text-xs font-semibold text-neutral-400 uppercase">Short Summary</span>
+                        <span class="text-xs ${shortValid ? 'text-emerald-400' : 'text-amber-400'}">
+                          ${shortValid ? '✓' : '⚠️'} ${shortLen} chars
+                        </span>
+                      </div>
+                      <p class="text-neutral-300">${summary.short || 'N/A'}</p>
+                    </div>
+                    
+                    <details class="group">
+                      <summary class="cursor-pointer text-sm font-medium text-neutral-400 hover:text-neutral-300 list-none flex items-center gap-2">
+                        <span class="transform transition-transform group-open:rotate-90">▶</span>
+                        Medium Summary
+                        <span class="text-xs ${mediumValid ? 'text-emerald-400' : 'text-amber-400'}">
+                          ${mediumValid ? '✓' : '⚠️'} ${mediumLen} chars
+                        </span>
+                      </summary>
+                      <p class="mt-2 text-neutral-300 text-sm">${summary.medium || 'N/A'}</p>
+                    </details>
+                    
+                    <details class="group">
+                      <summary class="cursor-pointer text-sm font-medium text-neutral-400 hover:text-neutral-300 list-none flex items-center gap-2">
+                        <span class="transform transition-transform group-open:rotate-90">▶</span>
+                        Long Summary
+                        <span class="text-xs ${longValid ? 'text-emerald-400' : 'text-amber-400'}">
+                          ${longValid ? '✓' : '⚠️'} ${longLen} chars
+                        </span>
+                      </summary>
+                      <p class="mt-2 text-neutral-300 text-sm">${summary.long || 'N/A'}</p>
+                    </details>
+                  </div>
+
+                  <!-- Tags -->
+                  <div class="mt-4 space-y-2">
+                    ${
+                      industryCodes.length > 0
+                        ? `
+                    <div>
+                      <span class="text-xs font-semibold text-neutral-400 uppercase">Industries</span>
+                      <div class="flex flex-wrap gap-2 mt-1">
+                        ${industryCodes
+                          .map((code) => {
+                            const name = industryMap.get(code) || code;
+                            return `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300">
+                            <span class="font-mono text-blue-400">${code}</span>
+                            <span class="text-blue-200">${name}</span>
+                          </span>`;
+                          })
+                          .join('')}
+                      </div>
+                    </div>
+                    `
+                        : ''
+                    }
+                    
+                    ${
+                      topicCodes.length > 0
+                        ? `
+                    <div>
+                      <span class="text-xs font-semibold text-neutral-400 uppercase">Topics</span>
+                      <div class="flex flex-wrap gap-2 mt-1">
+                        ${topicCodes
+                          .map((code) => {
+                            const name = topicMap.get(code) || code;
+                            return `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-purple-500/10 border border-purple-500/20 text-xs text-purple-300">
+                            <span class="font-mono text-purple-400">${code}</span>
+                            <span class="text-purple-200">${name}</span>
+                          </span>`;
+                          })
+                          .join('')}
+                      </div>
+                    </div>
+                    `
+                        : ''
+                    }
+                  </div>
+
+                  <!-- Persona Scores -->
                   ${
-                    item.payload.summary.short
-                      ? `<p class="mt-4 text-neutral-300">${item.payload.summary.short}</p>`
+                    Object.keys(personaScores).length > 0
+                      ? `
+                  <div class="mt-4">
+                    <span class="text-xs font-semibold text-neutral-400 uppercase">Persona Relevance</span>
+                    <div class="flex gap-4 mt-2">
+                      ${Object.entries(personaScores)
+                        .map(
+                          ([persona, score]) => `
+                        <div class="flex items-center gap-2">
+                          <span class="text-sm text-neutral-400 capitalize">${persona}:</span>
+                          <div class="flex items-center gap-1">
+                            <div class="w-24 h-2 bg-neutral-800 rounded-full overflow-hidden">
+                              <div class="h-full bg-gradient-to-r from-sky-500 to-emerald-500 rounded-full" style="width: ${(score * 100).toFixed(0)}%"></div>
+                            </div>
+                            <span class="text-sm font-medium text-neutral-300">${(score * 100).toFixed(0)}%</span>
+                          </div>
+                        </div>
+                      `,
+                        )
+                        .join('')}
+                    </div>
+                  </div>
+                  `
                       : ''
                   }
-                  <a href="${
-                    item.url
-                  }" target="_blank" rel="noopener noreferrer" class="mt-4 inline-block text-sm text-sky-400 hover:text-sky-300">View original →</a>
-                </div>
 
-                <div class="flex flex-col gap-2">
-                  <button class="approve-btn rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-500 transition" data-id="${
-                    item.id
-                  }">✓ Approve</button>
-                  <button class="reject-btn rounded-lg bg-red-600 px-6 py-2 font-semibold text-white hover:bg-red-500 transition" data-id="${
-                    item.id
-                  }">✗ Reject</button>
+                  <!-- Quality Indicators -->
+                  <div class="mt-4 flex items-center gap-4 text-xs">
+                    ${
+                      payload.relevance_confidence
+                        ? `
+                    <div class="flex items-center gap-1">
+                      <span class="text-neutral-400">AI Confidence:</span>
+                      <span class="font-medium text-emerald-300">${(payload.relevance_confidence * 100).toFixed(0)}%</span>
+                    </div>
+                    `
+                        : ''
+                    }
+                    <div class="flex items-center gap-1">
+                      <span class="text-neutral-400">Tags:</span>
+                      <span class="font-medium ${industryCodes.length + topicCodes.length >= 2 ? 'text-emerald-300' : 'text-amber-300'}">
+                        ${industryCodes.length + topicCodes.length >= 2 ? '✓' : '⚠️'} ${industryCodes.length + topicCodes.length} total
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </article>
-          `,
-          )
+          `;
+          })
           .join('');
 
         container.addEventListener('click', async (e) => {

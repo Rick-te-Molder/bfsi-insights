@@ -71,6 +71,10 @@ serve(async (req) => {
     const enrichment = await generateEnrichment(content.title, content.description);
 
     // 4. Update queue with enriched data
+    // Note: Thumbnails are NOT generated here because Edge Functions can't run Playwright.
+    // Thumbnails will be generated later by:
+    //   - enrich.mjs (if re-enriching via script), OR
+    //   - generate-thumbnails.mjs (dedicated thumbnail generator)
     const updatedPayload = {
       ...queueItem.payload,
       title: content.title,
@@ -80,6 +84,7 @@ serve(async (req) => {
       industry_codes: enrichment.industry_codes || [],
       topic_codes: enrichment.topic_codes || [],
       persona_scores: enrichment.persona_scores,
+      relevance_confidence: enrichment.relevance_confidence || null,
     };
 
     const { error: updateError } = await supabase
