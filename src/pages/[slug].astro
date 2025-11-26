@@ -1,20 +1,13 @@
 ---
-export const prerender = true;
+// Dynamic SSR mode - articles appear immediately after approval
+export const prerender = false;
 
 import fs from 'node:fs';
 import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import { marked } from 'marked';
 import { fmt } from '../lib/fmt';
-import { getAllPublications, getPublicationBySlug } from '../lib/supabase';
-
-// ------------------------------------------------------------
-// Static paths
-// ------------------------------------------------------------
-export async function getStaticPaths() {
-  const publications = await getAllPublications();
-  return publications.map((item) => ({ params: { slug: item.slug } }));
-}
+import { getPublicationBySlug } from '../lib/supabase';
 
 // ------------------------------------------------------------
 // Load publication for this slug

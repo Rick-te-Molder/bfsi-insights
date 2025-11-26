@@ -1,5 +1,6 @@
 ---
-export const prerender = true;
+// Dynamic SSR - show latest articles in real-time
+export const prerender = false;
 
 import Base from '../layouts/Base.astro';
 import { getAllPublications } from '../lib/supabase';

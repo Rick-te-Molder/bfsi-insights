@@ -332,11 +332,12 @@ import Base from '../../layouts/Base.astro';
           })
           .join('');
 
+        // Handle approve/reject buttons
         container.addEventListener('click', async (e) => {
           const target = e.target;
           if (!(target instanceof HTMLElement)) return;
 
-          // Approve
+          // Approve - auto-publishes to kb_publication
           if (target.classList.contains('approve-btn')) {
             const id = target.dataset.id;
             if (!id) return;
@@ -344,36 +345,28 @@ import Base from '../../layouts/Base.astro';
             const article = document.querySelector('[data-item-id="' + id + '"]');
             if (!(article instanceof HTMLElement)) return;
 
-            // Get current user for audit trail
-            const session = (await supabase.auth.getSession()).data.session;
-            const userId = session?.user?.id;
+            article.classList.add('opacity-60');
+            target.textContent = '⏳ Publishing...';
 
-            // Update status directly (no RPC function needed)
-            const { data, error } = await supabase
-              .from('ingestion_queue')
-              .update({
-                status: 'approved',
-                approved_at: new Date().toISOString(),
-                reviewer: userId,
-              })
-              .eq('id', id)
-              .eq('status', 'enriched')
-              .select();
+            // Call SQL function which:
+            // 1. Inserts into kb_publication
+            // 2. Creates taxonomy relationships
+            // 3. Marks as approved
+            const { error } = await supabase.rpc('approve_from_queue', {
+              p_queue_id: id,
+            });
 
             if (error) {
-              alert('Approval failed: ' + error.message);
-              return;
-            }
-
-            if (!data || data.length === 0) {
-              alert('Approval failed: Item not found or already processed');
+              article.classList.remove('opacity-60');
+              target.textContent = '✓ Approve';
+              alert('Publication failed: ' + error.message);
               return;
             }
 
             article.classList.add('opacity-50');
-            target.textContent = '✓ Approved! (Run publish script)';
+            target.textContent = '✓ Published! Live on site.';
             target.setAttribute('disabled', 'true');
-            setTimeout(() => article.remove(), 1500);
+            setTimeout(() => article.remove(), 2000);
           }
 
           // Reject
