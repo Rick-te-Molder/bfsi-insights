@@ -23,7 +23,7 @@ function emitHeadersFile() {
 
 export default defineConfig({
   site: 'https://www.bfsiinsights.com',
-  output: 'hybrid', // Allows mixing static and SSR pages
+  output: 'server', // Enable SSR, but most pages are static via prerender: true
   adapter: cloudflare(),
   integrations: [tailwind()],
   vite: {

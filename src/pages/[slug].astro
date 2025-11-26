@@ -1,13 +1,21 @@
 ---
-// Dynamic SSR mode - articles appear immediately after approval
-export const prerender = false;
+// Static pages - fast CDN delivery, rebuilds on approval
+export const prerender = true;
 
 import fs from 'node:fs';
 import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import { marked } from 'marked';
 import { fmt } from '../lib/fmt';
-import { getPublicationBySlug } from '../lib/supabase';
+import { getAllPublications, getPublicationBySlug } from '../lib/supabase';
+
+// ------------------------------------------------------------
+// Static paths
+// ------------------------------------------------------------
+export async function getStaticPaths() {
+  const publications = await getAllPublications();
+  return publications.map((item) => ({ params: { slug: item.slug } }));
+}
 
 // ------------------------------------------------------------
 // Load publication for this slug
