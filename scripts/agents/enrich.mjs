@@ -257,11 +257,11 @@ async function enrich(options = {}) {
       agent_metadata: { dryRun, limit, taxonomies_hash: Object.keys(taxonomies).length },
     });
 
-    // Load pending and fetched items from ingestion_queue
+    // Load filtered items from ingestion_queue (passed relevance check)
     const { data: items, error } = await supabase
       .from('ingestion_queue')
       .select('*')
-      .in('status', ['pending'])
+      .in('status', ['filtered'])
       .order('discovered_at', { ascending: false })
       .limit(limit || 100);
 
