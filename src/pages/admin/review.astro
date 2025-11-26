@@ -161,9 +161,8 @@ import Base from '../../layouts/Base.astro';
             const mediumValid = mediumLen >= 250 && mediumLen <= 300;
             const longValid = longLen >= 500 && longLen <= 600;
 
-            const thumbnailUrl = item.thumb_ref
-              ? `${import.meta.env.PUBLIC_SUPABASE_URL}/storage/v1/object/public/thumbnails/${item.thumb_ref}`
-              : null;
+            // Thumbnails are served from /public/thumbs/ directory
+            const thumbnailUrl = item.thumb_ref ? `/thumbs/${item.thumb_ref}` : null;
 
             return `
             <article class="rounded-xl border border-neutral-800 bg-neutral-900/60 transition hover:border-neutral-700" data-item-id="${item.id}">

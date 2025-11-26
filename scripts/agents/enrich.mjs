@@ -419,7 +419,7 @@ async function generateThumbnail(item) {
 
   const existing = paths.find((p) => fs.existsSync(p));
   if (existing) {
-    return `/thumbs/${path.basename(existing)}`;
+    return path.basename(existing);
   }
 
   try {
@@ -444,7 +444,7 @@ async function generateThumbnail(item) {
 
     await browser.close();
 
-    return `/thumbs/${slug}.png`;
+    return `${slug}.png`;
   } catch (err) {
     console.log(`   ⚠️ Thumbnail error: ${err.message}`);
     return null;
