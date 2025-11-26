@@ -1,6 +1,5 @@
 import { defineConfig } from 'astro/config';
 import tailwind from '@astrojs/tailwind';
-import cloudflare from '@astrojs/cloudflare';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -23,14 +22,8 @@ function emitHeadersFile() {
 
 export default defineConfig({
   site: 'https://www.bfsiinsights.com',
-  output: 'server', // Enable SSR, but most pages are static via prerender: true
-  adapter: cloudflare({
-    mode: 'directory',
-    routes: {
-      strategy: 'include', // Only include admin routes in Workers
-      include: ['/admin/*'],
-    },
-  }),
+  output: 'static', // Static by default
+  // No adapter needed for pure static
   integrations: [tailwind()],
   vite: {
     plugins: [emitHeadersFile()],
