@@ -338,13 +338,13 @@ async function enrich(options = {}) {
             ...item.payload,
             summary: enrichment.summary,
             // New format: arrays instead of object
-            industry_codes: enrichment.tags.industry ? [enrichment.tags.industry] : [],
-            topic_codes: enrichment.tags.topic ? [enrichment.tags.topic] : [],
+            industry_codes: enrichment.tags?.industry ? [enrichment.tags.industry] : [],
+            topic_codes: enrichment.tags?.topic ? [enrichment.tags.topic] : [],
             // Keep tags for backward compatibility
-            tags: enrichment.tags,
-            persona_scores: enrichment.persona_scores,
+            tags: enrichment.tags || {},
+            persona_scores: enrichment.persona_scores || {},
             quality_score: calculateQualityScore(item, enrichment),
-            relevance_confidence: enrichment.relevance_confidence,
+            relevance_confidence: enrichment.relevance_confidence || null,
           };
 
           const { error: updateError } = await supabase
@@ -368,12 +368,13 @@ async function enrich(options = {}) {
         enriched++;
 
         await finishStepSuccess(step_id, JSON.stringify(enrichment).length, {
-          role: enrichment.tags.role,
-          industry: enrichment.tags.industry,
-          topic: enrichment.tags.topic,
+          role: enrichment.tags?.role || null,
+          industry: enrichment.tags?.industry || null,
+          topic: enrichment.tags?.topic || null,
           mode: dryRun ? 'dry-run' : 'live',
         });
       } catch (err) {
+        console.error(`   ❌ Error: ${err.message || String(err)}`);
         failed++;
         await finishStepError(step_id, err.message || String(err));
       }
@@ -590,7 +591,18 @@ Only output valid JSON.
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
 
-  const limit = parseInt(args.find((a) => a.startsWith('--limit='))?.split('=')[1], 10) || null;
+  // Parse limit: supports both --limit=N and --limit N
+  let limit = null;
+  const limitArgEquals = args.find((a) => a.startsWith('--limit='));
+  if (limitArgEquals) {
+    limit = parseInt(limitArgEquals.split('=')[1], 10);
+  } else {
+    const limitIndex = args.indexOf('--limit');
+    if (limitIndex !== -1 && args[limitIndex + 1]) {
+      limit = parseInt(args[limitIndex + 1], 10);
+    }
+  }
+
   const dryRun = args.includes('--dry-run');
 
   enrich({ limit, dryRun })

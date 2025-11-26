@@ -269,9 +269,22 @@ function extractTitleFromUrl(url) {
 
 // CLI
 const args = process.argv.slice(2);
+
+// Parse limit: supports both --limit=N and --limit N
+let limit = null;
+const limitArgEquals = args.find((a) => a.startsWith('--limit='));
+if (limitArgEquals) {
+  limit = parseInt(limitArgEquals.split('=')[1], 10);
+} else {
+  const limitIndex = args.indexOf('--limit');
+  if (limitIndex !== -1 && args[limitIndex + 1]) {
+    limit = parseInt(args[limitIndex + 1], 10);
+  }
+}
+
 const options = {
   dryRun: args.includes('--dry-run'),
-  limit: parseInt(args.find((a) => a.startsWith('--limit='))?.split('=')[1]) || null,
+  limit: limit || null,
 };
 
 fetchQueue(options)

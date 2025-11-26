@@ -193,20 +193,17 @@ import Base from '../../layouts/Base.astro';
         }
 
         // Insert into ingestion_queue
-        const { data: insertedItem, error } = await supabase
-          .from('ingestion_queue')
-          .insert({
-            url: url,
-            status: 'pending',
-            payload: {
-              manual_submission: true,
-              notes: notes || null,
-              submitted_at: new Date().toISOString(),
-            },
-            content_type: 'resource',
-          })
-          .select('id')
-          .single();
+        // Database trigger will automatically call process-url Edge Function
+        const { error } = await supabase.from('ingestion_queue').insert({
+          url: url,
+          status: 'pending',
+          payload: {
+            manual_submission: true,
+            notes: notes || null,
+            submitted_at: new Date().toISOString(),
+          },
+          content_type: 'resource',
+        });
 
         if (error) {
           // Check for duplicate URL
@@ -218,50 +215,16 @@ import Base from '../../layouts/Base.astro';
           return;
         }
 
-        // Success! Now trigger immediate processing via Edge Function
-        submitBtn.textContent = 'Processing...';
-        showSuccess('✅ URL added! Processing now (fetch → enrich)...');
+        // Success! Database trigger will automatically process this URL
+        showSuccess('✅ URL added! Processing automatically (fetch → enrich)...');
 
-        try {
-          // Call Edge Function to process immediately
-          const processResponse = await fetch(
-            `${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/process-url`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${import.meta.env.PUBLIC_SUPABASE_ANON_KEY}`,
-              },
-              body: JSON.stringify({ queueId: insertedItem.id }),
-            },
-          );
+        urlInput.value = '';
+        notesInput.value = '';
 
-          const result = await processResponse.json();
-
-          if (result.success) {
-            if (result.status === 'enriched') {
-              showSuccess(`✅ ${result.title} - Ready for review!`);
-
-              urlInput.value = '';
-              notesInput.value = '';
-
-              // Redirect to review queue after 2 seconds
-              setTimeout(() => {
-                window.location.href = '/admin/review';
-              }, 2000);
-            } else if (result.status === 'rejected') {
-              showError(`⚠️ ${result.title} - Not BFSI relevant: ${result.reason}`);
-            }
-          } else {
-            showError(
-              `❌ ${result.error || 'Unknown error'}. You can retry after fixing the issue.`,
-            );
-          }
-        } catch (processErr) {
-          showError(
-            `Processing failed: ${processErr instanceof Error ? processErr.message : 'Unknown error'}`,
-          );
-        }
+        // Redirect to review queue after 3 seconds
+        setTimeout(() => {
+          window.location.href = '/admin/review';
+        }, 3000);
       } catch (err) {
         showError(err instanceof Error ? err.message : 'An unexpected error occurred');
       } finally {

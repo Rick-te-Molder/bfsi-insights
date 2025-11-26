@@ -120,37 +120,72 @@ serve(async (req) => {
   }
 });
 
-// Fetch content from URL with timeout
-async function fetchContent(url: string) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
+// Fetch content from URL with timeout and retry logic
+async function fetchContent(url: string, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000); // 45s timeout
 
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.9',
-      },
-      signal: controller.signal,
-    });
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          Accept:
+            'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br',
+          'Cache-Control': 'no-cache',
+          Pragma: 'no-cache',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Upgrade-Insecure-Requests': '1',
+          DNT: '1',
+          Connection: 'keep-alive',
+        },
+        redirect: 'follow',
+        signal: controller.signal,
+      });
 
-    clearTimeout(timeout);
+      clearTimeout(timeout);
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        // Retry on 5xx errors or 403 (might be temporary)
+        if (attempt < retries && (response.status >= 500 || response.status === 403)) {
+          console.log(`HTTP ${response.status}, retrying (${attempt}/${retries})...`);
+          await new Promise((resolve) => setTimeout(resolve, 3000 * attempt));
+          continue;
+        }
+        throw new Error(`HTTP ${response.status}. Site may be blocking requests.`);
+      }
+
+      const html = await response.text();
+      return parseHtml(html, url);
+    } catch (error) {
+      clearTimeout(timeout);
+      if (error.name === 'AbortError') {
+        if (attempt < retries) {
+          console.log(`Timeout, retrying (${attempt}/${retries})...`);
+          await new Promise((resolve) => setTimeout(resolve, 3000 * attempt));
+          continue;
+        }
+        throw new Error(`Request timeout after ${45 * retries}s`);
+      }
+
+      // For other errors, retry if we have attempts left
+      if (attempt < retries) {
+        console.log(`Error: ${error.message}, retrying (${attempt}/${retries})...`);
+        await new Promise((resolve) => setTimeout(resolve, 3000 * attempt));
+        continue;
+      }
+
+      throw error;
     }
-
-    const html = await response.text();
-    return parseHtml(html, url);
-  } catch (error) {
-    clearTimeout(timeout);
-    if (error.name === 'AbortError') {
-      throw new Error('Request timeout after 30s');
-    }
-    throw error;
   }
+
+  throw new Error('Failed after all retries');
 }
 
 function parseHtml(html: string, url: string) {
