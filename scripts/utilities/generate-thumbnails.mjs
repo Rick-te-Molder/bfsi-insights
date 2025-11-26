@@ -55,10 +55,15 @@ async function main() {
 
   // Launch browser
   console.log('🚀 Launching browser...');
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    args: ['--disable-blink-features=AutomationControlled', '--disable-web-security'],
+  });
   const context = await browser.newContext({
     viewport: { width: 1200, height: 675 }, // 16:9 aspect ratio
     deviceScaleFactor: 1,
+    userAgent:
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   });
 
   const results = [];
@@ -124,12 +129,27 @@ async function generateThumbnail(context, publication) {
     // Navigate to the page
     console.log('   📥 Loading page...');
     await page.goto(publication.url, {
-      waitUntil: 'networkidle',
-      timeout: 30000,
+      waitUntil: 'domcontentloaded',
+      timeout: 45000,
     });
 
-    // Wait for page to be fully rendered
-    await page.waitForTimeout(3000);
+    // Wait for page to start rendering
+    await page.waitForTimeout(2000);
+
+    // Scroll to trigger lazy loading
+    await page.evaluate(() => {
+      window.scrollTo(0, 300);
+    });
+
+    // Wait for content to render (longer for JS-heavy sites)
+    await page.waitForTimeout(8000);
+
+    // Scroll back to top for screenshot
+    await page.evaluate(() => {
+      window.scrollTo(0, 0);
+    });
+
+    await page.waitForTimeout(1000);
 
     // Hide cookie banners and popups with CSS
     await page.addStyleTag({
