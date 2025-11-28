@@ -11,5 +11,5 @@ CREATE TABLE IF NOT EXISTS rejection_analytics (
   created_at timestamptz DEFAULT now()
 );
 
-CREATE INDEX idx_rejection_analytics_category ON rejection_analytics(rejection_category);
-CREATE INDEX idx_rejection_analytics_created_at ON rejection_analytics(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_rejection_analytics_category ON rejection_analytics(rejection_category);
+CREATE INDEX IF NOT EXISTS idx_rejection_analytics_created_at ON rejection_analytics(created_at DESC);

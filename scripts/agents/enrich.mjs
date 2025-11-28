@@ -267,9 +267,11 @@ async function enrich(options = {}) {
 
     if (error) throw new Error('Failed to load items: ' + error.message);
 
-    // Filter: must not have summary AND must have content (title or description)
+    // Filter: (must not have summary OR is backfill) AND must have content
     const itemsToEnrich = (items || []).filter(
-      (i) => !i.payload?.summary?.short && (i.payload?.title || i.payload?.description),
+      (i) =>
+        (!i.payload?.summary?.short || i.payload?.is_backfill) &&
+        (i.payload?.title || i.payload?.description),
     );
 
     const itemsNeedingFetch = (items || []).filter(
