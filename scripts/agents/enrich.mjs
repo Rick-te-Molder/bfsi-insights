@@ -338,8 +338,17 @@ async function enrich(options = {}) {
             ...item.payload,
             summary: enrichment.summary,
             // New format: arrays instead of object
-            industry_codes: enrichment.tags?.industry ? [enrichment.tags.industry] : [],
-            topic_codes: enrichment.tags?.topic ? [enrichment.tags.topic] : [],
+            // Handle both string and array from AI
+            industry_codes: enrichment.tags?.industry
+              ? Array.isArray(enrichment.tags.industry)
+                ? enrichment.tags.industry
+                : [enrichment.tags.industry]
+              : [],
+            topic_codes: enrichment.tags?.topic
+              ? Array.isArray(enrichment.tags.topic)
+                ? enrichment.tags.topic
+                : [enrichment.tags.topic]
+              : [],
             // Keep tags for backward compatibility
             tags: enrichment.tags || {},
             persona_scores: enrichment.persona_scores || {},
