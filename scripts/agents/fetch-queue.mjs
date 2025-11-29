@@ -121,7 +121,7 @@ async function fetchQueue(options = {}) {
             ...item.payload,
             title: content.title,
             description: content.description,
-            published_at: content.date || new Date().toISOString(),
+            published_at: content.date || null,
           };
 
           const { error: updateError } = await supabase
@@ -242,15 +242,200 @@ function parseHtml(html, url) {
     html.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i) ||
     html.match(/<meta[^>]*property=["']og:description["'][^>]*content=["']([^"']+)["']/i);
 
-  const dateMatch =
-    html.match(/<meta[^>]*property=["']article:published_time["'][^>]*content=["']([^"']+)["']/i) ||
-    html.match(/<time[^>]*datetime=["']([^"']+)["']/i);
+  const extractedDate = extractPublicationDate(html);
 
   return {
     title: titleMatch ? titleMatch[1].trim() : extractTitleFromUrl(url),
     description: descMatch ? descMatch[1].trim() : '',
-    date: dateMatch ? dateMatch[1].trim() : null,
+    date: extractedDate,
   };
+}
+
+/**
+ * Extract publication date from HTML using multiple strategies
+ * @param {string} html - Raw HTML content
+ * @returns {string|null} - ISO date string or null
+ */
+function extractPublicationDate(html) {
+  // Strategy 1: JSON-LD Schema.org datePublished
+  const jsonLdMatch = html.match(
+    /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi,
+  );
+  if (jsonLdMatch) {
+    for (const block of jsonLdMatch) {
+      try {
+        const jsonContent = block.replace(/<script[^>]*>|<\/script>/gi, '');
+        const data = JSON.parse(jsonContent);
+        const dateStr = findDateInJsonLd(data);
+        if (dateStr) {
+          const parsed = parseFlexibleDate(dateStr);
+          if (parsed) return parsed;
+        }
+      } catch {
+        // Invalid JSON, continue
+      }
+    }
+  }
+
+  // Strategy 2: Meta tags (multiple formats)
+  const metaPatterns = [
+    /<meta[^>]*property=["']article:published_time["'][^>]*content=["']([^"']+)["']/i,
+    /<meta[^>]*content=["']([^"']+)["'][^>]*property=["']article:published_time["']/i,
+    /<meta[^>]*property=["']og:published_time["'][^>]*content=["']([^"']+)["']/i,
+    /<meta[^>]*name=["']pubdate["'][^>]*content=["']([^"']+)["']/i,
+    /<meta[^>]*name=["']publishdate["'][^>]*content=["']([^"']+)["']/i,
+    /<meta[^>]*name=["']date["'][^>]*content=["']([^"']+)["']/i,
+    /<meta[^>]*name=["']DC\.date["'][^>]*content=["']([^"']+)["']/i,
+    /<meta[^>]*name=["']dcterms\.created["'][^>]*content=["']([^"']+)["']/i,
+    /<meta[^>]*itemprop=["']datePublished["'][^>]*content=["']([^"']+)["']/i,
+  ];
+
+  for (const pattern of metaPatterns) {
+    const match = html.match(pattern);
+    if (match) {
+      const parsed = parseFlexibleDate(match[1].trim());
+      if (parsed) return parsed;
+    }
+  }
+
+  // Strategy 3: <time> elements with datetime attribute
+  const timeMatch = html.match(/<time[^>]*datetime=["']([^"']+)["']/i);
+  if (timeMatch) {
+    const parsed = parseFlexibleDate(timeMatch[1].trim());
+    if (parsed) return parsed;
+  }
+
+  // Strategy 4: Common visible date patterns in content
+  // Look near the title/header area (first 5000 chars) for better accuracy
+  const headerArea = html.slice(0, 5000);
+  const visibleDatePatterns = [
+    // "June 25, 2024" or "Jun 25, 2024"
+    /\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2}),?\s+(\d{4})\b/i,
+    // "25 June 2024" or "25 Jun 2024"
+    /\b(\d{1,2})\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{4})\b/i,
+    // "2024-06-25" ISO format
+    /\b(\d{4})-(\d{2})-(\d{2})\b/,
+    // "06/25/2024" or "06-25-2024" US format
+    /\b(\d{1,2})[/\x2d](\d{1,2})[/\x2d](\d{4})\b/,
+  ];
+
+  for (const pattern of visibleDatePatterns) {
+    const match = headerArea.match(pattern);
+    if (match) {
+      const parsed = parseFlexibleDate(match[0]);
+      if (parsed) return parsed;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Recursively find datePublished in JSON-LD structure
+ */
+function findDateInJsonLd(data) {
+  if (!data || typeof data !== 'object') return null;
+
+  // Check for datePublished directly
+  if (data.datePublished) return data.datePublished;
+  if (data.dateCreated) return data.dateCreated;
+  if (data.publishedTime) return data.publishedTime;
+
+  // Check @graph array (common in Schema.org)
+  if (Array.isArray(data['@graph'])) {
+    for (const item of data['@graph']) {
+      const found = findDateInJsonLd(item);
+      if (found) return found;
+    }
+  }
+
+  // Check if it's an array
+  if (Array.isArray(data)) {
+    for (const item of data) {
+      const found = findDateInJsonLd(item);
+      if (found) return found;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Parse various date formats into ISO string
+ */
+function parseFlexibleDate(dateStr) {
+  if (!dateStr) return null;
+
+  // Already ISO format
+  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) return d.toISOString();
+  }
+
+  // Try direct parsing
+  const direct = new Date(dateStr);
+  if (!isNaN(direct.getTime())) {
+    // Sanity check: date should be between 2000 and 2030
+    const year = direct.getFullYear();
+    if (year >= 2000 && year <= 2030) {
+      return direct.toISOString();
+    }
+  }
+
+  // Month name formats
+  const monthNames = {
+    jan: 0,
+    january: 0,
+    feb: 1,
+    february: 1,
+    mar: 2,
+    march: 2,
+    apr: 3,
+    april: 3,
+    may: 4,
+    jun: 5,
+    june: 5,
+    jul: 6,
+    july: 6,
+    aug: 7,
+    august: 7,
+    sep: 8,
+    september: 8,
+    oct: 9,
+    october: 9,
+    nov: 10,
+    november: 10,
+    dec: 11,
+    december: 11,
+  };
+
+  // "Month DD, YYYY"
+  const mdyMatch = dateStr.match(
+    /\b(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{1,2}),?\s+(\d{4})\b/i,
+  );
+  if (mdyMatch) {
+    const month = monthNames[mdyMatch[1].toLowerCase().slice(0, 3)];
+    const day = parseInt(mdyMatch[2], 10);
+    const year = parseInt(mdyMatch[3], 10);
+    if (month !== undefined && year >= 2000 && year <= 2030) {
+      return new Date(year, month, day).toISOString();
+    }
+  }
+
+  // "DD Month YYYY"
+  const dmyMatch = dateStr.match(
+    /\b(\d{1,2})\s+(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(\d{4})\b/i,
+  );
+  if (dmyMatch) {
+    const day = parseInt(dmyMatch[1], 10);
+    const month = monthNames[dmyMatch[2].toLowerCase().slice(0, 3)];
+    const year = parseInt(dmyMatch[3], 10);
+    if (month !== undefined && year >= 2000 && year <= 2030) {
+      return new Date(year, month, day).toISOString();
+    }
+  }
+
+  return null;
 }
 
 function extractTitleFromUrl(url) {
