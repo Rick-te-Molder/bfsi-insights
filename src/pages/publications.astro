@@ -418,21 +418,9 @@ const expandItemThumb = (t: string | undefined) => {
   </script>
 
   <!-- Filters JS -->
-  <script type="module">
-    import initPublicationFilters from '/src/features/publications/publication-filters.ts';
-    const startFilters = () => {
-      try {
-        initPublicationFilters();
-      } catch (err) {
-        console.error('Failed to initialize publication filters', err);
-      }
-    };
-
-    if (document.readyState === 'loading') {
-      window.addEventListener('DOMContentLoaded', startFilters, { once: true });
-    } else {
-      startFilters();
-    }
+  <script>
+    import initPublicationFilters from '../features/publications/publication-filters.ts';
+    initPublicationFilters();
   </script>
 
   <!-- Back to Top interaction -->
