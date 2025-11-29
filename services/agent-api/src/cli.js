@@ -19,6 +19,7 @@ import { runRelevanceFilter } from './agents/filter.js';
 import { runSummarizer } from './agents/summarize.js';
 import { runTagger } from './agents/tag.js';
 import { runThumbnailer } from './agents/thumbnail.js';
+import { processQueue } from './agents/enrich-item.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -296,13 +297,26 @@ async function runEnrichCmd(options) {
   console.log('📋 Items are ready for review at /admin/review');
 }
 
+// Process queued items (manual submissions)
+async function runProcessQueueCmd(options) {
+  console.log('🔄 Processing Queued Items...');
+  console.log('   (Manual URL submissions with status=queued)\n');
+
+  const result = await processQueue({
+    limit: options.limit || 10,
+    includeThumbnail: !options['no-thumbnail'],
+  });
+
+  return result;
+}
+
 // Main
 async function main() {
   const { command, options } = parseArgs();
 
   if (!command) {
     console.log('Usage: node cli.js <command> [options]');
-    console.log('Commands: discovery, filter, summarize, tag, thumbnail, enrich');
+    console.log('Commands: discovery, filter, summarize, tag, thumbnail, enrich, process-queue');
     process.exit(1);
   }
 
@@ -326,6 +340,10 @@ async function main() {
         break;
       case 'enrich':
         await runEnrichCmd(options);
+        break;
+      case 'process-queue':
+      case 'queue':
+        await runProcessQueueCmd(options);
         break;
       default:
         console.error(`Unknown command: ${command}`);

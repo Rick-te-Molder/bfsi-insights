@@ -75,20 +75,38 @@ import Base from '../../layouts/Base.astro';
       </div>
     </form>
 
+    <!-- Processing Status -->
+    <div
+      id="processing-status"
+      class="mt-6 hidden rounded-lg border border-sky-500/20 bg-sky-500/5 p-4"
+    >
+      <div class="flex items-center gap-3">
+        <div class="animate-spin h-5 w-5 border-2 border-sky-500 border-t-transparent rounded-full">
+        </div>
+        <div>
+          <p class="text-sky-300 font-medium">Processing: <span id="status-title"></span></p>
+          <p class="text-sm text-neutral-400">
+            Status: <span id="status-value" class="text-sky-400">queued</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
     <!-- Instructions -->
     <div class="mt-12 rounded-lg border border-neutral-800 bg-neutral-900/60 p-6">
       <h2 class="text-lg font-semibold mb-3">📋 What happens next?</h2>
       <ol class="space-y-3 text-sm text-neutral-400">
         <li>
-          <strong class="text-neutral-300">1. URL Added:</strong> The URL is inserted into the ingestion
-          queue
+          <strong class="text-neutral-300">1. URL Added:</strong> Inserted into ingestion queue
         </li>
         <li>
-          <strong class="text-neutral-300">2. Instant Processing:</strong> Edge Function automatically:
+          <strong class="text-neutral-300">2. Agent Processing:</strong> Agent API automatically:
           <ul class="mt-2 ml-4 space-y-1 text-xs">
             <li>• Fetches content from the URL</li>
-            <li>• Generates AI summaries and tags</li>
-            <li>• Checks BFSI relevance</li>
+            <li>• Checks BFSI relevance (filter)</li>
+            <li>• Generates AI summaries</li>
+            <li>• Applies taxonomy tags</li>
+            <li>• Creates thumbnail</li>
           </ul>
         </li>
         <li>
@@ -96,12 +114,14 @@ import Base from '../../layouts/Base.astro';
           <a href="/admin/review" class="text-sky-400 hover:underline">Review Queue</a>
         </li>
         <li>
-          <strong class="text-neutral-300">4. Publish:</strong> Approve it to go live immediately!
+          <strong class="text-neutral-300">4. Publish:</strong> Approve it to go live!
         </li>
       </ol>
       <div class="mt-4 rounded bg-neutral-800/50 p-3 border border-neutral-700">
-        <p class="text-xs font-semibold text-neutral-300 mb-2">⚡ Processing time:</p>
-        <p class="text-xs text-neutral-400">Usually completes in 5-15 seconds</p>
+        <p class="text-xs font-semibold text-neutral-300 mb-2">⏱️ Processing time:</p>
+        <p class="text-xs text-neutral-400">
+          Usually completes in 30-60 seconds (includes thumbnail)
+        </p>
       </div>
     </div>
   </div>
@@ -122,6 +142,9 @@ import Base from '../../layouts/Base.astro';
     const successText = document.getElementById('success-text');
     const errorMessage = document.getElementById('error-message');
     const errorText = document.getElementById('error-text');
+    const processingStatus = document.getElementById('processing-status');
+    const statusTitle = document.getElementById('status-title');
+    const statusValue = document.getElementById('status-value');
 
     // Check authentication
     async function checkAuth() {
@@ -169,7 +192,7 @@ import Base from '../../layouts/Base.astro';
           .from('ingestion_queue')
           .select('id, url, status')
           .eq('url_norm', urlNorm)
-          .in('status', ['pending', 'enriched']) // Allow retry if failed/rejected
+          .in('status', ['pending', 'queued', 'processing', 'enriched']) // Allow retry if failed/rejected
           .maybeSingle();
 
         if (queueDup) {
@@ -193,18 +216,22 @@ import Base from '../../layouts/Base.astro';
           return;
         }
 
-        // Insert into ingestion_queue
-        // Database trigger will automatically call process-url Edge Function
-        const { error } = await supabase.from('ingestion_queue').insert({
-          url: url,
-          status: 'pending',
-          payload: {
-            manual_submission: true,
-            notes: notes || null,
-            submitted_at: new Date().toISOString(),
-          },
-          content_type: 'resource',
-        });
+        // Insert into ingestion_queue with status='queued'
+        // Agent API will poll and process this item
+        const { data: inserted, error } = await supabase
+          .from('ingestion_queue')
+          .insert({
+            url: url,
+            status: 'queued',
+            payload: {
+              manual_submission: true,
+              notes: notes || null,
+              submitted_at: new Date().toISOString(),
+            },
+            content_type: 'resource',
+          })
+          .select()
+          .single();
 
         if (error) {
           // Check for duplicate URL
@@ -216,16 +243,15 @@ import Base from '../../layouts/Base.astro';
           return;
         }
 
-        // Success! Database trigger will automatically process this URL
-        showSuccess('✅ URL added! Processing automatically (fetch → enrich)...');
-
+        // Show processing status and start polling
+        showSuccess('URL queued! Agent API will process it shortly...');
         urlInput.value = '';
         notesInput.value = '';
 
-        // Redirect to review queue after 3 seconds
-        setTimeout(() => {
-          window.location.href = '/admin/review';
-        }, 3000);
+        if (inserted?.id) {
+          showProcessingStatus(inserted.id, url);
+          pollStatus(inserted.id);
+        }
       } catch (err) {
         showError(err instanceof Error ? err.message : 'An unexpected error occurred');
       } finally {
@@ -257,6 +283,72 @@ import Base from '../../layouts/Base.astro';
     function hideMessages() {
       if (successMessage) successMessage.classList.add('hidden');
       if (errorMessage) errorMessage.classList.add('hidden');
+    }
+
+    function showProcessingStatus(id: string, url: string) {
+      if (processingStatus && statusTitle) {
+        const shortUrl = url.length > 50 ? url.substring(0, 50) + '...' : url;
+        statusTitle.textContent = shortUrl;
+        processingStatus.classList.remove('hidden');
+      }
+    }
+
+    function updateStatusValue(status: string) {
+      if (statusValue) {
+        statusValue.textContent = status;
+
+        // Color code by status
+        statusValue.className = 'text-sky-400';
+        if (status === 'enriched') {
+          statusValue.className = 'text-green-400';
+        } else if (status === 'rejected' || status === 'failed') {
+          statusValue.className = 'text-red-400';
+        }
+      }
+    }
+
+    async function pollStatus(id: string) {
+      const maxPolls = 60; // Poll for max 2 minutes
+      let polls = 0;
+
+      const poll = async () => {
+        polls++;
+        if (polls > maxPolls) {
+          updateStatusValue('timeout - check review queue');
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from('ingestion_queue')
+          .select('status, payload')
+          .eq('id', id)
+          .single();
+
+        if (error) {
+          console.error('Poll error:', error);
+          return;
+        }
+
+        updateStatusValue(data.status);
+
+        // Terminal states
+        if (['enriched', 'rejected', 'failed', 'approved'].includes(data.status)) {
+          if (data.status === 'enriched') {
+            showSuccess(`Ready for review: ${data.payload?.title || 'Item processed'}`);
+            setTimeout(() => {
+              window.location.href = '/admin/review';
+            }, 2000);
+          } else if (data.status === 'rejected') {
+            showError(`Not relevant: ${data.payload?.rejection_reason || 'Rejected'}`);
+          }
+          return;
+        }
+
+        // Keep polling
+        setTimeout(poll, 2000);
+      };
+
+      poll();
     }
   </script>
 </Base>

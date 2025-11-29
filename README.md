@@ -117,7 +117,9 @@ The content processing pipeline runs through these stages:
 │ RSS/Scraping │    │  Relevance   │    │ AI Summary  │    │  Taxonomy    │    │  Screenshot  │
 │ BFSI filter  │    │  GPT-4o-mini │    │   GPT-4o    │    │ GPT-4o-mini  │    │  Playwright  │
 └──────────────┘    └──────────────┘    └─────────────┘    └──────────────┘    └──────────────┘
-     pending    →      filtered    →     summarized   →       tagged     →      enriched
+
+Manual:  queued → processing → filtered → summarized → tagged → enriched → approved
+Nightly: pending →  fetched  → filtered → summarized → tagged → enriched → approved
 ```
 
 **Database-Driven Configuration:**
@@ -129,18 +131,18 @@ The content processing pipeline runs through these stages:
 
 ### Content Ingestion Options
 
-#### **Option 1: Manual URL Submission** (⚡ Instant)
+#### **Option 1: Manual URL Submission** (Async Queue)
 
 ```text
-/admin/add → Edge Function (filter+summarize+tag) → enriched → /admin/review → Approve
+/admin/add → ingestion_queue (queued) → Agent API → enriched → /admin/review → Approve
 ```
 
 1. Paste URL at `/admin/add`
-2. Edge Function processes instantly (~10 seconds): fetches content, generates summary, applies tags
-3. Review and approve at `/admin/review`
-4. Click "Trigger Build" to deploy
+2. URL is queued, Agent API processes asynchronously (~30-60 seconds)
+3. UI polls for status updates (queued → processing → enriched)
+4. Review and approve at `/admin/review`
 
-> **Note**: Manual submissions skip thumbnail generation. Run `thumbnail` agent separately if needed.
+**Processing includes:** fetch → filter → summarize → tag → thumbnail (full pipeline)
 
 #### **Option 2: Nightly Pipeline** (🌙 Automated)
 
@@ -161,14 +163,18 @@ Runs automatically at 2 AM UTC via GitHub Actions:
 
 ```bash
 # 1. Add URL via Admin UI → /admin/add
-# 2. Review and approve → /admin/review
-# 3. Click "Trigger Build" button
+# 2. Process queued items (if not using hosted Agent API)
+node services/agent-api/src/cli.js process-queue
+# 3. Review and approve → /admin/review
 ```
 
 **Run Agents Manually:**
 
 ```bash
-# Full pipeline
+# Process manual submissions (status=queued)
+node services/agent-api/src/cli.js process-queue --limit=10
+
+# Full nightly pipeline
 node services/agent-api/src/cli.js discovery --limit=10
 node services/agent-api/src/cli.js enrich --limit=20
 

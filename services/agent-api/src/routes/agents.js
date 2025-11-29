@@ -6,6 +6,7 @@ import { runSummarizer } from '../agents/summarize.js';
 import { runTagger } from '../agents/tag.js';
 import { runThumbnailer } from '../agents/thumbnail.js';
 import { runDiscovery } from '../agents/discovery.js';
+import { processQueue, enrichItem } from '../agents/enrich-item.js';
 
 const router = express.Router();
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -195,6 +196,50 @@ router.post('/run/thumbnail', async (req, res) => {
     res.json({ processed: results.length, results });
   } catch (err) {
     console.error('API Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/agents/process-queue - Process all queued items (manual submissions)
+router.post('/process-queue', async (req, res) => {
+  try {
+    const { limit = 10, includeThumbnail = true } = req.body;
+
+    const result = await processQueue({ limit, includeThumbnail });
+
+    res.json(result);
+  } catch (err) {
+    console.error('Process Queue Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/agents/process-item - Process a single item by ID
+router.post('/process-item', async (req, res) => {
+  try {
+    const { id, includeThumbnail = true } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ error: 'id is required' });
+    }
+
+    // Fetch the queue item
+    const { data: item, error } = await supabase
+      .from('ingestion_queue')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error || !item) {
+      return res.status(404).json({ error: 'Queue item not found' });
+    }
+
+    // Process the item
+    const result = await enrichItem(item, { includeThumbnail });
+
+    res.json(result);
+  } catch (err) {
+    console.error('Process Item Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
