@@ -39,3 +39,4 @@ test-results/
 .env
 summaries-review.json
 summaries-review.json
+public/thumbs/

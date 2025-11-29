@@ -116,7 +116,7 @@ router.post('/run/tag', async (req, res) => {
       await supabase
         .from('ingestion_queue')
         .update({
-          status: 'enriched', // Final stage before approval!
+          status: 'tagged', // After tagging, ready for thumbnail
           payload: {
             ...item.payload,
             industry_codes: [result.industry_code],
@@ -130,7 +130,7 @@ router.post('/run/tag', async (req, res) => {
         })
         .eq('id', item.id);
 
-      results.push({ id: item.id, status: 'enriched', result });
+      results.push({ id: item.id, status: 'tagged', result });
     }
 
     res.json({ processed: results.length, results });
@@ -156,7 +156,7 @@ router.post('/run/discovery', async (req, res) => {
 router.post('/run/thumbnail', async (req, res) => {
   try {
     const { limit = 5, id } = req.body;
-    let query = supabase.from('ingestion_queue').select('*').eq('status', 'enriched'); // Process enriched items
+    let query = supabase.from('ingestion_queue').select('*').eq('status', 'tagged'); // Process tagged items
 
     if (id) query = query.eq('id', id);
     else query = query.limit(limit);

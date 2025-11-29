@@ -186,7 +186,7 @@ async function runTagCmd(options) {
       await supabase
         .from('ingestion_queue')
         .update({
-          status: 'enriched',
+          status: 'tagged',
           payload: {
             ...item.payload,
             industry_codes: [result.industry_code],
@@ -211,14 +211,14 @@ async function runTagCmd(options) {
   return { processed: items.length, success };
 }
 
-// Run thumbnail agent on enriched items
+// Run thumbnail agent on tagged items
 async function runThumbnailCmd(options) {
   console.log('📸 Running Thumbnail Agent...\n');
 
   const { data: items, error } = await supabase
     .from('ingestion_queue')
     .select('*')
-    .eq('status', 'enriched')
+    .eq('status', 'tagged')
     .is('payload->thumbnail', null)
     .order('discovered_at', { ascending: true })
     .limit(options.limit || 5);

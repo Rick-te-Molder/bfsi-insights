@@ -119,7 +119,7 @@ The content processing pipeline runs through these stages:
 │ RSS/Scraping │    │  Relevance   │    │ AI Summary  │    │  Taxonomy    │    │  Screenshot  │
 │ BFSI filter  │    │  GPT-4o-mini │    │   GPT-4o    │    │ GPT-4o-mini  │    │  Playwright  │
 └──────────────┘    └──────────────┘    └─────────────┘    └──────────────┘    └──────────────┘
-     pending    →      fetched     →      filtered    →     summarized   →      enriched
+     pending    →      filtered    →     summarized   →       tagged     →      enriched
 ```
 
 **Database-Driven Configuration:**
