@@ -10,8 +10,6 @@ bfsi-insights/
 ├── e2e/                  # End-to-end tests (Playwright)
 ├── public/               # Static assets (favicons)
 ├── scripts/              # Utility scripts
-│   ├── agents/           # Manual URL ingestion (fetch-queue)
-│   ├── lib/              # Shared agent utilities
 │   ├── publishing/       # Publishing utilities
 │   └── utilities/        # Link checker, RSS testing, etc.
 ├── services/
