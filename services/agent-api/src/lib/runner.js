@@ -11,15 +11,102 @@ export class AgentRunner {
     this.agentName = agentName;
     this.supabase = supabase;
     this.openai = openai;
+    this.runId = null;
+    this.stepOrder = 0;
+  }
+
+  /**
+   * Start a new step within the current run
+   * @param {string} stepType - Type of step (e.g., 'fetch', 'llm_call', 'upload')
+   * @param {object} details - Additional details about the step
+   * @returns {Promise<string|null>} Step ID
+   */
+  async startStep(stepType, details = {}) {
+    if (!this.runId) return null;
+
+    this.stepOrder++;
+    const { data, error } = await this.supabase
+      .from('agent_run_step')
+      .insert({
+        run_id: this.runId,
+        step_order: this.stepOrder,
+        step_type: stepType,
+        started_at: new Date().toISOString(),
+        status: 'running',
+        details,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.warn(`⚠️ Failed to start step: ${error.message}`);
+      return null;
+    }
+
+    return data.id;
+  }
+
+  /**
+   * Mark a step as successful
+   * @param {string} stepId - Step ID to update
+   * @param {object} details - Additional details/results
+   */
+  async finishStepSuccess(stepId, details = {}) {
+    if (!stepId) return;
+
+    await this.supabase
+      .from('agent_run_step')
+      .update({
+        finished_at: new Date().toISOString(),
+        status: 'success',
+        details,
+      })
+      .eq('id', stepId);
+  }
+
+  /**
+   * Mark a step as failed
+   * @param {string} stepId - Step ID to update
+   * @param {string} errorMsg - Error message
+   */
+  async finishStepError(stepId, errorMsg) {
+    if (!stepId) return;
+
+    await this.supabase
+      .from('agent_run_step')
+      .update({
+        finished_at: new Date().toISOString(),
+        status: 'error',
+        details: { error: errorMsg },
+      })
+      .eq('id', stepId);
+  }
+
+  /**
+   * Add a metric to the current run
+   * @param {string} name - Metric name
+   * @param {number} value - Metric value
+   * @param {object} metadata - Additional metadata
+   */
+  async addMetric(name, value, metadata = {}) {
+    if (!this.runId) return;
+
+    await this.supabase.from('agent_run_metric').insert({
+      run_id: this.runId,
+      metric_name: name,
+      metric_value: value,
+      metadata,
+    });
   }
 
   /**
    * Main execution method
-   * @param {object} context - { publicationId, payload, etc. }
+   * @param {object} context - { publicationId, queueId, payload, etc. }
    * @param {function} logicFn - (context, prompt, tools) => Promise<result>
    */
   async run(context, logicFn) {
     console.log(`🤖 [${this.agentName}] Starting run...`);
+    this.stepOrder = 0;
 
     // 1. Fetch Active Prompt Configuration
     const { data: promptConfig, error: promptError } = await this.supabase
@@ -38,67 +125,72 @@ export class AgentRunner {
       .from('agent_run')
       .insert({
         agent_name: this.agentName,
+        stage: this.agentName, // For compatibility with old schema
         prompt_version: promptConfig.version,
         status: 'running',
-        publication_id: context.publicationId || null, // Link if we have it
-        metadata: { queue_id: context.queueId },
+        started_at: new Date().toISOString(),
+        queue_id: context.queueId || null,
+        publication_id: context.publicationId || null,
+        agent_metadata: { queue_id: context.queueId },
       })
       .select()
       .single();
 
     if (runError) console.error('⚠️ Failed to log run start:', runError);
 
-    const runId = runLog?.id;
+    this.runId = runLog?.id;
     const startTime = Date.now();
 
     try {
-      // 3. Execute Logic
-      // Pass the prompt text and clients to the logic function
+      // 3. Execute Logic with step helpers available via tools
       const result = await logicFn(context, promptConfig.prompt_text, {
         openai: this.openai,
         supabase: this.supabase,
+        // Step helpers for granular logging
+        startStep: (type, details) => this.startStep(type, details),
+        finishStepSuccess: (id, details) => this.finishStepSuccess(id, details),
+        finishStepError: (id, msg) => this.finishStepError(id, msg),
+        addMetric: (name, value, meta) => this.addMetric(name, value, meta),
       });
 
       // 4. Log Success
       const duration = Date.now() - startTime;
-      if (runId) {
+      if (this.runId) {
         await this.supabase
           .from('agent_run')
           .update({
-            status: 'completed',
-            completed_at: new Date().toISOString(),
+            status: 'success',
+            finished_at: new Date().toISOString(),
             duration_ms: duration,
             result: result,
           })
-          .eq('id', runId);
+          .eq('id', this.runId);
 
-        // Log metrics if available
+        // Log token usage metrics if available
         if (result.usage) {
-          await this.supabase.from('agent_run_metric').insert({
-            run_id: runId,
-            metric_type: 'token_usage',
-            value_int: result.usage.total_tokens,
-            metadata: result.usage,
-          });
+          await this.addMetric('tokens_total', result.usage.total_tokens, result.usage);
+          await this.addMetric('tokens_prompt', result.usage.prompt_tokens);
+          await this.addMetric('tokens_completion', result.usage.completion_tokens);
         }
       }
 
+      console.log(`✅ [${this.agentName}] Completed in ${duration}ms`);
       return result;
     } catch (error) {
       // 5. Log Failure
-      console.error(`❌ [${this.agentName}] Failed:`, error);
+      console.error(`❌ [${this.agentName}] Failed:`, error.message);
       const duration = Date.now() - startTime;
 
-      if (runId) {
+      if (this.runId) {
         await this.supabase
           .from('agent_run')
           .update({
-            status: 'failed',
-            completed_at: new Date().toISOString(),
+            status: 'error',
+            finished_at: new Date().toISOString(),
             duration_ms: duration,
             error_message: error.message,
           })
-          .eq('id', runId);
+          .eq('id', this.runId);
       }
 
       throw error;

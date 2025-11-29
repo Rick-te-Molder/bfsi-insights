@@ -23,14 +23,18 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install root dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Run discovery
+      - name: Install agent-api dependencies
+        run: npm ci --legacy-peer-deps
+        working-directory: services/agent-api
+
+      - name: Run discovery (agent-api)
         env:
-          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-        run: node scripts/agents/discover.mjs
+        run: node services/agent-api/src/cli.js discovery
 
       - name: Notify on failure
         if: failure()
@@ -60,15 +64,23 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install root dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Run enrichment (limit 20 per night)
+      - name: Install agent-api dependencies
+        run: npm ci --legacy-peer-deps
+        working-directory: services/agent-api
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+        working-directory: services/agent-api
+
+      - name: Run enrichment pipeline (limit 20 per night)
         env:
-          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: node scripts/agents/enrich.mjs --limit=20
+        run: node services/agent-api/src/cli.js enrich --limit=20
 
       - name: Summary
         run: |
