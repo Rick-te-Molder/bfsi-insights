@@ -4,47 +4,43 @@ Agentic AI insights for executives, professionals, and researchers in banking, f
 
 ## 🚀 Project Structure
 
-Inside of your Astro project, you'll see the following folders:
-
 ```
 bfsi-insights/
-├── .github/          # CI/CD workflows (nightly discovery, link checks)
-├── .vscode/          # Editor configuration
-├── docs/             # Project documentation
-├── e2e/              # End-to-end tests (Playwright)
-├── public/           # Static assets (favicons, thumbnails)
-│   └── thumbs/       # Publication thumbnails (generated)
-├── scripts/          # Build and maintenance scripts
-│   ├── agents/       # Discovery, enrichment agents
-│   ├── lib/          # Shared agent utilities
-│   ├── publishing/   # Publishing utilities
-│   └── utilities/    # Thumbnail generation, etc.
+├── .github/              # CI/CD workflows (nightly discovery, link checks)
+├── e2e/                  # End-to-end tests (Playwright)
+├── public/               # Static assets (favicons)
+├── scripts/              # Utility scripts
+│   ├── agents/           # Manual URL ingestion (fetch-queue)
+│   ├── lib/              # Shared agent utilities
+│   ├── publishing/       # Publishing utilities
+│   └── utilities/        # Link checker, RSS testing, etc.
+├── services/
+│   └── agent-api/        # 🤖 Agent API service (Express.js)
+│       └── src/
+│           ├── agents/   # Discovery, Filter, Summarize, Tag, Thumbnail
+│           ├── lib/      # AgentRunner, scrapers
+│           └── cli.js    # CLI for running agents
 ├── src/
-│   ├── components/   # Reusable UI components
-│   ├── data/         # Static data files
-│   ├── features/     # Feature-specific components
-│   ├── layouts/      # Page layouts
-│   ├── lib/          # Utility functions (Supabase client, media helpers)
-│   ├── pages/        # Route pages (.astro files)
-│   └── styles/       # Global styles (Tailwind CSS)
-├── supabase/         # Supabase backend (core infrastructure)
-│   ├── functions/    # Edge Functions (process-url for instant enrichment)
-│   └── migrations/   # Database schema + PL/pgSQL functions
-├── tests/            # Unit/integration tests
-└── dist/             # Build output (gitignored)
+│   ├── features/         # Feature components (publications, modal)
+│   ├── layouts/          # Page layouts (Base.astro)
+│   ├── lib/              # Supabase client, utilities
+│   └── pages/            # Route pages + API endpoints
+│       ├── admin/        # Admin UI (add, review)
+│       └── api/          # API routes (build trigger)
+├── supabase/
+│   ├── functions/        # Edge Functions (process-url)
+│   └── migrations/       # Database schema + functions
+└── dist/                 # Build output (gitignored)
 ```
 
 **Key directories:**
 
-- `src/pages/` — Astro looks for `.astro` or `.md` files here. Each page is exposed as a route based on its file name.
-- `src/components/` and `src/features/` — Reusable Astro components (no React/Vue/Svelte).
-- `src/lib/` — Core utilities (Supabase client, media helpers, shared functions).
-- `public/thumbs/` — Generated thumbnails served by Astro.
-- `scripts/agents/` — Discovery and enrichment automation (runs nightly via GitHub Actions).
-- `scripts/utilities/` — Thumbnail generation (Playwright), maintenance scripts.
-- `supabase/functions/` — Edge Functions for instant URL processing (process-url).
-- `supabase/migrations/` — Database schema, tables, views, and PL/pgSQL functions.
-- `e2e/` and `tests/` — Playwright end-to-end tests and unit tests.
+- `services/agent-api/` — Express.js service with AI agents for content processing
+- `src/pages/` — Astro routes (static site + SSR admin pages)
+- `src/pages/admin/` — Admin UI for adding URLs and reviewing content
+- `supabase/functions/` — Edge Functions for instant URL processing
+- `supabase/migrations/` — Database schema, taxonomies, views, and PL/pgSQL functions
+- `e2e/` — Playwright end-to-end tests
 
 ## Getting Started
 
@@ -67,198 +63,171 @@ Local commands:
 
 ## 🧞 Commands
 
-| Command                                 | Action                                           |
-| :-------------------------------------- | :----------------------------------------------- |
-| `npm install`                           | Installs dependencies                            |
-| `npm run dev`                           | Starts local dev server at `localhost:4321`      |
-| `npm run build`                         | Build your production site to `./dist/`          |
-| `npm run preview`                       | Preview your build locally, before deploying     |
-| `npm run discover -- --limit=10`        | Run discovery agent (finds new publications)     |
-| `npm run enrich -- --limit=5`           | Run enrichment agent (AI processing)             |
-| `npm run generate:thumbnails`           | Generate missing thumbnails with Playwright      |
-| `supabase functions deploy process-url` | Deploy Edge Function for instant URL processing  |
-| `npm run astro ...`                     | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help`               | Get help using the Astro CLI                     |
+### Development
 
-## 👀 Want to learn more?
+| Command           | Action                                     |
+| :---------------- | :----------------------------------------- |
+| `npm install`     | Install dependencies                       |
+| `npm run dev`     | Start local dev server at `localhost:4321` |
+| `npm run build`   | Build production site to `./dist/`         |
+| `npm run preview` | Preview build locally before deploying     |
+| `npm run lint`    | Run ESLint on all files                    |
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+### Agent API (Content Processing)
 
-## Workflow Summary
+```bash
+# Install agent-api dependencies
+cd services/agent-api && npm install
 
-### Content Ingestion Pipelines
+# Run agents via CLI
+node services/agent-api/src/cli.js discovery              # Find new publications
+node services/agent-api/src/cli.js discovery --limit=10   # Limit to 10 items
+node services/agent-api/src/cli.js discovery --dry-run    # Preview only
 
-#### **Option 1: Manual URL Submission** (⚡ Instant Processing)
+node services/agent-api/src/cli.js enrich --limit=20      # Full pipeline (filter → summarize → tag → thumbnail)
+node services/agent-api/src/cli.js filter --limit=10      # Run relevance filter only
+node services/agent-api/src/cli.js summarize --limit=5    # Run summarizer only
+node services/agent-api/src/cli.js tag --limit=5          # Run tagger only
+node services/agent-api/src/cli.js thumbnail --limit=5    # Generate thumbnails only
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ 1. SUBMIT URL (Admin UI at /admin/add)                         │
-│    • Paste URL + optional notes                                │
-│    • Edge Function triggers immediately (~10 seconds)          │
-│    • Fetches content → AI enrichment → taxonomy tagging        │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 2. REVIEW (Admin UI at /admin/review)                          │
-│    • Appears in review queue with status='enriched'            │
-│    • Human approves or rejects                                 │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 3. PUBLISH                                                      │
-│    • Database updated immediately (kb_publication)             │
-│    • Website rebuilds on git push (Cloudflare Pages)           │
-│    • Article appears ~2 minutes after approval + push          │
-└─────────────────────────────────────────────────────────────────┘
+# Or start as HTTP API server
+node services/agent-api/src/index.js
+# POST /api/agents/run/discovery
+# POST /api/agents/run/filter
+# POST /api/agents/run/summarize
+# POST /api/agents/run/tag
+# POST /api/agents/run/thumbnail
 ```
 
-#### **Option 2: Autonomous Nightly Pipeline** (✅ Operational for 4/15 sources)
+### Utilities
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│ 1. DISCOVERY ✅ (Runs nightly at 2 AM UTC)                     │
-│    • Scrapes RSS feeds from kb_source table                    │
-│    • Active: 4/15 sources (McKinsey, Deloitte, BIS, arXiv)    │
-│    • Adds to ingestion_queue with status='pending'             │
-│    • Manual run: npm run discover                             │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 2. ENRICHMENT ✅ (Runs nightly, limit 20/night)                │
-│    • AI extracts content, generates summaries (UK English)     │
-│    • Tags with database taxonomy (loads from Supabase):        │
-│      - Industries (banking, financial-services, insurance)     │
-│      - Topics (strategy, technology, regulatory, etc.)         │
-│      - Role (executive, professional, researcher)              │
-│    • Status: pending → enriched                                │
-│    • Manual run: npm run enrich                               │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 3. MANUAL REVIEW (Admin UI at /admin/review)                   │
-│    • Human quality gate (prevents false positives)            │
-│    • Review summaries, tags, taxonomy                          │
-│    • Actions:                                                  │
-│      - Approve → Inserts into kb_publication (published)      │
-│      - Reject → Marks as rejected for learning                 │
-└─────────────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────────────┐
-│ 4. PUBLISH                                                      │
-│    • Database updated immediately (kb_publication)             │
-│    • Static site rebuilds on git push (Cloudflare Pages)       │
-│    • Articles appear ~2 minutes after rebuild completes        │
-└─────────────────────────────────────────────────────────────────┘
+| Command               | Action                          |
+| :-------------------- | :------------------------------ |
+| `npm run check:links` | Check for broken external links |
+| `npm run test:e2e`    | Run Playwright end-to-end tests |
+
+## Architecture
+
+### Agent Pipeline
+
+The content processing pipeline runs through these stages:
+
+```
+┌──────────────┐    ┌──────────────┐    ┌─────────────┐    ┌──────────────┐    ┌──────────────┐
+│   DISCOVERY  │ →  │    FILTER    │ →  │  SUMMARIZE  │ →  │     TAG      │ →  │  THUMBNAIL   │
+│              │    │              │    │             │    │              │    │              │
+│ RSS/Scraping │    │  Relevance   │    │ AI Summary  │    │  Taxonomy    │    │  Screenshot  │
+│ BFSI filter  │    │  GPT-4o-mini │    │   GPT-4o    │    │ GPT-4o-mini  │    │  Playwright  │
+└──────────────┘    └──────────────┘    └─────────────┘    └──────────────┘    └──────────────┘
+     pending    →      fetched     →      filtered    →     summarized   →      enriched
 ```
 
-**Coverage Status:**
+**Database-Driven Configuration:**
 
-- ✅ McKinsey, Deloitte, BIS, arXiv (RSS operational)
-- ❌ 11 sources missing RSS feeds (see scripts/README.md for details)
+- **BFSI Keywords**: Loaded from `bfsi_industry` and `bfsi_topic` table labels
+- **Exclusion Patterns**: Configured in `prompt_versions` table (discovery-filter agent)
+- **Agent Prompts**: Stored in `prompt_versions` table, version-controlled
+- **Taxonomies**: Industries and topics managed via Supabase tables
+
+### Content Ingestion Options
+
+#### **Option 1: Manual URL Submission** (⚡ Instant)
+
+```text
+/admin/add → Edge Function → enriched → /admin/review → Approve → Published
+```
+
+1. Paste URL at `/admin/add`
+2. Edge Function processes instantly (~10 seconds)
+3. Review and approve at `/admin/review`
+4. Click "Trigger Build" to deploy
+
+#### **Option 2: Nightly Pipeline** (🌙 Automated)
+
+```text
+Discovery → Filter → Summarize → Tag → Thumbnail → Review → Approve → Published
+```
+
+Runs automatically at 2 AM UTC via GitHub Actions:
+
+1. **Discovery**: Scrapes RSS feeds, filters by BFSI keywords
+2. **Enrichment**: Runs filter → summarize → tag → thumbnail (limit 20/night)
+3. **Review**: Human approves at `/admin/review`
+4. **Deploy**: Click "Trigger Build" or push to git
 
 ### Quick Start
 
-**Option A: Manual URL Submission (Fastest)**
+**Manual Submission:**
 
 ```bash
-# 1. Add URL via Admin UI
-# Open: https://bfsiinsights.com/admin/add
-# Paste URL → Click "Add to Queue"
-# Edge Function processes in ~10 seconds
-
-# 2. Review and approve
-# Open: https://bfsiinsights.com/admin/review
-# Click "Approve" for quality publications
-
-# 3. Generate thumbnail (if needed)
-npm run generate:thumbnails -- --limit=1
-
-# 4. Trigger deployment
-git commit --allow-empty -m "rebuild for new article"
-git push  # Cloudflare Pages auto-deploys in ~2 minutes
+# 1. Add URL via Admin UI → /admin/add
+# 2. Review and approve → /admin/review
+# 3. Click "Trigger Build" button
 ```
 
-**Option B: Automated Nightly Pipeline**
+**Run Agents Manually:**
 
 ```bash
-# 1. Discover new publications (or wait for nightly run at 2 AM UTC)
-npm run discover -- --limit=10
+# Full pipeline
+node services/agent-api/src/cli.js discovery --limit=10
+node services/agent-api/src/cli.js enrich --limit=20
 
-# 2. Enrich pending items (or wait for nightly run)
-npm run enrich -- --limit=5
-
-# 3. Review and approve via Admin UI
-# Open: https://bfsiinsights.com/admin/review
-
-# 4. Deploy (articles appear after rebuild)
-git push  # Auto-deploys to Cloudflare Pages
+# Or individual stages
+node services/agent-api/src/cli.js filter --limit=10
+node services/agent-api/src/cli.js summarize --limit=5
+node services/agent-api/src/cli.js tag --limit=5
+node services/agent-api/src/cli.js thumbnail --limit=5
 ```
-
-**Nightly Automation:**
-
-- Discovery runs at 2 AM UTC (GitHub Actions)
-- Enrichment processes up to 20 items/night
-- You only need to review and approve in admin UI
 
 ### Taxonomy System
 
 Publications are tagged with a **structured taxonomy** stored in Supabase:
 
-**Industries** (`bfsi_industry` table):
-
-- `banking` (with subcategories: retail-banking, corporate-banking, lending, payments, etc.)
-- `financial-services` (wealth-management, asset-management, private-equity, etc.)
-- `insurance`
-
-**Topics** (`bfsi_topic` table):
-
-- `strategy-and-management`
-- `ecosystem`
-- `regulatory-and-standards`
-- `technology-and-data`
-- `methods-and-approaches`
+| Table           | Examples                                                               |
+| --------------- | ---------------------------------------------------------------------- |
+| `bfsi_industry` | banking, retail-banking, payments, insurance, wealth-management        |
+| `bfsi_topic`    | strategy-and-management, technology-and-data, regulatory-and-standards |
+| `bfsi_role`     | executive, professional, researcher                                    |
 
 **How It Works:**
 
-1. **Edge Function** loads taxonomy from database on each enrichment
-2. **AI** selects appropriate codes from the actual taxonomy (not freeform tags)
-3. **Junction tables** store many-to-many relationships:
-   - `kb_publication_bfsi_industry` (publication ↔ industries)
-   - `kb_publication_bfsi_topic` (publication ↔ topics)
-4. **View** (`kb_publication_pretty`) flattens relationships for frontend
-
-Example enrichment output:
-
-```json
-{
-  "industry_codes": ["financial-services"],
-  "topic_codes": ["strategy-and-management", "technology-and-data"],
-  "summary": {
-    "short": "120-150 char summary",
-    "medium": "250-300 char summary",
-    "long": "500-600 char summary with key insights"
-  },
-  "persona_scores": {
-    "executive": 0.8,
-    "professional": 0.9,
-    "researcher": 0.7
-  }
-}
-```
+1. AI agents load taxonomy from database (not hardcoded)
+2. AI selects appropriate codes from available options
+3. Junction tables store many-to-many relationships
+4. View `kb_publication_pretty` flattens for frontend
 
 ### Thumbnail Generation
 
-**Automated via Playwright:**
+Thumbnails are generated via Playwright in the `thumbnail` agent:
 
 ```bash
-npm run generate:thumbnails -- --limit=5
+node services/agent-api/src/cli.js thumbnail --limit=5
 ```
 
-- Screenshots original article URL (not BFSI Insights page)
-- Handles cookie banners and popups automatically
-- Waits for `networkidle` to capture dynamic content
-- Saves to `public/thumbs/` (served by Astro)
-- Updates `kb_publication.thumbnail` with path
-- **Format**: `{slug}.png` (WebP conversion planned)
+- Screenshots original article URL
+- Hides cookie banners via CSS injection
+- Uploads to Supabase Storage (`asset/thumbnails/`)
+- Updates queue payload with public URL
 
-**Important**: Some sites (e.g., McKinsey) have anti-bot measures that may cause black images. These require manual handling or alternative thumbnail sources.
+## Environment Variables
+
+```bash
+# Supabase
+PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_KEY=eyJ...
+
+# OpenAI (for AI agents)
+OPENAI_API_KEY=sk-...
+
+# Cloudflare (for deploy trigger)
+CLOUDFLARE_DEPLOY_HOOK=https://api.cloudflare.com/...
+```
+
+## Tech Stack
+
+- **Frontend**: Astro 5, TailwindCSS, TypeScript
+- **Backend**: Supabase (PostgreSQL, Auth, Storage, Edge Functions)
+- **AI Agents**: Express.js, OpenAI GPT-4o/4o-mini, Playwright
+- **Deployment**: Cloudflare Pages (static + SSR hybrid)
+- **CI/CD**: GitHub Actions (nightly discovery, link checks)
