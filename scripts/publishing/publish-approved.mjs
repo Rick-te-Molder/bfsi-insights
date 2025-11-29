@@ -39,6 +39,15 @@ function safeString(x) {
   return String(x).trim();
 }
 
+function resolveRole(role, tags) {
+  const validRoles = new Set(['executive', 'professional', 'researcher']);
+  const candidate = safeString(role || tags?.role);
+  if (candidate && validRoles.has(candidate.toLowerCase())) {
+    return candidate.toLowerCase();
+  }
+  return 'researcher';
+}
+
 // -------------------------------------------------------------
 // Auto-create vendor on demand
 // -------------------------------------------------------------
@@ -141,7 +150,7 @@ async function publishItem(item, dryRun = false) {
       summary_short: payload.summary?.short || null,
       summary_medium: payload.summary?.medium || null,
       summary_long: payload.summary?.long || null,
-      role: tags.role || 'researcher',
+      role: resolveRole(payload.role, tags),
       content_type: tags.content_type || 'article',
       geography: tags.geography || 'global',
       thumbnail: item.thumb_ref || null,
