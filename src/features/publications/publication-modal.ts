@@ -80,8 +80,9 @@ function openModalFrom(li: HTMLElement) {
     else cand.push(`${thumb}.webp`, `${thumb}.png`, `${thumb}.jpg`);
   }
 
-  if (slugVal)
-    cand.push(`/thumbs/${slugVal}.png`, `/thumbs/${slugVal}.webp`, `/thumbs/${slugVal}.jpg`);
+  // Disable implicit guessing based on slug
+  // if (slugVal)
+  //   cand.push(`/thumbs/${slugVal}.png`, `/thumbs/${slugVal}.webp`, `/thumbs/${slugVal}.jpg`);
 
   const dedup = Array.from(new Set(cand));
 

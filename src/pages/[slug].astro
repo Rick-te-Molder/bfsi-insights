@@ -2,7 +2,6 @@
 // Static pages - fast CDN delivery, rebuilds on approval
 export const prerender = true;
 
-import fs from 'node:fs';
 import Base from '../layouts/Base.astro';
 import Breadcrumbs from '../components/Breadcrumbs.astro';
 import { marked } from 'marked';
@@ -33,34 +32,6 @@ if (!item) {
 const title = item.title;
 const description = (item.summary_medium || item.summary_short || '').slice(0, 220);
 
-// ------------------------------------------------------------
-// Thumbnail helpers
-// ------------------------------------------------------------
-const thumbsDirUrl = new URL('../../public/thumbs/', import.meta.url);
-let thumbFiles: string[] = [];
-
-try {
-  const dirPath = thumbsDirUrl.pathname;
-  thumbFiles = fs.readdirSync(dirPath).filter((f) => /\.(webp|png|jpe?g)$/i.test(f));
-} catch {
-  thumbFiles = [];
-}
-
-const findLocalThumbs = (slugValue?: string): string[] => {
-  if (!slugValue) return [];
-  const extPriority: Record<string, number> = { '.png': 0, '.webp': 1, '.jpg': 2, '.jpeg': 2 };
-  const getExt = (f: string) => (f.match(/\.[^.]+$/)?.[0] || '').toLowerCase();
-
-  const files = thumbFiles.filter((f) => f.includes(slugValue));
-  files.sort((a, b) => {
-    const pa = extPriority[getExt(a)] ?? 99;
-    const pb = extPriority[getExt(b)] ?? 99;
-    if (pa !== pb) return pa - pb;
-    return a.localeCompare(b);
-  });
-  return files.map((f) => `/thumbs/${f}`);
-};
-
 const expandItemThumb = (t?: string): string[] => {
   if (!t) return [];
   if (/\.(webp|png|jpe?g)$/i.test(t)) return [t];
@@ -68,7 +39,21 @@ const expandItemThumb = (t?: string): string[] => {
   return [`${t}.webp`, `${t}.png`, `${t}.jpg`];
 };
 
-const thumbCandidates = [...findLocalThumbs(item.slug), ...expandItemThumb(item.thumbnail)];
+let thumbCandidates: string[] = [];
+if (item.thumbnail_path && item.thumbnail_bucket) {
+  const url = `${import.meta.env.PUBLIC_SUPABASE_URL}/storage/v1/object/public/${item.thumbnail_bucket}/${item.thumbnail_path}`;
+  thumbCandidates = [url];
+} else if (item.thumbnail) {
+  if (item.thumbnail.startsWith('http') || item.thumbnail.startsWith('/')) {
+    thumbCandidates = [item.thumbnail];
+  } else {
+    thumbCandidates = expandItemThumb(item.thumbnail);
+  }
+} else {
+  // Disable implicit guessing to prevent 404s
+  thumbCandidates = [];
+}
+
 const ogImage = thumbCandidates[0];
 ---
 

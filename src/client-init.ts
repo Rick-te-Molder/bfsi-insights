@@ -96,7 +96,8 @@ function initPublicationModal() {
         if (/\.(webp|png|jpe?g)$/i.test(thumb)) arr.push(thumb);
         else arr.push(`${thumb}.webp`, `${thumb}.png`, `${thumb}.jpg`);
       }
-      if (slug) arr.push(`/thumbs/${slug}.png`, `/thumbs/${slug}.webp`, `/thumbs/${slug}.jpg`);
+      // Disable implicit guessing based on slug
+      // if (slug) arr.push(`/thumbs/${slug}.png`, `/thumbs/${slug}.webp`, `/thumbs/${slug}.jpg`);
       return Array.from(new Set(arr));
     };
     const cand = makeCandidates();

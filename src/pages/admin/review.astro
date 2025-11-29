@@ -162,8 +162,20 @@ import Base from '../../layouts/Base.astro';
             const mediumValid = mediumLen >= 250 && mediumLen <= 300;
             const longValid = longLen >= 500 && longLen <= 600;
 
-            // Thumbnails are served from /public/thumbs/ directory
-            const thumbnailUrl = item.thumb_ref ? `/thumbs/${item.thumb_ref}` : null;
+            // Resolve Thumbnail URL
+            // Priority: 1. Payload full URL (new agent), 2. Payload path (new agent), 3. Legacy local path
+            let thumbnailUrl = null;
+            if (payload.thumbnail) {
+              thumbnailUrl = payload.thumbnail;
+            } else if (payload.thumbnail_path && payload.thumbnail_bucket) {
+              // Fallback construction if full URL missing
+              thumbnailUrl = `${import.meta.env.PUBLIC_SUPABASE_URL}/storage/v1/object/public/${payload.thumbnail_bucket}/${payload.thumbnail_path}`;
+            } else if (item.thumbnail) {
+              // Legacy/Manual column
+              thumbnailUrl = item.thumbnail.startsWith('http')
+                ? item.thumbnail
+                : `/thumbs/${item.thumbnail}`;
+            }
 
             return `
             <article class="rounded-xl border border-neutral-800 bg-neutral-900/60 transition hover:border-neutral-700" data-item-id="${item.id}">

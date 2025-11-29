@@ -4,12 +4,12 @@ export const prerender = true;
 
 import Base from '../layouts/Base.astro';
 import { getAllPublications } from '../lib/supabase';
+import type { Publication } from '../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import PublicationCard from '../features/publications/PublicationCard.astro';
-import fs from 'node:fs';
 
 // Fetch all publications
-const publications = await getAllPublications();
+const publications: Publication[] = await getAllPublications();
 
 // Supabase client for dynamic filter config
 const supabase = createClient(
@@ -25,9 +25,15 @@ const { data: filterConfig } = await supabase
   .order('sort_order');
 
 const filters = filterConfig || [];
+const primaryFilters = filters.filter((filter) =>
+  ['role', 'industry'].includes(filter.column_name),
+);
+const advancedFiltersList = filters.filter(
+  (filter) => !['role', 'industry'].includes(filter.column_name),
+);
 
 // Build filter value lists + counts
-const createValuesWithCounts = (field: keyof (typeof publications)[0]) => {
+const createValuesWithCounts = (field: keyof Publication) => {
   const counts = new Map<string, number>();
 
   publications.forEach((p) => {
@@ -46,42 +52,8 @@ const createValuesWithCounts = (field: keyof (typeof publications)[0]) => {
 
 const values: Record<string, Array<{ value: string; count: number; label: string }>> = {};
 filters.forEach((filter) => {
-  values[filter.column_name] = createValuesWithCounts(
-    filter.column_name as keyof (typeof publications)[0],
-  );
+  values[filter.column_name] = createValuesWithCounts(filter.column_name as keyof Publication);
 });
-
-// Thumbnail handling
-const thumbsDirUrl = new URL('../../public/thumbs/', import.meta.url);
-let thumbFiles: string[] = [];
-
-try {
-  const dirPath = thumbsDirUrl.pathname;
-  thumbFiles = fs.readdirSync(dirPath).filter((f) => /\.(webp|png|jpe?g)$/i.test(f));
-} catch {
-  thumbFiles = [];
-}
-
-const findLocalThumbs = (slug: string) => {
-  if (!slug) return [];
-  const extPriority: Record<string, number> = {
-    '.png': 0,
-    '.webp': 1,
-    '.jpg': 2,
-    '.jpeg': 2,
-  };
-  const getExt = (f: string) => (f.match(/\.[^.]+$/)?.[0] || '').toLowerCase();
-
-  const files = thumbFiles.filter((f) => f.includes(slug));
-  files.sort((a, b) => {
-    const pa = extPriority[getExt(a)] ?? 99;
-    const pb = extPriority[getExt(b)] ?? 99;
-    if (pa !== pb) return pa - pb;
-    return a.localeCompare(b);
-  });
-
-  return files.map((f) => `/thumbs/${f}`);
-};
 
 const expandItemThumb = (t: string | undefined) => {
   if (!t) return [];
@@ -95,8 +67,13 @@ const expandItemThumb = (t: string | undefined) => {
       const first = publications?.[0];
       if (!first) return null;
 
-      const candidates = [...findLocalThumbs(first.slug), ...expandItemThumb(first.thumbnail)];
-      const href = candidates[0];
+      let href = null;
+      if (first.thumbnail_path && first.thumbnail_bucket) {
+        href = `${import.meta.env.PUBLIC_SUPABASE_URL}/storage/v1/object/public/${first.thumbnail_bucket}/${first.thumbnail_path}`;
+      } else if (first.thumbnail) {
+        const candidates = expandItemThumb(first.thumbnail);
+        href = candidates[0];
+      }
 
       return href ? (
         <Fragment slot="head">
@@ -121,7 +98,8 @@ const expandItemThumb = (t: string | undefined) => {
     </div>
 
     <p class="mt-1 text-sm text-neutral-300">
-      Filter publications by attributes to find relevant items.
+      Filter publications by attributes to find relevant items. Topic filters now live under “More
+      filters”.
     </p>
 
     <p id="count" class="mt-1 text-xs text-neutral-300" aria-live="polite"></p>
@@ -142,7 +120,7 @@ const expandItemThumb = (t: string | undefined) => {
 
     <!-- First three primary filters -->
     {
-      filters.slice(0, 3).map((filter) => {
+      primaryFilters.map((filter) => {
         const filterValues = values[filter.column_name] || [];
         const isRole = filter.column_name === 'role';
 
@@ -194,7 +172,7 @@ const expandItemThumb = (t: string | undefined) => {
 
       <div id="advanced-filters" class="hidden mt-3 grid gap-3 sm:grid-cols-2">
         {
-          filters.slice(3).map((filter) => {
+          advancedFiltersList.map((filter) => {
             const filterValues = values[filter.column_name] || [];
 
             return (
@@ -390,36 +368,39 @@ const expandItemThumb = (t: string | undefined) => {
   </button>
 
   <!-- Image enhancement -->
-  <script>
+  <script type="module">
+    // @ts-check
+    /**
+     * @param {Document | HTMLElement} [root]
+     */
     function enhanceImages(root) {
-      const container = root || document;
-      const imgs = Array.from(container.querySelectorAll('li.group img'));
+      const container = root ?? document;
+      /** @type {HTMLImageElement[]} */
+      const imgs = Array.from(container.querySelectorAll('li.group img')).filter(
+        (img) => img instanceof HTMLImageElement,
+      );
 
       imgs.forEach((img) => {
         const placeholder = img.previousElementSibling;
 
         const onload = () => {
           img.classList.remove('opacity-0');
-          if (placeholder && placeholder instanceof HTMLElement) {
-            placeholder.style.display = 'none';
-          }
+          if (placeholder && placeholder instanceof HTMLElement) placeholder.style.display = 'none';
         };
 
         const onerror = () => {
-          const n = img.dataset?.next || '';
+          const n = img.dataset?.next ?? '';
           if (n) {
             const parts = n.split('|');
             const nx = parts.shift();
+            img.dataset.next = parts.join('|');
             if (nx) {
-              img.dataset.next = parts.join('|');
               img.src = nx;
               return;
             }
           }
           img.style.display = 'none';
-          if (placeholder && placeholder instanceof HTMLElement) {
-            placeholder.style.display = 'none';
-          }
+          if (placeholder && placeholder instanceof HTMLElement) placeholder.style.display = 'none';
         };
 
         img.addEventListener('load', onload, { once: true });
@@ -437,17 +418,17 @@ const expandItemThumb = (t: string | undefined) => {
   </script>
 
   <!-- Filters JS -->
-  <script>
-    import('../features/publications/publication-filters.ts').then((mod) => {
-      mod.default();
-    });
+  <script type="module">
+    import initPublicationFilters from '/src/features/publications/publication-filters.ts';
+    initPublicationFilters();
   </script>
 
   <!-- Back to Top interaction -->
-  <script>
+  <script type="module">
+    // @ts-check
     const backToTopBtn = document.getElementById('back-to-top');
 
-    if (backToTopBtn) {
+    if (backToTopBtn instanceof HTMLButtonElement) {
       let isVisible = false;
       const SHOW_THRESHOLD = 400;
 
@@ -466,6 +447,7 @@ const expandItemThumb = (t: string | undefined) => {
         }
       };
 
+      /** @type {number | null} */
       let rafId = null;
       window.addEventListener(
         'scroll',
@@ -480,19 +462,25 @@ const expandItemThumb = (t: string | undefined) => {
         { passive: true },
       );
 
-      // Tesla-style scroll
       backToTopBtn.addEventListener('click', () => {
         const startPosition = window.scrollY;
         const distance = startPosition;
         const duration = Math.min(800 + distance * 0.3, 1200);
+        /** @type {number | null} */
         let startTime = null;
 
+        /**
+         * @param {number} t
+         */
         const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 
+        /**
+         * @param {number} currentTime
+         */
         const animateScroll = (currentTime) => {
           if (startTime === null) startTime = currentTime;
 
-          const elapsed = currentTime - startTime;
+          const elapsed = currentTime - (startTime ?? currentTime);
           const progress = Math.min(elapsed / duration, 1);
           const eased = easeInOutCubic(progress);
 

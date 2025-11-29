@@ -123,6 +123,11 @@ async function publishItem(item, dryRun = false) {
   }
 
   // ---- 1. Insert publication ----
+  const slugFromTitle = normaliseSlug(payload.title);
+  const slugFromUrl = normaliseSlug(item.url.split('/').pop());
+
+  const publicationSlug = payload.slug || slugFromTitle || slugFromUrl || `item-${Date.now()}`;
+
   const { data: inserted, error: insertError } = await supabase
     .from('kb_publication')
     .insert({
@@ -132,7 +137,7 @@ async function publishItem(item, dryRun = false) {
       source_url: safeString(item.url),
       source_name: payload.source || payload.source_name || null,
       source_domain: new URL(item.url).hostname,
-      slug: payload.slug || normaliseSlug(item.url.split('/').pop()) || `item-${Date.now()}`,
+      slug: publicationSlug,
       summary_short: payload.summary?.short || null,
       summary_medium: payload.summary?.medium || null,
       summary_long: payload.summary?.long || null,

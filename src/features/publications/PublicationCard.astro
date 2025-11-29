@@ -1,8 +1,8 @@
 ---
-import fs from 'node:fs';
+import type { Publication } from '../../lib/supabase';
 
 interface Props {
-  item: any;
+  item: Publication;
   index?: number;
   mode?: string;
 }
@@ -22,43 +22,11 @@ const fmt = (iso?: string) =>
 
 const asArr = (v: any) => (Array.isArray(v) ? v : v ? [v] : []);
 
-// Thumbnail helpers
 const expandItemThumb = (t?: string) => {
   if (!t) return [];
   if (/\.(webp|png|jpe?g)$/i.test(t)) return [t];
   if (t.startsWith('http://') || t.startsWith('https://')) return [t];
   return [`${t}.webp`, `${t}.png`, `${t}.jpg`];
-};
-
-let thumbFiles: string[] = [];
-try {
-  const thumbsDirUrl = new URL('../../../public/thumbs/', import.meta.url);
-  const dirPath = thumbsDirUrl.pathname;
-  thumbFiles = fs.readdirSync(dirPath).filter((f) => /\.(webp|png|jpe?g)$/i.test(f));
-} catch {
-  thumbFiles = [];
-}
-
-const findLocalThumbs = (slug?: string) => {
-  if (!slug) return [] as string[];
-
-  // If we couldn't read the directory, fall back to generic guesses
-  if (!thumbFiles.length) {
-    return [`/thumbs/${slug}.webp`, `/thumbs/${slug}.png`, `/thumbs/${slug}.jpg`];
-  }
-
-  const extPriority: Record<string, number> = { '.png': 0, '.webp': 1, '.jpg': 2, '.jpeg': 2 };
-  const getExt = (f: string) => (f.match(/\.[^.]+$/)?.[0] || '').toLowerCase();
-
-  const files = thumbFiles.filter((f) => f.includes(slug));
-  files.sort((a, b) => {
-    const pa = extPriority[getExt(a)] ?? 99;
-    const pb = extPriority[getExt(b)] ?? 99;
-    if (pa !== pb) return pa - pb;
-    return a.localeCompare(b);
-  });
-
-  return files.map((f) => `/thumbs/${f}`);
 };
 
 const topic = asArr(item.topic);
@@ -84,11 +52,18 @@ const isUpdated =
     : false;
 
 // Only use thumbnails if explicitly set in database
-const hasImage = !!item.thumbnail;
-const itemThumbs = expandItemThumb(item.thumbnail);
-const localThumbs = hasImage ? findLocalThumbs(item.slug) : [];
-// Put database thumbnail first, then local guesses as fallback
-const candidates = [...itemThumbs, ...localThumbs];
+const hasImage = !!item.thumbnail || !!item.thumbnail_path;
+
+let itemThumbs: string[] = [];
+if (item.thumbnail_path && item.thumbnail_bucket) {
+  const url = `${import.meta.env.PUBLIC_SUPABASE_URL}/storage/v1/object/public/${item.thumbnail_bucket}/${item.thumbnail_path}`;
+  itemThumbs = [url];
+} else if (item.thumbnail) {
+  itemThumbs = expandItemThumb(item.thumbnail);
+}
+
+// Put database thumbnail first
+const candidates = [...itemThumbs];
 ---
 
 <li
@@ -111,7 +86,8 @@ const candidates = [...itemThumbs, ...localThumbs];
     class="absolute inset-0 rounded-2xl focus:outline-none focus:ring-2 focus:ring-sky-500 z-10"
     aria-label={`View details for ${item.title}`}
     tabindex="0"
-    data-card-link></a>
+    data-card-link
+    data-open-modal="true"></a>
 
   <div class="relative z-20 pointer-events-none">
     <div class="flex items-center gap-2">

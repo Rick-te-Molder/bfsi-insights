@@ -1,3 +1,4 @@
+import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
@@ -40,7 +41,7 @@ export class AgentRunner {
         prompt_version: promptConfig.version,
         status: 'running',
         publication_id: context.publicationId || null, // Link if we have it
-        metadata: { queue_id: context.queueId }
+        metadata: { queue_id: context.queueId },
       })
       .select()
       .single();
@@ -55,44 +56,49 @@ export class AgentRunner {
       // Pass the prompt text and clients to the logic function
       const result = await logicFn(context, promptConfig.prompt_text, {
         openai: this.openai,
-        supabase: this.supabase
+        supabase: this.supabase,
       });
 
       // 4. Log Success
       const duration = Date.now() - startTime;
       if (runId) {
-        await this.supabase.from('agent_run').update({
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-          duration_ms: duration,
-          result: result
-        }).eq('id', runId);
-        
+        await this.supabase
+          .from('agent_run')
+          .update({
+            status: 'completed',
+            completed_at: new Date().toISOString(),
+            duration_ms: duration,
+            result: result,
+          })
+          .eq('id', runId);
+
         // Log metrics if available
         if (result.usage) {
-            await this.supabase.from('agent_run_metric').insert({
-                run_id: runId,
-                metric_type: 'token_usage',
-                value_int: result.usage.total_tokens,
-                metadata: result.usage
-            });
+          await this.supabase.from('agent_run_metric').insert({
+            run_id: runId,
+            metric_type: 'token_usage',
+            value_int: result.usage.total_tokens,
+            metadata: result.usage,
+          });
         }
       }
 
       return result;
-
     } catch (error) {
       // 5. Log Failure
       console.error(`❌ [${this.agentName}] Failed:`, error);
       const duration = Date.now() - startTime;
-      
+
       if (runId) {
-        await this.supabase.from('agent_run').update({
-          status: 'failed',
-          completed_at: new Date().toISOString(),
-          duration_ms: duration,
-          error_message: error.message
-        }).eq('id', runId);
+        await this.supabase
+          .from('agent_run')
+          .update({
+            status: 'failed',
+            completed_at: new Date().toISOString(),
+            duration_ms: duration,
+            error_message: error.message,
+          })
+          .eq('id', runId);
       }
 
       throw error;

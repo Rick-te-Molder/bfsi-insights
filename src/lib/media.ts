@@ -35,8 +35,8 @@ export function expandItemThumb(t?: string): string[] {
  * simple and generate likely static paths under /thumbs.
  */
 export function findLocalThumbs(slug?: string): string[] {
-  if (!slug) return [];
-  return [`/thumbs/${slug}.webp`, `/thumbs/${slug}.png`, `/thumbs/${slug}.jpg`];
+  // Disable implicit local guessing
+  return [];
 }
 
 /**

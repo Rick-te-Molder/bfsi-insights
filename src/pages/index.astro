@@ -4,12 +4,12 @@ export const prerender = true;
 
 import Base from '../layouts/Base.astro';
 import { getAllPublications } from '../lib/supabase';
+import type { Publication } from '../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import PublicationCard from '../features/publications/PublicationCard.astro';
-import fs from 'node:fs';
 
 // Fetch enough publications to ensure we have 6 per persona
-const allPublications = await getAllPublications();
+const allPublications: Publication[] = await getAllPublications();
 
 // Supabase client for role metadata
 const supabase = createClient(
@@ -39,9 +39,10 @@ const roleOptions = rolesData.map((r) => ({
 const validRoles = roleOptions.map((r) => r.value);
 
 // Get 6 most recent from each persona
-const byRole = Object.fromEntries(
-  validRoles.map((role) => [role, allPublications.filter((p) => p.role === role).slice(0, 6)]),
-);
+const byRole = validRoles.reduce<Record<string, Publication[]>>((acc, role) => {
+  acc[role] = allPublications.filter((p) => p.role === role).slice(0, 6);
+  return acc;
+}, {});
 
 const roleOptionsWithCounts = roleOptions.map((option) => ({
   ...option,
@@ -49,42 +50,12 @@ const roleOptionsWithCounts = roleOptions.map((option) => ({
 }));
 
 // Combine all, dedupe
-const allByPersona = Object.values(byRole).flat();
-const latest = Array.from(new Map(allByPersona.map((item) => [item.id, item])).values());
+const allByPersona: Publication[] = Object.values(byRole).flat();
+const latest: Publication[] = Array.from(
+  new Map(allByPersona.map((item) => [item.id, item])).values(),
+);
 
-// Thumbnails
-const thumbsDirUrl = new URL('../../public/thumbs/', import.meta.url);
-let thumbFiles: string[] = [];
-
-try {
-  const dirPath = thumbsDirUrl.pathname;
-  thumbFiles = fs.readdirSync(dirPath).filter((f) => /\.(webp|png|jpe?g)$/i.test(f));
-} catch {
-  thumbFiles = [];
-}
-
-const findLocalThumbs = (slug: string) => {
-  if (!slug) return [];
-  const extPriority: Record<string, number> = {
-    '.png': 0,
-    '.webp': 1,
-    '.jpg': 2,
-    '.jpeg': 2,
-  };
-  const getExt = (f: string) => (f.match(/\.[^.]+$/)?.[0] || '').toLowerCase();
-
-  const files = thumbFiles.filter((f) => f.includes(slug));
-  files.sort((a, b) => {
-    const pa = extPriority[getExt(a)] ?? 99;
-    const pb = extPriority[getExt(b)] ?? 99;
-    if (pa !== pb) return pa - pb;
-    return a.localeCompare(b);
-  });
-
-  return files.map((f) => `/thumbs/${f}`);
-};
-
-const expandItemThumb = (t: string | undefined) => {
+const expandItemThumb = (t?: string | null) => {
   if (!t) return [];
   if (/\.(webp|png|jpe?g)$/i.test(t)) return [t];
   if (t.startsWith('http://') || t.startsWith('https://')) return [t];
@@ -98,8 +69,13 @@ const expandItemThumb = (t: string | undefined) => {
       const first = latest?.[0];
       if (!first) return null;
 
-      const candidates = [...findLocalThumbs(first.slug), ...expandItemThumb(first.thumbnail)];
-      const href = candidates[0];
+      let href = null;
+      if (first.thumbnail_path && first.thumbnail_bucket) {
+        href = `${import.meta.env.PUBLIC_SUPABASE_URL}/storage/v1/object/public/${first.thumbnail_bucket}/${first.thumbnail_path}`;
+      } else if (first.thumbnail) {
+        const candidates = expandItemThumb(first.thumbnail);
+        href = candidates[0];
+      }
 
       return href ? (
         <Fragment slot="head">
@@ -154,25 +130,51 @@ const expandItemThumb = (t: string | undefined) => {
     </ul>
   </section>
 
-  <!-- Persona filter -->
-  <script define:vars={{ validRoles }}>
-    const filterEl = document.getElementById('persona-filter');
-    const gridEl = document.getElementById('publications-grid');
+  <script id="valid-roles-data" type="application/json" set:html={JSON.stringify(validRoles)} />
 
-    if (!filterEl || !gridEl) {
-      console.error('Filter or grid not found');
-    } else {
+  <!-- Persona filter -->
+  <script type="module">
+    // @ts-check
+    /**
+     * @returns {string[]}
+     */
+    function getValidRoles() {
+      const el = document.getElementById('valid-roles-data');
+      if (!el || !el.textContent) return [];
+      try {
+        const parsed = JSON.parse(el.textContent);
+        return Array.isArray(parsed) ? parsed.map(String) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function initPersonaFilter() {
+      const filterEl = document.getElementById('persona-filter');
+      if (!(filterEl instanceof HTMLSelectElement)) return;
+      const gridEl = document.getElementById('publications-grid');
+      if (!(gridEl instanceof HTMLElement)) return;
+
+      const roles = getValidRoles();
       const saved = localStorage.getItem('bfsi-persona-preference');
       const defaultPersona = 'executive';
 
-      const specificRoles = validRoles;
-
-      if (saved && saved !== 'all' && specificRoles.includes(saved)) {
+      if (saved && saved !== 'all' && roles.includes(saved)) {
         filterEl.value = saved;
       } else {
         filterEl.value = defaultPersona;
         localStorage.setItem('bfsi-persona-preference', defaultPersona);
       }
+
+      const filterPublications = () => {
+        const persona = filterEl.value;
+        /** @type {HTMLElement[]} */
+        const cards = Array.from(gridEl.children).filter((child) => child instanceof HTMLElement);
+        cards.forEach((card) => {
+          const cardRole = card.getAttribute('data-role');
+          card.style.display = persona === 'all' || cardRole === persona ? '' : 'none';
+        });
+      };
 
       filterPublications();
 
@@ -180,30 +182,24 @@ const expandItemThumb = (t: string | undefined) => {
         localStorage.setItem('bfsi-persona-preference', filterEl.value);
         filterPublications();
       });
-
-      function filterPublications() {
-        const persona = filterEl.value;
-
-        const allCards = Array.from(gridEl.children);
-
-        allCards.forEach((card) => {
-          const cardRole = card.getAttribute('data-role');
-
-          if (persona === 'all' || cardRole === persona) {
-            card.style.display = '';
-          } else {
-            card.style.display = 'none';
-          }
-        });
-      }
     }
+
+    if (document.readyState !== 'loading') initPersonaFilter();
+    else window.addEventListener('DOMContentLoaded', initPersonaFilter);
   </script>
 
   <!-- Image enhancement -->
-  <script>
+  <script type="module">
+    // @ts-check
+    /**
+     * @param {Document | HTMLElement} [root]
+     */
     function enhanceImages(root) {
-      const container = root || document;
-      const imgs = Array.from(container.querySelectorAll('li.group img'));
+      const container = root ?? document;
+      /** @type {HTMLImageElement[]} */
+      const imgs = Array.from(container.querySelectorAll('li.group img')).filter(
+        (img) => img instanceof HTMLImageElement,
+      );
 
       imgs.forEach((img) => {
         const placeholder = img.previousElementSibling;
@@ -214,7 +210,7 @@ const expandItemThumb = (t: string | undefined) => {
         };
 
         const onerror = () => {
-          const n = img.dataset?.next || '';
+          const n = img.dataset?.next ?? '';
           if (n) {
             const parts = n.split('|');
             const nx = parts.shift();

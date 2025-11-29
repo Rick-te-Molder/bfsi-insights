@@ -21,7 +21,10 @@ export interface Publication {
   source_name: string | null;
   date_published: string | null;
   date_added: string | null;
+  last_edited: string | null;
   thumbnail: string | null;
+  thumbnail_bucket?: string | null;
+  thumbnail_path?: string | null;
 
   summary_short: string | null;
   summary_medium: string | null;
