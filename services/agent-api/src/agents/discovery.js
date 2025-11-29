@@ -4,52 +4,114 @@ import { scrapeWebsite } from '../lib/scrapers.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-// BFSI relevance keywords for pre-filtering
-const BFSI_KEYWORDS = [
-  'bank',
-  'banking',
-  'finance',
-  'financial',
-  'insurance',
-  'fintech',
-  'payment',
-  'credit',
-  'risk',
-  'compliance',
-  'regulation',
-  'aml',
-  'kyc',
-  'fraud',
-  'asset',
-  'investment',
-  'loan',
-  'mortgage',
-  'wealth',
-  'trading',
-  'securities',
-  'capital',
-  'treasury',
-  'defi',
-  'crypto',
-  'blockchain',
-  'ledger',
-  'settlement',
-];
+// Cache for discovery config (loaded from database)
+let discoveryConfig = null;
 
-// Exclusion patterns for clearly irrelevant content
-const EXCLUSION_PATTERNS = [
-  /\b(medical|healthcare|x-ray|diagnosis|patient|clinical|hospital|doctor)\b/i,
-  /\b(classroom|curriculum|pedagogy|teaching methods|school|student|k-12)\b/i,
-  /\b(agriculture|farming|crop|soil|harvest|livestock)\b/i,
-  /\b(manufacturing|factory|production line|assembly|industrial machinery)\b/i,
-  /\b(military|defense|weapon|combat|warfare)\b/i,
-];
+/**
+ * Load discovery configuration from database
+ * - BFSI keywords derived from bfsi_industry and bfsi_topic labels
+ * - Exclusion patterns from discovery_filter prompt
+ */
+async function loadDiscoveryConfig() {
+  if (discoveryConfig) return discoveryConfig;
+
+  console.log('   📚 Loading discovery config from database...');
+
+  // 1. Load BFSI keywords from industry taxonomy
+  const { data: industries } = await supabase
+    .from('bfsi_industry')
+    .select('label')
+    .order('sort_order');
+
+  // 2. Load BFSI keywords from topic taxonomy
+  const { data: topics } = await supabase.from('bfsi_topic').select('label').order('sort_order');
+
+  // 3. Load exclusion patterns from prompt_versions (discovery-filter agent)
+  const { data: filterConfig } = await supabase
+    .from('prompt_versions')
+    .select('prompt_text')
+    .eq('agent_name', 'discovery-filter')
+    .eq('is_current', true)
+    .single();
+
+  // Extract keywords from taxonomy labels
+  const keywordsFromTaxonomy = new Set();
+
+  // Add industry labels as keywords
+  for (const ind of industries || []) {
+    // Split multi-word labels and add each word
+    const words = ind.label.toLowerCase().split(/[\s&-]+/);
+    words.forEach((w) => {
+      if (w.length > 2) keywordsFromTaxonomy.add(w);
+    });
+  }
+
+  // Add topic labels as keywords
+  for (const topic of topics || []) {
+    const words = topic.label.toLowerCase().split(/[\s&-]+/);
+    words.forEach((w) => {
+      if (w.length > 2) keywordsFromTaxonomy.add(w);
+    });
+  }
+
+  // Add core BFSI terms that might not be in taxonomy labels
+  const coreBfsiTerms = ['bank', 'finance', 'insurance', 'fintech', 'bfsi'];
+  coreBfsiTerms.forEach((t) => keywordsFromTaxonomy.add(t));
+
+  // Parse exclusion patterns from prompt config (JSON format expected)
+  let exclusionPatterns = [];
+  if (filterConfig?.prompt_text) {
+    try {
+      const config = JSON.parse(filterConfig.prompt_text);
+      exclusionPatterns = (config.exclusion_patterns || []).map((p) => new RegExp(p, 'i'));
+    } catch {
+      // If not JSON, use default patterns
+      exclusionPatterns = getDefaultExclusionPatterns();
+    }
+  } else {
+    exclusionPatterns = getDefaultExclusionPatterns();
+  }
+
+  discoveryConfig = {
+    keywords: Array.from(keywordsFromTaxonomy),
+    exclusionPatterns,
+  };
+
+  console.log(
+    `   ✅ Loaded ${discoveryConfig.keywords.length} keywords, ${exclusionPatterns.length} exclusion patterns`,
+  );
+
+  return discoveryConfig;
+}
+
+/**
+ * Default exclusion patterns (fallback if not configured in database)
+ */
+function getDefaultExclusionPatterns() {
+  return [
+    /\b(medical|healthcare|x-ray|diagnosis|patient|clinical|hospital|doctor)\b/i,
+    /\b(classroom|curriculum|pedagogy|teaching methods|school|student|k-12)\b/i,
+    /\b(agriculture|farming|crop|soil|harvest|livestock)\b/i,
+    /\b(manufacturing|factory|production line|assembly|industrial machinery)\b/i,
+    /\b(military|defense|weapon|combat|warfare)\b/i,
+  ];
+}
+
+/**
+ * Clear the config cache (useful for testing or after config updates)
+ */
+export function clearDiscoveryConfigCache() {
+  discoveryConfig = null;
+}
 
 export async function runDiscovery(options = {}) {
   const { source: sourceSlug, limit = null, dryRun = false } = options;
   console.log('🔍 Starting discovery...');
   console.log(`   Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}`);
   if (limit) console.log(`   Limit: ${limit}`);
+
+  // Load discovery configuration from database (keywords, exclusion patterns)
+  const config = await loadDiscoveryConfig();
 
   // Load Sources
   let query = supabase
@@ -99,7 +161,7 @@ export async function runDiscovery(options = {}) {
       // 1. Try RSS first (fast and reliable)
       if (src.rss_feed) {
         try {
-          candidates = await fetchRSS(src);
+          candidates = await fetchRSS(src, config);
           console.log(`   Found ${candidates.length} potential publications from RSS`);
         } catch (err) {
           console.warn(`   ⚠️ RSS failed: ${err.message}`);
@@ -184,7 +246,7 @@ export async function runDiscovery(options = {}) {
 
 // --- Helpers ---
 
-async function fetchRSS(source) {
+async function fetchRSS(source, config) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
@@ -202,7 +264,7 @@ async function fetchRSS(source) {
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const xml = await res.text();
-    return parseRSS(xml, source);
+    return parseRSS(xml, source, config);
   } catch (err) {
     clearTimeout(timeout);
     if (err.name === 'AbortError') throw new Error('Timeout after 30s');
@@ -210,7 +272,7 @@ async function fetchRSS(source) {
   }
 }
 
-function parseRSS(xml, source) {
+function parseRSS(xml, source, config) {
   const items = [];
   const itemRegex = /<(?:item|entry)[^>]*>([\s\S]*?)<\/(?:item|entry)>/gi;
   const titleRegex = /<title>(?:<!\[CDATA\[)?([^\]<]+)(?:\]\]>)?<\/title>/i;
@@ -219,6 +281,8 @@ function parseRSS(xml, source) {
     /<(?:pubDate|published|dc:date|updated|date)>([^<]+)<\/(?:pubDate|published|dc:date|updated|date)>/i;
   const descRegex =
     /<(?:description|summary)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:description|summary)>/i;
+
+  const { keywords, exclusionPatterns } = config;
 
   let match;
   while ((match = itemRegex.exec(xml)) !== null) {
@@ -236,15 +300,15 @@ function parseRSS(xml, source) {
 
     if (!url || !url.startsWith('http')) continue;
 
-    // BFSI Relevance Check
+    // BFSI Relevance Check (using database-driven config)
     const text = (title + ' ' + description).toLowerCase();
 
     // Check exclusion patterns first
-    const hasExclusion = EXCLUSION_PATTERNS.some((pattern) => pattern.test(text));
+    const hasExclusion = exclusionPatterns.some((pattern) => pattern.test(text));
     if (hasExclusion) continue;
 
-    // Check for BFSI keywords
-    const hasBfsiKeyword = BFSI_KEYWORDS.some((kw) => text.includes(kw));
+    // Check for BFSI keywords (loaded from taxonomy)
+    const hasBfsiKeyword = keywords.some((kw) => text.includes(kw));
     if (!hasBfsiKeyword) continue;
 
     // Extract date with arXiv fallback
