@@ -132,13 +132,15 @@ The content processing pipeline runs through these stages:
 #### **Option 1: Manual URL Submission** (⚡ Instant)
 
 ```text
-/admin/add → Edge Function → enriched → /admin/review → Approve → Published
+/admin/add → Edge Function (filter+summarize+tag) → enriched → /admin/review → Approve
 ```
 
 1. Paste URL at `/admin/add`
-2. Edge Function processes instantly (~10 seconds)
+2. Edge Function processes instantly (~10 seconds): fetches content, generates summary, applies tags
 3. Review and approve at `/admin/review`
 4. Click "Trigger Build" to deploy
+
+> **Note**: Manual submissions skip thumbnail generation. Run `thumbnail` agent separately if needed.
 
 #### **Option 2: Nightly Pipeline** (🌙 Automated)
 
