@@ -20,6 +20,13 @@ import Base from '../../layouts/Base.astro';
           >
             ➕ Add URL
           </a>
+          <button
+            id="trigger-build"
+            class="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-500/20 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+            type="button"
+          >
+            🚀 Trigger Build
+          </button>
           <select
             id="persona-filter"
             class="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm text-neutral-300"
@@ -40,6 +47,7 @@ import Base from '../../layouts/Base.astro';
       </div>
 
       <div id="stats" class="mt-4 flex gap-4 text-sm"></div>
+      <p id="build-status" class="mt-2 text-xs text-neutral-400"></p>
     </header>
 
     <div
@@ -80,9 +88,46 @@ import Base from '../../layouts/Base.astro';
       const statsDiv = document.getElementById('stats');
       const unenrichedNotice = document.getElementById('unenriched-notice');
       const container = document.getElementById('items-container');
+      const buildBtn = document.getElementById('trigger-build');
+      const buildStatus = document.getElementById('build-status');
 
       if (!loading || !errorBox || !statsDiv || !unenrichedNotice || !container) {
         return;
+      }
+
+      if (buildBtn instanceof HTMLButtonElement && buildStatus) {
+        buildBtn.addEventListener('click', async () => {
+          buildBtn.disabled = true;
+          buildBtn.textContent = '⏳ Triggering…';
+          buildStatus.textContent = '';
+          buildStatus.className = 'mt-2 text-xs text-neutral-400';
+          try {
+            const response = await fetch('/api/build', { method: 'POST' });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.ok) {
+              throw new Error(data.message || 'Build hook failed');
+            }
+            buildBtn.textContent = '✅ Build queued';
+            buildStatus.textContent = 'Cloudflare rebuild requested successfully.';
+          } catch (err) {
+            if (buildBtn instanceof HTMLButtonElement) {
+              buildBtn.textContent = '🚀 Trigger Build';
+              buildBtn.disabled = false;
+            }
+            buildStatus.textContent = `⚠️ ${err instanceof Error ? err.message : 'Failed to trigger build'}`;
+            buildStatus.className = 'mt-2 text-xs text-amber-300';
+            return;
+          }
+
+          setTimeout(() => {
+            if (buildBtn instanceof HTMLButtonElement) {
+              buildBtn.textContent = '🚀 Trigger Build';
+              buildBtn.disabled = false;
+            }
+            buildStatus.textContent = '';
+            buildStatus.className = 'mt-2 text-xs text-neutral-400';
+          }, 5000);
+        });
       }
 
       try {
