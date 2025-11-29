@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 
 const webhookUrl = process.env.CLOUDFLARE_DEPLOY_HOOK || import.meta.env.CLOUDFLARE_DEPLOY_HOOK;
 
-export const POST: APIRoute = async () => {
+const handler: APIRoute = async () => {
   if (!webhookUrl) {
     return new Response(
       JSON.stringify({ ok: false, message: 'CLOUDFLARE_DEPLOY_HOOK is not configured' }),
@@ -36,3 +36,6 @@ export const POST: APIRoute = async () => {
     );
   }
 };
+
+export const POST = handler;
+export const GET = handler;
