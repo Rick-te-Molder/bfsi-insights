@@ -102,8 +102,8 @@ erDiagram
 
 ### Junction Tables (M:N)
 
-| Table                              | Links                       |
-| ---------------------------------- | --------------------------- |
+| Table                              | Links                      |
+| ---------------------------------- | -------------------------- |
 | `kb_publication_bfsi_industry`     | Publication ↔ Industry     |
 | `kb_publication_bfsi_topic`        | Publication ↔ Topic        |
 | `kb_publication_ag_vendor`         | Publication ↔ Vendor       |

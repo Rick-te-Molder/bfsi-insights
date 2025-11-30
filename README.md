@@ -117,11 +117,11 @@ See [`/docs/architecture/high-level-architecture.png`](/docs/architecture/high-l
 
 ### 4.4 Additional Diagrams
 
-- **BPMN ingestion flow**: [`/docs/bpmn/`](/docs/bpmn/) — See [`/docs/bpmn/README.md`](/docs/bpmn/README.md) for Mermaid source
-- **Data Flow Diagram**: [`/docs/dfd/`](/docs/dfd/) — See [`/docs/dfd/README.md`](/docs/dfd/README.md) for Mermaid source
-- **Data model**: [`/docs/data-model/`](/docs/data-model/) — See [`/docs/data-model/README.md`](/docs/data-model/README.md) for ER diagram
+- **BPMN ingestion flow**: [`/docs/bpmn/`](/docs/bpmn/) — See [`process-diagrams.md`](/docs/bpmn/process-diagrams.md) for Mermaid source
+- **Data Flow Diagram**: [`/docs/dfd/`](/docs/dfd/) — See [`data-flows.md`](/docs/dfd/data-flows.md) for Mermaid source
+- **Data model**: [`/docs/data-model/`](/docs/data-model/) — See [`schema.md`](/docs/data-model/schema.md) for ER diagram
 
-> **Note:** Diagrams use Mermaid syntax. See [`/docs/README.md`](/docs/README.md) for viewing instructions.
+> **Note:** Diagrams use Mermaid syntax. See [`/docs/index.md`](/docs/index.md) for viewing instructions.
 
 ---
 
