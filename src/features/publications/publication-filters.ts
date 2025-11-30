@@ -393,7 +393,7 @@ export default function initPublicationFilters() {
       geography: document.getElementById('m-f-geography') as HTMLSelectElement | null,
     } as const;
 
-    function getDesktopVals(): FilterValues {
+    const getDesktopVals = (): FilterValues => {
       return {
         role: desktop.role?.value || '',
         industry: desktop.industry?.value || '',
@@ -402,18 +402,18 @@ export default function initPublicationFilters() {
         geography: desktop.geography?.value || '',
         q: desktop.q?.value?.trim() || '',
       };
-    }
+    };
 
-    function setDesktopVals(vals: FilterValues) {
+    const setDesktopVals = (vals: FilterValues) => {
       if (desktop.role) desktop.role.value = vals.role || '';
       if (desktop.industry) desktop.industry.value = vals.industry || '';
       if (desktop.topic) desktop.topic.value = vals.topic || '';
       if (desktop.content_type) desktop.content_type.value = vals.content_type || '';
       if (desktop.geography) desktop.geography.value = vals.geography || '';
       if (desktop.q) desktop.q.value = vals.q || '';
-    }
+    };
 
-    function syncToMobile() {
+    const syncToMobile = () => {
       const v = getDesktopVals();
       if (mobile.role) mobile.role.value = v.role;
       if (mobile.industry) mobile.industry.value = v.industry;
@@ -421,31 +421,31 @@ export default function initPublicationFilters() {
       if (mobile.content_type) mobile.content_type.value = v.content_type;
       if (mobile.geography) mobile.geography.value = v.geography;
       if (mobile.q) mobile.q.value = v.q;
-    }
+    };
 
-    function applyFromDesktop() {
+    const applyFromDesktop = () => {
       ['role', 'industry', 'topic', 'content_type', 'geography'].forEach((k) => {
         const el = (desktop as any)[k] as HTMLSelectElement | null;
         if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
       });
       if (desktop.q) desktop.q.dispatchEvent(new Event('input', { bubbles: true }));
       renderChipsSummary(getDesktopVals());
-    }
+    };
 
-    function openSheet() {
+    const openSheet = () => {
       syncToMobile();
       sheet.classList.remove('hidden');
       sheet.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
       mobile.role?.focus();
-    }
+    };
 
-    function closeSheet() {
+    const closeSheet = () => {
       sheet.classList.add('hidden');
       sheet.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
       (openBtn as HTMLElement).focus();
-    }
+    };
 
     openBtn.addEventListener('click', openSheet);
     closeBtn?.addEventListener('click', closeSheet);
