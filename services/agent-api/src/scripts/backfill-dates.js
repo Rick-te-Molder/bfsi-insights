@@ -23,7 +23,7 @@ const supabase = createClient(
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
 const limitArg = args.find((a) => a.startsWith('--limit='));
-const limit = limitArg ? parseInt(limitArg.split('=')[1], 10) : 100;
+const limit = limitArg ? Number.parseInt(limitArg.split('=')[1], 10) : 100;
 
 async function fetchContent(url) {
   const controller = new AbortController();
@@ -45,10 +45,10 @@ async function fetchContent(url) {
 
     // Extract text content (simplified)
     const textContent = html
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
+      .replaceAll(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replaceAll(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replaceAll(/<[^>]+>/g, ' ')
+      .replaceAll(/\s+/g, ' ')
       .trim()
       .substring(0, 15000); // Limit for LLM context
 
@@ -152,7 +152,9 @@ async function main() {
   console.log(`📊 Results: ${updated} updated, ${failed} failed`);
 }
 
-main().catch((err) => {
+try {
+  await main();
+} catch (err) {
   console.error('Fatal error:', err);
   process.exit(1);
-});
+}
