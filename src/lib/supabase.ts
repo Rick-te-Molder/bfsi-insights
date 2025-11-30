@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { normalizeAuthors } from './authors';
 
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
@@ -46,23 +47,7 @@ export interface Publication {
   status: string;
 }
 
-// ------------------------------------------------------------
-// Normalize authors: DB stores as "John Doe, Jane Smith"
-// ------------------------------------------------------------
-function normalizeAuthors(raw: unknown): string[] {
-  if (!raw) return [];
-  if (Array.isArray(raw)) {
-    return raw.map((x) => String(x).trim()).filter(Boolean);
-  }
-  if (typeof raw === 'string') {
-    return raw
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
-  // Non-string, non-array objects cannot be meaningfully converted
-  return [];
-}
+// normalizeAuthors imported from ./authors
 
 // ------------------------------------------------------------
 // Normalize a single publication row

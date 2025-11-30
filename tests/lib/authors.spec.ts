@@ -1,19 +1,5 @@
 import { describe, it, expect } from 'vitest';
-
-// Test the normalizeAuthors logic (extracted for testability)
-function normalizeAuthors(raw: unknown): string[] {
-  if (!raw) return [];
-  if (Array.isArray(raw)) {
-    return raw.map((x) => String(x).trim()).filter(Boolean);
-  }
-  if (typeof raw === 'string') {
-    return raw
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
-  return [];
-}
+import { normalizeAuthors } from '../../src/lib/authors';
 
 describe('normalizeAuthors', () => {
   it('returns empty array for null', () => {
