@@ -54,11 +54,14 @@ function normalizeAuthors(raw: unknown): string[] {
   if (Array.isArray(raw)) {
     return raw.map((x) => String(x).trim()).filter(Boolean);
   }
-
-  return String(raw)
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  if (typeof raw === 'string') {
+    return raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+  // Non-string, non-array objects cannot be meaningfully converted
+  return [];
 }
 
 // ------------------------------------------------------------
