@@ -63,10 +63,7 @@ Follow the writing rules provided. Key principles:
 
 Your output will be displayed on a detail page. Make it scannable, actionable, and trustworthy.',
   false  -- Will be set to current after testing
-)
-ON CONFLICT (agent_name, version) DO UPDATE SET
-  prompt_text = EXCLUDED.prompt_text,
-  updated_at = now();
+);
 
 -- Note: Keep old version as current until tested
 -- To activate: UPDATE prompt_versions SET is_current = true WHERE version = 'summarizer-v2.0' AND agent_name = 'content-summarizer';
