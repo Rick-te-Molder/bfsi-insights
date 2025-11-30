@@ -14,7 +14,7 @@ BFSI Insights collects, enriches, classifies, and publishes high-quality AI-rela
 
 ### 1.2 Audience
 
-- Executives and practitioners in BFSI
+- Executives and professionals in BFSI
 - Researchers following AI developments
 - Contributors and developers of the platform
 - Auditors, security teams, and technical reviewers
@@ -111,15 +111,17 @@ See [`/docs/architecture/high-level-architecture.png`](/docs/architecture/high-l
 ### 4.3 Build & Deploy Flow
 
 1. Admin approves publication
-2. Build trigger (manual button or git push)
+2. Admin triggers build (manual button or git push)
 3. Astro rebuilds static site
 4. Cloudflare Pages deploys to CDN
 
 ### 4.4 Additional Diagrams
 
-- BPMN ingestion flow: [`/docs/bpmn/ingestion-process.png`](/docs/bpmn/ingestion-process.png)
-- Data Flow Diagram: [`/docs/dfd/dfd-level-1.png`](/docs/dfd/dfd-level-1.png)
-- Data model: [`/docs/data-model/logical.png`](/docs/data-model/logical.png)
+- **BPMN ingestion flow**: [`/docs/bpmn/`](/docs/bpmn/) — See [`/docs/bpmn/README.md`](/docs/bpmn/README.md) for Mermaid source
+- **Data Flow Diagram**: [`/docs/dfd/`](/docs/dfd/) — See [`/docs/dfd/README.md`](/docs/dfd/README.md) for Mermaid source
+- **Data model**: [`/docs/data-model/`](/docs/data-model/) — See [`/docs/data-model/README.md`](/docs/data-model/README.md) for ER diagram
+
+> **Note:** Diagrams use Mermaid syntax. See [`/docs/README.md`](/docs/README.md) for viewing instructions.
 
 ---
 
@@ -283,7 +285,7 @@ node src/index.js
 | `npm run preview` | Preview build locally before deploying     |
 | `npm run lint`    | Run ESLint on all files                    |
 
-### 9.2 Agent CLI Commands
+### 9.2 Agent CLI (Command-Line Interface) Commands
 
 ```bash
 node services/agent-api/src/cli.js discovery              # Find new publications
@@ -319,13 +321,29 @@ npm run build && npm run lhci          # Run Lighthouse CI locally
 
 The project follows a layered testing approach:
 
-| Level           | Tool                        | Status    | Coverage                          |
-| --------------- | --------------------------- | --------- | --------------------------------- |
-| **Unit**        | Vitest                      | ✅ Active | Utilities, helpers (32 tests)     |
-| **Integration** | Lighthouse CI, Link Checker | ✅ Active | Performance, accessibility, links |
-| **E2E**         | Playwright                  | ✅ Active | User journeys (28 tests)          |
+| Level           | Tool                        | Status    | Tests | Coverage                 |
+| --------------- | --------------------------- | --------- | ----- | ------------------------ |
+| **Unit**        | Vitest                      | ✅ Active | 32    | Utilities, helpers       |
+| **Integration** | Lighthouse CI, Link Checker | ✅ Active | 4     | Performance, a11y, links |
+| **E2E**         | Playwright                  | ✅ Active | 28    | User journeys            |
 
-### 10.2 End-to-End Tests (Playwright)
+### 10.2 Unit Tests (Vitest)
+
+```bash
+npm run test           # Run all unit tests
+npm run test:watch     # Watch mode for development
+```
+
+**Current coverage:** 32 tests covering `fmt` utilities, text linkify, and filename helpers (`slug`, `lastName`, `kbFileName`). Focus on pure functions with deterministic output.
+
+### 10.3 Integration Tests
+
+- **Lighthouse CI**: Enforces ≥95 scores for Performance, Accessibility, Best Practices, SEO
+- **Link Checker**: Nightly validation of all external links in published content
+
+**Current coverage:** 4 Lighthouse audits on `/` and `/publications`. Link checker validates all `source_url` values.
+
+### 10.4 End-to-End Tests (Playwright)
 
 ```bash
 npx playwright test              # Run all E2E tests
@@ -333,21 +351,22 @@ npx playwright test --ui         # Run with interactive UI
 npx playwright test modal.spec   # Run specific test file
 ```
 
-**Test coverage:** search, filters, modal, navigation, publication detail, admin auth
+**Current coverage:** 28 tests covering search, filters, modal interactions, navigation, publication detail pages, and admin authentication flows.
 
-### 10.3 Integration Tests
+### 10.5 Test Coverage Measurement
 
-- **Lighthouse CI**: Enforces ≥95 scores for Performance, Accessibility, Best Practices, SEO
-- **Link Checker**: Nightly validation of all external links
+To quantify test coverage across all three levels:
 
-### 10.4 Unit Tests (Vitest)
+| Level           | Measurement Method                             | Target |
+| --------------- | ---------------------------------------------- | ------ |
+| **Unit**        | `vitest --coverage` (c8/istanbul)              | ≥80%   |
+| **Integration** | Lighthouse scores (automated)                  | ≥95    |
+| **E2E**         | User journey coverage matrix (manual tracking) | 100%   |
 
 ```bash
-npm run test           # Run all unit tests
-npm run test:watch     # Watch mode for development
+# Generate unit test coverage report
+npm run test -- --coverage
 ```
-
-**Test coverage:** fmt utilities, text linkify, filename helpers (slug, lastName, kbFileName)
 
 ---
 
@@ -399,19 +418,21 @@ Goals:
 
 ## 12. Security
 
+For detailed security policies and vulnerability reporting, see [SECURITY.md](SECURITY.md).
+
 ### 12.1 Authentication & Authorization
 
 - Supabase Auth for admin users
-- Admin UI is SSR to avoid leaking keys
+- Admin UI uses SSR to avoid leaking keys
 
 ### 12.2 Row Level Security (RLS)
 
 - All database tables protected with RLS
-- RPCs verify admin status when mutating data
+- RPCs verify admin status before mutating data
 
 ### 12.3 Secrets & Keys
 
-- Supabase Vault for sensitive data
+- Supabase Vault stores sensitive data
 - Cloudflare environment variables for deploy hooks
 - No service keys in frontend code
 
@@ -471,7 +492,6 @@ Admin UI can trigger rebuilds via Cloudflare Deploy Hooks.
 - [ ] More granular taxonomy extraction
 - [ ] Wider crawling in discovery agent
 - [ ] Embedding-based similarity search
-- [ ] Multilingual summarization
 
 ---
 
