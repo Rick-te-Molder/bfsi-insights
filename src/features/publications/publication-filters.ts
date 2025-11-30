@@ -58,7 +58,7 @@ export default function initPublicationFilters() {
     const item: IndexedItem = {
       el,
       title: heading || linkTitle,
-      source_name: (el.querySelector('.mt-1') as HTMLElement | null)?.textContent || '',
+      source_name: el.querySelector<HTMLElement>('.mt-1')?.textContent || '',
       authors: el.dataset.authors || '',
       summary: el.dataset.summaryMedium || el.querySelector('p.text-sm')?.textContent?.trim() || '',
       tags_text: [
@@ -188,7 +188,7 @@ export default function initPublicationFilters() {
       }
     }
 
-    const hasAnyParam = Object.values(vals).some((v) => v);
+    const hasAnyParam = Object.values(vals).some(Boolean);
 
     if (!hasAnyParam) {
       try {
@@ -437,7 +437,7 @@ export default function initPublicationFilters() {
       sheet.classList.add('hidden');
       sheet.setAttribute('aria-hidden', 'true');
       document.body.style.overflow = '';
-      (openBtn as HTMLElement).focus();
+      openBtn.focus();
     };
 
     openBtn.addEventListener('click', openSheet);
