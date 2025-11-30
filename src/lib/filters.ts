@@ -48,7 +48,7 @@ export function matchesTextSearch(
   const q = query.toLowerCase();
   return searchFields.some((field) => {
     const value = item[field];
-    return value && value.toLowerCase().includes(q);
+    return value?.toLowerCase().includes(q);
   });
 }
 

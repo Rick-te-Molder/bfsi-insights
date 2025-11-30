@@ -4,22 +4,23 @@ Technical documentation for BFSI Insights using **Mermaid diagrams** (renders in
 
 ## Quick Links
 
-| Document                               | Description                                    |
-| -------------------------------------- | ---------------------------------------------- |
-| [Architecture](architecture/README.md) | System components, layers, security boundaries |
-| [BPMN](bpmn/README.md)                 | Content ingestion workflow, status flow        |
-| [DFD](dfd/README.md)                   | Data flow through the system                   |
-| [Data Model](data-model/README.md)     | ER diagram, tables, taxonomies                 |
+| Document                                 | Description                                    |
+| ---------------------------------------- | ---------------------------------------------- |
+| [Architecture](architecture/overview.md) | System components, layers, security boundaries |
+| [BPMN](bpmn/process-diagrams.md)         | Content ingestion workflow, status flow        |
+| [DFD](dfd/data-flows.md)                 | Data flow through the system                   |
+| [Data Model](data-model/schema.md)       | ER diagram, tables, taxonomies                 |
 
 ## Folder Structure
 
 ```
 docs/
-├── README.md              # This file
+├── index.md               # This file
 ├── architecture/          # System architecture
 ├── bpmn/                  # Business process diagrams
 ├── dfd/                   # Data flow diagrams
-└── data-model/            # Database schema
+├── data-model/            # Database schema
+└── quality/               # Quality policies (Sonar exclusions, etc.)
 ```
 
 ## Viewing Diagrams
