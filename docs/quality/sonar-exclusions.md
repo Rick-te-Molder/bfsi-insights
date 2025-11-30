@@ -24,6 +24,8 @@ This document explains which files are excluded from coverage requirements in So
 | `**/playwright.config.ts`                      | E2E test runner configuration                                                          | 2025-11-30    | 2026-03-31 |
 | `**/e2e/**`                                    | E2E test files (tested separately via Playwright)                                      | 2025-11-30    | 2026-03-31 |
 | `**/routes/**`                                 | Express route handlers; thin wrappers around agent logic                               | 2025-11-30    | 2026-03-31 |
+| `**/pages/**`                                  | Astro pages; DOM/SSR glue code                                                         | 2025-11-30    | 2026-03-31 |
+| `**/features/**`                               | UI components; DOM wiring (business logic extracted to `src/lib/`)                     | 2025-11-30    | 2026-03-31 |
 | `**/pages/api/**`                              | Astro API routes; minimal glue code                                                    | 2025-11-30    | 2026-03-31 |
 
 ## 3. Files NOT Excluded (Business Logic)
@@ -50,6 +52,7 @@ Do not configure exclusions in the SonarCloud UI—keep the single source of tru
 
 ## 6. Changelog
 
-| Date       | Change                                       | Author         |
-| ---------- | -------------------------------------------- | -------------- |
-| 2025-11-30 | Initial documentation of coverage exclusions | Rick te Molder |
+| Date       | Change                                                              | Author         |
+| ---------- | ------------------------------------------------------------------- | -------------- |
+| 2025-11-30 | Initial documentation of coverage exclusions                        | Rick te Molder |
+| 2025-11-30 | Add pages/** and features/** - business logic extracted to src/lib/ | Rick te Molder |
