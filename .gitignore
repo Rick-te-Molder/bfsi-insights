@@ -29,13 +29,9 @@ dist/
 
 # Test artifacts
 playwright-report/
- test-results/
- .playwright/
-
-# Test artifacts
-playwright-report/
 test-results/
 .playwright/
+coverage/
 .env
 summaries-review.json
 summaries-review.json
