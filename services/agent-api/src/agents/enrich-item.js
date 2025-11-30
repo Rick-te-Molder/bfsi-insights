@@ -72,6 +72,17 @@ async function fetchContent(url, retries = 3) {
   throw new Error('Failed after all retries');
 }
 
+function extractTextContent(html) {
+  // Remove scripts, styles, and HTML tags to get readable text
+  return html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .substring(0, 15000); // Limit to ~15k chars for LLM context
+}
+
 function parseHtml(html, url) {
   const titleMatch =
     html.match(/<title[^>]*>([^<]+)<\/title>/i) ||
@@ -90,6 +101,7 @@ function parseHtml(html, url) {
     title: titleMatch ? titleMatch[1].trim() : extractTitleFromUrl(url),
     description: descMatch ? descMatch[1].trim() : '',
     date: dateMatch ? dateMatch[1].trim() : null,
+    textContent: extractTextContent(html), // Full text for LLM to extract date/author
   };
 }
 
@@ -133,7 +145,8 @@ export async function enrichItem(queueItem, options = {}) {
       ...queueItem.payload,
       title: content.title,
       description: content.description,
-      published_at: content.date || new Date().toISOString(),
+      textContent: content.textContent, // Full text for LLM date/author extraction
+      published_at: content.date || null, // Will be extracted by LLM if not in meta tags
     };
 
     await supabase
@@ -163,14 +176,23 @@ export async function enrichItem(queueItem, options = {}) {
 
     await supabase.from('ingestion_queue').update({ status: 'filtered' }).eq('id', queueItem.id);
 
-    // Step 3: Summarize
+    // Step 3: Summarize (LLM also extracts date and author)
     console.log('   📝 Generating summary...');
     const summaryResult = await runSummarizer({ id: queueItem.id, payload });
+
+    // Use LLM-extracted date if not already found in meta tags
+    const extractedDate = summaryResult.published_at || payload.published_at;
+    const extractedAuthor = summaryResult.author || payload.author;
 
     payload = {
       ...payload,
       summary: summaryResult.summary,
+      published_at: extractedDate,
+      author: extractedAuthor,
     };
+
+    // Remove textContent from payload (too large for storage)
+    delete payload.textContent;
 
     await supabase
       .from('ingestion_queue')
