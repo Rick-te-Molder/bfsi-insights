@@ -11,53 +11,11 @@
 
 import process from 'node:process';
 import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
 import { runSummarizer } from '../agents/summarize.js';
+import { createSupabaseClient, parseCliArgs, fetchContent, delay } from './utils.js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-);
-
-// Parse CLI arguments
-const args = process.argv.slice(2);
-const dryRun = args.includes('--dry-run');
-const limitArg = args.find((a) => a.startsWith('--limit='));
-const limit = limitArg ? Number.parseInt(limitArg.split('=')[1], 10) : 1000;
-
-async function fetchContent(url) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
-
-  try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      },
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeout);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-    const html = await response.text();
-
-    // Extract text content
-    const textContent = html
-      .replaceAll(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replaceAll(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replaceAll(/<[^>]+>/g, ' ')
-      .replaceAll(/\s+/g, ' ')
-      .trim()
-      .substring(0, 15000);
-
-    return { textContent };
-  } catch (error) {
-    clearTimeout(timeout);
-    throw error;
-  }
-}
+const supabase = createSupabaseClient();
+const { dryRun, limit } = parseCliArgs(1000);
 
 async function main() {
   console.log('📝 Backfill Summaries with v2\n');
@@ -152,7 +110,7 @@ async function main() {
     }
 
     // Rate limit: 2 seconds between requests
-    await new Promise((r) => setTimeout(r, 2000));
+    await delay(2000);
   }
 
   console.log('\n' + '='.repeat(50));
