@@ -1,35 +1,117 @@
 # Contributing to BFSI Insights
 
-Thank you for your interest in contributing to BFSI Insights!
-
 ## Maintainer
 
 **Rick te Molder** — [@Rick-te-Molder](https://github.com/Rick-te-Molder)
 
-## How to Contribute
+---
 
-### Reporting Issues
+## Workflow
 
-- Use [GitHub Issues](https://github.com/Rick-te-Molder/bfsi-insights/issues) to report bugs or suggest features
-- Check existing issues before creating a new one
-- Provide clear reproduction steps for bugs
+We use **Linear** for issue tracking and **GitHub** for code management.
 
-### Pull Requests
+### 1. Pick an Issue
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Make your changes following the code style below
-4. Run tests and linting (`npm run test && npm run lint`)
-5. Commit with a descriptive message
-6. Open a Pull Request against `main`
+- All work starts with a Linear issue
+- Issues are organized in projects and cycles
+- Grab an issue from the current cycle or create one if needed
 
-### Code Style
+### 2. Create a Branch
+
+```bash
+git checkout main
+git pull origin main
+git checkout -b lin-123-short-description
+```
+
+**Branch naming convention:** `lin-{issue-id}-{short-description}`
+
+Examples:
+
+- `lin-42-add-filter-component`
+- `lin-108-fix-date-parsing`
+
+### 3. Make Changes
+
+- Follow the code style (auto-enforced by pre-commit hooks)
+- Run tests locally: `npm run test`
+- Keep commits focused and atomic
+
+### 4. Commit with Linear Reference
+
+Include the Linear issue ID in your commit message:
+
+```bash
+# Links to issue (doesn't close it)
+git commit -m "feat: add industry filter dropdown
+
+LIN-123"
+
+# Closes the issue when PR is merged
+git commit -m "fix: resolve date parsing edge case
+
+Fixes LIN-123"
+```
+
+**Magic words** that auto-close Linear issues:
+
+- `fixes LIN-123`
+- `closes LIN-123`
+- `resolves LIN-123`
+
+### 5. Push and Create PR
+
+```bash
+git push -u origin lin-123-short-description
+```
+
+Then create a Pull Request on GitHub:
+
+- Target branch: `main`
+- Title: Brief description (Linear auto-links via branch name)
+- Description: What changed and why
+
+### 6. CI Checks & Merge
+
+- Wait for CI checks to pass (lint, tests, build)
+- Review the diff
+- Merge using **Squash and merge** (keeps history clean)
+- Delete the branch after merging
+
+---
+
+## Commit Message Format
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>: <short description>
+
+[optional body]
+
+[Linear reference]
+```
+
+**Types:**
+
+- `feat` — New feature
+- `fix` — Bug fix
+- `refactor` — Code change that neither fixes a bug nor adds a feature
+- `docs` — Documentation only
+- `test` — Adding or updating tests
+- `chore` — Maintenance (deps, config, etc.)
+
+---
+
+## Code Style
 
 - **Linting:** ESLint + Prettier (auto-enforced via pre-commit hook)
-- **Formatting:** Run `npm run lint` before committing
+- **Formatting:** Runs automatically on commit via lint-staged
 - **Tests:** Add tests for new functionality; don't reduce coverage
 
-### Development Setup
+---
+
+## Development Setup
 
 ```bash
 # Clone and install
@@ -42,12 +124,13 @@ npm run dev
 
 # Run tests
 npm run test
+
+# Run linting
+npm run lint
 ```
 
-## Code of Conduct
-
-Be respectful and constructive. We're here to build something useful together.
+---
 
 ## Questions?
 
-Open an issue or reach out to the maintainer.
+Open a Linear issue or reach out to the maintainer.
