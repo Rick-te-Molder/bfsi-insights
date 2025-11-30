@@ -1,8 +1,10 @@
-# Security Documentation
+# Security Policy
 
 ## Overview
 
 This document describes the security architecture, access controls, and operational procedures for the BFSI Insights platform.
+
+Our security practices align with [OWASP](https://owasp.org/) guidelines, particularly the [OWASP Top 10](https://owasp.org/www-project-top-ten/) and [OWASP ASVS](https://owasp.org/www-project-application-security-verification-standard/).
 
 ## Architecture
 
@@ -263,7 +265,23 @@ SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'anthropic_key
 
 ---
 
-## 7. Best Practices Checklist
+## 7. OWASP Alignment
+
+This project implements controls for the following [OWASP Top 10 (2021)](https://owasp.org/www-project-top-ten/) risks:
+
+| OWASP Risk                        | Our Control                                                         |
+| --------------------------------- | ------------------------------------------------------------------- |
+| **A01 Broken Access Control**     | Row Level Security (RLS), `auth.uid()` checks, least privilege      |
+| **A02 Cryptographic Failures**    | Supabase handles encryption at rest/transit, no client-side secrets |
+| **A03 Injection**                 | Parameterized queries via Supabase client, no raw SQL in app        |
+| **A04 Insecure Design**           | Defense in depth (RLS + function checks + app logic)                |
+| **A05 Security Misconfiguration** | RLS enabled on all tables, service key never client-side            |
+| **A07 Auth Failures**             | Supabase Auth with secure session handling                          |
+| **A09 Security Logging**          | Audit trail via `reviewer = auth.uid()`, Supabase logs              |
+
+---
+
+## 8. Best Practices Checklist
 
 - [ ] Service key never committed to Git
 - [ ] Service key never in CF Pages env vars
@@ -276,8 +294,17 @@ SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'anthropic_key
 
 ---
 
-## Contact & Reporting
+## Reporting Vulnerabilities
 
-For security concerns or to report vulnerabilities, contact the repository owner directly.
+To report a security vulnerability:
 
-**Last updated**: 2025-11-17
+1. **Do not** open a public GitHub issue
+2. Email the maintainer directly or use [GitHub's private vulnerability reporting](https://github.com/Rick-te-Molder/bfsi-insights/security/advisories/new)
+3. Include: description, reproduction steps, potential impact
+4. Expect a response within 48 hours
+
+We appreciate responsible disclosure.
+
+---
+
+**Last updated**: 2025-11-30
