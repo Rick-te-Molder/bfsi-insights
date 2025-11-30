@@ -71,6 +71,16 @@ Local commands:
 | `npm run preview` | Preview build locally before deploying     |
 | `npm run lint`    | Run ESLint on all files                    |
 
+### Testing
+
+```bash
+npx playwright test              # Run all E2E tests
+npx playwright test --ui         # Run with interactive UI
+npx playwright test modal.spec   # Run specific test file
+```
+
+**Test coverage:** search, filters, modal, navigation, publication detail, admin auth (28 tests)
+
 ### Agent API (Content Processing)
 
 ```bash
