@@ -2,17 +2,30 @@ import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
-// Shared clients
+// Shared clients - Supabase created immediately, OpenAI lazily
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+let _openai = null;
+
+function getOpenAI() {
+  if (!_openai) {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OPENAI_API_KEY environment variable is required for this agent');
+    }
+    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return _openai;
+}
 
 export class AgentRunner {
   constructor(agentName) {
     this.agentName = agentName;
     this.supabase = supabase;
-    this.openai = openai;
     this.runId = null;
     this.stepOrder = 0;
+  }
+
+  get openai() {
+    return getOpenAI();
   }
 
   /**
