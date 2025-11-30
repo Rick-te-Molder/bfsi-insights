@@ -4,10 +4,10 @@
  */
 import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
-import { fetchContent as baseFetchContent, delay } from '../lib/content-fetcher.js';
+import { fetchContent as baseFetchContent } from '../lib/content-fetcher.js';
 
 // Re-export delay from shared module
-export { delay };
+export { delay } from '../lib/content-fetcher.js';
 
 /**
  * Create Supabase client with service key
