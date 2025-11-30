@@ -325,6 +325,10 @@ node services/agent-api/src/scripts/backfill-dates.js --limit=50
 # Re-run summarizer on all publications
 node services/agent-api/src/scripts/backfill-summaries.js --dry-run
 node services/agent-api/src/scripts/backfill-summaries.js --limit=100
+
+# Backfill missing taxonomy tags
+node services/agent-api/src/scripts/backfill-tags.js --dry-run
+node services/agent-api/src/scripts/backfill-tags.js --limit=50
 ```
 
 Shared utilities for scripts are in `services/agent-api/src/scripts/utils.js`.
