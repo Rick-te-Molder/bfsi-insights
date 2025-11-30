@@ -29,8 +29,15 @@ jobs:
         run: npm ci
 
       - name: Run unit tests with coverage
-        run: npm run test -- --coverage --reporter=default --reporter=lcov
+        run: npm run test -- --coverage
         continue-on-error: true # Don't fail if some tests fail
+
+      - name: Debug coverage output
+        run: |
+          echo "=== Coverage files ==="
+          ls -la coverage/ || echo "No coverage folder"
+          echo "=== First 20 lines of lcov.info ==="
+          head -20 coverage/lcov.info || echo "No lcov.info"
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5
