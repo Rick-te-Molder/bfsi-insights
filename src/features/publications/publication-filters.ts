@@ -1,3 +1,10 @@
+// Helper to determine default role from persona preference (outer scope for reuse)
+function getDefaultRole(personaPref: string | null): string {
+  if (personaPref && personaPref !== 'all') return personaPref;
+  if (personaPref === 'all') return 'all';
+  return 'executive';
+}
+
 export default function initPublicationFilters() {
   const list = document.getElementById('list');
   const empty = document.getElementById('empty');
@@ -15,13 +22,6 @@ export default function initPublicationFilters() {
   const ADVANCED_FILTERS_KEY = 'advanced-filters-expanded';
 
   if (!list) return;
-
-  // Helper to determine default role from persona preference
-  function getDefaultRole(personaPref: string | null): string {
-    if (personaPref && personaPref !== 'all') return personaPref;
-    if (personaPref === 'all') return 'all';
-    return 'executive';
-  }
 
   const filterElements = Array.from(
     document.querySelectorAll<HTMLSelectElement>('select[id^="f-"]'),
@@ -60,10 +60,7 @@ export default function initPublicationFilters() {
       title: heading || linkTitle,
       source_name: (el.querySelector('.mt-1') as HTMLElement | null)?.textContent || '',
       authors: el.dataset.authors || '',
-      summary:
-        el.getAttribute('data-summary-medium') ||
-        el.querySelector('p.text-sm')?.textContent?.trim() ||
-        '',
+      summary: el.dataset.summaryMedium || el.querySelector('p.text-sm')?.textContent?.trim() || '',
       tags_text: [
         el.dataset.role || '',
         el.dataset.industry || '',
@@ -71,7 +68,7 @@ export default function initPublicationFilters() {
         el.dataset.content_type || '',
         el.dataset.geography || '',
       ]
-        .filter(Boolean)
+        .filter((v): v is string => Boolean(v))
         .join(' '),
     };
 
@@ -209,13 +206,7 @@ export default function initPublicationFilters() {
           vals.geography = parsed.geography || '';
           vals.q = parsed.q || '';
         } else {
-          if (personaPref && personaPref !== 'all') {
-            vals.role = personaPref;
-          } else if (!personaPref) {
-            vals.role = 'executive';
-          } else {
-            vals.role = 'all';
-          }
+          vals.role = getDefaultRole(personaPref);
         }
       } catch {
         // ignore
@@ -453,8 +444,8 @@ export default function initPublicationFilters() {
     closeBtn?.addEventListener('click', closeSheet);
     backdrop?.addEventListener('click', closeSheet);
 
-    window.addEventListener('keydown', (e) => {
-      if ((e as KeyboardEvent).key === 'Escape' && !sheet.classList.contains('hidden')) {
+    globalThis.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !sheet.classList.contains('hidden')) {
         closeSheet();
       }
     });
