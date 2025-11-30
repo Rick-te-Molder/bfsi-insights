@@ -1,32 +1,33 @@
 # Documentation
 
-This folder contains architectural diagrams and documentation for BFSI Insights.
+Technical documentation for BFSI Insights using **Mermaid diagrams** (renders in GitHub).
+
+## Quick Links
+
+| Document                               | Description                                    |
+| -------------------------------------- | ---------------------------------------------- |
+| [Architecture](architecture/README.md) | System components, layers, security boundaries |
+| [BPMN](bpmn/README.md)                 | Content ingestion workflow, status flow        |
+| [DFD](dfd/README.md)                   | Data flow through the system                   |
+| [Data Model](data-model/README.md)     | ER diagram, tables, taxonomies                 |
 
 ## Folder Structure
 
 ```
 docs/
-├── architecture/     # High-level system architecture diagrams
-├── bpmn/            # Business Process Model and Notation diagrams
-├── dfd/             # Data Flow Diagrams
-└── data-model/      # Entity-relationship and data model diagrams
+├── README.md              # This file
+├── architecture/          # System architecture
+├── bpmn/                  # Business process diagrams
+├── dfd/                   # Data flow diagrams
+└── data-model/            # Database schema
 ```
 
-## Diagrams
+## Viewing Diagrams
 
-| Diagram                 | Path                                       | Description                                |
-| ----------------------- | ------------------------------------------ | ------------------------------------------ |
-| High-Level Architecture | `architecture/high-level-architecture.png` | System components and their interactions   |
-| Ingestion Process       | `bpmn/ingestion-process.png`               | BPMN diagram of content ingestion workflow |
-| Data Flow (Level 1)     | `dfd/dfd-level-1.png`                      | How data flows through the system          |
-| Logical Data Model      | `data-model/logical.png`                   | Database tables and relationships          |
+All diagrams use **Mermaid** syntax which renders automatically on:
 
-## Creating Diagrams
+- GitHub (markdown files)
+- VS Code (with Mermaid extension)
+- Notion, GitLab, etc.
 
-Recommended tools:
-
-- **draw.io** / **diagrams.net** - Free, exports to PNG
-- **Mermaid** - Code-based diagrams (can embed in markdown)
-- **Lucidchart** - Professional diagramming
-
-Export diagrams as PNG at 2x resolution for clarity.
+To view locally, install the [Mermaid Preview](https://marketplace.visualstudio.com/items?itemName=bierner.markdown-mermaid) VS Code extension.
