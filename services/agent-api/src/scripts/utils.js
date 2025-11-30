@@ -26,6 +26,65 @@ export function parseCliArgs(defaultLimit = 100) {
 }
 
 /**
+ * Remove content between opening and closing tags (e.g., script, style)
+ * Uses iterative approach to avoid ReDoS vulnerabilities
+ */
+function removeTagContent(html, tagName) {
+  const openTag = `<${tagName}`;
+  const closeTag = `</${tagName}>`;
+  let result = '';
+  let pos = 0;
+
+  while (pos < html.length) {
+    const openPos = html.toLowerCase().indexOf(openTag, pos);
+    if (openPos === -1) {
+      result += html.substring(pos);
+      break;
+    }
+
+    result += html.substring(pos, openPos);
+
+    const closePos = html.toLowerCase().indexOf(closeTag, openPos);
+    if (closePos === -1) {
+      // No closing tag found, skip to end
+      break;
+    }
+
+    pos = closePos + closeTag.length;
+  }
+
+  return result;
+}
+
+/**
+ * Strip HTML tags from text using iterative approach (ReDoS-safe)
+ */
+function stripHtmlTags(html) {
+  let result = '';
+  let inTag = false;
+
+  for (const char of html) {
+    if (char === '<') {
+      inTag = true;
+      result += ' ';
+    } else if (char === '>') {
+      inTag = false;
+    } else if (!inTag) {
+      result += char;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Normalize whitespace (collapse multiple spaces/newlines to single space)
+ */
+function normalizeWhitespace(text) {
+  return text.split(/\s+/).join(' ').trim();
+}
+
+/**
  * Fetch content from URL and extract text
  */
 export async function fetchContent(url, timeoutMs = 30000) {
@@ -46,13 +105,18 @@ export async function fetchContent(url, timeoutMs = 30000) {
 
     const html = await response.text();
 
-    const textContent = html
-      .replaceAll(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replaceAll(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replaceAll(/<[^>]+>/g, ' ')
-      .replaceAll(/\s+/g, ' ')
-      .trim()
-      .substring(0, 15000);
+    // Limit input size first to prevent DoS
+    const truncatedHtml = html.substring(0, 100000);
+
+    // Remove script and style content (iterative, ReDoS-safe)
+    const noScripts = removeTagContent(truncatedHtml, 'script');
+    const noStyles = removeTagContent(noScripts, 'style');
+
+    // Strip remaining tags using iterative approach (ReDoS-safe)
+    const textOnly = stripHtmlTags(noStyles);
+
+    // Normalize whitespace and limit output
+    const textContent = normalizeWhitespace(textOnly).substring(0, 15000);
 
     return { textContent };
   } catch (error) {
