@@ -11,9 +11,10 @@ scripts/
 ├── publishing/         # Publishing utilities
 │   └── publish-approved.mjs
 ├── utilities/          # Maintenance utilities
-│   ├── check-links.mjs
-│   ├── test-rss-feeds.mjs
-│   └── debug-scraper.mjs
+│   ├── check-links.mjs     # Check for broken links
+│   ├── test-rss-feeds.mjs  # Validate RSS feeds
+│   ├── extract-pdf.py      # PDF text extraction
+│   └── filename-helper.mjs # Slug/filename utilities
 └── _archive/           # Retired scripts (not used)
 ```
 
