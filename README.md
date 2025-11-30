@@ -398,15 +398,27 @@ Nightly CI checks all external links in published publications.
 npm run check:links
 ```
 
-### 11.4 Static Code Analysis (Planned)
+### 11.4 Static Code Analysis (SonarCloud)
 
-**Planned:** Integrate SonarCloud to enforce a quality gate in CI.
+SonarCloud runs on every push and PR to enforce code quality.
 
-Goals:
+**Quality Gate Checks:**
 
-- Detect vulnerabilities and code smells
-- Track maintainability and technical debt
-- Add PR annotations
+- Code smells and bugs
+- Security vulnerabilities
+- Test coverage (target: ≥80%)
+- Code duplication
+
+**Setup (one-time):**
+
+1. Go to [sonarcloud.io](https://sonarcloud.io) and import the repository
+2. Add `SONAR_TOKEN` secret in GitHub repository settings
+3. Quality gate runs automatically on push/PR
+
+```bash
+# View results
+https://sonarcloud.io/project/overview?id=Rick-te-Molder_bfsi-insights
+```
 
 ### 11.5 Data Integrity & Accuracy
 
@@ -488,7 +500,7 @@ Admin UI can trigger rebuilds via Cloudflare Deploy Hooks.
 
 ## 16. Roadmap
 
-- [ ] SonarCloud quality gate
+- [x] SonarCloud quality gate
 - [ ] More granular taxonomy extraction
 - [ ] Wider crawling in discovery agent
 - [ ] Embedding-based similarity search
