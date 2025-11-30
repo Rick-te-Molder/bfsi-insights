@@ -412,7 +412,15 @@ function normalizeUrl(url) {
     const parsed = new URL(url);
     return (parsed.origin + parsed.pathname).toLowerCase();
   } catch {
-    return url.toLowerCase().replace(/[?#].*$/, '');
+    // Strip query string and hash without regex (ReDoS-safe)
+    let normalized = url.toLowerCase();
+    const queryIdx = normalized.indexOf('?');
+    const hashIdx = normalized.indexOf('#');
+    const cutIdx = Math.min(
+      queryIdx === -1 ? normalized.length : queryIdx,
+      hashIdx === -1 ? normalized.length : hashIdx,
+    );
+    return normalized.substring(0, cutIdx);
   }
 }
 
