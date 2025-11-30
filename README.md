@@ -313,6 +313,22 @@ npm run check:links                    # Check for broken links
 npm run build && npm run lhci          # Run Lighthouse CI locally
 ```
 
+### 9.4 Maintenance Scripts
+
+One-time or periodic data maintenance scripts:
+
+```bash
+# Backfill missing publication dates
+node services/agent-api/src/scripts/backfill-dates.js --dry-run
+node services/agent-api/src/scripts/backfill-dates.js --limit=50
+
+# Re-run summarizer on all publications
+node services/agent-api/src/scripts/backfill-summaries.js --dry-run
+node services/agent-api/src/scripts/backfill-summaries.js --limit=100
+```
+
+Shared utilities for scripts are in `services/agent-api/src/scripts/utils.js`.
+
 ---
 
 ## 10. Testing & Code Quality
@@ -321,11 +337,11 @@ npm run build && npm run lhci          # Run Lighthouse CI locally
 
 The project follows a layered testing approach:
 
-| Level           | Tool                        | Status    | Tests | Coverage                 |
-| --------------- | --------------------------- | --------- | ----- | ------------------------ |
-| **Unit**        | Vitest                      | ✅ Active | 32    | Utilities, helpers       |
-| **Integration** | Lighthouse CI, Link Checker | ✅ Active | 4     | Performance, a11y, links |
-| **E2E**         | Playwright                  | ✅ Active | 28    | User journeys            |
+| Level           | Tool                        | Status    | Tests | Coverage                    |
+| --------------- | --------------------------- | --------- | ----- | --------------------------- |
+| **Unit**        | Vitest                      | ✅ Active | 68    | Utilities, filters, helpers |
+| **Integration** | Lighthouse CI, Link Checker | ✅ Active | 4     | Performance, a11y, links    |
+| **E2E**         | Playwright                  | ✅ Active | 28    | User journeys               |
 
 ### 10.2 Unit Tests (Vitest)
 
@@ -334,7 +350,15 @@ npm run test           # Run all unit tests
 npm run test:watch     # Watch mode for development
 ```
 
-**Current coverage:** 32 tests covering `fmt` utilities, text linkify, and filename helpers (`slug`, `lastName`, `kbFileName`). Focus on pure functions with deterministic output.
+**Current coverage:** 68 tests covering:
+
+- `src/lib/filters.ts` — publication filtering logic (26 tests)
+- `src/lib/authors.ts` — author normalization (10 tests)
+- `src/lib/text.ts` — text linkify utilities (7 tests)
+- `src/lib/fmt.ts` — date formatting (8 tests)
+- `tests/utils/filename-helper.spec.ts` — slug, lastName, kbFileName (17 tests)
+
+Focus on pure functions with deterministic output. See [docs/quality/sonar-exclusions.md](docs/quality/sonar-exclusions.md) for coverage policy.
 
 ### 10.3 Integration Tests
 
