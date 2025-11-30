@@ -314,11 +314,11 @@ npm run build && npm run lhci          # Run Lighthouse CI locally
 
 The project follows a layered testing approach:
 
-| Level           | Tool                        | Status     | Coverage                           |
-| --------------- | --------------------------- | ---------- | ---------------------------------- |
-| **Unit**        | Vitest                      | 🔜 Planned | Utilities, helpers, pure functions |
-| **Integration** | Lighthouse CI, Link Checker | ✅ Active  | Performance, accessibility, links  |
-| **E2E**         | Playwright                  | ✅ Active  | User journeys (28 tests)           |
+| Level           | Tool                        | Status    | Coverage                          |
+| --------------- | --------------------------- | --------- | --------------------------------- |
+| **Unit**        | Vitest                      | ✅ Active | Utilities, helpers (33 tests)     |
+| **Integration** | Lighthouse CI, Link Checker | ✅ Active | Performance, accessibility, links |
+| **E2E**         | Playwright                  | ✅ Active | User journeys (28 tests)          |
 
 ### 10.2 End-to-End Tests (Playwright)
 
@@ -335,11 +335,14 @@ npx playwright test modal.spec   # Run specific test file
 - **Lighthouse CI**: Enforces ≥95 scores for Performance, Accessibility, Best Practices, SEO
 - **Link Checker**: Nightly validation of all external links
 
-### 10.4 Unit Tests (Planned)
+### 10.4 Unit Tests (Vitest)
 
 ```bash
-# Future: npm run test:unit
+npm run test           # Run all unit tests
+npm run test:watch     # Watch mode for development
 ```
+
+**Test coverage:** fmt utilities, text linkify, filename helpers (slug, lastName, kbFileName)
 
 ---
 
@@ -460,7 +463,6 @@ Admin UI can trigger rebuilds via Cloudflare Deploy Hooks.
 ## 16. Roadmap
 
 - [ ] SonarCloud quality gate
-- [ ] Unit tests with Vitest
 - [ ] More granular taxonomy extraction
 - [ ] Wider crawling in discovery agent
 - [ ] Embedding-based similarity search
