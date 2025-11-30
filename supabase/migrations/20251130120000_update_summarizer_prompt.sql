@@ -1,7 +1,7 @@
 -- Update summarizer prompt with enhanced requirements
 -- Version: summarizer-v2.0
 
-INSERT INTO prompt_versions (agent_name, version, prompt_text, is_current, created_by)
+INSERT INTO prompt_versions (agent_name, version, prompt_text, is_current)
 VALUES (
   'content-summarizer',
   'summarizer-v2.0',
@@ -62,8 +62,7 @@ Follow the writing rules provided. Key principles:
 - UK English spelling
 
 Your output will be displayed on a detail page. Make it scannable, actionable, and trustworthy.',
-  false,  -- Will be set to current after testing
-  'cascade-migration'
+  false  -- Will be set to current after testing
 )
 ON CONFLICT (agent_name, version) DO UPDATE SET
   prompt_text = EXCLUDED.prompt_text,
