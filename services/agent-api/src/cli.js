@@ -32,11 +32,14 @@ function parseArgs() {
 
   for (const arg of args.slice(1)) {
     if (arg.startsWith('--')) {
-      const [key, value] = arg.slice(2).split('=');
-      if (value === undefined) {
+      const parts = arg.slice(2).split('=');
+      const key = parts[0];
+      const value = parts[1];
+
+      if (parts.length === 1) {
         options[key] = true;
-      } else if (!isNaN(value)) {
-        options[key] = parseInt(value, 10);
+      } else if (/^\d+$/.test(value)) {
+        options[key] = Number.parseInt(value, 10);
       } else {
         options[key] = value;
       }
@@ -439,4 +442,4 @@ async function runEvalHistoryCmd(options) {
   });
 }
 
-main();
+await main();
