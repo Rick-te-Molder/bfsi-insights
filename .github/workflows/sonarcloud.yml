@@ -33,14 +33,13 @@ jobs:
         continue-on-error: true # Don't fail if some tests fail
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: SonarCloud Quality Gate
-        uses: SonarSource/sonarqube-quality-gate-action@master
+        uses: SonarSource/sonarqube-quality-gate-action@v5
         timeout-minutes: 5
-        continue-on-error: true # Don't block until Quality Gate is configured
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
