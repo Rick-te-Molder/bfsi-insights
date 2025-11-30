@@ -290,17 +290,21 @@ export async function enrichItem(queueItem, options = {}) {
 }
 
 /**
- * Process all queued items (status='queued')
+ * Process all pending/queued items through full enrichment pipeline
+ * Handles both:
+ * - 'pending' items from discovery (nightly batch)
+ * - 'queued' items from manual admin submissions
  */
 export async function processQueue(options = {}) {
   const { limit = 10, includeThumbnail = true } = options;
 
   console.log('🔄 Processing queue...\n');
 
+  // Process both 'pending' (from discovery) and 'queued' (from admin)
   const { data: items, error } = await supabase
     .from('ingestion_queue')
     .select('*')
-    .eq('status', 'queued')
+    .in('status', ['pending', 'queued'])
     .order('discovered_at', { ascending: true })
     .limit(limit);
 
