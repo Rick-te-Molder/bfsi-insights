@@ -14,12 +14,7 @@
     "test:watch": "vitest",
     "e2e": "playwright test",
     "check:links": "node scripts/utilities/check-links.mjs",
-    "generate:summaries": "node scripts/generate-summaries.mjs",
-    "generate:thumbnails": "node scripts/utilities/generate-thumbnails.mjs",
-    "discover": "node scripts/agents/discover.mjs",
-    "enrich": "node scripts/agents/enrich.mjs",
     "publish:approved": "node scripts/publishing/publish-approved.mjs",
-    "apply:summaries": "node scripts/apply-summaries.mjs",
     "lhci": "npx @lhci/cli@0.14.0 autorun --config=.lighthouserc.json",
     "prepare": "husky"
   },
