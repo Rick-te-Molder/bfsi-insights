@@ -17,57 +17,75 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY,
 );
 
+const FETCH_HEADERS = {
+  'User-Agent':
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  Accept:
+    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9',
+};
+
+function isRetryableStatus(status) {
+  return status >= 500 || status === 403;
+}
+
+async function delay(attempt) {
+  await new Promise((r) => setTimeout(r, 3000 * attempt));
+}
+
+function logRetry(message, attempt, retries) {
+  console.log(`   ⚠️ ${message}, retrying (${attempt}/${retries})...`);
+}
+
+async function attemptFetch(url, attempt, retries) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 45000);
+
+  try {
+    const response = await fetch(url, {
+      headers: FETCH_HEADERS,
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      if (attempt < retries && isRetryableStatus(response.status)) {
+        logRetry(`HTTP ${response.status}`, attempt, retries);
+        return { retry: true };
+      }
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const html = await response.text();
+    return { success: true, html };
+  } catch (error) {
+    clearTimeout(timeout);
+
+    if (error.name === 'AbortError') {
+      if (attempt < retries) {
+        logRetry('Timeout', attempt, retries);
+        return { retry: true };
+      }
+      throw new Error('Request timeout');
+    }
+
+    if (attempt < retries) {
+      logRetry(error.message, attempt, retries);
+      return { retry: true };
+    }
+    throw error;
+  }
+}
+
 /**
  * Fetch content from URL with retry logic
  */
 async function fetchContent(url, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000);
-
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-          Accept:
-            'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
-        },
-        redirect: 'follow',
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeout);
-
-      if (!response.ok) {
-        if (attempt < retries && (response.status >= 500 || response.status === 403)) {
-          console.log(`   ⚠️ HTTP ${response.status}, retrying (${attempt}/${retries})...`);
-          await new Promise((r) => setTimeout(r, 3000 * attempt));
-          continue;
-        }
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const html = await response.text();
-      return parseHtml(html, url);
-    } catch (error) {
-      clearTimeout(timeout);
-      if (error.name === 'AbortError') {
-        if (attempt < retries) {
-          console.log(`   ⚠️ Timeout, retrying (${attempt}/${retries})...`);
-          await new Promise((r) => setTimeout(r, 3000 * attempt));
-          continue;
-        }
-        throw new Error('Request timeout');
-      }
-      if (attempt < retries) {
-        console.log(`   ⚠️ ${error.message}, retrying (${attempt}/${retries})...`);
-        await new Promise((r) => setTimeout(r, 3000 * attempt));
-        continue;
-      }
-      throw error;
-    }
+    const result = await attemptFetch(url, attempt, retries);
+    if (result.success) return parseHtml(result.html, url);
+    if (result.retry) await delay(attempt);
   }
   throw new Error('Failed after all retries');
 }
@@ -108,11 +126,10 @@ function parseHtml(html, url) {
 function extractTitleFromUrl(url) {
   try {
     const u = new URL(url);
-    return u.pathname
-      .split('/')
-      .filter(Boolean)
-      .pop()
-      .replace(/[-_]/g, ' ')
+    const lastSegment = u.pathname.split('/').findLast(Boolean) || '';
+    return lastSegment
+      .replaceAll('-', ' ')
+      .replaceAll('_', ' ')
       .replace(/\.[^.]+$/, '');
   } catch {
     return 'Untitled';
