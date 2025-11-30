@@ -16,6 +16,13 @@ export default function initPublicationFilters() {
 
   if (!list) return;
 
+  // Helper to determine default role from persona preference
+  function getDefaultRole(personaPref: string | null): string {
+    if (personaPref && personaPref !== 'all') return personaPref;
+    if (personaPref === 'all') return 'all';
+    return 'executive';
+  }
+
   const filterElements = Array.from(
     document.querySelectorAll<HTMLSelectElement>('select[id^="f-"]'),
   );
@@ -52,24 +59,24 @@ export default function initPublicationFilters() {
       el,
       title: heading || linkTitle,
       source_name: (el.querySelector('.mt-1') as HTMLElement | null)?.textContent || '',
-      authors: el.getAttribute('data-authors') || '',
+      authors: el.dataset.authors || '',
       summary:
         el.getAttribute('data-summary-medium') ||
         el.querySelector('p.text-sm')?.textContent?.trim() ||
         '',
       tags_text: [
-        el.getAttribute('data-role') || '',
-        el.getAttribute('data-industry') || '',
-        el.getAttribute('data-topic') || '',
-        el.getAttribute('data-content_type') || '',
-        el.getAttribute('data-geography') || '',
+        el.dataset.role || '',
+        el.dataset.industry || '',
+        el.dataset.topic || '',
+        el.dataset.content_type || '',
+        el.dataset.geography || '',
       ]
         .filter(Boolean)
         .join(' '),
     };
 
     filters.forEach(({ key }) => {
-      item[key] = el.getAttribute(`data-${key}`) || '';
+      item[key] = el.dataset[key] || '';
     });
 
     return item;
@@ -178,7 +185,7 @@ export default function initPublicationFilters() {
 
     const pageParam = params.get('page');
     if (pageParam) {
-      const parsed = parseInt(pageParam, 10);
+      const parsed = Number.parseInt(pageParam, 10);
       if (!Number.isNaN(parsed) && parsed > 0) {
         currentPage = parsed;
       }
@@ -194,12 +201,7 @@ export default function initPublicationFilters() {
         if (saved) {
           const parsed = JSON.parse(saved) as FilterValues;
 
-          vals.role =
-            personaPref && personaPref !== 'all'
-              ? personaPref
-              : personaPref === 'all'
-                ? 'all'
-                : 'executive';
+          vals.role = getDefaultRole(personaPref);
 
           vals.industry = parsed.industry || '';
           vals.topic = parsed.topic || '';
@@ -287,7 +289,7 @@ export default function initPublicationFilters() {
     });
 
     if (empty) empty.classList.toggle('hidden', totalFiltered !== 0);
-    if (countEl) countEl.textContent = `Showing ${visible} of ${list.children.length}`;
+    if (countEl && list) countEl.textContent = `Showing ${visible} of ${list.children.length}`;
 
     updatePaginationUI(visible, totalFiltered);
     updateQuery(vals);
@@ -317,10 +319,10 @@ export default function initPublicationFilters() {
   });
 
   const debounced = (() => {
-    let t: number | undefined;
+    let t: ReturnType<typeof setTimeout> | undefined;
     return (fn: () => void) => {
-      if (t) window.clearTimeout(t);
-      t = window.setTimeout(fn, 250);
+      if (t) globalThis.clearTimeout(t);
+      t = globalThis.setTimeout(fn, 250);
     };
   })();
 

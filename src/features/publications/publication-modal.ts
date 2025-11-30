@@ -20,16 +20,14 @@ function openModalFrom(li: HTMLElement) {
   const summary = p?.textContent || '';
 
   const link = (li.querySelector('a') as HTMLAnchorElement)?.href || '#';
-  const slug = li.getAttribute('data-slug') || '';
-  const external = li.getAttribute('data-url') || '#';
-  const sourceName = li.getAttribute('data-source_name') || 'original';
+  const slug = li.dataset.slug || '';
 
   const tags = [
-    li.getAttribute('data-role') || '',
-    li.getAttribute('data-industry') || '',
-    li.getAttribute('data-topic') || '',
-    li.getAttribute('data-content_type') || '',
-    li.getAttribute('data-geography') || '',
+    li.dataset.role || '',
+    li.dataset.industry || '',
+    li.dataset.topic || '',
+    li.dataset.content_type || '',
+    li.dataset.geography || '',
   ].filter(Boolean);
 
   const modal = document.getElementById('modal');
@@ -71,8 +69,7 @@ function openModalFrom(li: HTMLElement) {
   const modalImg = document.getElementById('modal-img') as HTMLImageElement | null;
   if (!modalImg) return;
 
-  const slugVal = li.getAttribute('data-slug') || '';
-  const thumb = li.getAttribute('data-thumbnail') || '';
+  const thumb = li.dataset.thumbnail || '';
   const cand: string[] = [];
 
   if (thumb) {
@@ -109,7 +106,7 @@ function openModalFrom(li: HTMLElement) {
     }
   };
 
-  window.addEventListener('focusin', focusTrapHandler);
+  globalThis.addEventListener('focusin', focusTrapHandler);
 }
 
 function closeModal() {
@@ -119,7 +116,7 @@ function closeModal() {
   modal.classList.add('hidden');
   document.body.style.overflow = '';
 
-  if (focusTrapHandler) window.removeEventListener('focusin', focusTrapHandler);
+  if (focusTrapHandler) globalThis.removeEventListener('focusin', focusTrapHandler);
   if (lastFocus && lastFocus instanceof HTMLElement) lastFocus.focus();
 }
 
@@ -129,7 +126,7 @@ export default function initPublicationModal() {
   document.getElementById('modal-close')?.addEventListener('click', closeModal);
   document.getElementById('modal-backdrop')?.addEventListener('click', closeModal);
 
-  window.addEventListener('keydown', (e: KeyboardEvent) => {
+  globalThis.addEventListener('keydown', (e: KeyboardEvent) => {
     if (e.key === 'Escape') closeModal();
   });
 

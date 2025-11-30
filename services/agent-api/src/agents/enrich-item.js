@@ -75,10 +75,10 @@ async function fetchContent(url, retries = 3) {
 function extractTextContent(html) {
   // Remove scripts, styles, and HTML tags to get readable text
   return html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replaceAll(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replaceAll(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replaceAll(/<[^>]+>/g, ' ')
+    .replaceAll(/\s+/g, ' ')
     .trim()
     .substring(0, 15000); // Limit to ~15k chars for LLM context
 }
@@ -119,11 +119,108 @@ function extractTitleFromUrl(url) {
   }
 }
 
+// --- Pipeline Step Functions ---
+
+async function updateStatus(queueId, status, extra = {}) {
+  await supabase
+    .from('ingestion_queue')
+    .update({ status, ...extra })
+    .eq('id', queueId);
+}
+
+async function stepFetch(queueItem) {
+  console.log('   📥 Fetching content...');
+  const content = await fetchContent(queueItem.url);
+  console.log(`   📄 Title: ${content.title?.substring(0, 60)}...`);
+
+  const payload = {
+    ...queueItem.payload,
+    title: content.title,
+    description: content.description,
+    textContent: content.textContent,
+    published_at: content.date || null,
+  };
+
+  await updateStatus(queueItem.id, 'fetched', { payload, fetched_at: new Date().toISOString() });
+  return payload;
+}
+
+async function stepFilter(queueId, payload) {
+  console.log('   🔍 Checking relevance...');
+  const result = await runRelevanceFilter({ id: queueId, payload });
+
+  if (!result.relevant) {
+    console.log(`   ❌ Not relevant: ${result.reason}`);
+    await updateStatus(queueId, 'rejected', { rejection_reason: result.reason });
+    return { rejected: true, reason: result.reason };
+  }
+
+  await updateStatus(queueId, 'filtered');
+  return { rejected: false };
+}
+
+async function stepSummarize(queueId, payload) {
+  console.log('   📝 Generating summary...');
+  const result = await runSummarizer({ id: queueId, payload });
+
+  const updated = {
+    ...payload,
+    summary: result.summary,
+    published_at: result.published_at || payload.published_at,
+    author: result.author || payload.author,
+    key_takeaways: result.key_takeaways,
+    authors: result.authors,
+    long_summary_sections: result.long_summary_sections,
+    key_figures: result.key_figures,
+    entities: result.entities,
+    is_academic: result.is_academic,
+    citations: result.citations,
+  };
+
+  delete updated.textContent;
+  await updateStatus(queueId, 'summarized', { payload: updated });
+  return updated;
+}
+
+async function stepTag(queueId, payload) {
+  console.log('   🏷️ Applying tags...');
+  const result = await runTagger({ id: queueId, payload });
+
+  const updated = {
+    ...payload,
+    industry_codes: [result.industry_code],
+    topic_codes: [result.topic_code],
+    geography_codes: result.geography_codes || [],
+    use_case_codes: result.use_case_codes || [],
+    capability_codes: result.capability_codes || [],
+    regulator_codes: result.regulator_codes || [],
+    regulation_codes: result.regulation_codes || [],
+    organization_names: result.organization_names || [],
+    vendor_names: result.vendor_names || [],
+    tagging_metadata: {
+      confidence: result.confidence,
+      reasoning: result.reasoning,
+      tagged_at: new Date().toISOString(),
+    },
+  };
+
+  await updateStatus(queueId, 'tagged', { payload: updated });
+  return updated;
+}
+
+async function stepThumbnail(queueId, payload) {
+  console.log('   📸 Generating thumbnail...');
+  try {
+    const result = await runThumbnailer({ id: queueId, payload });
+    return { ...payload, thumbnail_bucket: result.bucket, thumbnail_path: result.path };
+  } catch (error) {
+    console.log(`   ⚠️ Thumbnail failed: ${error.message} (continuing without)`);
+    return payload;
+  }
+}
+
 /**
  * Full enrichment pipeline for a single queue item
- * @param {Object} queueItem - The queue item to process
- * @param {Object} options - Processing options
- * @param {boolean} options.includeThumbnail - Whether to generate thumbnail (default: true)
  */
 export async function enrichItem(queueItem, options = {}) {
   const { includeThumbnail = true } = options;
@@ -132,170 +229,32 @@ export async function enrichItem(queueItem, options = {}) {
   console.log(`\n📦 Processing: ${queueItem.url}`);
 
   try {
-    // Update status to 'processing'
-    await supabase.from('ingestion_queue').update({ status: 'processing' }).eq('id', queueItem.id);
+    await updateStatus(queueItem.id, 'processing');
 
-    // Step 1: Fetch content
-    console.log('   📥 Fetching content...');
-    const content = await fetchContent(queueItem.url);
-    console.log(`   📄 Title: ${content.title?.substring(0, 60)}...`);
+    let payload = await stepFetch(queueItem);
 
-    // Update payload with fetched content
-    let payload = {
-      ...queueItem.payload,
-      title: content.title,
-      description: content.description,
-      textContent: content.textContent, // Full text for LLM date/author extraction
-      published_at: content.date || null, // Will be extracted by LLM if not in meta tags
-    };
-
-    await supabase
-      .from('ingestion_queue')
-      .update({
-        status: 'fetched',
-        payload,
-        fetched_at: new Date().toISOString(),
-      })
-      .eq('id', queueItem.id);
-
-    // Step 2: Filter (relevance check)
-    console.log('   🔍 Checking relevance...');
-    const filterResult = await runRelevanceFilter({ id: queueItem.id, payload });
-
-    if (!filterResult.relevant) {
-      console.log(`   ❌ Not relevant: ${filterResult.reason}`);
-      await supabase
-        .from('ingestion_queue')
-        .update({
-          status: 'rejected',
-          rejection_reason: filterResult.reason,
-        })
-        .eq('id', queueItem.id);
+    const filterResult = await stepFilter(queueItem.id, payload);
+    if (filterResult.rejected) {
       return { success: false, reason: filterResult.reason, duration: Date.now() - startTime };
     }
 
-    await supabase.from('ingestion_queue').update({ status: 'filtered' }).eq('id', queueItem.id);
+    payload = await stepSummarize(queueItem.id, payload);
+    payload = await stepTag(queueItem.id, payload);
 
-    // Step 3: Summarize (LLM extracts date, author, structured insights)
-    console.log('   📝 Generating summary...');
-    const summaryResult = await runSummarizer({ id: queueItem.id, payload });
-
-    // Use LLM-extracted date if not already found in meta tags
-    const extractedDate = summaryResult.published_at || payload.published_at;
-    const extractedAuthor = summaryResult.author || payload.author;
-
-    payload = {
-      ...payload,
-      // Core summary fields (backward compatible)
-      summary: summaryResult.summary,
-      published_at: extractedDate,
-      author: extractedAuthor,
-      key_takeaways: summaryResult.key_takeaways,
-
-      // Enhanced structured data (v2)
-      authors: summaryResult.authors,
-      long_summary_sections: summaryResult.long_summary_sections,
-      key_figures: summaryResult.key_figures,
-      entities: summaryResult.entities,
-      is_academic: summaryResult.is_academic,
-      citations: summaryResult.citations,
-    };
-
-    // Remove textContent from payload (too large for storage)
-    delete payload.textContent;
-
-    await supabase
-      .from('ingestion_queue')
-      .update({
-        status: 'summarized',
-        payload,
-      })
-      .eq('id', queueItem.id);
-
-    // Step 4: Tag (comprehensive taxonomy classification)
-    console.log('   🏷️ Applying tags...');
-    const tagResult = await runTagger({ id: queueItem.id, payload });
-
-    payload = {
-      ...payload,
-      // Core taxonomy (guardrails)
-      industry_codes: [tagResult.industry_code],
-      topic_codes: [tagResult.topic_code],
-      geography_codes: tagResult.geography_codes || [],
-      // AI/Agentic taxonomy (guardrails)
-      use_case_codes: tagResult.use_case_codes || [],
-      capability_codes: tagResult.capability_codes || [],
-      // Regulatory taxonomy (guardrails)
-      regulator_codes: tagResult.regulator_codes || [],
-      regulation_codes: tagResult.regulation_codes || [],
-      // Expandable entities (names for lookup/creation)
-      organization_names: tagResult.organization_names || [],
-      vendor_names: tagResult.vendor_names || [],
-      // Metadata
-      tagging_metadata: {
-        confidence: tagResult.confidence,
-        reasoning: tagResult.reasoning,
-        tagged_at: new Date().toISOString(),
-      },
-    };
-
-    await supabase
-      .from('ingestion_queue')
-      .update({
-        status: 'tagged',
-        payload,
-      })
-      .eq('id', queueItem.id);
-
-    // Step 5: Thumbnail (optional)
     if (includeThumbnail) {
-      console.log('   📸 Generating thumbnail...');
-      try {
-        const thumbResult = await runThumbnailer({ id: queueItem.id, payload });
-        payload = {
-          ...payload,
-          thumbnail_bucket: thumbResult.bucket,
-          thumbnail_path: thumbResult.path,
-        };
-      } catch (thumbErr) {
-        console.log(`   ⚠️ Thumbnail failed: ${thumbErr.message} (continuing without)`);
-      }
+      payload = await stepThumbnail(queueItem.id, payload);
     }
 
-    // Final status: enriched (ready for review)
-    await supabase
-      .from('ingestion_queue')
-      .update({
-        status: 'enriched',
-        payload,
-        content_type: 'publication',
-      })
-      .eq('id', queueItem.id);
+    await updateStatus(queueItem.id, 'enriched', { payload, content_type: 'publication' });
 
     const duration = Date.now() - startTime;
     console.log(`   ✅ Enriched in ${(duration / 1000).toFixed(1)}s`);
 
-    return {
-      success: true,
-      title: payload.title,
-      duration,
-    };
+    return { success: true, title: payload.title, duration };
   } catch (error) {
     console.error(`   ❌ Error: ${error.message}`);
-
-    await supabase
-      .from('ingestion_queue')
-      .update({
-        status: 'failed',
-        rejection_reason: error.message,
-      })
-      .eq('id', queueItem.id);
-
-    return {
-      success: false,
-      error: error.message,
-      duration: Date.now() - startTime,
-    };
+    await updateStatus(queueItem.id, 'failed', { rejection_reason: error.message });
+    return { success: false, error: error.message, duration: Date.now() - startTime };
   }
 }
 
