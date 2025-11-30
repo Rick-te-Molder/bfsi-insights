@@ -176,7 +176,7 @@ export async function enrichItem(queueItem, options = {}) {
 
     await supabase.from('ingestion_queue').update({ status: 'filtered' }).eq('id', queueItem.id);
 
-    // Step 3: Summarize (LLM also extracts date and author)
+    // Step 3: Summarize (LLM extracts date, author, structured insights)
     console.log('   📝 Generating summary...');
     const summaryResult = await runSummarizer({ id: queueItem.id, payload });
 
@@ -186,9 +186,19 @@ export async function enrichItem(queueItem, options = {}) {
 
     payload = {
       ...payload,
+      // Core summary fields (backward compatible)
       summary: summaryResult.summary,
       published_at: extractedDate,
       author: extractedAuthor,
+      key_takeaways: summaryResult.key_takeaways,
+
+      // Enhanced structured data (v2)
+      authors: summaryResult.authors,
+      long_summary_sections: summaryResult.long_summary_sections,
+      key_figures: summaryResult.key_figures,
+      entities: summaryResult.entities,
+      is_academic: summaryResult.is_academic,
+      citations: summaryResult.citations,
     };
 
     // Remove textContent from payload (too large for storage)
