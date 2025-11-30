@@ -134,13 +134,14 @@ Nightly: pending →  fetched  → filtered → summarized → tagged → enrich
 #### **Option 1: Manual URL Submission** (Async Queue)
 
 ```text
-/admin/add → ingestion_queue (queued) → Agent API → enriched → /admin/review → Approve
+/admin/add → Agent API → enriched → /admin/review → Approve → Published
 ```
 
 1. Paste URL at `/admin/add`
 2. URL is queued, Agent API processes asynchronously (~30-60 seconds)
 3. UI polls for status updates (queued → processing → enriched)
 4. Review and approve at `/admin/review`
+5. Click "Trigger Build" or push to git → Published
 
 **Processing includes:** fetch → filter → summarize → tag → thumbnail (full pipeline)
 
