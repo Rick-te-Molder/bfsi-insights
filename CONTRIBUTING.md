@@ -21,15 +21,15 @@ We use **Linear** for issue tracking and **GitHub** for code management.
 ```bash
 git checkout main
 git pull origin main
-git checkout -b lin-123-short-description
+git checkout -b kb-123-short-description
 ```
 
-**Branch naming convention:** `lin-{issue-id}-{short-description}`
+**Branch naming convention:** `kb-{issue-id}-{short-description}`
 
 Examples:
 
-- `lin-42-add-filter-component`
-- `lin-108-fix-date-parsing`
+- `kb-42-add-filter-component`
+- `kb-108-fix-date-parsing`
 
 ### 3. Make Changes
 
@@ -45,24 +45,24 @@ Include the Linear issue ID in your commit message:
 # Links to issue (doesn't close it)
 git commit -m "feat: add industry filter dropdown
 
-LIN-123"
+KB-123"
 
 # Closes the issue when PR is merged
 git commit -m "fix: resolve date parsing edge case
 
-Fixes LIN-123"
+Fixes KB-123"
 ```
 
 **Magic words** that auto-close Linear issues:
 
-- `fixes LIN-123`
-- `closes LIN-123`
-- `resolves LIN-123`
+- `fixes KB-123`
+- `closes KB-123`
+- `resolves KB-123`
 
 ### 5. Push and Create PR
 
 ```bash
-git push -u origin lin-123-short-description
+git push -u origin kb-123-short-description
 ```
 
 Then create a Pull Request on GitHub:
