@@ -1,9 +1,4 @@
-// Helper to determine default role from persona preference (outer scope for reuse)
-function getDefaultRole(personaPref: string | null): string {
-  if (personaPref && personaPref !== 'all') return personaPref;
-  if (personaPref === 'all') return 'all';
-  return 'executive';
-}
+import { getDefaultRole } from '../../lib/filters';
 
 export default function initPublicationFilters() {
   const list = document.getElementById('list');
