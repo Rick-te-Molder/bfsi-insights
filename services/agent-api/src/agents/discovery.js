@@ -104,16 +104,91 @@ export function clearDiscoveryConfigCache() {
   discoveryConfig = null;
 }
 
-export async function runDiscovery(options = {}) {
-  const { source: sourceSlug, limit = null, dryRun = false } = options;
-  console.log('🔍 Starting discovery...');
-  console.log(`   Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}`);
-  if (limit) console.log(`   Limit: ${limit}`);
+/**
+ * Fetch candidates from a single source (RSS or scraper)
+ */
+async function fetchCandidatesFromSource(src, config) {
+  // Try RSS first (fast and reliable)
+  if (src.rss_feed) {
+    try {
+      const candidates = await fetchRSS(src, config);
+      console.log(`   Found ${candidates.length} potential publications from RSS`);
+      return candidates;
+    } catch (err) {
+      console.warn(`   ⚠️ RSS failed: ${err.message}`);
+    }
+  }
 
-  // Load discovery configuration from database (keywords, exclusion patterns)
-  const config = await loadDiscoveryConfig();
+  // Fallback to Scraper (slower but works when RSS unavailable)
+  if (src.scraper_config) {
+    console.log(`   🌐 Using web scraper...`);
+    try {
+      const candidates = await scrapeWebsite(src);
+      console.log(`   Found ${candidates.length} potential publications from scraper`);
+      return candidates;
+    } catch (err) {
+      console.warn(`   ⚠️ Scraper failed: ${err.message}`);
+    }
+  }
 
-  // Load Sources
+  return [];
+}
+
+/**
+ * Process a single candidate - check existence and add/retry as needed
+ */
+async function processCandidate(candidate, sourceName, dryRun) {
+  const existsStatus = await checkExists(candidate.url);
+
+  if (existsStatus === 'skip') {
+    return { action: 'skip' };
+  }
+
+  const titlePreview = candidate.title.substring(0, 60);
+
+  if (dryRun) {
+    const action = existsStatus === 'retry' ? 'retry' : 'add';
+    console.log(`   [DRY] Would ${action}: ${titlePreview}...`);
+    return { action: 'dry-run' };
+  }
+
+  if (existsStatus === 'retry') {
+    return processRetry(candidate, sourceName, titlePreview);
+  }
+
+  return processNewItem(candidate, sourceName, titlePreview);
+}
+
+async function processRetry(candidate, sourceName, titlePreview) {
+  const restored = await retryRejected(candidate.url);
+  if (!restored) {
+    return { action: 'skip' };
+  }
+
+  console.log(`   🔄 Retry: ${titlePreview}...`);
+  return {
+    action: 'retry',
+    result: { title: candidate.title, url: candidate.url, source: sourceName, action: 'retry' },
+  };
+}
+
+async function processNewItem(candidate, sourceName, titlePreview) {
+  const inserted = await insertToQueue(candidate, sourceName);
+  if (!inserted) {
+    return { action: 'skip' };
+  }
+
+  console.log(`   ✅ Added: ${titlePreview}...`);
+  return {
+    action: 'new',
+    result: { title: candidate.title, url: candidate.url, source: sourceName, action: 'new' },
+  };
+}
+
+/**
+ * Load sources from database based on options
+ */
+async function loadSources(sourceSlug) {
   let query = supabase
     .from('kb_source')
     .select('slug, name, domain, tier, category, rss_feed, scraper_config')
@@ -124,124 +199,96 @@ export async function runDiscovery(options = {}) {
   if (sourceSlug) {
     query = query.eq('slug', sourceSlug);
   } else {
-    // Skip premium unless specified
     query = query.neq('tier', 'premium');
   }
 
   const { data: sources, error } = await query;
   if (error) throw error;
 
-  if (!sources || sources.length === 0) {
-    console.log('⚠️  No enabled sources found in database');
-    return { found: 0, new: 0, items: [] };
-  }
+  return sources || [];
+}
 
-  // Log premium sources info
+async function logSkippedPremiumSources(sourceSlug) {
+  if (sourceSlug) return;
+
   const { data: premiumSources } = await supabase
     .from('kb_source')
     .select('name')
     .eq('enabled', true)
     .eq('tier', 'premium');
 
-  if (premiumSources?.length > 0 && !sourceSlug) {
+  if (premiumSources?.length > 0) {
     console.log(`ℹ️  Skipping ${premiumSources.length} premium sources (require manual curation):`);
     console.log(`   ${premiumSources.map((s) => s.name).join(', ')}`);
   }
+}
 
-  let totalFound = 0;
-  let totalNew = 0;
-  let totalRetried = 0;
+export async function runDiscovery(options = {}) {
+  const { source: sourceSlug, limit = null, dryRun = false } = options;
+
+  console.log('🔍 Starting discovery...');
+  console.log(`   Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}`);
+  if (limit) console.log(`   Limit: ${limit}`);
+
+  const config = await loadDiscoveryConfig();
+  const sources = await loadSources(sourceSlug);
+
+  if (sources.length === 0) {
+    console.log('⚠️  No enabled sources found in database');
+    return { found: 0, new: 0, items: [] };
+  }
+
+  await logSkippedPremiumSources(sourceSlug);
+
+  const stats = { found: 0, new: 0, retried: 0 };
   const results = [];
 
   for (const src of sources) {
     console.log(`📡 Checking ${src.name}...`);
-    let candidates = [];
 
     try {
-      // 1. Try RSS first (fast and reliable)
-      if (src.rss_feed) {
-        try {
-          candidates = await fetchRSS(src, config);
-          console.log(`   Found ${candidates.length} potential publications from RSS`);
-        } catch (err) {
-          console.warn(`   ⚠️ RSS failed: ${err.message}`);
-        }
-      }
+      const candidates = await fetchCandidatesFromSource(src, config);
+      const sourceResults = await processCandidates(candidates, src.name, dryRun, limit, stats);
+      results.push(...sourceResults);
 
-      // 2. Fallback to Scraper (slower but works when RSS unavailable)
-      if (candidates.length === 0 && src.scraper_config) {
-        console.log(`   🌐 Using web scraper...`);
-        try {
-          candidates = await scrapeWebsite(src);
-          console.log(`   Found ${candidates.length} potential publications from scraper`);
-        } catch (err) {
-          console.warn(`   ⚠️ Scraper failed: ${err.message}`);
-        }
-      }
-
-      // 3. Process Candidates
-      for (const candidate of candidates) {
-        if (limit && totalNew >= limit) {
-          console.log(`   ⚠️  Reached limit of ${limit} new items, stopping discovery`);
-          break;
-        }
-
-        totalFound++;
-        const existsStatus = await checkExists(candidate.url);
-
-        if (existsStatus === 'skip') {
-          continue; // Already in pipeline or published
-        }
-
-        if (dryRun) {
-          console.log(
-            `   [DRY] Would ${existsStatus === 'retry' ? 'retry' : 'add'}: ${candidate.title.substring(0, 60)}...`,
-          );
-          totalNew++;
-          continue;
-        }
-
-        if (existsStatus === 'retry') {
-          // Retry previously rejected item
-          const restored = await retryRejected(candidate.url);
-          if (restored) {
-            console.log(`   🔄 Retry: ${candidate.title.substring(0, 60)}...`);
-            totalNew++;
-            totalRetried++;
-            results.push({
-              title: candidate.title,
-              url: candidate.url,
-              source: src.name,
-              action: 'retry',
-            });
-          }
-        } else {
-          // Add new item
-          const inserted = await insertToQueue(candidate, src.name);
-          if (inserted) {
-            console.log(`   ✅ Added: ${candidate.title.substring(0, 60)}...`);
-            totalNew++;
-            results.push({
-              title: candidate.title,
-              url: candidate.url,
-              source: src.name,
-              action: 'new',
-            });
-          }
-        }
+      if (limit && stats.new >= limit) {
+        console.log(`   ⚠️  Reached limit of ${limit} new items, stopping discovery`);
+        break;
       }
     } catch (err) {
       console.error(`❌ Failed source ${src.name}:`, err.message);
     }
   }
 
-  console.log(`\n📊 Summary:`);
-  console.log(`   Total found: ${totalFound}`);
-  console.log(`   New items: ${totalNew}`);
-  console.log(`   Retried: ${totalRetried}`);
-  console.log(`   Already exists: ${totalFound - totalNew}`);
+  logSummary(stats);
+  return { found: stats.found, new: stats.new, retried: stats.retried, items: results };
+}
 
-  return { found: totalFound, new: totalNew, retried: totalRetried, items: results };
+async function processCandidates(candidates, sourceName, dryRun, limit, stats) {
+  const results = [];
+
+  for (const candidate of candidates) {
+    if (limit && stats.new >= limit) break;
+
+    stats.found++;
+    const outcome = await processCandidate(candidate, sourceName, dryRun);
+
+    if (outcome.action === 'skip') continue;
+
+    stats.new++;
+    if (outcome.action === 'retry') stats.retried++;
+    if (outcome.result) results.push(outcome.result);
+  }
+
+  return results;
+}
+
+function logSummary(stats) {
+  console.log(`\n📊 Summary:`);
+  console.log(`   Total found: ${stats.found}`);
+  console.log(`   New items: ${stats.new}`);
+  console.log(`   Retried: ${stats.retried}`);
+  console.log(`   Already exists: ${stats.found - stats.new}`);
 }
 
 // --- Helpers ---
@@ -331,7 +378,7 @@ function extractDate(rssDateStr, url, sourceName) {
   // Try RSS date first
   if (rssDateStr) {
     const rssDate = new Date(rssDateStr);
-    if (!isNaN(rssDate.getTime())) {
+    if (!Number.isNaN(rssDate.getTime())) {
       return rssDate.toISOString();
     }
   }
@@ -341,8 +388,8 @@ function extractDate(rssDateStr, url, sourceName) {
     const arxivIdMatch = url.match(/arxiv\.org\/(?:abs|pdf)\/(\d{4})\.(\d+)/);
     if (arxivIdMatch) {
       const yymm = arxivIdMatch[1]; // e.g., "2511"
-      const year = 2000 + parseInt(yymm.substring(0, 2)); // "25" -> 2025
-      const month = parseInt(yymm.substring(2, 4)); // "11" -> 11
+      const year = 2000 + Number.parseInt(yymm.substring(0, 2), 10); // "25" -> 2025
+      const month = Number.parseInt(yymm.substring(2, 4), 10); // "11" -> 11
 
       if (year >= 2020 && year <= 2030 && month >= 1 && month <= 12) {
         return new Date(year, month - 1, 1).toISOString();
