@@ -95,7 +95,7 @@ queued → processing → enriched → approved → published
 
 ### 4.1 High-Level Diagram
 
-See [`/docs/architecture/high-level-architecture.png`](/docs/architecture/high-level-architecture.png)
+See [`docs/architecture/overview.md`](docs/architecture/overview.md) for architecture diagrams (Mermaid).
 
 ### 4.2 Components
 
