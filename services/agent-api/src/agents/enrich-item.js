@@ -3,6 +3,12 @@
  *
  * Runs: fetch → filter → summarize → tag → thumbnail (optional)
  * Used by both manual submissions and batch processing
+ *
+ * NOTE (SonarCoverageExclusion):
+ * This orchestration file is excluded from Sonar coverage.
+ * It coordinates IO-heavy pipeline steps (DB, LLM APIs, storage).
+ * Individual step logic is tested via E2E flows.
+ * See docs/quality/sonar-exclusions.md for rationale.
  */
 
 import process from 'node:process';

@@ -406,8 +406,13 @@ SonarCloud runs on every push and PR to enforce code quality.
 
 - Code smells and bugs
 - Security vulnerabilities
-- Test coverage (target: ≥80%)
+- Test coverage (target: ≥80% on new code)
 - Code duplication
+
+**Coverage Exclusions:**
+
+Some orchestration/infrastructure code is excluded from coverage requirements.
+For the full list and rationale, see [docs/quality/sonar-exclusions.md](docs/quality/sonar-exclusions.md).
 
 **Setup (one-time):**
 

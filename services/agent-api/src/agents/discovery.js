@@ -1,3 +1,9 @@
+// NOTE (SonarCoverageExclusion):
+// This orchestration file is excluded from Sonar coverage.
+// It coordinates RSS fetching, parsing, and queue insertion.
+// Pure logic is tested in separate modules.
+// See docs/quality/sonar-exclusions.md for rationale.
+
 import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 import { scrapeWebsite } from '../lib/scrapers.js';
