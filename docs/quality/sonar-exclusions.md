@@ -18,6 +18,7 @@ This document explains which files are excluded from coverage requirements in So
 | ---------------------------------------------- | -------------------------------------------------------------------------------------- | ------------- | ---------- |
 | `services/agent-api/src/agents/discovery.js`   | CLI/orchestration wrapper; pure logic extracted to separate modules                    | 2025-11-30    | 2026-03-31 |
 | `services/agent-api/src/agents/enrich-item.js` | IO-heavy pipeline orchestration (fetch→filter→summarize→tag→thumbnail); tested via E2E | 2025-11-30    | 2026-03-31 |
+| `**/lib/content-fetcher.js`                    | Shared fetch/retry/HTML-parsing infrastructure; IO-heavy, no business logic            | 2025-11-30    | 2026-03-31 |
 | `**/scripts/**`                                | One-off backfill/migration scripts; not part of runtime application                    | 2025-11-30    | 2026-03-31 |
 | `**/cli.js`                                    | CLI entry point; argument parsing and command routing only                             | 2025-11-30    | 2026-03-31 |
 | `**/*.config.{js,ts}`                          | Tool configuration (Vitest, Tailwind, ESLint, etc.)                                    | 2025-11-30    | 2026-03-31 |
@@ -56,3 +57,4 @@ Do not configure exclusions in the SonarCloud UI—keep the single source of tru
 | ---------- | ------------------------------------------------------------------- | -------------- |
 | 2025-11-30 | Initial documentation of coverage exclusions                        | Rick te Molder |
 | 2025-11-30 | Add pages/** and features/** - business logic extracted to src/lib/ | Rick te Molder |
+| 2025-11-30 | Add lib/content-fetcher.js - extracted from enrich-item.js          | Rick te Molder |
