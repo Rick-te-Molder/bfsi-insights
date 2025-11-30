@@ -345,7 +345,7 @@ function parseRSS(xml, source, config) {
     const url = (linkMatch[1] || linkMatch[2] || '').trim();
     const description = descMatch ? descMatch[1].trim().substring(0, 500) : '';
 
-    if (!url || !url.startsWith('http')) continue;
+    if (!url?.startsWith('http')) continue;
 
     // BFSI Relevance Check (using database-driven config)
     const text = (title + ' ' + description).toLowerCase();
