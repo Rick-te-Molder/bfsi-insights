@@ -68,7 +68,7 @@ export default function initPublicationFilters() {
         el.dataset.content_type || '',
         el.dataset.geography || '',
       ]
-        .filter((v): v is string => Boolean(v))
+        .filter(Boolean)
         .join(' '),
     };
 

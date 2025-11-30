@@ -23,7 +23,7 @@ function extractCardData(li: HTMLElement) {
     link: (li.querySelector('a') as HTMLAnchorElement)?.href || '#',
     slug: li.dataset.slug || '',
     thumb: li.dataset.thumbnail || '',
-    img: li.querySelector('img') as HTMLImageElement | null,
+    img: li.querySelector<HTMLImageElement>('img'),
     tags: [
       li.dataset.role || '',
       li.dataset.industry || '',
