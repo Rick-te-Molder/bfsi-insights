@@ -297,6 +297,11 @@ node services/agent-api/src/cli.js tag --limit=5          # Tag only
 node services/agent-api/src/cli.js thumbnail --limit=5    # Thumbnails only
 
 node services/agent-api/src/cli.js process-queue          # Process manual submissions
+
+# Evals
+node services/agent-api/src/cli.js eval --agent=relevance-filter --type=golden
+node services/agent-api/src/cli.js eval --agent=content-summarizer --type=judge
+node services/agent-api/src/cli.js eval-history --agent=relevance-filter
 ```
 
 ### 9.3 Utility Commands

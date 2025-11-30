@@ -20,6 +20,7 @@ import { runSummarizer } from './agents/summarize.js';
 import { runTagger } from './agents/tag.js';
 import { runThumbnailer } from './agents/thumbnail.js';
 import { processQueue } from './agents/enrich-item.js';
+import { runGoldenEval, runLLMJudgeEval, getEvalHistory } from './lib/evals.js';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -345,6 +346,12 @@ async function main() {
       case 'queue':
         await runProcessQueueCmd(options);
         break;
+      case 'eval':
+        await runEvalCmd(options);
+        break;
+      case 'eval-history':
+        await runEvalHistoryCmd(options);
+        break;
       default:
         console.error(`Unknown command: ${command}`);
         process.exit(1);
@@ -353,6 +360,83 @@ async function main() {
     console.error(`\n❌ Fatal error: ${err.message}`);
     process.exit(1);
   }
+}
+
+// Run evals on an agent
+async function runEvalCmd(options) {
+  const agentName = options.agent;
+  const evalType = options.type || 'golden';
+
+  if (!agentName) {
+    console.log('Usage: node cli.js eval --agent=<name> [--type=golden|judge] [--limit=N]');
+    console.log('Agents: relevance-filter, content-summarizer, taxonomy-tagger');
+    process.exit(1);
+  }
+
+  console.log(`🧪 Running ${evalType} eval for ${agentName}\n`);
+
+  // Get the agent function
+  const agentFns = {
+    'relevance-filter': async (input) => {
+      const result = await runRelevanceFilter({ id: 'eval', payload: input });
+      return { relevant: result.relevant, reason: result.reason };
+    },
+    'content-summarizer': async (input) => {
+      const result = await runSummarizer({ id: 'eval', payload: input });
+      return { summary: result.summary, published_at: result.published_at };
+    },
+    'taxonomy-tagger': async (input) => {
+      const result = await runTagger({ id: 'eval', payload: input });
+      return { industry_code: result.industry_code, topic_code: result.topic_code };
+    },
+  };
+
+  const agentFn = agentFns[agentName];
+  if (!agentFn) {
+    console.error(`Unknown agent: ${agentName}`);
+    process.exit(1);
+  }
+
+  if (evalType === 'golden') {
+    await runGoldenEval(agentName, agentFn, { limit: options.limit || 100 });
+  } else if (evalType === 'judge') {
+    // For judge eval, we need sample inputs
+    const { data: samples } = await supabase
+      .from('ingestion_queue')
+      .select('payload')
+      .eq('status', 'enriched')
+      .limit(options.limit || 10);
+
+    const inputs = samples?.map((s) => s.payload) || [];
+    await runLLMJudgeEval(agentName, agentFn, inputs);
+  }
+}
+
+// Show eval history
+async function runEvalHistoryCmd(options) {
+  const agentName = options.agent;
+
+  if (!agentName) {
+    console.log('Usage: node cli.js eval-history --agent=<name>');
+    process.exit(1);
+  }
+
+  const history = await getEvalHistory(agentName, options.limit || 10);
+
+  console.log(`\n📊 Eval History for ${agentName}\n`);
+
+  if (!history?.length) {
+    console.log('No eval runs found');
+    return;
+  }
+
+  history.forEach((run) => {
+    const date = new Date(run.started_at).toLocaleDateString();
+    const score = run.score ? `${(run.score * 100).toFixed(1)}%` : 'N/A';
+    console.log(
+      `  ${date} | ${run.eval_type.padEnd(10)} | ${run.prompt_version.padEnd(20)} | Score: ${score}`,
+    );
+  });
 }
 
 main();
