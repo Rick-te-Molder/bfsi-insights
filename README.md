@@ -188,20 +188,46 @@ node services/agent-api/src/cli.js thumbnail --limit=5
 
 ### Taxonomy System
 
-Publications are tagged with a **structured taxonomy** stored in Supabase:
+Publications are tagged using a **comprehensive taxonomy** stored in Supabase.
 
-| Table           | Examples                                                               |
-| --------------- | ---------------------------------------------------------------------- |
-| `bfsi_industry` | banking, retail-banking, payments, insurance, wealth-management        |
-| `bfsi_topic`    | strategy-and-management, technology-and-data, regulatory-and-standards |
-| `bfsi_role`     | executive, professional, researcher                                    |
+#### Guardrail Taxonomies (curated, fixed lists)
 
-**How It Works:**
+LLM picks from these pre-defined lists. **Do not auto-create entries.**
 
-1. AI agents load taxonomy from database (not hardcoded)
-2. AI selects appropriate codes from available options
-3. Junction tables store many-to-many relationships
-4. View `kb_publication_pretty` flattens for frontend
+| Table            | Rows | Purpose                                                |
+| ---------------- | ---- | ------------------------------------------------------ |
+| `bfsi_industry`  | 53   | Banking sectors (banking, insurance, payments, etc.)   |
+| `bfsi_topic`     | 5    | Content categories (strategy, technology, regulatory)  |
+| `bfsi_geography` | —    | Countries/regions (global, eu, uk, us, etc.)           |
+| `ag_use_case`    | 16   | AI use cases (customer-service, fraud-detection, etc.) |
+| `ag_capability`  | 24   | AI capabilities (nlp, computer-vision, etc.)           |
+| `regulator`      | 18   | Regulatory bodies (ecb, fca, sec, etc.)                |
+| `regulation`     | 18   | Regulations/laws (gdpr, psd2, mifid, etc.)             |
+| `obligation`     | —    | Compliance requirements (expert-curated)               |
+
+#### Expandable Taxonomies (grow from publications)
+
+LLM extracts names; new entries can be created.
+
+| Table               | Rows | Purpose                               |
+| ------------------- | ---- | ------------------------------------- |
+| `bfsi_organization` | 8    | Banks, insurers mentioned in articles |
+| `ag_vendor`         | 81   | AI/tech vendors mentioned in articles |
+
+#### How It Works
+
+1. **Tag agent** loads all taxonomies from database (not hardcoded)
+2. LLM classifies content and picks codes from guardrail lists
+3. LLM extracts entity names for expandable taxonomies
+4. Junction tables store many-to-many relationships
+5. View `kb_publication_pretty` flattens for frontend display
+
+#### Why Guardrails for Regulations?
+
+- **Accuracy is critical** — regulatory errors have compliance consequences
+- **Structure matters** — regulator → regulation → obligation hierarchy
+- **Expert curation** — should be reviewed by compliance professionals
+- **Liability** — auto-generated regulatory info could mislead users
 
 ### Thumbnail Generation
 

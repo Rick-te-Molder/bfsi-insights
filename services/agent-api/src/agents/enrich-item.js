@@ -202,14 +202,26 @@ export async function enrichItem(queueItem, options = {}) {
       })
       .eq('id', queueItem.id);
 
-    // Step 4: Tag
+    // Step 4: Tag (comprehensive taxonomy classification)
     console.log('   🏷️ Applying tags...');
     const tagResult = await runTagger({ id: queueItem.id, payload });
 
     payload = {
       ...payload,
+      // Core taxonomy (guardrails)
       industry_codes: [tagResult.industry_code],
       topic_codes: [tagResult.topic_code],
+      geography_codes: tagResult.geography_codes || [],
+      // AI/Agentic taxonomy (guardrails)
+      use_case_codes: tagResult.use_case_codes || [],
+      capability_codes: tagResult.capability_codes || [],
+      // Regulatory taxonomy (guardrails)
+      regulator_codes: tagResult.regulator_codes || [],
+      regulation_codes: tagResult.regulation_codes || [],
+      // Expandable entities (names for lookup/creation)
+      organization_names: tagResult.organization_names || [],
+      vendor_names: tagResult.vendor_names || [],
+      // Metadata
       tagging_metadata: {
         confidence: tagResult.confidence,
         reasoning: tagResult.reasoning,
