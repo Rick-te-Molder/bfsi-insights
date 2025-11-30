@@ -316,7 +316,7 @@ The project follows a layered testing approach:
 
 | Level           | Tool                        | Status    | Coverage                          |
 | --------------- | --------------------------- | --------- | --------------------------------- |
-| **Unit**        | Vitest                      | ✅ Active | Utilities, helpers (33 tests)     |
+| **Unit**        | Vitest                      | ✅ Active | Utilities, helpers (32 tests)     |
 | **Integration** | Lighthouse CI, Link Checker | ✅ Active | Performance, accessibility, links |
 | **E2E**         | Playwright                  | ✅ Active | User journeys (28 tests)          |
 
