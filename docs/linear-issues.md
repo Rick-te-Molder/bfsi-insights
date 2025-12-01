@@ -142,6 +142,37 @@ Expand the discovery agent to crawl more sources beyond RSS feeds, including sit
 
 ---
 
+### KB-XXX: Enable regulator/regulation filtering
+
+**Type:** Feature  
+**Priority:** Medium  
+**Labels:** database, taxonomy, frontend
+
+**Description:**
+The tag agent extracts `regulator_codes` and `regulation_codes` but these are not persisted to the publication or exposed for filtering. Users should be able to filter publications by regulatory body and specific regulations.
+
+**Current State:**
+
+- `tag.js` extracts codes from `regulator` and `regulation` tables ✅
+- Codes stored in queue payload during enrichment ✅
+- `approve_from_queue` does NOT insert regulator/regulation relationships ❌
+- No junction tables for publication ↔ regulator/regulation ❌
+- No UI filtering available ❌
+
+**Acceptance Criteria:**
+
+- [ ] Create `kb_publication_regulator` junction table
+- [ ] Create `kb_publication_regulation` junction table
+- [ ] Update `approve_from_queue` function to insert regulator/regulation relationships
+- [ ] Update `kb_publication_pretty` view to include `regulators` and `regulations` arrays
+- [ ] Add regulator/regulation to Publication interface
+- [ ] Add filter UI for regulator and regulation
+- [ ] Add regulator/regulation tags to PublicationCard
+
+**Reference:** Tag agent schema, approve function analysis
+
+---
+
 ## Embedding & RAG Project
 
 See `docs/linear-project-embeddings.md` for the full project plan.
