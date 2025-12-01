@@ -11,7 +11,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: SUPABASE_URL
+      - key: PUBLIC_SUPABASE_URL
         sync: false # Set manually in Render dashboard
       - key: SUPABASE_SERVICE_KEY
         sync: false

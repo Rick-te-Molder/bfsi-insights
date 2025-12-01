@@ -22,7 +22,7 @@ Hosted agent service for content processing pipeline.
 
    | Variable               | Description                                            |
    | ---------------------- | ------------------------------------------------------ |
-   | `SUPABASE_URL`         | Your Supabase project URL                              |
+   | `PUBLIC_SUPABASE_URL`  | Your Supabase project URL                              |
    | `SUPABASE_SERVICE_KEY` | Service role key (not anon!)                           |
    | `OPENAI_API_KEY`       | OpenAI API key                                         |
    | `AGENT_API_KEY`        | Secret key for API auth (auto-generated or create one) |
@@ -96,7 +96,7 @@ npm run dev
 
 | Variable               | Required  | Description                          |
 | ---------------------- | --------- | ------------------------------------ |
-| `SUPABASE_URL`         | ✅        | Supabase project URL                 |
+| `PUBLIC_SUPABASE_URL`  | ✅        | Supabase project URL                 |
 | `SUPABASE_SERVICE_KEY` | ✅        | Service role key for backend access  |
 | `OPENAI_API_KEY`       | ✅        | OpenAI API key for agents            |
 | `AGENT_API_KEY`        | ✅ (prod) | API authentication key               |
