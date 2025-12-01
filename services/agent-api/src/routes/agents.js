@@ -5,14 +5,11 @@ import { runRelevanceFilter } from '../agents/filter.js';
 import { runSummarizer } from '../agents/summarize.js';
 import { runTagger } from '../agents/tag.js';
 import { runThumbnailer } from '../agents/thumbnail.js';
-import { runDiscovery } from '../agents/discovery.js';
+import { runDiscovery } from '../agents/discover.js';
 import { processQueue, enrichItem } from '../agents/enrich-item.js';
 
 const router = express.Router();
-const supabase = createClient(
-  process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-);
+const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 // POST /api/agents/run/filter
 router.post('/run/filter', async (req, res) => {

@@ -13,10 +13,7 @@ export { delay } from '../lib/content-fetcher.js';
  * Create Supabase client with service key
  */
 export function createSupabaseClient() {
-  return createClient(
-    process.env.SUPABASE_URL || process.env.PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY,
-  );
+  return createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 }
 
 /**

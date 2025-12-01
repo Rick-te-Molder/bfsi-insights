@@ -138,7 +138,7 @@ See [`docs/architecture/overview.md`](docs/architecture/overview.md) for archite
 
 | Agent          | Purpose                                               |
 | -------------- | ----------------------------------------------------- |
-| `discovery.js` | Scrape RSS feeds, find new URLs                       |
+| `discover.js`  | Scrape RSS feeds, find new URLs                       |
 | `filter.js`    | Check BFSI relevance (GPT-4o-mini)                    |
 | `summarize.js` | Generate summaries, extract date/author (GPT-4o-mini) |
 | `tag.js`       | Classify with taxonomies (GPT-4o-mini)                |

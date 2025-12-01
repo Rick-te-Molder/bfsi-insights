@@ -19,10 +19,7 @@ import { runTagger } from './tag.js';
 import { runThumbnailer } from './thumbnail.js';
 import { fetchContent } from '../lib/content-fetcher.js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-);
+const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 // --- Pipeline Step Functions ---
 

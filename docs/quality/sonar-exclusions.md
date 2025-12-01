@@ -16,7 +16,7 @@ This document explains which files are excluded from coverage requirements in So
 
 | Pattern / File                                 | Reason                                                                                 | Decision Date | Review By  |
 | ---------------------------------------------- | -------------------------------------------------------------------------------------- | ------------- | ---------- |
-| `services/agent-api/src/agents/discovery.js`   | CLI/orchestration wrapper; pure logic extracted to separate modules                    | 2025-11-30    | 2026-03-31 |
+| `services/agent-api/src/agents/discover.js`    | CLI/orchestration wrapper; pure logic extracted to separate modules                    | 2025-11-30    | 2026-03-31 |
 | `services/agent-api/src/agents/enrich-item.js` | IO-heavy pipeline orchestration (fetch→filter→summarize→tag→thumbnail); tested via E2E | 2025-11-30    | 2026-03-31 |
 | `**/lib/content-fetcher.js`                    | Shared fetch/retry/HTML-parsing infrastructure; IO-heavy, no business logic            | 2025-11-30    | 2026-03-31 |
 | `**/scripts/**`                                | One-off backfill/migration scripts; not part of runtime application                    | 2025-11-30    | 2026-03-31 |
