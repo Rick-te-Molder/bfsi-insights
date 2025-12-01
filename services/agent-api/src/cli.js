@@ -14,7 +14,7 @@
 import process from 'node:process';
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
-import { runDiscovery } from './agents/discovery.js';
+import { runDiscovery } from './agents/discover.js';
 import { runRelevanceFilter } from './agents/filter.js';
 import { runSummarizer } from './agents/summarize.js';
 import { runTagger } from './agents/tag.js';
@@ -22,10 +22,7 @@ import { runThumbnailer } from './agents/thumbnail.js';
 import { processQueue } from './agents/enrich-item.js';
 import { runGoldenEval, runLLMJudgeEval, getEvalHistory } from './lib/evals.js';
 
-const supabase = createClient(
-  process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-);
+const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 // Parse CLI arguments
 function parseArgs() {

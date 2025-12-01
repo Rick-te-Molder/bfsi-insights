@@ -3,10 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
 // Shared clients - Supabase created immediately, OpenAI lazily
-const supabase = createClient(
-  process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-);
+const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 let _openai = null;
 
 function getOpenAI() {
