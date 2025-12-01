@@ -34,9 +34,14 @@ const industries = item.industries?.length ? item.industries : asArr(item.indust
 const content_type = asArr(item.content_type);
 const role = item.role || '';
 const geography = item.geography || '';
+const regulators = item.regulators || [];
+const regulations = item.regulations || [];
 
 // Build tags array with type info for color coding
-type TagInfo = { label: string; type: 'industry' | 'topic' | 'geography' | 'role' | 'content' };
+type TagInfo = {
+  label: string;
+  type: 'industry' | 'topic' | 'geography' | 'role' | 'content' | 'regulator' | 'regulation';
+};
 const allTags: TagInfo[] = [];
 
 // Add industry tags (primary importance)
@@ -49,9 +54,13 @@ if (geography) allTags.push({ label: geography, type: 'geography' });
 if (role) allTags.push({ label: role, type: 'role' });
 // Add content type
 content_type.filter(Boolean).forEach((ct: string) => allTags.push({ label: ct, type: 'content' }));
+// Add regulators
+regulators.filter(Boolean).forEach((r: string) => allTags.push({ label: r, type: 'regulator' }));
+// Add regulations
+regulations.filter(Boolean).forEach((r: string) => allTags.push({ label: r, type: 'regulation' }));
 
-// Show max 4 tags, with overflow indicator
-const MAX_VISIBLE_TAGS = 4;
+// Show max 5 tags, with overflow indicator
+const MAX_VISIBLE_TAGS = 5;
 const visibleTags = allTags.slice(0, MAX_VISIBLE_TAGS);
 const overflowCount = Math.max(0, allTags.length - MAX_VISIBLE_TAGS);
 
@@ -94,6 +103,8 @@ const candidates = [...itemThumbs];
   data-topic={topics[0] || ''}
   data-content_type={content_type[0] || ''}
   data-geography={geography}
+  data-regulator={regulators.join(',') || ''}
+  data-regulation={regulations.join(',') || ''}
   data-authors={Array.isArray(item.authors) ? item.authors.join(', ') : item.authors || ''}
   data-slug={item.slug}
   data-url={item.url}
@@ -214,21 +225,20 @@ const candidates = [...itemThumbs];
               class:list={[
                 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
                 {
-                  // Industry: Blue/Cyan
                   'bg-cyan-500/10 text-cyan-300 ring-1 ring-inset ring-cyan-500/20':
                     tag.type === 'industry',
-                  // Topic: Purple/Violet
                   'bg-violet-500/10 text-violet-300 ring-1 ring-inset ring-violet-500/20':
                     tag.type === 'topic',
-                  // Geography: Green/Teal
                   'bg-teal-500/10 text-teal-300 ring-1 ring-inset ring-teal-500/20':
                     tag.type === 'geography',
-                  // Role/Persona: Orange/Amber
                   'bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/20':
                     tag.type === 'role',
-                  // Content Type: Gray/Neutral
                   'bg-neutral-500/10 text-neutral-300 ring-1 ring-inset ring-neutral-500/20':
                     tag.type === 'content',
+                  'bg-rose-500/10 text-rose-300 ring-1 ring-inset ring-rose-500/20':
+                    tag.type === 'regulator',
+                  'bg-orange-500/10 text-orange-300 ring-1 ring-inset ring-orange-500/20':
+                    tag.type === 'regulation',
                 },
               ]}
             >
@@ -280,6 +290,26 @@ const candidates = [...itemThumbs];
                     stroke-linejoin="round"
                     stroke-width="2"
                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+              )}
+              {tag.type === 'regulator' && (
+                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"
+                  />
+                </svg>
+              )}
+              {tag.type === 'regulation' && (
+                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
                   />
                 </svg>
               )}

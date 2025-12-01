@@ -40,6 +40,8 @@ export interface Publication {
   industries?: string[];
   topics?: string[];
   processes?: string[];
+  regulators?: string[];
+  regulations?: string[];
 
   use_cases: string | null;
   agentic_capabilities: string | null;
