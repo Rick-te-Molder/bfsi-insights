@@ -395,7 +395,16 @@ const expandItemThumb = (t: string | undefined) => {
           }
         </div>
 
-        <div class="mt-4 flex items-center justify-between">
+        <!-- Live result count -->
+        <div
+          id="m-result-count"
+          class="mt-4 py-2 px-3 rounded-md bg-neutral-800/50 text-sm text-neutral-300 text-center"
+          aria-live="polite"
+        >
+          <span id="m-result-number" class="font-semibold text-sky-300">0</span> publications match
+        </div>
+
+        <div class="mt-3 flex items-center justify-between">
           <button
             id="m-clear"
             class="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
@@ -404,10 +413,10 @@ const expandItemThumb = (t: string | undefined) => {
           </button>
 
           <button
-            id="m-apply"
+            id="m-done"
             class="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
           >
-            Apply
+            Done
           </button>
         </div>
       </div>

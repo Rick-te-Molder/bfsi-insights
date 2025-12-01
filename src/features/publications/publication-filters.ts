@@ -509,11 +509,12 @@ export default function initPublicationFilters() {
     }
   });
 
-  /* Mobile Sheet */
+  /* Mobile Sheet with instant apply */
   const openBtn = document.getElementById('open-sheet');
   const sheet = document.getElementById('filter-sheet');
   const backdrop = document.getElementById('sheet-backdrop');
   const closeBtn = document.getElementById('close-sheet');
+  const mobileResultNumber = document.getElementById('m-result-number');
 
   if (openBtn && sheet) {
     const desktop = {
@@ -534,14 +535,14 @@ export default function initPublicationFilters() {
       geography: document.getElementById('m-f-geography') as HTMLSelectElement | null,
     } as const;
 
-    const getDesktopVals = (): FilterValues => {
+    const getMobileVals = (): FilterValues => {
       return {
-        role: desktop.role?.value || '',
-        industry: desktop.industry?.value || '',
-        topic: desktop.topic?.value || '',
-        content_type: desktop.content_type?.value || '',
-        geography: desktop.geography?.value || '',
-        q: desktop.q?.value?.trim() || '',
+        role: mobile.role?.value || '',
+        industry: mobile.industry?.value || '',
+        topic: mobile.topic?.value || '',
+        content_type: mobile.content_type?.value || '',
+        geography: mobile.geography?.value || '',
+        q: mobile.q?.value?.trim() || mobileSearchEl?.value?.trim() || '',
       };
     };
 
@@ -555,28 +556,43 @@ export default function initPublicationFilters() {
     };
 
     const syncToMobile = () => {
-      const v = getDesktopVals();
-      // Also get search from sticky mobile input if desktop is empty
-      const searchVal = v.q || mobileSearchEl?.value?.trim() || '';
-      if (mobile.role) mobile.role.value = v.role;
-      if (mobile.industry) mobile.industry.value = v.industry;
-      if (mobile.topic) mobile.topic.value = v.topic;
-      if (mobile.content_type) mobile.content_type.value = v.content_type;
-      if (mobile.geography) mobile.geography.value = v.geography;
-      if (mobile.q) mobile.q.value = searchVal;
+      const v = getVals();
+      if (mobile.role) mobile.role.value = v.role || '';
+      if (mobile.industry) mobile.industry.value = v.industry || '';
+      if (mobile.topic) mobile.topic.value = v.topic || '';
+      if (mobile.content_type) mobile.content_type.value = v.content_type || '';
+      if (mobile.geography) mobile.geography.value = v.geography || '';
+      if (mobile.q) mobile.q.value = v.q || '';
     };
 
-    const applyFromDesktop = () => {
-      ['role', 'industry', 'topic', 'content_type', 'geography'].forEach((k) => {
-        const el = (desktop as any)[k] as HTMLSelectElement | null;
-        if (el) el.dispatchEvent(new Event('change', { bubbles: true }));
-      });
-      if (desktop.q) desktop.q.dispatchEvent(new Event('input', { bubbles: true }));
-      renderChipsSummary(getDesktopVals());
+    // Update live result count in mobile sheet
+    const updateMobileResultCount = (count: number) => {
+      if (mobileResultNumber) {
+        mobileResultNumber.textContent = String(count);
+      }
+    };
+
+    // Apply filters instantly from mobile sheet
+    const applyFromMobile = () => {
+      const vals = getMobileVals();
+      setDesktopVals(vals);
+      setVals(vals);
+      currentPage = 1;
+      const visibleCount = apply(vals, true);
+      updateMobileResultCount(visibleCount);
+      renderChipsSummary(vals);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(vals));
+      } catch {}
     };
 
     const openSheet = () => {
       syncToMobile();
+      // Show current result count
+      const currentCount = Array.from(list.children).filter(
+        (el) => !(el as HTMLElement).classList.contains('hidden'),
+      ).length;
+      updateMobileResultCount(currentCount);
       sheet.classList.remove('hidden');
       sheet.setAttribute('aria-hidden', 'false');
       document.body.style.overflow = 'hidden';
@@ -600,37 +616,30 @@ export default function initPublicationFilters() {
       }
     });
 
+    // Instant apply on mobile filter changes
+    Object.values(mobile).forEach((el) => {
+      if (el instanceof HTMLSelectElement) {
+        el.addEventListener('change', applyFromMobile);
+      } else if (el instanceof HTMLInputElement) {
+        el.addEventListener('input', () => debounced(applyFromMobile, false));
+      }
+    });
+
+    // Clear all - instant apply, stay in sheet
     document.getElementById('m-clear')?.addEventListener('click', () => {
-      const emptyVals: FilterValues = {
-        role: '',
-        industry: '',
-        topic: '',
-        content_type: '',
-        geography: '',
-        q: '',
-      };
-      setDesktopVals(emptyVals);
-      currentPage = 1;
-      applyFromDesktop();
-      closeSheet();
+      if (mobile.role) mobile.role.value = '';
+      if (mobile.industry) mobile.industry.value = '';
+      if (mobile.topic) mobile.topic.value = '';
+      if (mobile.content_type) mobile.content_type.value = '';
+      if (mobile.geography) mobile.geography.value = '';
+      if (mobile.q) mobile.q.value = '';
+      applyFromMobile();
     });
 
-    document.getElementById('m-apply')?.addEventListener('click', () => {
-      const vals: FilterValues = {
-        role: mobile.role?.value || '',
-        industry: mobile.industry?.value || '',
-        topic: mobile.topic?.value || '',
-        content_type: mobile.content_type?.value || '',
-        geography: mobile.geography?.value || '',
-        q: mobile.q?.value?.trim() || '',
-      };
-      setDesktopVals(vals);
-      currentPage = 1;
-      applyFromDesktop();
-      closeSheet();
-    });
+    // Done button - just closes sheet (filters already applied)
+    document.getElementById('m-done')?.addEventListener('click', closeSheet);
 
-    renderChipsSummary(getDesktopVals());
+    renderChipsSummary(getVals());
   }
 
   const toggleAdvancedBtn = document.getElementById('toggle-advanced-filters');
