@@ -228,7 +228,14 @@ export default function initPublicationFilters() {
 
       const next = new Set<number>();
       allowed.forEach((idx) => {
-        if (data[idx][key] === value) next.add(idx);
+        const itemValue = data[idx][key];
+        // Handle both single values and comma-separated arrays (from data attributes)
+        if (typeof itemValue === 'string') {
+          // Check if it's an exact match or if the value is in a comma-separated list
+          if (itemValue === value || itemValue.split(',').includes(value)) {
+            next.add(idx);
+          }
+        }
       });
       allowed = next;
     }
