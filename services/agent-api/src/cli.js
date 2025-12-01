@@ -22,7 +22,10 @@ import { runThumbnailer } from './agents/thumbnail.js';
 import { processQueue } from './agents/enrich-item.js';
 import { runGoldenEval, runLLMJudgeEval, getEvalHistory } from './lib/evals.js';
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+const supabase = createClient(
+  process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY,
+);
 
 // Parse CLI arguments
 function parseArgs() {

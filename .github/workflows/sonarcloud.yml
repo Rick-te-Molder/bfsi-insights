@@ -32,12 +32,25 @@ jobs:
         run: npm run test -- --coverage
         continue-on-error: true # Don't fail if some tests fail
 
+      - name: Install agent-api dependencies
+        run: npm ci
+        working-directory: services/agent-api
+
+      - name: Run agent-api tests with coverage
+        run: npm run test:coverage
+        working-directory: services/agent-api
+        continue-on-error: true
+
       - name: Debug coverage output
         run: |
-          echo "=== Coverage files ==="
+          echo "=== Main coverage files ==="
           ls -la coverage/ || echo "No coverage folder"
-          echo "=== First 20 lines of lcov.info ==="
-          head -20 coverage/lcov.info || echo "No lcov.info"
+          echo "=== Agent-api coverage files ==="
+          ls -la services/agent-api/coverage/ || echo "No agent-api coverage folder"
+          echo "=== First 20 lines of main lcov.info ==="
+          head -20 coverage/lcov.info || echo "No main lcov.info"
+          echo "=== First 20 lines of agent-api lcov.info ==="
+          head -20 services/agent-api/coverage/lcov.info || echo "No agent-api lcov.info"
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5

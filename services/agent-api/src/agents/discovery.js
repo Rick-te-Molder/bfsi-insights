@@ -8,7 +8,10 @@ import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 import { scrapeWebsite } from '../lib/scrapers.js';
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+const supabase = createClient(
+  process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY,
+);
 
 // Cache for discovery config (loaded from database)
 let discoveryConfig = null;

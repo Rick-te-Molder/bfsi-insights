@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: bfsi-agent-api
+    runtime: node
+    region: frankfurt # EU region
+    plan: starter # $7/month, no sleep
+    rootDir: services/agent-api
+    buildCommand: npm install && npx playwright install chromium --with-deps
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PUBLIC_SUPABASE_URL
+        sync: false # Set manually in Render dashboard
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AGENT_API_KEY
+        generateValue: true # Auto-generate a secure API key

@@ -5,7 +5,10 @@ import { zodResponseFormat } from 'openai/helpers/zod';
 import { createClient } from '@supabase/supabase-js';
 
 const runner = new AgentRunner('taxonomy-tagger');
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+const supabase = createClient(
+  process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY,
+);
 
 /**
  * Tagging Schema - Comprehensive taxonomy classification

@@ -485,16 +485,25 @@ For detailed security policies and vulnerability reporting, see [SECURITY.md](SE
 
 ## 13. Environment Variables
 
+### Frontend (.env)
+
 ```bash
-# Supabase
 PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=eyJ...
+```
+
+### Agent API (services/agent-api/.env)
+
+```bash
+PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_SERVICE_KEY=eyJ...
-
-# OpenAI
 OPENAI_API_KEY=sk-...
+AGENT_API_KEY=your-secret-api-key  # Required in production
+```
 
-# Cloudflare (optional, for deploy hooks)
+### Cloudflare (optional)
+
+```bash
 CLOUDFLARE_DEPLOY_HOOK=https://api.cloudflare.com/...
 ```
 
@@ -502,15 +511,28 @@ CLOUDFLARE_DEPLOY_HOOK=https://api.cloudflare.com/...
 
 ## 14. Deployment
 
-### 14.1 Cloudflare Pages
+### 14.1 Cloudflare Pages (Frontend)
 
 Static deployment with global CDN. Auto-deploys on push to `main`.
 
-### 14.2 Deploy Hooks
+### 14.2 Render (Agent API)
+
+The Agent API is hosted on [Render](https://render.com) as a Node.js web service.
+
+**Setup:**
+
+1. Go to Render → New → Web Service
+2. Connect repo, set root directory to `services/agent-api`
+3. Configure environment variables (see `services/agent-api/.env.example`)
+4. Deploy with Starter plan ($7/mo)
+
+See [`services/agent-api/README.md`](services/agent-api/README.md) for full deployment docs.
+
+### 14.3 Deploy Hooks
 
 Admin UI can trigger rebuilds via Cloudflare Deploy Hooks.
 
-### 14.3 GitHub Actions
+### 14.4 GitHub Actions
 
 - **Nightly ingestion**: Discovers and enriches new content
 - **Link checking**: Validates external links
@@ -523,11 +545,11 @@ Admin UI can trigger rebuilds via Cloudflare Deploy Hooks.
 | Layer          | Technology                                        |
 | -------------- | ------------------------------------------------- |
 | **Frontend**   | Astro 5, TailwindCSS, TypeScript                  |
-| **Agents**     | Node.js (Express), OpenAI GPT-4o-mini             |
+| **Agents**     | Node.js (Express), OpenAI GPT-4o-mini, Playwright |
 | **Backend**    | Supabase (Postgres, RLS, Edge Functions, Storage) |
-| **Testing**    | Playwright, Lighthouse CI                         |
-| **CI/CD**      | GitHub Actions                                    |
-| **Deployment** | Cloudflare Pages                                  |
+| **Testing**    | Vitest, Playwright, Lighthouse CI                 |
+| **CI/CD**      | GitHub Actions, SonarCloud                        |
+| **Deployment** | Cloudflare Pages (frontend), Render (agents)      |
 
 ---
 

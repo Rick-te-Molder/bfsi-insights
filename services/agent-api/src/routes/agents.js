@@ -9,7 +9,10 @@ import { runDiscovery } from '../agents/discovery.js';
 import { processQueue, enrichItem } from '../agents/enrich-item.js';
 
 const router = express.Router();
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+const supabase = createClient(
+  process.env.PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY,
+);
 
 // POST /api/agents/run/filter
 router.post('/run/filter', async (req, res) => {
