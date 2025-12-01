@@ -37,6 +37,7 @@ async function stepFetch(queueItem) {
 
   const payload = {
     ...queueItem.payload,
+    url: queueItem.url, // Ensure URL is in payload for thumbnail agent
     title: content.title,
     description: content.description,
     textContent: content.textContent,

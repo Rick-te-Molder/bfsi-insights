@@ -28,7 +28,9 @@ export async function runThumbnailer(queueItem) {
       console.log(`📸 Generating thumbnail for: ${payload.title}`);
 
       const targetUrl = payload.url || payload.source_url;
-      if (!targetUrl) throw new Error('No URL provided');
+      if (!targetUrl) {
+        throw new Error('No URL provided in payload (expected payload.url or payload.source_url)');
+      }
 
       // Step 1: Launch browser
       const browserStepId = await startStep('browser_launch', { url: targetUrl });
