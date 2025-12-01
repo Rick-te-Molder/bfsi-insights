@@ -247,4 +247,31 @@ router.post('/process-item', async (req, res) => {
   }
 });
 
+// POST /api/agents/trigger-build - Trigger Cloudflare Pages rebuild
+router.post('/trigger-build', async (req, res) => {
+  try {
+    const webhookUrl = process.env.CLOUDFLARE_DEPLOY_HOOK;
+
+    if (!webhookUrl) {
+      return res.status(500).json({ ok: false, message: 'CLOUDFLARE_DEPLOY_HOOK not configured' });
+    }
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    if (!response.ok) {
+      const body = await response.text();
+      return res.status(500).json({ ok: false, message: body || 'Build hook failed' });
+    }
+
+    console.log('✅ Cloudflare build triggered');
+    res.json({ ok: true, message: 'Build triggered' });
+  } catch (err) {
+    console.error('Trigger Build Error:', err);
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
 export default router;
