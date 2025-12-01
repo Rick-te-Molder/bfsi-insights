@@ -13,8 +13,8 @@ DECLARE
   v_agent_api_key text;
   v_request_id bigint;
 BEGIN
-  -- Only trigger for manual submissions that are pending
-  IF NEW.status = 'pending' 
+  -- Only trigger for manual submissions that are queued
+  IF NEW.status = 'queued' 
      AND (NEW.payload->>'manual_submission')::boolean = true THEN
     
     -- Get Agent API URL from Vault (e.g., https://bfsi-agent-api.onrender.com)
