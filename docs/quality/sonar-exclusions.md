@@ -25,7 +25,6 @@ This document explains which files are excluded from coverage requirements in So
 | `**/playwright.config.ts`                      | E2E test runner configuration                                                          | 2025-11-30    | 2026-03-31 |
 | `**/e2e/**`                                    | E2E test files (tested separately via Playwright)                                      | 2025-11-30    | 2026-03-31 |
 | `**/routes/**`                                 | Express route handlers; thin wrappers around agent logic                               | 2025-11-30    | 2026-03-31 |
-| `**/middleware/**`                             | Express middleware (auth); infrastructure code                                         | 2025-12-01    | 2026-06-01 |
 | `services/agent-api/src/index.js`              | Express entry point; server bootstrap only                                             | 2025-12-01    | 2026-06-01 |
 | `**/lib/runner.js`                             | Agent runner infrastructure; Supabase/OpenAI client setup                              | 2025-12-01    | 2026-06-01 |
 | `src/pages/**`                                 | Astro pages; DOM/SSR glue code                                                         | 2025-11-30    | 2026-03-31 |

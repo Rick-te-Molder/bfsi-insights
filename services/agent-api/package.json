@@ -10,6 +10,9 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "postinstall": "npx playwright install chromium --with-deps || true"
   },
   "dependencies": {
@@ -19,5 +22,9 @@
     "openai": "^4.73.1",
     "playwright": "^1.57.0",
     "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0",
+    "@vitest/coverage-v8": "^2.1.0"
   }
 }
