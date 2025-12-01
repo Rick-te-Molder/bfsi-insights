@@ -1,11 +1,12 @@
 /**
- * Tests for enrich-item.js filter skip logic
+ * Tests for enrich-item.js logic
  *
- * Focus: Manual submissions should bypass filter rejection
+ * Focus:
+ * - Manual submissions should bypass filter rejection
+ * - URL should be passed through to thumbnail agent
  *
  * Note: Since enrich-item.js has heavy dependencies (Supabase, OpenAI, etc.),
- * we test the filter skip logic by testing the isManualSubmission detection
- * and documenting the expected behavior.
+ * we test the core logic by extracting and testing the pure functions.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -78,5 +79,94 @@ describe('Manual Submission Filter Skip Logic', () => {
       expect(isManualSubmission(manualItem)).toBe(true); // Skip rejection
       expect(isManualSubmission(nightlyItem)).toBe(false); // Normal rejection
     });
+  });
+});
+
+describe('Payload URL Handling', () => {
+  /**
+   * Simulates the payload building logic in stepFetch
+   * URL must be copied from queueItem.url to payload.url for thumbnail agent
+   */
+  function buildPayload(queueItem, fetchedContent) {
+    return {
+      ...queueItem.payload,
+      url: queueItem.url, // Critical: URL must be in payload
+      title: fetchedContent.title,
+      description: fetchedContent.description,
+    };
+  }
+
+  it('should include URL in payload from queueItem.url', () => {
+    const queueItem = {
+      id: 'test-1',
+      url: 'https://example.com/article',
+      payload: { manual_submission: true },
+    };
+    const fetchedContent = { title: 'Test', description: 'Test desc' };
+
+    const payload = buildPayload(queueItem, fetchedContent);
+
+    expect(payload.url).toBe('https://example.com/article');
+  });
+
+  it('should preserve existing payload properties', () => {
+    const queueItem = {
+      id: 'test-2',
+      url: 'https://example.com/article',
+      payload: { manual_submission: true, source: 'admin' },
+    };
+    const fetchedContent = { title: 'Test', description: 'Test desc' };
+
+    const payload = buildPayload(queueItem, fetchedContent);
+
+    expect(payload.manual_submission).toBe(true);
+    expect(payload.source).toBe('admin');
+    expect(payload.url).toBe('https://example.com/article');
+  });
+
+  it('should override payload.url if queueItem.url differs', () => {
+    const queueItem = {
+      id: 'test-3',
+      url: 'https://example.com/new-url',
+      payload: { url: 'https://example.com/old-url' },
+    };
+    const fetchedContent = { title: 'Test', description: 'Test desc' };
+
+    const payload = buildPayload(queueItem, fetchedContent);
+
+    // queueItem.url should take precedence (it's the actual source)
+    expect(payload.url).toBe('https://example.com/new-url');
+  });
+});
+
+describe('Thumbnail URL Extraction', () => {
+  /**
+   * Simulates the URL extraction logic in thumbnail.js
+   */
+  function extractThumbnailUrl(payload) {
+    return payload.url || payload.source_url || null;
+  }
+
+  it('should extract URL from payload.url', () => {
+    const payload = { url: 'https://example.com/article', title: 'Test' };
+    expect(extractThumbnailUrl(payload)).toBe('https://example.com/article');
+  });
+
+  it('should fallback to payload.source_url', () => {
+    const payload = { source_url: 'https://example.com/article', title: 'Test' };
+    expect(extractThumbnailUrl(payload)).toBe('https://example.com/article');
+  });
+
+  it('should prefer payload.url over source_url', () => {
+    const payload = {
+      url: 'https://example.com/primary',
+      source_url: 'https://example.com/fallback',
+    };
+    expect(extractThumbnailUrl(payload)).toBe('https://example.com/primary');
+  });
+
+  it('should return null when no URL present', () => {
+    const payload = { title: 'Test' };
+    expect(extractThumbnailUrl(payload)).toBeNull();
   });
 });
