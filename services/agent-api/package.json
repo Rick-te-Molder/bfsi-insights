@@ -1,12 +1,16 @@
 {
   "name": "bfsi-agent-api",
   "version": "1.0.0",
-  "description": "Agent API Service",
+  "description": "Agent API Service for BFSI Insights",
   "main": "src/index.js",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "start": "node src/index.js",
-    "dev": "node --watch src/index.js"
+    "dev": "node --watch src/index.js",
+    "postinstall": "npx playwright install chromium --with-deps || true"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.46.2",
