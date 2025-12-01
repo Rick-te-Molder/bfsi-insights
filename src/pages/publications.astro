@@ -114,16 +114,54 @@ const expandItemThumb = (t: string | undefined) => {
 
   <!-- Desktop Filters -->
   <section class="mb-6 hidden sm:grid gap-3 sm:grid-cols-2">
-    <!-- Search -->
-    <label class="hidden sm:col-span-2 sm:flex flex-col gap-1 text-sm">
-      <span class="text-neutral-300">Search</span>
-      <input
-        id="q"
-        type="search"
-        placeholder="Search by title, author, or source…"
-        class="rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-base placeholder:text-neutral-500"
-      />
-    </label>
+    <!-- Search with loading indicator and suggestions -->
+    <div class="hidden sm:col-span-2 sm:flex flex-col gap-1 text-sm relative">
+      <label for="q" class="text-neutral-300">Search</label>
+      <div class="relative">
+        <svg
+          class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+        <input
+          id="q"
+          type="search"
+          placeholder="Search by title, author, or source…"
+          autocomplete="off"
+          class="w-full rounded-md border border-neutral-700 bg-neutral-900 pl-10 pr-10 py-2 text-base placeholder:text-neutral-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
+        />
+        <!-- Loading spinner (hidden by default) -->
+        <div
+          id="search-spinner"
+          class="absolute right-3 top-1/2 -translate-y-1/2 hidden"
+          aria-hidden="true"
+        >
+          <svg class="animate-spin h-4 w-4 text-sky-400" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
+          </svg>
+        </div>
+      </div>
+      <!-- Search suggestions dropdown -->
+      <div
+        id="search-suggestions"
+        class="absolute top-full left-0 right-0 mt-1 bg-neutral-900 border border-neutral-700 rounded-md shadow-lg z-30 hidden"
+      >
+        <div id="search-history" class="py-1"></div>
+      </div>
+    </div>
 
     <!-- First three primary filters -->
     {
@@ -216,34 +254,82 @@ const expandItemThumb = (t: string | undefined) => {
     </div>
   </section>
 
-  <!-- Mobile search and filter buttons -->
-  <section class="mb-4 sm:hidden">
+  <!-- Mobile sticky search bar -->
+  <section
+    class="mb-4 sm:hidden sticky top-0 z-40 -mx-4 px-4 py-3 bg-neutral-950/95 backdrop-blur-sm border-b border-neutral-800/50"
+  >
+    <!-- Search input always visible -->
+    <div class="relative mb-3">
+      <svg
+        class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+      </svg>
+      <input
+        id="m-q-sticky"
+        type="search"
+        placeholder="Search publications…"
+        autocomplete="off"
+        class="w-full rounded-lg border border-neutral-700 bg-neutral-900 pl-10 pr-10 py-2.5 text-base placeholder:text-neutral-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
+      />
+      <!-- Mobile loading spinner -->
+      <div
+        id="mobile-search-spinner"
+        class="absolute right-3 top-1/2 -translate-y-1/2 hidden"
+        aria-hidden="true"
+      >
+        <svg class="animate-spin h-4 w-4 text-sky-400" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
+        </svg>
+      </div>
+      <!-- Mobile search suggestions -->
+      <div
+        id="mobile-search-suggestions"
+        class="absolute top-full left-0 right-0 mt-1 bg-neutral-900 border border-neutral-700 rounded-md shadow-lg z-50 hidden"
+      >
+        <div id="mobile-search-history" class="py-1"></div>
+      </div>
+    </div>
+
+    <!-- Filter button and count -->
     <div class="flex items-center gap-2">
       <button
-        id="mobile-search-btn"
-        class="flex items-center justify-center w-10 h-10 rounded-lg border border-neutral-700 bg-neutral-900 text-neutral-300 hover:bg-neutral-800 transition-colors"
-        aria-label="Search"
+        id="open-sheet"
+        class="flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm font-medium text-neutral-200 hover:bg-neutral-800 flex items-center justify-center gap-2"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+          ></path>
         </svg>
+        <span>Filters</span>
+        <span
+          id="filter-count"
+          class="hidden ml-1 px-1.5 py-0.5 text-xs font-semibold bg-sky-500 text-white rounded-full"
+        ></span>
       </button>
 
-      <button
-        id="open-sheet"
-        class="flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm font-medium text-neutral-200 hover:bg-neutral-800"
-      >
-        Filters
-      </button>
-
-      <div id="count-mobile" class="text-xs text-neutral-400" aria-live="polite"></div>
+      <div id="count-mobile" class="text-xs text-neutral-400 whitespace-nowrap" aria-live="polite">
+      </div>
     </div>
 
-    <div id="chips" class="mt-2 flex flex-wrap gap-2"></div>
+    <div id="chips" class="mt-2 flex flex-wrap gap-2 empty:hidden"></div>
   </section>
 
   <!-- Mobile filter sheet -->

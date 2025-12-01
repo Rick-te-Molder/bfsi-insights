@@ -6,15 +6,26 @@ export default function initPublicationFilters() {
   const clearBtn = document.getElementById('clear-filters');
   const countEl = document.getElementById('count');
   const qEl = document.getElementById('q') as HTMLInputElement | null;
+  const mobileSearchEl = document.getElementById('m-q-sticky') as HTMLInputElement | null;
   const chipsEl = document.getElementById('chips');
   const badgeEl = document.getElementById('filter-count');
   const loadMoreBtn = document.getElementById('load-more-btn') as HTMLButtonElement | null;
   const paginationCount = document.getElementById('pagination-count');
   const paginationContainer = document.getElementById('pagination-container');
 
+  // Search UI elements
+  const searchSpinner = document.getElementById('search-spinner');
+  const mobileSearchSpinner = document.getElementById('mobile-search-spinner');
+  const searchSuggestions = document.getElementById('search-suggestions');
+  const mobileSearchSuggestions = document.getElementById('mobile-search-suggestions');
+  const searchHistory = document.getElementById('search-history');
+  const mobileSearchHistory = document.getElementById('mobile-search-history');
+
   const STORAGE_KEY = 'publicationFiltersV1';
   const PAGE_SIZE = 30;
   const ADVANCED_FILTERS_KEY = 'advanced-filters-expanded';
+  const SEARCH_HISTORY_KEY = 'publicationSearchHistory';
+  const MAX_SEARCH_HISTORY = 5;
 
   if (!list) return;
 
@@ -89,7 +100,8 @@ export default function initPublicationFilters() {
     filters.forEach(({ key, el }) => {
       vals[key] = el.value || '';
     });
-    vals.q = qEl?.value?.trim() || '';
+    // Get search from whichever input has a value (desktop or mobile sticky)
+    vals.q = qEl?.value?.trim() || mobileSearchEl?.value?.trim() || '';
     return vals;
   }
 
@@ -98,6 +110,7 @@ export default function initPublicationFilters() {
       el.value = vals[key] || '';
     });
     if (qEl) qEl.value = vals.q || '';
+    if (mobileSearchEl) mobileSearchEl.value = vals.q || '';
   }
 
   function updateQuery(vals: FilterValues) {
@@ -311,24 +324,158 @@ export default function initPublicationFilters() {
     });
   });
 
+  // Search history management
+  function getSearchHistory(): string[] {
+    try {
+      const stored = localStorage.getItem(SEARCH_HISTORY_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function addToSearchHistory(query: string) {
+    if (!query.trim() || query.length < 2) return;
+    try {
+      let history = getSearchHistory();
+      // Remove if already exists (will re-add at top)
+      history = history.filter((h) => h.toLowerCase() !== query.toLowerCase());
+      // Add to beginning
+      history.unshift(query.trim());
+      // Keep only MAX_SEARCH_HISTORY items
+      history = history.slice(0, MAX_SEARCH_HISTORY);
+      localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(history));
+    } catch {}
+  }
+
+  function renderSearchHistory(container: HTMLElement | null, onSelect: (query: string) => void) {
+    if (!container) return;
+    const history = getSearchHistory();
+    if (history.length === 0) {
+      container.innerHTML = `
+        <div class="px-3 py-2 text-xs text-neutral-500">No recent searches</div>
+      `;
+      return;
+    }
+    container.innerHTML = `
+      <div class="px-3 py-1.5 text-xs text-neutral-500 border-b border-neutral-800">Recent searches</div>
+      ${history
+        .map(
+          (q) => `
+        <button
+          type="button"
+          class="w-full px-3 py-2 text-left text-sm text-neutral-200 hover:bg-neutral-800 flex items-center gap-2 search-history-item"
+          data-query="${q.replace(/"/g, '&quot;')}"
+        >
+          <svg class="h-3.5 w-3.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          ${q}
+        </button>
+      `,
+        )
+        .join('')}
+    `;
+    // Add click handlers
+    container.querySelectorAll('.search-history-item').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const query = (e.currentTarget as HTMLElement).dataset.query || '';
+        onSelect(query);
+      });
+    });
+  }
+
+  function showSearchSuggestions(
+    suggestionsEl: HTMLElement | null,
+    historyEl: HTMLElement | null,
+    onSelect: (q: string) => void,
+  ) {
+    if (!suggestionsEl) return;
+    renderSearchHistory(historyEl, onSelect);
+    suggestionsEl.classList.remove('hidden');
+  }
+
+  function hideSearchSuggestions(suggestionsEl: HTMLElement | null) {
+    if (!suggestionsEl) return;
+    suggestionsEl.classList.add('hidden');
+  }
+
+  // Show/hide spinner during search
+  function showSpinner() {
+    searchSpinner?.classList.remove('hidden');
+    mobileSearchSpinner?.classList.remove('hidden');
+  }
+
+  function hideSpinner() {
+    searchSpinner?.classList.add('hidden');
+    mobileSearchSpinner?.classList.add('hidden');
+  }
+
+  // Sync search inputs
+  function syncSearchInputs(value: string, source: HTMLInputElement | null) {
+    if (qEl && qEl !== source) qEl.value = value;
+    if (mobileSearchEl && mobileSearchEl !== source) mobileSearchEl.value = value;
+  }
+
   const debounced = (() => {
     let t: ReturnType<typeof setTimeout> | undefined;
-    return (fn: () => void) => {
+    return (fn: () => void, showLoading = true) => {
       if (t) globalThis.clearTimeout(t);
-      t = globalThis.setTimeout(fn, 250);
+      if (showLoading) showSpinner();
+      t = globalThis.setTimeout(() => {
+        fn();
+        hideSpinner();
+      }, 250);
     };
   })();
 
-  qEl?.addEventListener('input', () =>
+  // Handle search input with history
+  function handleSearchInput(inputEl: HTMLInputElement | null) {
+    if (!inputEl) return;
     debounced(() => {
+      const query = inputEl.value.trim();
+      syncSearchInputs(query, inputEl);
+      // Add to history if search is substantial
+      if (query.length >= 2) {
+        addToSearchHistory(query);
+      }
       const vals = getVals();
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(vals));
       } catch {}
       apply(vals, true);
       renderChipsSummary(vals);
-    }),
-  );
+    });
+  }
+
+  // Desktop search events
+  qEl?.addEventListener('input', () => handleSearchInput(qEl));
+  qEl?.addEventListener('focus', () => {
+    showSearchSuggestions(searchSuggestions, searchHistory, (query) => {
+      if (qEl) qEl.value = query;
+      syncSearchInputs(query, qEl);
+      hideSearchSuggestions(searchSuggestions);
+      handleSearchInput(qEl);
+    });
+  });
+  qEl?.addEventListener('blur', () => {
+    // Delay to allow click on suggestions
+    setTimeout(() => hideSearchSuggestions(searchSuggestions), 150);
+  });
+
+  // Mobile sticky search events
+  mobileSearchEl?.addEventListener('input', () => handleSearchInput(mobileSearchEl));
+  mobileSearchEl?.addEventListener('focus', () => {
+    showSearchSuggestions(mobileSearchSuggestions, mobileSearchHistory, (query) => {
+      if (mobileSearchEl) mobileSearchEl.value = query;
+      syncSearchInputs(query, mobileSearchEl);
+      hideSearchSuggestions(mobileSearchSuggestions);
+      handleSearchInput(mobileSearchEl);
+    });
+  });
+  mobileSearchEl?.addEventListener('blur', () => {
+    setTimeout(() => hideSearchSuggestions(mobileSearchSuggestions), 150);
+  });
 
   clearBtn?.addEventListener('click', () => {
     const cleared: FilterValues = {
@@ -367,7 +514,6 @@ export default function initPublicationFilters() {
   const sheet = document.getElementById('filter-sheet');
   const backdrop = document.getElementById('sheet-backdrop');
   const closeBtn = document.getElementById('close-sheet');
-  const mobileSearchBtn = document.getElementById('mobile-search-btn');
 
   if (openBtn && sheet) {
     const desktop = {
@@ -410,12 +556,14 @@ export default function initPublicationFilters() {
 
     const syncToMobile = () => {
       const v = getDesktopVals();
+      // Also get search from sticky mobile input if desktop is empty
+      const searchVal = v.q || mobileSearchEl?.value?.trim() || '';
       if (mobile.role) mobile.role.value = v.role;
       if (mobile.industry) mobile.industry.value = v.industry;
       if (mobile.topic) mobile.topic.value = v.topic;
       if (mobile.content_type) mobile.content_type.value = v.content_type;
       if (mobile.geography) mobile.geography.value = v.geography;
-      if (mobile.q) mobile.q.value = v.q;
+      if (mobile.q) mobile.q.value = searchVal;
     };
 
     const applyFromDesktop = () => {
@@ -480,17 +628,6 @@ export default function initPublicationFilters() {
       currentPage = 1;
       applyFromDesktop();
       closeSheet();
-    });
-
-    mobileSearchBtn?.addEventListener('click', () => {
-      syncToMobile();
-      sheet.classList.remove('hidden');
-      sheet.setAttribute('aria-hidden', 'false');
-      document.body.style.overflow = 'hidden';
-      const searchInput = document.getElementById('m-q') as HTMLInputElement | null;
-      if (searchInput) {
-        setTimeout(() => searchInput.focus(), 100);
-      }
     });
 
     renderChipsSummary(getDesktopVals());
