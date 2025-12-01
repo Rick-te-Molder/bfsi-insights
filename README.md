@@ -606,7 +606,7 @@ The Agent API is hosted on [Render](https://render.com) as a Node.js web service
 3. Configure environment variables (see `services/agent-api/.env.example`)
 4. Deploy with Starter plan ($7/mo)
 
-See [`services/agent-api/README.md`](services/agent-api/README.md) for full deployment docs.
+See [`services/agent-api/DEPLOYMENT.md`](services/agent-api/DEPLOYMENT.md) for full deployment docs.
 
 ### 14.3 Deploy Hooks
 
