@@ -492,19 +492,14 @@ PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=eyJ...
 ```
 
-### Agent API (services/agent-api/.env)
+### Agent API (services/agent-api/.env + Render)
 
 ```bash
 PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_SERVICE_KEY=eyJ...
 OPENAI_API_KEY=sk-...
 AGENT_API_KEY=your-secret-api-key  # Required in production
-```
-
-### Cloudflare (optional)
-
-```bash
-CLOUDFLARE_DEPLOY_HOOK=https://api.cloudflare.com/...
+CLOUDFLARE_DEPLOY_HOOK=https://api.cloudflare.com/...  # For rebuild button
 ```
 
 ---
