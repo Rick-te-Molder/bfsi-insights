@@ -162,7 +162,7 @@ See [`docs/architecture/overview.md`](docs/architecture/overview.md) for archite
 | `rejected`   | 🤖/👤 | Not BFSI relevant (filter¹) or human rejected |
 | `failed`     | 🤖    | Processing error (can retry)                  |
 
-> ¹ **Note:** Filter rejection only applies to nightly RSS discovery. Manual submissions should skip filter rejection since a human explicitly submitted the URL. (TODO: implement this bypass)
+> ¹ **Note:** Filter rejection only applies to nightly RSS discovery. Manual submissions skip filter rejection since a human explicitly submitted the URL.
 
 #### Publication (`kb_publication.status`)
 
