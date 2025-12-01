@@ -50,18 +50,29 @@ async function stepFetch(queueItem) {
   return payload;
 }
 
-async function stepFilter(queueId, payload) {
+async function stepFilter(queueId, payload, options = {}) {
+  const { skipRejection = false } = options;
   console.log('   🔍 Checking relevance...');
   const result = await runRelevanceFilter({ id: queueId, payload });
 
   if (!result.relevant) {
+    if (skipRejection) {
+      // Manual submission: log but don't reject (human decided it's relevant)
+      console.log(
+        `   ⚠️ Filter says not relevant: ${result.reason} (skipping rejection for manual submission)`,
+      );
+      await updateStatus(queueId, 'filtered');
+      return { rejected: false, filterResult: result };
+    }
+    // Nightly discovery: reject as normal
     console.log(`   ❌ Not relevant: ${result.reason}`);
     await updateStatus(queueId, 'rejected', { rejection_reason: result.reason });
     return { rejected: true, reason: result.reason };
   }
 
+  console.log('   ✅ Relevant');
   await updateStatus(queueId, 'filtered');
-  return { rejected: false };
+  return { rejected: false, filterResult: result };
 }
 
 async function stepSummarize(queueId, payload) {
@@ -131,14 +142,22 @@ export async function enrichItem(queueItem, options = {}) {
   const { includeThumbnail = true } = options;
   const startTime = Date.now();
 
+  // Manual submissions should not be rejected by filter
+  const isManualSubmission = queueItem.payload?.manual_submission === true;
+
   console.log(`\n📦 Processing: ${queueItem.url}`);
+  if (isManualSubmission) {
+    console.log('   👤 Manual submission - filter will not reject');
+  }
 
   try {
     await updateStatus(queueItem.id, 'processing');
 
     let payload = await stepFetch(queueItem);
 
-    const filterResult = await stepFilter(queueItem.id, payload);
+    const filterResult = await stepFilter(queueItem.id, payload, {
+      skipRejection: isManualSubmission,
+    });
     if (filterResult.rejected) {
       return { success: false, reason: filterResult.reason, duration: Date.now() - startTime };
     }
