@@ -32,13 +32,20 @@ const advancedFiltersList = filters.filter(
   (filter) => !['role', 'industry'].includes(filter.column_name),
 );
 
-// Build filter value lists + counts
+// Build filter value lists + counts (handles both single values and arrays)
 const createValuesWithCounts = (field: keyof Publication) => {
   const counts = new Map<string, number>();
 
   publications.forEach((p) => {
     const val = p[field];
-    if (val) counts.set(String(val), (counts.get(String(val)) || 0) + 1);
+    if (Array.isArray(val)) {
+      // Handle array fields (regulators, regulations, industries, topics, etc.)
+      val.forEach((v) => {
+        if (v) counts.set(String(v), (counts.get(String(v)) || 0) + 1);
+      });
+    } else if (val) {
+      counts.set(String(val), (counts.get(String(val)) || 0) + 1);
+    }
   });
 
   return Array.from(counts.entries())

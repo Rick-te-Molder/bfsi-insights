@@ -22,6 +22,38 @@ Manual submissions from `/admin/add` should bypass the filter agent's rejection 
 
 ---
 
+### KB-148: Enable regulator/regulation filtering
+
+**Type:** Feature  
+**Priority:** Medium  
+**Labels:** database, taxonomy, frontend  
+**Status:** Implemented
+
+**Description:**
+The tag agent extracts `regulator_codes` and `regulation_codes` but these are not persisted to the publication or exposed for filtering. Users should be able to filter publications by regulatory body and specific regulations.
+
+**Implementation:**
+
+- `tag.js` extracts codes from `regulator` and `regulation` tables
+- Codes stored in queue payload during enrichment
+- `approve_from_queue` now inserts regulator/regulation relationships
+- Junction tables created: `kb_publication_regulator`, `kb_publication_regulation`
+- UI filtering available
+
+**Acceptance Criteria:**
+
+- [x] Create `kb_publication_regulator` junction table
+- [x] Create `kb_publication_regulation` junction table
+- [x] Update `approve_from_queue` function to insert regulator/regulation relationships
+- [x] Update `kb_publication_pretty` view to include `regulators` and `regulations` arrays
+- [x] Add regulator/regulation to Publication interface
+- [x] Add filter UI for regulator and regulation
+- [x] Add regulator/regulation tags to PublicationCard (rose/orange pills with icons)
+
+**Migration:** `20251201230000_add_regulator_regulation_to_publications.sql`
+
+---
+
 ### KB-XXX: Taxonomy curation UI during article review
 
 **Type:** Feature  

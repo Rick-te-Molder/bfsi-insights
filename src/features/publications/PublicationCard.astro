@@ -29,40 +29,13 @@ const expandItemThumb = (t?: string) => {
   return [`${t}.webp`, `${t}.png`, `${t}.jpg`];
 };
 
-const topics = item.topics?.length ? item.topics : asArr(item.topic);
-const industries = item.industries?.length ? item.industries : asArr(item.industry);
+const topic = asArr(item.topic);
 const content_type = asArr(item.content_type);
 const role = item.role || '';
+const industry = item.industry || '';
 const geography = item.geography || '';
 const regulators = item.regulators || [];
 const regulations = item.regulations || [];
-
-// Build tags array with type info for color coding
-type TagInfo = {
-  label: string;
-  type: 'industry' | 'topic' | 'geography' | 'role' | 'content' | 'regulator' | 'regulation';
-};
-const allTags: TagInfo[] = [];
-
-// Add industry tags (primary importance)
-industries.filter(Boolean).forEach((ind: string) => allTags.push({ label: ind, type: 'industry' }));
-// Add topic tags
-topics.filter(Boolean).forEach((t: string) => allTags.push({ label: t, type: 'topic' }));
-// Add geography
-if (geography) allTags.push({ label: geography, type: 'geography' });
-// Add role/persona
-if (role) allTags.push({ label: role, type: 'role' });
-// Add content type
-content_type.filter(Boolean).forEach((ct: string) => allTags.push({ label: ct, type: 'content' }));
-// Add regulators
-regulators.filter(Boolean).forEach((r: string) => allTags.push({ label: r, type: 'regulator' }));
-// Add regulations
-regulations.filter(Boolean).forEach((r: string) => allTags.push({ label: r, type: 'regulation' }));
-
-// Show max 5 tags, with overflow indicator
-const MAX_VISIBLE_TAGS = 5;
-const visibleTags = allTags.slice(0, MAX_VISIBLE_TAGS);
-const overflowCount = Math.max(0, allTags.length - MAX_VISIBLE_TAGS);
 
 const isNew =
   isHome && item.date_added
@@ -99,8 +72,8 @@ const candidates = [...itemThumbs];
   class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition-all hover:border-neutral-700 hover:ring-neutral-700 hover:bg-neutral-900 relative"
   aria-labelledby={`t-${item.slug}`}
   data-role={role}
-  data-industry={industries[0] || ''}
-  data-topic={topics[0] || ''}
+  data-industry={industry}
+  data-topic={topic[0] || ''}
   data-content_type={content_type[0] || ''}
   data-geography={geography}
   data-regulator={regulators.join(',') || ''}
@@ -217,83 +190,58 @@ const candidates = [...itemThumbs];
         )
       }
 
-      {/* Enhanced Tags Section with color coding and icons */}
       <div class="mt-3 flex flex-wrap gap-1.5">
+        {/* Core metadata */}
         {
-          visibleTags.map((tag) => (
-            <span
-              class:list={[
-                'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
-                {
-                  'bg-cyan-500/10 text-cyan-300 ring-1 ring-inset ring-cyan-500/20':
-                    tag.type === 'industry',
-                  'bg-violet-500/10 text-violet-300 ring-1 ring-inset ring-violet-500/20':
-                    tag.type === 'topic',
-                  'bg-teal-500/10 text-teal-300 ring-1 ring-inset ring-teal-500/20':
-                    tag.type === 'geography',
-                  'bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/20':
-                    tag.type === 'role',
-                  'bg-neutral-500/10 text-neutral-300 ring-1 ring-inset ring-neutral-500/20':
-                    tag.type === 'content',
-                  'bg-rose-500/10 text-rose-300 ring-1 ring-inset ring-rose-500/20':
-                    tag.type === 'regulator',
-                  'bg-orange-500/10 text-orange-300 ring-1 ring-inset ring-orange-500/20':
-                    tag.type === 'regulation',
-                },
-              ]}
-            >
-              {/* Icons for each tag type */}
-              {tag.type === 'industry' && (
-                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                  />
-                </svg>
-              )}
-              {tag.type === 'topic' && (
-                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-                  />
-                </svg>
-              )}
-              {tag.type === 'geography' && (
-                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              )}
-              {tag.type === 'role' && (
-                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-              )}
-              {tag.type === 'content' && (
-                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-              )}
-              {tag.type === 'regulator' && (
+          role && (
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/20">
+              <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
+              </svg>
+              {role}
+            </span>
+          )
+        }
+        {
+          content_type.length > 0 && (
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-500/10 text-neutral-300 ring-1 ring-inset ring-neutral-500/20">
+              <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+              {content_type[0]}
+            </span>
+          )
+        }
+        {
+          geography && (
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-500/10 text-teal-300 ring-1 ring-inset ring-teal-500/20">
+              <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              {geography}
+            </span>
+          )
+        }
+        {/* Regulatory tags */}
+        {
+          regulators.length > 0 &&
+            regulators.slice(0, 2).map((reg: string) => (
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-300 ring-1 ring-inset ring-rose-500/20">
                 <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     stroke-linecap="round"
@@ -302,8 +250,14 @@ const candidates = [...itemThumbs];
                     d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"
                   />
                 </svg>
-              )}
-              {tag.type === 'regulation' && (
+                {reg}
+              </span>
+            ))
+        }
+        {
+          regulations.length > 0 &&
+            regulations.slice(0, 2).map((reg: string) => (
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-500/10 text-orange-300 ring-1 ring-inset ring-orange-500/20">
                 <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     stroke-linecap="round"
@@ -312,15 +266,15 @@ const candidates = [...itemThumbs];
                     d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
                   />
                 </svg>
-              )}
-              {tag.label}
-            </span>
-          ))
+                {reg}
+              </span>
+            ))
         }
+        {/* Overflow indicator */}
         {
-          overflowCount > 0 && (
+          (regulators.length > 2 || regulations.length > 2) && (
             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-700/50 text-neutral-400 ring-1 ring-inset ring-neutral-600/30">
-              +{overflowCount} more
+              +{Math.max(0, regulators.length - 2) + Math.max(0, regulations.length - 2)} more
             </span>
           )
         }
