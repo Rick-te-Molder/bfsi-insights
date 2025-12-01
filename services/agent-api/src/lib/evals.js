@@ -10,6 +10,7 @@
 import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { compareOutputs } from './eval-helpers.js';
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -293,28 +294,7 @@ export async function runABTest(agentName, agentFnA, agentFnB, inputs, options =
   return { runId: run.id, winsA, winsB, ties, results };
 }
 
-// Helper: Compare expected vs actual output
-function compareOutputs(expected, actual) {
-  if (typeof expected === 'object' && typeof actual === 'object') {
-    // Deep comparison for objects
-    let matches = 0;
-    let total = 0;
-
-    for (const key of Object.keys(expected)) {
-      total++;
-      if (JSON.stringify(expected[key]) === JSON.stringify(actual[key])) {
-        matches++;
-      }
-    }
-
-    const score = total > 0 ? matches / total : 0;
-    return { match: score >= 0.8, score };
-  }
-
-  // Simple equality
-  const match = JSON.stringify(expected) === JSON.stringify(actual);
-  return { match, score: match ? 1 : 0 };
-}
+// compareOutputs imported from ./eval-helpers.js
 
 // Helper: Judge output quality with LLM
 async function judgeWithLLM(input, output, criteria, model) {

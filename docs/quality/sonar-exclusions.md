@@ -27,6 +27,7 @@ This document explains which files are excluded from coverage requirements in So
 | `**/routes/**`                                 | Express route handlers; thin wrappers around agent logic                               | 2025-11-30    | 2026-03-31 |
 | `services/agent-api/src/index.js`              | Express entry point; server bootstrap only                                             | 2025-12-01    | 2026-06-01 |
 | `**/lib/runner.js`                             | Agent runner infrastructure; Supabase/OpenAI client setup                              | 2025-12-01    | 2026-06-01 |
+| `**/lib/evals.js`                              | Eval orchestration; pure helpers extracted to `eval-helpers.js`                        | 2025-12-01    | 2026-06-01 |
 | `src/pages/**`                                 | Astro pages; DOM/SSR glue code                                                         | 2025-11-30    | 2026-03-31 |
 | `src/features/**`                              | UI components; DOM wiring (business logic extracted to `src/lib/`)                     | 2025-11-30    | 2026-03-31 |
 | `**/pages/api/**`                              | Astro API routes; minimal glue code                                                    | 2025-11-30    | 2026-03-31 |
