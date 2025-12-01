@@ -32,8 +32,15 @@ BFSI Insights collects, enriches, classifies, and publishes high-quality AI-rela
 ### 1.4 High-Level Workflow
 
 ```
-Discover → Filter → Summarize → Tag → Thumbnail → Review → Approve → Published
+Entry:      Manual (queued) or Nightly (pending → filtered)
+                            ↓
+Pipeline:   summarized → tagged → thumbnailed → enriched
+                            ↓
+Review:     👤 Approve article + suggested taxonomy entries → Published
+            👤 Reject  → Rejected
 ```
+
+> **Taxonomy curation:** During review, the admin sees AI-suggested vendors and organizations. Approving the article also upserts approved suggestions to `ag_vendor` and `bfsi_organization` tables.
 
 ---
 
@@ -127,38 +134,73 @@ See [`docs/architecture/overview.md`](docs/architecture/overview.md) for archite
 
 ## 5. Agent Pipeline
 
-### 5.1 Pipeline Stages
+### 5.1 AI Agents
+
+| Agent          | Purpose                                               |
+| -------------- | ----------------------------------------------------- |
+| `discovery.js` | Scrape RSS feeds, find new URLs                       |
+| `filter.js`    | Check BFSI relevance (GPT-4o-mini)                    |
+| `summarize.js` | Generate summaries, extract date/author (GPT-4o-mini) |
+| `tag.js`       | Classify with taxonomies (GPT-4o-mini)                |
+| `thumbnail.js` | Screenshot article (Playwright)                       |
+
+### 5.2 Workflow States
+
+#### Ingestion Queue (`ingestion_queue.status`)
+
+| Status       | Actor | Description                                   |
+| ------------ | ----- | --------------------------------------------- |
+| `pending`    | 🤖    | Discovered via RSS, awaiting processing       |
+| `queued`     | 🤖    | Manual submission, ready for processing       |
+| `processing` | 🤖    | Agent API currently processing                |
+| `fetched`    | 🤖    | Content retrieved from URL                    |
+| `filtered`   | 🤖    | Passed BFSI relevance check                   |
+| `summarized` | 🤖    | AI summaries generated                        |
+| `tagged`     | 🤖    | Taxonomy tags applied                         |
+| `enriched`   | 🤖    | Ready for human review                        |
+| `approved`   | 👤    | Human approved → moved to kb_publication      |
+| `rejected`   | 🤖/👤 | Not BFSI relevant (filter¹) or human rejected |
+| `failed`     | 🤖    | Processing error (can retry)                  |
+
+> ¹ **Note:** Filter rejection only applies to nightly RSS discovery. Manual submissions should skip filter rejection since a human explicitly submitted the URL. (TODO: implement this bypass)
+
+#### Publication (`kb_publication.status`)
+
+| Status      | Actor | Description                      |
+| ----------- | ----- | -------------------------------- |
+| `published` | 👤    | Live on website (after approval) |
+| `draft`     | 👤    | Created but not yet live         |
+| `archived`  | 👤    | Removed from public view         |
+
+#### State Flow Diagram
 
 ```
-DISCOVERY → FILTER → SUMMARIZE → TAG → THUMBNAIL
+Manual:   queued → processing → filtered → summarized → tagged → enriched
+                                                                    ↓
+Nightly:  pending → fetched → filtered → summarized → tagged → enriched
+                                                                    ↓
+                                              👤 Review → approved → published
+                                                       ↘ rejected
 ```
 
-| Stage     | Agent          | Purpose                                               |
-| --------- | -------------- | ----------------------------------------------------- |
-| Discovery | `discovery.js` | Scrape RSS feeds, find new URLs                       |
-| Filter    | `filter.js`    | Check BFSI relevance (GPT-4o-mini)                    |
-| Summarize | `summarize.js` | Generate summaries, extract date/author (GPT-4o-mini) |
-| Tag       | `tag.js`       | Classify with taxonomies (GPT-4o-mini)                |
-| Thumbnail | `thumbnail.js` | Screenshot article (Playwright)                       |
+### 5.3 Content Ingestion Options
 
-### 5.2 Content Ingestion Options
-
-#### Option 1: Manual URL Submission (Async Queue)
+#### Option 1: Manual URL Submission (Real-time)
 
 ```
-/admin/add → Agent API → enriched → /admin/review → Approve → Published
+/admin/add → DB Trigger → Render API → enriched → /admin/review → Approve → Published
 ```
 
 1. Paste URL at `/admin/add`
-2. URL is queued, Agent API processes asynchronously (~30-60 seconds)
-3. UI polls for status updates (queued → processing → enriched)
+2. DB trigger fires, calls Render-hosted Agent API
+3. UI polls for status updates (`queued` → `processing` → `enriched`)
 4. Review and approve at `/admin/review`
-5. Click "Trigger Build" or push to git → Published
+5. Click "Trigger Build" → Cloudflare deploys
 
 #### Option 2: Nightly Pipeline (🌙 Automated)
 
 ```
-Discovery → Filter → Summarize → Tag → Thumbnail → Review → Approve → Published
+pending → fetched → filtered → summarized → tagged → enriched → 👤 Review → Published
 ```
 
 Runs automatically at 2 AM UTC via GitHub Actions:
@@ -168,7 +210,7 @@ Runs automatically at 2 AM UTC via GitHub Actions:
 3. **Review**: Human approves at `/admin/review`
 4. **Deploy**: Click "Trigger Build" or push to git
 
-### 5.3 Running the Pipeline
+### 5.4 Running the Pipeline
 
 **CLI:**
 
@@ -185,6 +227,38 @@ POST /api/agents/run/discovery
 POST /api/agents/run/filter
 POST /api/agents/run/summarize
 ```
+
+### 5.5 Agent Evaluation & Optimization
+
+The core workflow produces **rejection reasons** when humans reject articles. This data feeds into a **periodic optimization cycle** (separate from the content workflow).
+
+```
+Core Workflow:      Entry → Pipeline → Review → Published/Rejected
+                                                      ↓
+                                             rejection_reason stored
+                                                      ↓
+Optimization:       Periodic analysis → Prompt tuning → A/B testing
+(monthly)
+```
+
+#### Evaluation Framework (`evals.js`)
+
+| Method                 | Description                                          | Use Case                                |
+| ---------------------- | ---------------------------------------------------- | --------------------------------------- |
+| **Golden Dataset**     | Compare agent output against human-verified examples | Regression testing after prompt changes |
+| **LLM-as-Judge**       | Second LLM evaluates output quality (0-1 score)      | Continuous quality monitoring           |
+| **A/B Prompt Testing** | Compare two prompt versions side-by-side             | Validating prompt improvements          |
+
+#### Optimization Tables
+
+| Table             | Purpose                                       |
+| ----------------- | --------------------------------------------- |
+| `eval_golden_set` | Human-verified input/output pairs per agent   |
+| `eval_run`        | Evaluation run metadata and results           |
+| `eval_result`     | Individual example results per run            |
+| `prompt_versions` | Prompt version history with `is_current` flag |
+
+> **Note:** Rejection reasons from human review should be periodically analyzed to identify systematic agent failures, then addressed via prompt refinement validated through EVALs.
 
 ---
 
@@ -215,6 +289,24 @@ LLM picks from these pre-defined lists. **Do not auto-create entries.**
 | `regulation`     | 18   | Regulations/laws (gdpr, psd2, mifid, etc.)             |
 | `obligation`     | —    | Compliance requirements (expert-curated)               |
 
+#### Regulatory Compliance Feature
+
+The regulatory tables form a hierarchy: **Regulator → Regulation → Obligation**.
+
+```
+Example: ECB (regulator) → DORA (regulation) → "ICT risk assessment" (obligation)
+```
+
+**Current state:** The tag agent extracts `regulator_codes` and `regulation_codes` from articles, linking publications to known regulations.
+
+**Planned:** The `obligation` table will store specific compliance requirements per regulation, enabling users to:
+
+- Browse publications by regulatory impact
+- Track which obligations are covered by AI solutions
+- Filter content by compliance area (risk, reporting, security, etc.)
+
+> **Why guardrails?** Regulatory info requires expert curation — auto-generated compliance data could mislead users and create liability.
+
 ### 6.3 Expandable Taxonomies (grow from publications)
 
 LLM extracts names; new entries can be created.
@@ -223,13 +315,6 @@ LLM extracts names; new entries can be created.
 | ------------------- | ---- | ------------------------------------- |
 | `bfsi_organization` | 8    | Banks, insurers mentioned in articles |
 | `ag_vendor`         | 81   | AI/tech vendors mentioned in articles |
-
-### 6.4 Why Guardrails for Regulations?
-
-- **Accuracy is critical** — regulatory errors have compliance consequences
-- **Structure matters** — regulator → regulation → obligation hierarchy
-- **Expert curation** — should be reviewed by compliance professionals
-- **Liability** — auto-generated regulatory info could mislead users
 
 ---
 
