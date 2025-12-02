@@ -77,11 +77,11 @@ function normalizeScore(score, min = 0, max = 10) {
  * @returns {Object} Combined quality assessment
  */
 export function calculateQualityScore({
-  relevanceScore,
+  relevanceScore = 5,
   similarityScore = null,
   impactScore = null,
   publishedAt = null,
-}) {
+} = {}) {
   // Normalize scores to 0-10
   const scores = {
     relevance: normalizeScore(relevanceScore, 1, 10),
@@ -127,6 +127,8 @@ export function calculateQualityScore({
  * @returns {Promise<Object>} Citation data or empty object
  */
 export async function enrichWithCitations(candidate) {
+  if (!candidate) return {};
+
   const { title, url } = candidate;
 
   // Extract arXiv ID if present

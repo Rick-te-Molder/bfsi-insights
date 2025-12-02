@@ -207,7 +207,14 @@ export function extractCitationMetrics(paper) {
  * @returns {number} Impact score 0-10
  */
 export function calculateImpactScore(metrics) {
-  const { citationCount, influentialCitations, maxAuthorHIndex, citationsPerYear } = metrics;
+  if (!metrics) return 0;
+
+  const {
+    citationCount = 0,
+    influentialCitations = 0,
+    maxAuthorHIndex = 0,
+    citationsPerYear = 0,
+  } = metrics;
 
   // Citation score (0-4 points)
   // 0 citations = 0, 10+ = 2, 100+ = 3, 500+ = 4
