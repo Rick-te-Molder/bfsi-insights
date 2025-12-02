@@ -21,7 +21,7 @@ BFSI Insights collects, enriches, classifies, and publishes high-quality AI-rela
 
 ### 1.3 Key Features
 
-- Automated and manual content ingestion
+- Agentic and manual content ingestion
 - AI-based filtering, summarization, tagging, and thumbnail generation
 - Guardrail taxonomies (industry, topics, AI use cases, regulations)
 - Expandable taxonomies (organizations, vendors)
@@ -71,7 +71,7 @@ Review:     👤 Approve article + suggested taxonomy entries → Published
 
 ### 3.1 What the App Does
 
-- Collects and enriches BFSI-related content from RSS feeds and manual submissions
+- Collects and enriches BFSI-related content from RSS feeds, sitemaps, academic papers, and manual submissions
 - Classifies with strict guardrail taxonomies
 - Maintains expandable vendor/organization taxonomies
 - Publishes curated insights to a fast, static site
@@ -136,31 +136,31 @@ See [`docs/architecture/overview.md`](docs/architecture/overview.md) for archite
 
 ### 5.1 AI Agents
 
-| Agent          | Purpose                                               |
-| -------------- | ----------------------------------------------------- |
-| `discover.js`  | Scrape RSS feeds, find new URLs                       |
-| `filter.js`    | Check BFSI relevance (GPT-4o-mini)                    |
-| `summarize.js` | Generate summaries, extract date/author (GPT-4o-mini) |
-| `tag.js`       | Classify with taxonomies (GPT-4o-mini)                |
-| `thumbnail.js` | Screenshot article (Playwright)                       |
+| Agent          | Purpose                                                  |
+| -------------- | -------------------------------------------------------- |
+| `discover.js`  | Discover content from RSS feeds, sitemaps, and web pages |
+| `filter.js`    | Check BFSI relevance (GPT-4o-mini)                       |
+| `summarize.js` | Generate summaries, extract date/author (GPT-4o-mini)    |
+| `tag.js`       | Classify with taxonomies (GPT-4o-mini)                   |
+| `thumbnail.js` | Screenshot article (Playwright)                          |
 
 ### 5.2 Workflow States
 
 #### Ingestion Queue (`ingestion_queue.status`)
 
-| Status       | Actor | Description                                   |
-| ------------ | ----- | --------------------------------------------- |
-| `pending`    | 🤖    | Discovered via RSS, awaiting processing       |
-| `queued`     | 🤖    | Manual submission, ready for processing       |
-| `processing` | 🤖    | Agent API currently processing                |
-| `fetched`    | 🤖    | Content retrieved from URL                    |
-| `filtered`   | 🤖    | Passed BFSI relevance check                   |
-| `summarized` | 🤖    | AI summaries generated                        |
-| `tagged`     | 🤖    | Taxonomy tags applied                         |
-| `enriched`   | 🤖    | Ready for human review                        |
-| `approved`   | 👤    | Human approved → moved to kb_publication      |
-| `rejected`   | 🤖/👤 | Not BFSI relevant (filter¹) or human rejected |
-| `failed`     | 🤖    | Processing error (can retry)                  |
+| Status       | Actor | Description                                          |
+| ------------ | ----- | ---------------------------------------------------- |
+| `pending`    | 🤖    | Discovered via agentic pipeline, awaiting processing |
+| `queued`     | 🤖    | Manual submission, ready for processing              |
+| `processing` | 🤖    | Agent API currently processing                       |
+| `fetched`    | 🤖    | Content retrieved from URL                           |
+| `filtered`   | 🤖    | Passed BFSI relevance check                          |
+| `summarized` | 🤖    | AI summaries generated                               |
+| `tagged`     | 🤖    | Taxonomy tags applied                                |
+| `enriched`   | 🤖    | Ready for human review                               |
+| `approved`   | 👤    | Human approved → moved to kb_publication             |
+| `rejected`   | 🤖/👤 | Not BFSI relevant (filter¹) or human rejected        |
+| `failed`     | 🤖    | Processing error (can retry)                         |
 
 > ¹ **Note:** Filter rejection only applies to nightly RSS discovery. Manual submissions skip filter rejection since a human explicitly submitted the URL.
 

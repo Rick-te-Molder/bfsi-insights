@@ -10,7 +10,14 @@
 import OpenAI from 'openai';
 import process from 'node:process';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Lazy-load OpenAI client to avoid error at import time when key is missing
+let openai = null;
+function getOpenAI() {
+  if (!openai) {
+    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return openai;
+}
 
 // Minimum score to queue (below this = auto-skip)
 const MIN_RELEVANCE_SCORE = 4;
@@ -66,7 +73,7 @@ Title: ${title}
 Description: ${description || '(no description available)'}`;
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: SYSTEM_PROMPT },
