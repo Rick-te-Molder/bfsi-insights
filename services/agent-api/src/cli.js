@@ -56,9 +56,13 @@ async function runDiscoveryCmd(options) {
     source: options.source,
     limit: options.limit,
     dryRun: options['dry-run'] || options.dryRun,
+    agentic: options.agentic || false,
   });
   console.log('\n✨ Discovery complete!');
   console.log(`   Found: ${result.found}, New: ${result.new}, Retried: ${result.retried || 0}`);
+  if (result.skipped) {
+    console.log(`   Skipped (low relevance): ${result.skipped}`);
+  }
   return result;
 }
 

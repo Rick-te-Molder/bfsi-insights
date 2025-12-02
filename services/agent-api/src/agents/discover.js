@@ -8,6 +8,7 @@ import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 import { scrapeWebsite } from '../lib/scrapers.js';
 import { fetchFromSitemap } from '../lib/sitemap.js';
+import { scoreRelevance } from './discovery-relevance.js';
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -155,9 +156,9 @@ async function fetchCandidatesFromSource(src, config) {
 }
 
 /**
- * Process a single candidate - check existence and add/retry as needed
+ * Process a single candidate - check existence, score relevance, and add/retry as needed
  */
-async function processCandidate(candidate, sourceName, dryRun) {
+async function processCandidate(candidate, sourceName, dryRun, agentic, stats) {
   const existsStatus = await checkExists(candidate.url);
 
   if (existsStatus === 'skip') {
@@ -165,6 +166,32 @@ async function processCandidate(candidate, sourceName, dryRun) {
   }
 
   const titlePreview = candidate.title.substring(0, 60);
+
+  // Agentic mode: score relevance before queuing
+  let relevanceResult = null;
+  if (agentic && existsStatus !== 'retry') {
+    relevanceResult = await scoreRelevance({
+      title: candidate.title,
+      description: candidate.description || '',
+      source: sourceName,
+    });
+
+    if (relevanceResult.usage) {
+      stats.totalTokens += relevanceResult.usage.total_tokens;
+    }
+
+    if (!relevanceResult.should_queue) {
+      console.log(`   ⏭️  Skip (${relevanceResult.relevance_score}/10): ${titlePreview}...`);
+      console.log(`      Reason: ${relevanceResult.skip_reason}`);
+      return { action: 'skipped-relevance', relevanceResult };
+    }
+
+    console.log(`   🎯 Score ${relevanceResult.relevance_score}/10: ${titlePreview}...`);
+
+    if (dryRun) {
+      console.log(`      Summary: ${relevanceResult.executive_summary}`);
+    }
+  }
 
   if (dryRun) {
     const action = existsStatus === 'retry' ? 'retry' : 'add';
@@ -176,7 +203,7 @@ async function processCandidate(candidate, sourceName, dryRun) {
     return processRetry(candidate, sourceName, titlePreview);
   }
 
-  return processNewItem(candidate, sourceName, titlePreview);
+  return processNewItem(candidate, sourceName, titlePreview, relevanceResult);
 }
 
 async function processRetry(candidate, sourceName, titlePreview) {
@@ -192,8 +219,8 @@ async function processRetry(candidate, sourceName, titlePreview) {
   };
 }
 
-async function processNewItem(candidate, sourceName, titlePreview) {
-  const inserted = await insertToQueue(candidate, sourceName);
+async function processNewItem(candidate, sourceName, titlePreview, relevanceResult = null) {
+  const inserted = await insertToQueue(candidate, sourceName, relevanceResult);
   if (!inserted) {
     return { action: 'skip' };
   }
@@ -201,7 +228,13 @@ async function processNewItem(candidate, sourceName, titlePreview) {
   console.log(`   ✅ Added: ${titlePreview}...`);
   return {
     action: 'new',
-    result: { title: candidate.title, url: candidate.url, source: sourceName, action: 'new' },
+    result: {
+      title: candidate.title,
+      url: candidate.url,
+      source: sourceName,
+      action: 'new',
+      relevance_score: relevanceResult?.relevance_score || null,
+    },
   };
 }
 
@@ -244,10 +277,11 @@ async function logSkippedPremiumSources(sourceSlug) {
 }
 
 export async function runDiscovery(options = {}) {
-  const { source: sourceSlug, limit = null, dryRun = false } = options;
+  const { source: sourceSlug, limit = null, dryRun = false, agentic = false } = options;
 
   console.log('🔍 Starting discovery...');
   console.log(`   Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}`);
+  console.log(`   Agentic: ${agentic ? 'ON (LLM relevance scoring)' : 'OFF (rule-based)'}`);
   if (limit) console.log(`   Limit: ${limit}`);
 
   const config = await loadDiscoveryConfig();
@@ -260,7 +294,7 @@ export async function runDiscovery(options = {}) {
 
   await logSkippedPremiumSources(sourceSlug);
 
-  const stats = { found: 0, new: 0, retried: 0 };
+  const stats = { found: 0, new: 0, retried: 0, skipped: 0, totalTokens: 0 };
   const results = [];
 
   for (const src of sources) {
@@ -268,7 +302,14 @@ export async function runDiscovery(options = {}) {
 
     try {
       const candidates = await fetchCandidatesFromSource(src, config);
-      const sourceResults = await processCandidates(candidates, src.name, dryRun, limit, stats);
+      const sourceResults = await processCandidates(
+        candidates,
+        src.name,
+        dryRun,
+        limit,
+        stats,
+        agentic,
+      );
       results.push(...sourceResults);
 
       if (limit && stats.new >= limit) {
@@ -281,19 +322,30 @@ export async function runDiscovery(options = {}) {
   }
 
   logSummary(stats);
-  return { found: stats.found, new: stats.new, retried: stats.retried, items: results };
+  return {
+    found: stats.found,
+    new: stats.new,
+    retried: stats.retried,
+    skipped: stats.skipped,
+    tokensUsed: stats.totalTokens,
+    items: results,
+  };
 }
 
-async function processCandidates(candidates, sourceName, dryRun, limit, stats) {
+async function processCandidates(candidates, sourceName, dryRun, limit, stats, agentic) {
   const results = [];
 
   for (const candidate of candidates) {
     if (limit && stats.new >= limit) break;
 
     stats.found++;
-    const outcome = await processCandidate(candidate, sourceName, dryRun);
+    const outcome = await processCandidate(candidate, sourceName, dryRun, agentic, stats);
 
     if (outcome.action === 'skip') continue;
+    if (outcome.action === 'skipped-relevance') {
+      stats.skipped++;
+      continue;
+    }
 
     stats.new++;
     if (outcome.action === 'retry') stats.retried++;
@@ -308,7 +360,12 @@ function logSummary(stats) {
   console.log(`   Total found: ${stats.found}`);
   console.log(`   New items: ${stats.new}`);
   console.log(`   Retried: ${stats.retried}`);
-  console.log(`   Already exists: ${stats.found - stats.new}`);
+  console.log(`   Skipped (low relevance): ${stats.skipped}`);
+  console.log(`   Already exists: ${stats.found - stats.new - stats.skipped}`);
+  if (stats.totalTokens > 0) {
+    const estimatedCost = (stats.totalTokens / 1000000) * 0.15; // GPT-4o-mini input pricing
+    console.log(`   Tokens used: ${stats.totalTokens} (~$${estimatedCost.toFixed(4)})`);
+  }
 }
 
 // --- Helpers ---
@@ -505,7 +562,7 @@ async function retryRejected(url) {
   return !error;
 }
 
-async function insertToQueue(candidate, sourceName) {
+async function insertToQueue(candidate, sourceName, relevanceResult = null) {
   const payload = {
     title: candidate.title,
     authors: [],
@@ -516,20 +573,24 @@ async function insertToQueue(candidate, sourceName) {
     tags: {},
   };
 
-  const { error } = await supabase
-    .from('ingestion_queue')
-    .insert({
-      url: candidate.url,
-      // url_norm is a generated column - computed automatically from url
-      content_type: 'publication',
-      status: 'pending',
-      discovered_at: new Date().toISOString(),
-      payload,
-      payload_schema_version: 1,
-      model_id: 'discovery-rss',
-    })
-    .select()
-    .single();
+  // url_norm is a generated column - computed automatically from url
+  const insertData = {
+    url: candidate.url,
+    content_type: 'publication',
+    status: 'pending',
+    discovered_at: new Date().toISOString(),
+    payload,
+    payload_schema_version: 1,
+    model_id: relevanceResult ? 'discovery-agentic' : 'discovery-rss',
+  };
+
+  // Add relevance scoring data if available
+  if (relevanceResult) {
+    insertData.relevance_score = relevanceResult.relevance_score;
+    insertData.executive_summary = relevanceResult.executive_summary;
+  }
+
+  const { error } = await supabase.from('ingestion_queue').insert(insertData).select().single();
 
   if (error) {
     if (error.code === '23505') return false; // Duplicate
