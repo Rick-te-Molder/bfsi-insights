@@ -80,7 +80,7 @@ async function loadTaxonomies() {
     supabase.from('ag_capability').select('code, name').order('name'),
     supabase.from('regulator').select('code, name').order('name'),
     supabase.from('regulation').select('code, name').order('name'),
-    supabase.from('bfsi_process_taxonomy').select('code, name, level').order('level').order('name'),
+    supabase.from('bfsi_process_taxonomy').select('code, name, level').order('name'),
   ]);
 
   const format = (data) => data?.data?.map((i) => `${i.code}: ${i.name}`).join('\n') || '';
