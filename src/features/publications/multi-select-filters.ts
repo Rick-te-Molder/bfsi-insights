@@ -1,0 +1,385 @@
+/**
+ * Multi-select filter panel functionality
+ * Replaces the old single-select dropdown filters with checkbox-based multi-select
+ */
+
+export default function initMultiSelectFilters() {
+  const list = document.getElementById('list');
+  const empty = document.getElementById('empty');
+  const countEl = document.getElementById('count');
+  const qEl = document.getElementById('q') as HTMLInputElement | null;
+  const filterChipsEl = document.getElementById('filter-chips');
+  const searchSpinner = document.getElementById('search-spinner');
+  const loadMoreBtn = document.getElementById('load-more-btn') as HTMLButtonElement | null;
+  const paginationCount = document.getElementById('pagination-count');
+  const paginationContainer = document.getElementById('pagination-container');
+
+  // Filter panel elements
+  const filterPanel = document.getElementById('filter-panel');
+  const panelBackdrop = document.getElementById('panel-backdrop');
+  const closePanel = document.getElementById('close-panel');
+  const openPanelBtn = document.getElementById('open-filter-panel');
+  const clearAllBtn = document.getElementById('clear-all-filters');
+  const applyFiltersBtn = document.getElementById('apply-filters');
+  const panelCountNumber = document.getElementById('panel-count-number');
+  const fabFilterCount = document.getElementById('fab-filter-count');
+
+  const STORAGE_KEY = 'publicationMultiFiltersV1';
+  const PAGE_SIZE = 30;
+
+  if (!list) return;
+
+  // Index all items
+  interface IndexedItem {
+    el: HTMLElement;
+    title: string;
+    source_name: string;
+    authors: string;
+    summary: string;
+    [key: string]: string | HTMLElement;
+  }
+
+  let currentPage = 1;
+
+  const data: IndexedItem[] = Array.from(list.children).map((node) => {
+    const el = node as HTMLElement;
+    const heading = el.querySelector('h3')?.textContent?.trim() || '';
+    const linkTitle = el.querySelector('a')?.textContent?.trim() || '';
+    return {
+      el,
+      title: heading || linkTitle,
+      source_name: el.querySelector<HTMLElement>('.mt-1')?.textContent || '',
+      authors: el.dataset.authors || '',
+      summary: el.dataset.summaryMedium || '',
+      role: el.dataset.role || '',
+      industry: el.dataset.industry || '',
+      topic: el.dataset.topic || '',
+      content_type: el.dataset.content_type || '',
+      geography: el.dataset.geography || '',
+      regulator: el.dataset.regulator || '',
+      regulation: el.dataset.regulation || '',
+      process: el.dataset.process || '',
+    };
+  });
+
+  // Multi-select filter state
+  type FilterState = Record<string, Set<string>>;
+  let filterState: FilterState = {};
+  let searchQuery = '';
+
+  // Get all filter checkboxes
+  const filterCheckboxes = document.querySelectorAll<HTMLInputElement>(
+    '#filter-panel input[type="checkbox"]',
+  );
+
+  // Initialize filter state from checkboxes
+  function initFilterState() {
+    filterCheckboxes.forEach((cb) => {
+      const filterKey = cb.name.replace('filter-', '');
+      if (!filterState[filterKey]) {
+        filterState[filterKey] = new Set();
+      }
+    });
+  }
+
+  // Get current filter state from checkboxes
+  function getFilterStateFromCheckboxes(): FilterState {
+    const state: FilterState = {};
+    filterCheckboxes.forEach((cb) => {
+      const filterKey = cb.name.replace('filter-', '');
+      if (!state[filterKey]) {
+        state[filterKey] = new Set();
+      }
+      if (cb.checked) {
+        state[filterKey].add(cb.value);
+      }
+    });
+    return state;
+  }
+
+  // Apply filter state to checkboxes
+  function applyFilterStateToCheckboxes(state: FilterState) {
+    filterCheckboxes.forEach((cb) => {
+      const filterKey = cb.name.replace('filter-', '');
+      cb.checked = state[filterKey]?.has(cb.value) || false;
+    });
+  }
+
+  // Check if item matches multi-select filters
+  function matchesFilters(item: IndexedItem, state: FilterState): boolean {
+    for (const [key, values] of Object.entries(state)) {
+      if (values.size === 0) continue; // No filter for this key
+
+      const itemValue = item[key];
+      if (typeof itemValue !== 'string') continue;
+
+      // For comma-separated values (like regulator, regulation)
+      const itemValues = itemValue
+        .split(',')
+        .map((v) => v.trim())
+        .filter(Boolean);
+
+      // Check if any of the item's values match any selected filter value
+      const hasMatch = itemValues.some((v) => values.has(v)) || values.has(itemValue);
+      if (!hasMatch) return false;
+    }
+    return true;
+  }
+
+  // Check if item matches search query
+  function matchesSearch(item: IndexedItem, query: string): boolean {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return (
+      item.title.toLowerCase().includes(q) ||
+      item.source_name.toLowerCase().includes(q) ||
+      item.authors.toLowerCase().includes(q) ||
+      item.summary.toLowerCase().includes(q)
+    );
+  }
+
+  // Apply filters and return count
+  function applyFilters(state: FilterState, query: string, resetPage = false): number {
+    if (resetPage) currentPage = 1;
+
+    let matchingIndices: number[] = [];
+
+    data.forEach((item, index) => {
+      if (matchesFilters(item, state) && matchesSearch(item, query)) {
+        matchingIndices.push(index);
+      }
+    });
+
+    const totalMatching = matchingIndices.length;
+    const visibleCount = Math.min(currentPage * PAGE_SIZE, totalMatching);
+    const visibleIndices = new Set(matchingIndices.slice(0, visibleCount));
+
+    let visible = 0;
+    data.forEach((item, index) => {
+      const isVisible = visibleIndices.has(index);
+      item.el.classList.toggle('hidden', !isVisible);
+      if (isVisible) visible++;
+    });
+
+    // Update UI
+    if (empty) empty.classList.toggle('hidden', totalMatching !== 0);
+    if (countEl) countEl.textContent = `Showing ${visible} of ${totalMatching} publications`;
+    if (panelCountNumber) panelCountNumber.textContent = String(totalMatching);
+
+    updatePaginationUI(visible, totalMatching);
+    updateFilterChips(state, query);
+    updateFabBadge(state);
+
+    return totalMatching;
+  }
+
+  // Update pagination UI
+  function updatePaginationUI(visible: number, total: number) {
+    if (!loadMoreBtn || !paginationCount || !paginationContainer) return;
+
+    if (total === 0) {
+      paginationContainer.classList.add('hidden');
+      return;
+    }
+
+    paginationContainer.classList.remove('hidden');
+    paginationCount.textContent = `Showing ${visible} of ${total} publications`;
+
+    if (visible < total) {
+      loadMoreBtn.classList.remove('hidden');
+    } else {
+      loadMoreBtn.classList.add('hidden');
+    }
+  }
+
+  // Update filter chips below search
+  function updateFilterChips(state: FilterState, query: string) {
+    if (!filterChipsEl) return;
+
+    filterChipsEl.innerHTML = '';
+
+    // Add search chip
+    if (query) {
+      const chip = createChip(`Search: ${query}`, () => {
+        if (qEl) qEl.value = '';
+        searchQuery = '';
+        applyFilters(filterState, searchQuery, true);
+      });
+      filterChipsEl.appendChild(chip);
+    }
+
+    // Add filter chips
+    for (const [key, values] of Object.entries(state)) {
+      values.forEach((value) => {
+        const chip = createChip(`${key}: ${value}`, () => {
+          filterState[key].delete(value);
+          applyFilterStateToCheckboxes(filterState);
+          applyFilters(filterState, searchQuery, true);
+          saveFilters();
+        });
+        filterChipsEl.appendChild(chip);
+      });
+    }
+  }
+
+  // Create a removable chip
+  function createChip(label: string, onRemove: () => void): HTMLElement {
+    const chip = document.createElement('button');
+    chip.className =
+      'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-sky-500/10 text-sky-300 border border-sky-500/20 hover:bg-sky-500/20 transition-colors';
+    chip.innerHTML = `
+      ${label}
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    `;
+    chip.addEventListener('click', onRemove);
+    return chip;
+  }
+
+  // Update FAB badge
+  function updateFabBadge(state: FilterState) {
+    if (!fabFilterCount) return;
+
+    let count = 0;
+    for (const values of Object.values(state)) {
+      count += values.size;
+    }
+
+    if (count > 0) {
+      fabFilterCount.textContent = String(count);
+      fabFilterCount.classList.remove('hidden');
+    } else {
+      fabFilterCount.classList.add('hidden');
+    }
+  }
+
+  // Save filters to localStorage
+  function saveFilters() {
+    try {
+      const serializable: Record<string, string[]> = {};
+      for (const [key, values] of Object.entries(filterState)) {
+        serializable[key] = Array.from(values);
+      }
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ filters: serializable, search: searchQuery }),
+      );
+    } catch {}
+  }
+
+  // Load filters from localStorage
+  function loadFilters() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.filters) {
+          for (const [key, values] of Object.entries(parsed.filters)) {
+            filterState[key] = new Set(values as string[]);
+          }
+        }
+        if (parsed.search && qEl) {
+          qEl.value = parsed.search;
+          searchQuery = parsed.search;
+        }
+      }
+    } catch {}
+  }
+
+  // Panel open/close
+  function openPanel() {
+    if (!filterPanel) return;
+    filterPanel.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    // Update count when opening
+    const tempState = getFilterStateFromCheckboxes();
+    const count = applyFilters(tempState, searchQuery, false);
+    if (panelCountNumber) panelCountNumber.textContent = String(count);
+  }
+
+  function closeFilterPanel() {
+    if (!filterPanel) return;
+    filterPanel.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  // Show/hide search spinner
+  function showSpinner() {
+    searchSpinner?.classList.remove('hidden');
+  }
+
+  function hideSpinner() {
+    searchSpinner?.classList.add('hidden');
+  }
+
+  // Debounce helper
+  const debounced = (() => {
+    let t: ReturnType<typeof setTimeout> | undefined;
+    return (fn: () => void) => {
+      if (t) clearTimeout(t);
+      showSpinner();
+      t = setTimeout(() => {
+        fn();
+        hideSpinner();
+      }, 250);
+    };
+  })();
+
+  // Initialize
+  initFilterState();
+  loadFilters();
+  applyFilterStateToCheckboxes(filterState);
+  applyFilters(filterState, searchQuery);
+
+  // Event listeners
+  openPanelBtn?.addEventListener('click', openPanel);
+  closePanel?.addEventListener('click', closeFilterPanel);
+  panelBackdrop?.addEventListener('click', closeFilterPanel);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && filterPanel && !filterPanel.classList.contains('hidden')) {
+      closeFilterPanel();
+    }
+  });
+
+  // Live update as checkboxes change
+  filterCheckboxes.forEach((cb) => {
+    cb.addEventListener('change', () => {
+      const tempState = getFilterStateFromCheckboxes();
+      const count = applyFilters(tempState, searchQuery, true);
+      if (panelCountNumber) panelCountNumber.textContent = String(count);
+    });
+  });
+
+  // Apply button
+  applyFiltersBtn?.addEventListener('click', () => {
+    filterState = getFilterStateFromCheckboxes();
+    applyFilters(filterState, searchQuery, true);
+    saveFilters();
+    closeFilterPanel();
+  });
+
+  // Clear all
+  clearAllBtn?.addEventListener('click', () => {
+    filterCheckboxes.forEach((cb) => (cb.checked = false));
+    const tempState = getFilterStateFromCheckboxes();
+    const count = applyFilters(tempState, searchQuery, true);
+    if (panelCountNumber) panelCountNumber.textContent = String(count);
+  });
+
+  // Search input
+  qEl?.addEventListener('input', () => {
+    debounced(() => {
+      searchQuery = qEl.value.trim();
+      applyFilters(filterState, searchQuery, true);
+      saveFilters();
+    });
+  });
+
+  // Load more
+  loadMoreBtn?.addEventListener('click', () => {
+    currentPage++;
+    applyFilters(filterState, searchQuery, false);
+  });
+}
