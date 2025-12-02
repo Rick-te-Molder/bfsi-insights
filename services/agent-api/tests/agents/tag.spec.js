@@ -4,23 +4,26 @@ import { describe, it, expect, vi, beforeAll } from 'vitest';
 vi.stubEnv('PUBLIC_SUPABASE_URL', 'https://test.supabase.co');
 vi.stubEnv('SUPABASE_SERVICE_KEY', 'test-key');
 
-// Mock Supabase before importing
+// Mock Supabase before importing - support chained .order() calls
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({
     from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        order: vi.fn(() => ({
+      select: vi.fn(() => {
+        const orderFn = vi.fn(() => ({
+          order: orderFn,
           data: [
-            { code: 'banking', name: 'Banking' },
-            { code: 'insurance', name: 'Insurance' },
+            { code: 'banking', name: 'Banking', level: 1, parent_code: null },
+            { code: 'retail-banking', name: 'Retail Banking', level: 2, parent_code: 'banking' },
+            { code: 'insurance', name: 'Insurance', level: 1, parent_code: null },
           ],
-        })),
-      })),
+        }));
+        return { order: orderFn };
+      }),
     })),
   })),
 }));
 
-// Mock the AgentRunner
+// Mock the AgentRunner with new granular schema
 vi.mock('../../src/lib/runner.js', () => ({
   AgentRunner: vi.fn(() => ({
     run: vi.fn(async (context, callback) => {
@@ -35,17 +38,21 @@ vi.mock('../../src/lib/runner.js', () => ({
                     {
                       message: {
                         parsed: {
-                          industry_code: 'banking',
-                          topic_code: 'ai-strategy',
-                          geography_codes: ['global'],
+                          industry_codes: [
+                            { code: 'banking', confidence: 0.95 },
+                            { code: 'retail-banking', confidence: 0.85 },
+                          ],
+                          topic_codes: [{ code: 'ai-strategy', confidence: 0.9 }],
+                          geography_codes: [{ code: 'global', confidence: 0.8 }],
                           use_case_codes: [],
                           capability_codes: [],
                           regulator_codes: [],
                           regulation_codes: [],
+                          process_codes: [],
                           organization_names: ['JPMorgan'],
                           vendor_names: ['OpenAI'],
-                          confidence: 0.95,
-                          reasoning: 'Test reasoning',
+                          overall_confidence: 0.92,
+                          reasoning: 'Test reasoning with granular confidence',
                         },
                       },
                     },
@@ -74,7 +81,7 @@ describe('Tagger Agent', () => {
     expect(typeof runTagger).toBe('function');
   });
 
-  it('should process a queue item and return tags', async () => {
+  it('should process a queue item and return granular tags with confidence', async () => {
     const mockQueueItem = {
       id: 'test-id',
       payload: {
@@ -87,9 +94,28 @@ describe('Tagger Agent', () => {
     const result = await runTagger(mockQueueItem);
 
     expect(result).toBeDefined();
-    expect(result.industry_code).toBe('banking');
-    expect(result.topic_code).toBe('ai-strategy');
-    expect(result.confidence).toBeGreaterThan(0);
+
+    // Check industry_codes is array with confidence
+    expect(result.industry_codes).toBeInstanceOf(Array);
+    expect(result.industry_codes.length).toBeGreaterThan(0);
+    expect(result.industry_codes[0]).toHaveProperty('code', 'banking');
+    expect(result.industry_codes[0]).toHaveProperty('confidence');
+    expect(result.industry_codes[0].confidence).toBeGreaterThan(0);
+
+    // Check hierarchical extraction (L1 and L2)
+    const industryCodes = result.industry_codes.map((i) => i.code);
+    expect(industryCodes).toContain('banking'); // L1 parent
+    expect(industryCodes).toContain('retail-banking'); // L2 sub-category
+
+    // Check topic_codes
+    expect(result.topic_codes).toBeInstanceOf(Array);
+    expect(result.topic_codes[0].code).toBe('ai-strategy');
+
+    // Check overall confidence
+    expect(result.overall_confidence).toBeGreaterThan(0);
+    expect(result.overall_confidence).toBeLessThanOrEqual(1);
+
+    // Check entity extraction
     expect(result.organization_names).toContain('JPMorgan');
     expect(result.vendor_names).toContain('OpenAI');
   });
@@ -105,6 +131,23 @@ describe('Tagger Agent', () => {
     const result = await runTagger(mockQueueItem);
 
     expect(result).toBeDefined();
-    expect(result.industry_code).toBeDefined();
+    expect(result.industry_codes).toBeDefined();
+    expect(result.overall_confidence).toBeDefined();
+  });
+
+  it('should include reasoning for classification', async () => {
+    const mockQueueItem = {
+      id: 'test-id-3',
+      payload: {
+        title: 'Insurance AI Trends',
+        description: 'Overview of AI in insurance industry',
+      },
+    };
+
+    const result = await runTagger(mockQueueItem);
+
+    expect(result.reasoning).toBeDefined();
+    expect(typeof result.reasoning).toBe('string');
+    expect(result.reasoning.length).toBeGreaterThan(0);
   });
 });
