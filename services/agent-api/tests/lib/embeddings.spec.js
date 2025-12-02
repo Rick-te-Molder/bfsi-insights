@@ -36,6 +36,7 @@ import {
   generateEmbedding,
   generateEmbeddings,
   scoreWithEmbedding,
+  batchScoreWithEmbeddings,
   clearReferenceCache,
   HIGH_RELEVANCE_THRESHOLD,
   LOW_RELEVANCE_THRESHOLD,
@@ -249,5 +250,80 @@ describe('constants', () => {
 describe('clearReferenceCache', () => {
   it('clears the cache without error', () => {
     expect(() => clearReferenceCache()).not.toThrow();
+  });
+});
+
+describe('batchScoreWithEmbeddings', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('handles empty array', async () => {
+    const result = await batchScoreWithEmbeddings([], [0.1]);
+    expect(result.results).toEqual([]);
+    expect(result.totalTokens).toBe(0);
+  });
+
+  it('scores multiple candidates with correct actions', async () => {
+    const referenceEmbedding = new Array(1536).fill(0.1);
+
+    // Mock embeddings that will produce different similarities
+    const highSimilarityEmb = new Array(1536).fill(0.1); // Same as reference = 1.0
+    const lowSimilarityEmb = new Array(1536).fill(0);
+    lowSimilarityEmb[0] = 1; // Orthogonal to reference
+
+    mockEmbeddingsCreate.mockResolvedValue({
+      data: [{ embedding: highSimilarityEmb }, { embedding: lowSimilarityEmb }],
+      usage: { total_tokens: 20 },
+    });
+
+    const candidates = [
+      { title: 'High match', description: 'desc' },
+      { title: 'Low match', description: 'desc' },
+    ];
+
+    const result = await batchScoreWithEmbeddings(candidates, referenceEmbedding);
+
+    expect(result.results).toHaveLength(2);
+    expect(result.totalTokens).toBe(20);
+    expect(result.results[0].action).toBe('accept');
+    expect(result.results[1].action).toBe('reject');
+  });
+
+  it('preserves candidate properties in results', async () => {
+    mockEmbeddingsCreate.mockResolvedValue({
+      data: [{ embedding: new Array(1536).fill(0.1) }],
+      usage: { total_tokens: 10 },
+    });
+
+    const candidates = [{ title: 'Test', description: 'Desc', customProp: 'value' }];
+    const result = await batchScoreWithEmbeddings(candidates, new Array(1536).fill(0.1));
+
+    expect(result.results[0].title).toBe('Test');
+    expect(result.results[0].customProp).toBe('value');
+    expect(result.results[0].similarity).toBeDefined();
+    expect(result.results[0].action).toBeDefined();
+  });
+
+  it('returns llm action for uncertain similarity', async () => {
+    const referenceEmbedding = new Array(1536).fill(0.1);
+
+    // Create embedding with ~0.5-0.7 similarity (uncertain zone)
+    const uncertainEmb = new Array(1536).fill(0);
+    for (let i = 0; i < 768; i++) {
+      uncertainEmb[i] = 0.1;
+    }
+
+    mockEmbeddingsCreate.mockResolvedValue({
+      data: [{ embedding: uncertainEmb }],
+      usage: { total_tokens: 10 },
+    });
+
+    const candidates = [{ title: 'Uncertain', description: 'test' }];
+    const result = await batchScoreWithEmbeddings(candidates, referenceEmbedding);
+
+    expect(result.results[0].action).toBe('llm');
+    expect(result.results[0].similarity).toBeGreaterThan(LOW_RELEVANCE_THRESHOLD);
+    expect(result.results[0].similarity).toBeLessThan(HIGH_RELEVANCE_THRESHOLD);
   });
 });
