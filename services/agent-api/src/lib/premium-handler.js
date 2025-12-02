@@ -92,14 +92,28 @@ export function processHeadlineOnly(candidate, source) {
 export function extractRssPreview(description) {
   if (!description) return { preview: null, wordCount: 0 };
 
-  // Limit input length to prevent ReDoS attacks
+  // Limit input length to prevent DoS attacks
   const safeInput = description.slice(0, 10000);
 
-  // Clean HTML tags using a simple, non-backtracking approach
-  const cleaned = safeInput
-    .replace(/<[^>]*>/g, ' ') // Use * instead of + to avoid backtracking
+  // Strip HTML tags using iterative approach (ReDoS-safe)
+  let textOnly = '';
+  let inTag = false;
+  for (const char of safeInput) {
+    if (char === '<') {
+      inTag = true;
+      textOnly += ' ';
+    } else if (char === '>') {
+      inTag = false;
+    } else if (!inTag) {
+      textOnly += char;
+    }
+  }
+
+  // Clean up whitespace and entities
+  const cleaned = textOnly
     .replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ')
+    .split(/\s+/)
+    .join(' ')
     .trim();
 
   // Truncate to reasonable preview length
