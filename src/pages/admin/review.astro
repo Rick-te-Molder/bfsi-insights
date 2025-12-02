@@ -632,11 +632,19 @@ import PublicationModal from '../../features/publications/PublicationModal.astro
 
       try {
         // Update title in queue item if changed
+        // IMPORTANT: Fetch fresh payload to avoid overwriting re-enriched data
         if (editedTitle !== item.payload?.title) {
+          const { data: freshItem, error: fetchError } = await supabase
+            .from('ingestion_queue')
+            .select('payload')
+            .eq('id', item.id)
+            .single();
+          if (fetchError) throw fetchError;
+
           const { error: updateError } = await supabase
             .from('ingestion_queue')
             .update({
-              payload: { ...item.payload, title: editedTitle },
+              payload: { ...freshItem.payload, title: editedTitle },
             })
             .eq('id', item.id);
           if (updateError) throw updateError;
