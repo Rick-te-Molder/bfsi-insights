@@ -15,6 +15,7 @@ import process from 'node:process';
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { runDiscovery } from './agents/discover.js';
+import { runClassicsDiscovery } from './agents/discover-classics.js';
 import { runRelevanceFilter } from './agents/filter.js';
 import { runSummarizer } from './agents/summarize.js';
 import { runTagger } from './agents/tag.js';
@@ -65,6 +66,20 @@ async function runDiscoveryCmd(options) {
   if (result.skipped) {
     console.log(`   Skipped (low relevance): ${result.skipped}`);
   }
+  return result;
+}
+
+// Run classics discovery
+async function runClassicsCmd(options) {
+  console.log('📚 Running Classics Discovery Agent...\n');
+  const result = await runClassicsDiscovery({
+    limit: options.limit || 5,
+    expandCitations: !options['no-expand'],
+    dryRun: options['dry-run'] || options.dryRun,
+  });
+  console.log('\n✨ Classics discovery complete!');
+  console.log(`   Classics queued: ${result.classics}`);
+  console.log(`   Expansion papers: ${result.expansions}`);
   return result;
 }
 
@@ -335,6 +350,10 @@ async function main() {
       case 'discovery':
       case 'discover':
         await runDiscoveryCmd(options);
+        break;
+      case 'classics':
+      case 'discover-classics':
+        await runClassicsCmd(options);
         break;
       case 'filter':
         await runFilterCmd(options);

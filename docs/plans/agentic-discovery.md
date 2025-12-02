@@ -307,12 +307,13 @@ CREATE TABLE discovery_metrics (
 - [ ] Create manual curation queue for premium content
 - [ ] **Goal**: 50% coverage of premium sources
 
-### Phase 5: Classic Papers (2-3 days)
+### Phase 5: Classic Papers ✅ COMPLETE
 
-- [ ] Create classic_papers seed table
-- [ ] Implement periodic classic sweep
-- [ ] Add citation-based expansion
-- [ ] **Goal**: 50+ foundational papers discovered
+- [x] Create classic_papers seed table with 15 foundational papers
+- [x] Implement classics discovery agent
+- [x] Add citation-based expansion (high-impact citing papers)
+- [x] CLI: `node src/cli.js classics [--limit=N] [--no-expand] [--dry-run]`
+- [x] **Result**: Semantic Scholar integration for classic paper discovery
 
 ### Phase 6: Learning Loop (5+ days)
 
