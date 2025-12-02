@@ -407,4 +407,27 @@ export default function initMultiSelectFilters() {
     currentPage++;
     applyFilters(filterState, searchQuery, false);
   });
+
+  // Empty state actions
+  const emptyClearFilters = document.getElementById('empty-clear-filters');
+  const emptyClearSearch = document.getElementById('empty-clear-search');
+
+  emptyClearFilters?.addEventListener('click', () => {
+    // Clear all filter checkboxes
+    filterCheckboxes.forEach((cb) => (cb.checked = false));
+    filterState = {};
+    initFilterState();
+    applyFilters(filterState, searchQuery, true);
+    saveFilters();
+  });
+
+  emptyClearSearch?.addEventListener('click', () => {
+    // Clear search input
+    if (qEl) {
+      qEl.value = '';
+      searchQuery = '';
+      applyFilters(filterState, searchQuery, true);
+      saveFilters();
+    }
+  });
 }
