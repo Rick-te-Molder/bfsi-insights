@@ -11,8 +11,23 @@ import OpenAI from 'openai';
 import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+// Lazy-load clients to avoid error at import time when env vars are missing
+let openai = null;
+let supabase = null;
+
+function getOpenAI() {
+  if (!openai) {
+    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return openai;
+}
+
+function getSupabase() {
+  if (!supabase) {
+    supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  }
+  return supabase;
+}
 
 // Model config
 const EMBEDDING_MODEL = 'text-embedding-3-small';
@@ -32,7 +47,7 @@ let referenceEmbeddingCache = null;
  * @returns {Promise<{embedding: number[], tokens: number}>}
  */
 export async function generateEmbedding(text) {
-  const response = await openai.embeddings.create({
+  const response = await getOpenAI().embeddings.create({
     model: EMBEDDING_MODEL,
     input: text.slice(0, 8000), // Limit to avoid token overflow
   });
@@ -54,7 +69,7 @@ export async function generateEmbeddings(texts) {
   // Limit each text and batch
   const truncatedTexts = texts.map((t) => t.slice(0, 8000));
 
-  const response = await openai.embeddings.create({
+  const response = await getOpenAI().embeddings.create({
     model: EMBEDDING_MODEL,
     input: truncatedTexts,
   });
@@ -100,7 +115,7 @@ export async function buildReferenceEmbedding(limit = 50) {
   console.log('   📊 Building reference embedding from approved publications...');
 
   // Get approved publications with good content
-  const { data: publications, error } = await supabase
+  const { data: publications, error } = await getSupabase()
     .from('ingestion_queue')
     .select('payload')
     .eq('status', 'approved')
