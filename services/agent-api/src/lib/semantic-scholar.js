@@ -87,8 +87,8 @@ async function apiRequest(endpoint, params = {}) {
 export async function searchPaper(title) {
   // Clean title for search
   const cleanTitle = title
-    .replace(/[^\w\s]/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replaceAll(/[^\w\s]/g, ' ')
+    .replaceAll(/\s+/g, ' ')
     .trim()
     .slice(0, 200);
 
@@ -137,7 +137,7 @@ export async function getPaperByDoi(doi) {
  */
 export async function getPaperByArxiv(arxivId) {
   // Extract just the ID part if full URL given
-  const match = arxivId.match(/(\d{4}\.\d{4,5})/);
+  const match = /(\d{4}\.\d{4,5})/.exec(arxivId);
   const id = match ? match[1] : arxivId;
 
   return apiRequest(`/paper/ARXIV:${id}`, {

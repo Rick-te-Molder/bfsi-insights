@@ -62,7 +62,7 @@ export function calculateRecencyScore(publishedAt) {
  * @returns {number} Normalized score 0-10
  */
 function normalizeScore(score, min = 0, max = 10) {
-  if (score === null || score === undefined) return 5;
+  if (score == null) return 5;
   const normalized = ((score - min) / (max - min)) * 10;
   return Math.max(0, Math.min(10, normalized));
 }
@@ -85,8 +85,8 @@ export function calculateQualityScore({
   // Normalize scores to 0-10
   const scores = {
     relevance: normalizeScore(relevanceScore, 1, 10),
-    similarity: similarityScore !== null ? normalizeScore(similarityScore, 0, 1) : null,
-    impact: impactScore !== null ? normalizeScore(impactScore, 0, 10) : null,
+    similarity: similarityScore != null ? normalizeScore(similarityScore, 0, 1) : null,
+    impact: impactScore != null ? normalizeScore(impactScore, 0, 10) : null,
     recency: calculateRecencyScore(publishedAt),
   };
 
