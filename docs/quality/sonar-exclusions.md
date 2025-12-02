@@ -29,6 +29,7 @@ This document explains which files are excluded from coverage requirements in So
 | `**/lib/runner.js`                             | Agent runner infrastructure; Supabase/OpenAI client setup                              | 2025-12-01    | 2026-06-01 |
 | `**/lib/evals.js`                              | Eval orchestration; pure helpers extracted to `eval-helpers.js`                        | 2025-12-01    | 2026-06-01 |
 | `**/lib/scrapers.js`                           | Web scraping infrastructure; Playwright browser automation                             | 2025-12-02    | 2026-06-02 |
+| `**/lib/embeddings.js`                         | OpenAI embeddings + Supabase reference builder; pure math tested, infra excluded       | 2025-12-02    | 2026-06-02 |
 | `**/agents/filter.js`                          | Thin LLM wrapper; AgentRunner orchestration                                            | 2025-12-02    | 2026-06-02 |
 | `**/agents/summarize.js`                       | Thin LLM wrapper; AgentRunner orchestration                                            | 2025-12-02    | 2026-06-02 |
 | `**/agents/thumbnail.js`                       | Thin LLM wrapper; screenshot/image processing                                          | 2025-12-02    | 2026-06-02 |
@@ -47,7 +48,6 @@ These files contain core business logic and **must** have test coverage:
 | `src/lib/text.ts`                                      | Text utilities (linkify, escape) | `tests/lib/text.spec.ts`                   |
 | `src/lib/fmt.ts`                                       | Date formatting                  | `tests/lib/fmt.spec.ts`                    |
 | `services/agent-api/src/agents/discovery-relevance.js` | LLM relevance scoring logic      | `tests/agents/discovery-relevance.spec.js` |
-| `services/agent-api/src/lib/embeddings.js`             | Embedding similarity scoring     | `tests/lib/embeddings.spec.js`             |
 | `services/agent-api/src/lib/sitemap.js`                | Sitemap parsing                  | `tests/lib/sitemap.spec.js`                |
 
 ## 4. Review Policy
