@@ -630,7 +630,10 @@ import PublicationModal from '../../features/publications/PublicationModal.astro
         }
         updateStats();
       } catch (err) {
-        alert('Approve failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        const msg =
+          err?.message || err?.error_description || JSON.stringify(err) || 'Unknown error';
+        alert('Approve failed: ' + msg);
+        console.error('Approve error:', err);
         if (btn) btn.textContent = '✓ Approve & Publish';
       } finally {
         processing = false;
