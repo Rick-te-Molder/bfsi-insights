@@ -125,22 +125,33 @@ import Base from '../../layouts/Base.astro';
           return;
         }
 
-        // Load taxonomy for code-to-label mapping
-        const [queueResult, industriesResult, topicsResult] = await Promise.all([
-          supabase
-            .from('ingestion_queue')
-            .select('*')
-            .eq('status', 'enriched')
-            .order('fetched_at', { ascending: false }),
-          supabase.from('bfsi_industry').select('code, name').order('sort_order'),
-          supabase.from('bfsi_topic').select('code, name').order('sort_order'),
-        ]);
+        // Load taxonomy for code-to-label mapping and existing entities for duplicate detection
+        const [queueResult, industriesResult, topicsResult, vendorsResult, orgsResult] =
+          await Promise.all([
+            supabase
+              .from('ingestion_queue')
+              .select('*')
+              .eq('status', 'enriched')
+              .order('fetched_at', { ascending: false }),
+            supabase.from('bfsi_industry').select('code, name').order('sort_order'),
+            supabase.from('bfsi_topic').select('code, name').order('sort_order'),
+            supabase.from('ag_vendor').select('id, name'),
+            supabase.from('bfsi_organization').select('id, organization_name'),
+          ]);
 
         if (queueResult.error) throw queueResult.error;
 
         // Create lookup maps
         const industryMap = new Map((industriesResult.data || []).map((i) => [i.code, i.name]));
         const topicMap = new Map((topicsResult.data || []).map((t) => [t.code, t.name]));
+
+        // Existing entities for duplicate detection (lowercase for case-insensitive matching)
+        const existingVendors = new Set(
+          (vendorsResult.data || []).map((v) => v.name.toLowerCase()),
+        );
+        const existingOrgs = new Set(
+          (orgsResult.data || []).map((o) => o.organization_name.toLowerCase()),
+        );
 
         loading.classList.add('hidden');
         const pending = queueResult.data || [];
@@ -183,6 +194,18 @@ import Base from '../../layouts/Base.astro';
             const personaScores = payload.persona_scores || {};
             const industryCodes = payload.industry_codes || [];
             const topicCodes = payload.topic_codes || [];
+            const vendorNames = payload.vendor_names || [];
+            const organizationNames = payload.organization_names || [];
+
+            // Check which entities are new vs existing
+            const vendorStatus = vendorNames.map((name) => ({
+              name,
+              isNew: !existingVendors.has(name.toLowerCase()),
+            }));
+            const orgStatus = organizationNames.map((name) => ({
+              name,
+              isNew: !existingOrgs.has(name.toLowerCase()),
+            }));
 
             // Validate summary lengths
             const shortLen = summary.short?.length || 0;
@@ -322,6 +345,80 @@ import Base from '../../layouts/Base.astro';
                     }
                   </div>
 
+                  <!-- Entity Curation (Vendors & Organizations) -->
+                  ${
+                    vendorStatus.length > 0 || orgStatus.length > 0
+                      ? `
+                  <div class="mt-4 p-4 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                    <div class="flex items-center gap-2 mb-3">
+                      <span class="text-xs font-semibold text-amber-300 uppercase">🏷️ Taxonomy Curation</span>
+                      <span class="text-xs text-neutral-400">(Select entities to add to database)</span>
+                    </div>
+                    
+                    ${
+                      vendorStatus.length > 0
+                        ? `
+                    <div class="mb-3">
+                      <span class="text-xs font-medium text-neutral-400">AI/Tech Vendors</span>
+                      <div class="flex flex-wrap gap-2 mt-1">
+                        ${vendorStatus
+                          .map(
+                            (v) => `
+                          <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md cursor-pointer transition
+                            ${v.isNew ? 'bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20' : 'bg-neutral-800 border border-neutral-700'}">
+                            <input type="checkbox" 
+                              class="vendor-checkbox rounded border-neutral-600 bg-neutral-800 text-emerald-500 focus:ring-emerald-500/30"
+                              data-item-id="${item.id}"
+                              data-entity-type="vendor"
+                              data-entity-name="${v.name}"
+                              ${v.isNew ? 'checked' : ''}
+                            />
+                            <span class="text-sm ${v.isNew ? 'text-emerald-300' : 'text-neutral-400'}">${v.name}</span>
+                            ${v.isNew ? '<span class="text-xs px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">NEW</span>' : '<span class="text-xs text-neutral-500">exists</span>'}
+                          </label>
+                        `,
+                          )
+                          .join('')}
+                      </div>
+                    </div>
+                    `
+                        : ''
+                    }
+                    
+                    ${
+                      orgStatus.length > 0
+                        ? `
+                    <div>
+                      <span class="text-xs font-medium text-neutral-400">BFSI Organizations</span>
+                      <div class="flex flex-wrap gap-2 mt-1">
+                        ${orgStatus
+                          .map(
+                            (o) => `
+                          <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-md cursor-pointer transition
+                            ${o.isNew ? 'bg-sky-500/10 border border-sky-500/30 hover:bg-sky-500/20' : 'bg-neutral-800 border border-neutral-700'}">
+                            <input type="checkbox"
+                              class="org-checkbox rounded border-neutral-600 bg-neutral-800 text-sky-500 focus:ring-sky-500/30"
+                              data-item-id="${item.id}"
+                              data-entity-type="organization"
+                              data-entity-name="${o.name}"
+                              ${o.isNew ? 'checked' : ''}
+                            />
+                            <span class="text-sm ${o.isNew ? 'text-sky-300' : 'text-neutral-400'}">${o.name}</span>
+                            ${o.isNew ? '<span class="text-xs px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400">NEW</span>' : '<span class="text-xs text-neutral-500">exists</span>'}
+                          </label>
+                        `,
+                          )
+                          .join('')}
+                      </div>
+                    </div>
+                    `
+                        : ''
+                    }
+                  </div>
+                  `
+                      : ''
+                  }
+
                   <!-- Persona Scores -->
                   ${
                     Object.keys(personaScores).length > 0
@@ -392,12 +489,31 @@ import Base from '../../layouts/Base.astro';
             article.classList.add('opacity-60');
             target.textContent = '⏳ Publishing...';
 
+            // Collect selected entities for taxonomy curation
+            const selectedVendors = [];
+            const selectedOrgs = [];
+
+            article.querySelectorAll('.vendor-checkbox:checked').forEach((cb) => {
+              if (cb instanceof HTMLInputElement && cb.dataset.entityName) {
+                selectedVendors.push(cb.dataset.entityName);
+              }
+            });
+
+            article.querySelectorAll('.org-checkbox:checked').forEach((cb) => {
+              if (cb instanceof HTMLInputElement && cb.dataset.entityName) {
+                selectedOrgs.push(cb.dataset.entityName);
+              }
+            });
+
             // Call SQL function which:
             // 1. Inserts into kb_publication
             // 2. Creates taxonomy relationships
-            // 3. Marks as approved
+            // 3. Upserts approved vendors and organizations
+            // 4. Marks as approved
             const { error } = await supabase.rpc('approve_from_queue', {
               p_queue_id: id,
+              p_approved_vendors: selectedVendors,
+              p_approved_organizations: selectedOrgs,
             });
 
             if (error) {
@@ -407,8 +523,14 @@ import Base from '../../layouts/Base.astro';
               return;
             }
 
+            // Show count of entities added
+            const entityMsg = [];
+            if (selectedVendors.length > 0) entityMsg.push(`${selectedVendors.length} vendors`);
+            if (selectedOrgs.length > 0) entityMsg.push(`${selectedOrgs.length} orgs`);
+            const entityNote = entityMsg.length > 0 ? ` (+${entityMsg.join(', ')})` : '';
+
             article.classList.add('opacity-50');
-            target.textContent = '✓ Published! Live on site.';
+            target.textContent = `✓ Published!${entityNote}`;
             target.setAttribute('disabled', 'true');
             setTimeout(() => article.remove(), 2000);
           }
