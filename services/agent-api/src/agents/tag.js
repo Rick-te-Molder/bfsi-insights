@@ -44,6 +44,11 @@ const TaggingSchema = z.object({
   regulation_codes: z
     .array(z.string())
     .describe('Regulation codes if specific regulations mentioned (empty array if none)'),
+  obligation_codes: z
+    .array(z.string())
+    .describe(
+      'Compliance obligation codes if specific requirements mentioned (empty array if none)',
+    ),
 
   // Process taxonomy (optional)
   process_codes: z
@@ -71,6 +76,7 @@ async function loadTaxonomies() {
     capabilities,
     regulators,
     regulations,
+    obligations,
     processes,
   ] = await Promise.all([
     supabase.from('bfsi_industry').select('code, name').order('name'),
@@ -80,6 +86,10 @@ async function loadTaxonomies() {
     supabase.from('ag_capability').select('code, name').order('name'),
     supabase.from('regulator').select('code, name').order('name'),
     supabase.from('regulation').select('code, name').order('name'),
+    supabase
+      .from('obligation')
+      .select('code, name, regulation_code, category')
+      .order('regulation_code, sort_order'),
     supabase.from('bfsi_process_taxonomy').select('code, name, level').order('name'),
   ]);
 
@@ -91,6 +101,12 @@ async function loadTaxonomies() {
       ?.map((i) => `${i.code}: ${i.name}${i.level > 1 ? ` (L${i.level})` : ''}`)
       .join('\n') || '';
 
+  // Format obligations with regulation and category
+  const formatObligations = (data) =>
+    data?.data
+      ?.map((i) => `${i.code}: ${i.name} [${i.regulation_code}/${i.category}]`)
+      .join('\n') || '';
+
   return {
     industries: format(industries),
     topics: format(topics),
@@ -99,6 +115,7 @@ async function loadTaxonomies() {
     capabilities: format(capabilities),
     regulators: format(regulators),
     regulations: format(regulations),
+    obligations: formatObligations(obligations),
     processes: formatProcesses(processes),
   };
 }
@@ -142,6 +159,9 @@ ${taxonomies.regulators}
 
 REGULATIONS (pick all that apply if specific regulations mentioned, or empty):
 ${taxonomies.regulations}
+
+OBLIGATIONS (pick all that apply if specific compliance requirements mentioned, or empty):
+${taxonomies.obligations}
 
 BFSI PROCESSES (pick all that apply - what business process does this relate to, or empty):
 ${taxonomies.processes}

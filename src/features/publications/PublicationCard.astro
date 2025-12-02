@@ -36,6 +36,7 @@ const industry = item.industry || '';
 const geography = item.geography || '';
 const regulators = item.regulators || [];
 const regulations = item.regulations || [];
+const obligations = item.obligations || [];
 const processes = item.processes || [];
 
 const isNew =
@@ -79,6 +80,7 @@ const candidates = [...itemThumbs];
   data-geography={geography}
   data-regulator={regulators.join(',') || ''}
   data-regulation={regulations.join(',') || ''}
+  data-obligation={obligations.join(',') || ''}
   data-process={processes.join(',') || ''}
   data-authors={Array.isArray(item.authors) ? item.authors.join(', ') : item.authors || ''}
   data-slug={item.slug}
