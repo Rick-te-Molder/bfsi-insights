@@ -22,11 +22,24 @@ if (error) {
 // Category normalization
 // ------------------------------------------------------------
 const CATEGORY_MAP: Record<string, string> = {
-  'strategy-consulting': 'Industry Research',
-  big4: 'Industry Research',
+  'strategy-consulting': 'Strategy Consulting',
+  big4: 'Big 4 Firms',
   regulator: 'Regulatory Bodies',
   research: 'Academic Research',
+  vendor: 'AI & Technology Vendors',
+  publication: 'Premium Publications',
 };
+
+// Category display order
+const CATEGORY_ORDER = [
+  'Regulatory Bodies',
+  'Strategy Consulting',
+  'Big 4 Firms',
+  'Academic Research',
+  'AI & Technology Vendors',
+  'Premium Publications',
+  'Other',
+];
 
 // ------------------------------------------------------------
 // Transform raw Supabase rows → view model
@@ -48,14 +61,19 @@ for (const res of externalSources) {
   grouped[res.category].push(res);
 }
 
-const categories = Object.keys(grouped).sort();
+// Sort categories by defined order
+const categories = Object.keys(grouped).sort((a, b) => {
+  const orderA = CATEGORY_ORDER.indexOf(a);
+  const orderB = CATEGORY_ORDER.indexOf(b);
+  return (orderA === -1 ? 999 : orderA) - (orderB === -1 ? 999 : orderB);
+});
 ---
 
 <Base title="Sources · BFSI Insights">
   <div class="mx-auto max-w-4xl px-4 py-8">
     <header class="mb-8">
       <h1 class="text-3xl font-bold tracking-tight">Sources</h1>
-      <p class="mt-2 text-neutral-300">
+      <p class="mt-2 text-neutral-600 dark:text-neutral-300">
         Curated external sources and high-quality content platforms for BFSI and agentic AI.
       </p>
     </header>
@@ -64,21 +82,25 @@ const categories = Object.keys(grouped).sort();
       {
         categories.map((category) => (
           <section>
-            <h2 class="mb-4 text-xl font-semibold text-neutral-200">{category}</h2>
+            <h2 class="mb-4 text-xl font-semibold text-neutral-800 dark:text-neutral-200">
+              {category}
+            </h2>
             <div class="space-y-4">
               {grouped[category].map((res) => (
-                <div class="rounded-lg border border-neutral-800 bg-neutral-900/40 p-4 transition-colors hover:border-neutral-700">
+                <div class="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/40 p-4 transition-colors hover:border-neutral-300 dark:hover:border-neutral-700">
                   <h3 class="font-medium">
                     <a
                       href={res.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      class="text-sky-300 underline-offset-2 hover:underline"
+                      class="text-sky-600 dark:text-sky-300 underline-offset-2 hover:underline"
                     >
                       {res.name} →
                     </a>
                   </h3>
-                  <p class="mt-1 text-sm text-neutral-300">{res.description}</p>
+                  <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
+                    {res.description}
+                  </p>
                 </div>
               ))}
             </div>

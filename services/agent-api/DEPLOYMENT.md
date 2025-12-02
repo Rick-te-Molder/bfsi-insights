@@ -103,6 +103,44 @@ npm run dev
 | `PORT`                 | ❌        | Server port (default: 3000)          |
 | `NODE_ENV`             | ❌        | Environment (development/production) |
 
+## Discovery Source Types
+
+The discovery agent supports multiple source types in `kb_source`, tried in priority order:
+
+| Field            | Type  | Description                                   |
+| ---------------- | ----- | --------------------------------------------- |
+| `rss_feed`       | URL   | RSS/Atom feed URL (fastest, most reliable)    |
+| `sitemap_url`    | URL   | XML sitemap URL (parses sitemap index too)    |
+| `scraper_config` | JSONB | Playwright scraper config (slowest, fallback) |
+
+### Sitemap Features
+
+- Parses standard XML sitemaps and sitemap indexes
+- Respects `robots.txt` (disallow patterns, crawl-delay)
+- Rate limiting: 1 second minimum between requests
+- Filters for article-like URLs, excludes static assets
+
+### Example Source Configuration
+
+```sql
+-- RSS source
+UPDATE kb_source SET rss_feed = 'https://example.com/feed.xml' WHERE slug = 'example';
+
+-- Sitemap source
+UPDATE kb_source SET sitemap_url = 'https://example.com/sitemap.xml' WHERE slug = 'example';
+
+-- Scraper source
+UPDATE kb_source SET scraper_config = '{
+  "url": "https://example.com/insights",
+  "selectors": {
+    "article": ".article-card",
+    "title": "h2",
+    "link": "a",
+    "date": ".date"
+  }
+}'::jsonb WHERE slug = 'example';
+```
+
 ## Architecture
 
 ```

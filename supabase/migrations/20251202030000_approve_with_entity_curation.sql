@@ -1,8 +1,15 @@
 -- ============================================================================
--- Add process tagging support to approve_from_queue
+-- KB-134: Add entity curation to approve_from_queue
+-- ============================================================================
+-- Adds optional parameters for upserting approved vendors and organizations
+-- during article approval process.
 -- ============================================================================
 
-CREATE OR REPLACE FUNCTION approve_from_queue(p_queue_id uuid)
+CREATE OR REPLACE FUNCTION approve_from_queue(
+  p_queue_id uuid,
+  p_approved_vendors text[] DEFAULT '{}',
+  p_approved_organizations text[] DEFAULT '{}'
+)
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -19,6 +26,8 @@ DECLARE
   v_regulator_code text;
   v_regulation_code text;
   v_process_code text;
+  v_vendor_name text;
+  v_org_name text;
   v_thumb_bucket text;
   v_thumb_path text;
 BEGIN
@@ -144,12 +153,32 @@ BEGIN
     ON CONFLICT DO NOTHING;
   END LOOP;
   
-  -- Insert process relationships (NEW)
+  -- Insert process relationships
   FOR v_process_code IN 
     SELECT jsonb_array_elements_text(COALESCE(v_payload->'process_codes', '[]'::jsonb))
   LOOP
     INSERT INTO kb_publication_bfsi_process (publication_id, process_code)
     VALUES (v_id, v_process_code)
+    ON CONFLICT DO NOTHING;
+  END LOOP;
+  
+  -- ============================================================================
+  -- NEW: Upsert approved vendors to ag_vendor
+  -- ============================================================================
+  FOREACH v_vendor_name IN ARRAY p_approved_vendors
+  LOOP
+    INSERT INTO ag_vendor (name)
+    VALUES (v_vendor_name)
+    ON CONFLICT (name_lc) DO NOTHING;
+  END LOOP;
+  
+  -- ============================================================================
+  -- NEW: Upsert approved organizations to bfsi_organization
+  -- ============================================================================
+  FOREACH v_org_name IN ARRAY p_approved_organizations
+  LOOP
+    INSERT INTO bfsi_organization (organization_name)
+    VALUES (v_org_name)
     ON CONFLICT DO NOTHING;
   END LOOP;
   
@@ -162,95 +191,17 @@ BEGIN
 END;
 $$;
 
--- ============================================================================
--- Update kb_publication_pretty view to include processes
--- ============================================================================
+-- Add unique constraint on organization_name if not exists
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'bfsi_organization_name_unique'
+  ) THEN
+    ALTER TABLE bfsi_organization 
+    ADD CONSTRAINT bfsi_organization_name_unique 
+    UNIQUE (organization_name);
+  END IF;
+END $$;
 
--- Must DROP first because column order/names changed
-DROP VIEW IF EXISTS kb_publication_pretty;
-
-CREATE VIEW kb_publication_pretty AS
-SELECT 
-  p.id,
-  p.slug,
-  p.title,
-  p.author as authors,
-  p.date_published,
-  p.source_url,
-  p.source_name,
-  p.source_domain,
-  p.thumbnail,
-  p.thumbnail_bucket,
-  p.thumbnail_path,
-  p.summary_short,
-  p.summary_medium,
-  p.summary_long,
-  p.content_type,
-  p.role,
-  p.geography,
-  p.status,
-  p.date_added,
-  p.last_edited,
-  
-  -- First industry (backward compat)
-  (SELECT i.code 
-   FROM kb_publication_bfsi_industry pi
-   JOIN bfsi_industry i ON i.code = pi.industry_code
-   WHERE pi.publication_id = p.id
-   ORDER BY pi.rank NULLS LAST
-   LIMIT 1
-  ) as industry,
-  
-  -- First topic (backward compat)
-  (SELECT t.code 
-   FROM kb_publication_bfsi_topic pt
-   JOIN bfsi_topic t ON t.code = pt.topic_code
-   WHERE pt.publication_id = p.id
-   ORDER BY pt.rank NULLS LAST
-   LIMIT 1
-  ) as topic,
-  
-  -- Industries array
-  COALESCE(
-    (SELECT array_agg(pi.industry_code ORDER BY pi.rank NULLS LAST)
-     FROM kb_publication_bfsi_industry pi
-     WHERE pi.publication_id = p.id),
-    '{}'
-  ) as industries,
-  
-  -- Topics array
-  COALESCE(
-    (SELECT array_agg(pt.topic_code ORDER BY pt.rank NULLS LAST)
-     FROM kb_publication_bfsi_topic pt
-     WHERE pt.publication_id = p.id),
-    '{}'
-  ) as topics,
-  
-  -- Regulators array
-  COALESCE(
-    (SELECT array_agg(pr.regulator_code)
-     FROM kb_publication_regulator pr
-     WHERE pr.publication_id = p.id),
-    '{}'
-  ) as regulators,
-  
-  -- Regulations array
-  COALESCE(
-    (SELECT array_agg(preg.regulation_code)
-     FROM kb_publication_regulation preg
-     WHERE preg.publication_id = p.id),
-    '{}'
-  ) as regulations,
-  
-  -- Processes array (NEW)
-  COALESCE(
-    (SELECT array_agg(pp.process_code)
-     FROM kb_publication_bfsi_process pp
-     WHERE pp.publication_id = p.id),
-    '{}'
-  ) as processes
-
-FROM kb_publication p
-WHERE p.status = 'published';
-
-COMMENT ON VIEW kb_publication_pretty IS 'Publication view with all taxonomy arrays including processes';
+COMMENT ON FUNCTION approve_from_queue IS 'Approves a queue item, creates publication, sets up taxonomy relationships, and optionally upserts new vendors/organizations';

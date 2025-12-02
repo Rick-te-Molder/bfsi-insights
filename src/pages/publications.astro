@@ -542,16 +542,86 @@ const expandItemThumb = (t: string | undefined) => {
 
   <!-- Publications list -->
   <section>
+    <!-- Enhanced empty state -->
     <div
       id="empty"
-      class="hidden rounded-md border border-neutral-800 bg-neutral-900/60 p-4 text-sm text-neutral-300"
+      class="hidden rounded-2xl border border-neutral-800 bg-neutral-900/60 p-8 text-center"
       role="status"
       aria-live="polite"
     >
-      No publications match the selected filters.
+      <!-- Search illustration -->
+      <div
+        class="mx-auto mb-4 w-16 h-16 rounded-full bg-neutral-800/50 flex items-center justify-center"
+      >
+        <svg class="w-8 h-8 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+        </svg>
+      </div>
+
+      <h3 class="text-lg font-medium text-neutral-200 mb-2">No publications found</h3>
+      <p class="text-sm text-neutral-400 mb-4">
+        Your search and filter combination didn't match any publications.
+      </p>
+
+      <!-- Suggestions -->
+      <div class="space-y-2 text-sm">
+        <p class="text-neutral-500">Try these suggestions:</p>
+        <ul class="text-neutral-400 space-y-1">
+          <li>• Remove some filters to broaden your search</li>
+          <li>• Check for typos in your search query</li>
+          <li>• Use fewer, more general keywords</li>
+        </ul>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="mt-6 flex flex-wrap justify-center gap-3">
+        <button
+          id="empty-clear-filters"
+          class="px-4 py-2 text-sm font-medium text-sky-300 border border-sky-500/30 rounded-lg hover:bg-sky-500/10 transition-colors"
+        >
+          Clear all filters
+        </button>
+        <button
+          id="empty-clear-search"
+          class="px-4 py-2 text-sm font-medium text-neutral-300 border border-neutral-700 rounded-lg hover:bg-neutral-800 transition-colors"
+        >
+          Clear search
+        </button>
+      </div>
+
+      <!-- Total count hint -->
+      <p class="mt-6 text-xs text-neutral-500">
+        <span id="empty-total-count">{publications.length}</span> publications available without filters
+      </p>
     </div>
 
-    <ul id="list" class="grid gap-6 sm:grid-cols-2">
+    <!-- Loading skeleton (shown before JS hydration) -->
+    <div id="loading-skeleton" class="grid gap-6 sm:grid-cols-2">
+      {
+        [1, 2, 3, 4, 5, 6].map(() => (
+          <div class="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 animate-pulse">
+            <div class="h-6 w-3/4 bg-neutral-800 rounded mb-3" />
+            <div class="h-4 w-1/2 bg-neutral-800 rounded mb-4" />
+            <div class="space-y-2">
+              <div class="h-3 w-full bg-neutral-800 rounded" />
+              <div class="h-3 w-5/6 bg-neutral-800 rounded" />
+              <div class="h-3 w-4/6 bg-neutral-800 rounded" />
+            </div>
+            <div class="mt-4 flex gap-2">
+              <div class="h-5 w-16 bg-neutral-800 rounded-full" />
+              <div class="h-5 w-20 bg-neutral-800 rounded-full" />
+            </div>
+          </div>
+        ))
+      }
+    </div>
+
+    <!-- Actual publication list (initially hidden, shown after JS hydration) -->
+    <ul id="list" class="grid gap-6 sm:grid-cols-2 opacity-0 transition-opacity duration-300">
       {publications.map((item, idx) => <PublicationCard item={item} index={idx} />)}
     </ul>
 
@@ -574,12 +644,23 @@ const expandItemThumb = (t: string | undefined) => {
     aria-label="Open filters"
     class="fixed bottom-6 left-6 z-40 flex h-14 items-center gap-2 px-5 rounded-full bg-sky-600 text-white shadow-lg hover:bg-sky-500 transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-neutral-950"
   >
-    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Filter icon (default) -->
+    <svg id="fab-icon" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path
         stroke-linecap="round"
         stroke-linejoin="round"
         stroke-width="2"
         d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+      ></path>
+    </svg>
+    <!-- Loading spinner (shown during filtering) -->
+    <svg id="fab-spinner" class="h-5 w-5 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+      ></circle>
+      <path
+        class="opacity-75"
+        fill="currentColor"
+        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
       ></path>
     </svg>
     <span class="font-medium">Filters</span>

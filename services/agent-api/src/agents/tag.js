@@ -8,52 +8,63 @@ const runner = new AgentRunner('taxonomy-tagger');
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 /**
- * Tagging Schema - Comprehensive taxonomy classification
+ * Tagged item with confidence score
+ */
+const TaggedCode = z.object({
+  code: z.string().describe('The taxonomy code'),
+  confidence: z.number().min(0).max(1).describe('Confidence score 0-1 for this specific tag'),
+});
+
+/**
+ * Tagging Schema - Comprehensive taxonomy classification with granular confidence
  *
  * GUARDRAILS (pick from list):
- * - industry_code, topic_code, geography_code
+ * - industry_codes, topic_codes, geography_codes
  * - use_case_codes, capability_codes
  * - regulator_codes, regulation_codes
  * - process_codes (BFSI business processes)
  *
  * EXPANDABLE (extract names, may create new entries):
  * - organization_names, vendor_names
+ *
+ * Each tag includes individual confidence scores for granular extraction.
  */
 const TaggingSchema = z.object({
-  // Core BFSI taxonomy (required)
-  industry_code: z.string().describe('Primary BFSI industry code from the list'),
-  topic_code: z.string().describe('Primary topic code from the list'),
+  // Core BFSI taxonomy - now supports multiple with confidence
+  industry_codes: z
+    .array(TaggedCode)
+    .describe(
+      'BFSI industry codes with confidence (include L1 parent and L2 sub-category if applicable)',
+    ),
+  topic_codes: z
+    .array(TaggedCode)
+    .describe('Topic codes with confidence (include L1 parent and L2 sub-topic if applicable)'),
 
-  // Geography (optional)
+  // Geography with confidence
   geography_codes: z
-    .array(z.string())
-    .describe('Geography codes mentioned (e.g., "global", "eu", "uk", "us")'),
+    .array(TaggedCode)
+    .describe('Geography codes with confidence (e.g., "global", "eu", "uk", "us")'),
 
-  // AI/Agentic taxonomy (optional)
+  // AI/Agentic taxonomy with confidence
   use_case_codes: z
-    .array(z.string())
-    .describe('AI use case codes if applicable (empty array if not AI-related)'),
+    .array(TaggedCode)
+    .describe('AI use case codes with confidence (empty array if not AI-related)'),
   capability_codes: z
-    .array(z.string())
-    .describe('AI capability codes if applicable (empty array if not AI-related)'),
+    .array(TaggedCode)
+    .describe('AI capability codes with confidence (empty array if not AI-related)'),
 
-  // Regulatory taxonomy (optional)
+  // Regulatory taxonomy with confidence
   regulator_codes: z
-    .array(z.string())
-    .describe('Regulator codes if regulatory content (empty array if not regulatory)'),
+    .array(TaggedCode)
+    .describe('Regulator codes with confidence (empty array if not regulatory)'),
   regulation_codes: z
     .array(z.string())
     .describe('Regulation codes if specific regulations mentioned (empty array if none)'),
-  obligation_codes: z
-    .array(z.string())
-    .describe(
-      'Compliance obligation codes if specific requirements mentioned (empty array if none)',
-    ),
 
-  // Process taxonomy (optional)
+  // Process taxonomy with confidence (hierarchical L1/L2/L3)
   process_codes: z
-    .array(z.string())
-    .describe('BFSI business process codes if applicable (empty array if general content)'),
+    .array(TaggedCode)
+    .describe('BFSI process codes with confidence - include parent codes for hierarchy'),
 
   // Expandable entities (names, not codes)
   organization_names: z
@@ -61,13 +72,13 @@ const TaggingSchema = z.object({
     .describe('BFSI organizations mentioned (banks, insurers, asset managers)'),
   vendor_names: z.array(z.string()).describe('AI/tech vendors mentioned'),
 
-  // Metadata
-  confidence: z.number().describe('Confidence score 0-1'),
+  // Overall metadata
+  overall_confidence: z.number().min(0).max(1).describe('Overall confidence in classification 0-1'),
   reasoning: z.string().describe('Brief explanation of classification choices'),
 });
 
 async function loadTaxonomies() {
-  // Load all guardrail taxonomies in parallel
+  // Load all guardrail taxonomies in parallel (include hierarchy info)
   const [
     industries,
     topics,
@@ -79,26 +90,35 @@ async function loadTaxonomies() {
     obligations,
     processes,
   ] = await Promise.all([
-    supabase.from('bfsi_industry').select('code, name').order('name'),
-    supabase.from('bfsi_topic').select('code, name').order('name'),
+    supabase
+      .from('bfsi_industry')
+      .select('code, name, level, parent_code')
+      .order('level')
+      .order('name'),
+    supabase
+      .from('bfsi_topic')
+      .select('code, name, level, parent_code')
+      .order('level')
+      .order('name'),
     supabase.from('bfsi_geography').select('code, name').order('name'),
     supabase.from('ag_use_case').select('code, name').order('name'),
     supabase.from('ag_capability').select('code, name').order('name'),
     supabase.from('regulator').select('code, name').order('name'),
     supabase.from('regulation').select('code, name').order('name'),
-    supabase
-      .from('obligation')
-      .select('code, name, regulation_code, category')
-      .order('regulation_code, sort_order'),
     supabase.from('bfsi_process_taxonomy').select('code, name, level').order('name'),
   ]);
 
   const format = (data) => data?.data?.map((i) => `${i.code}: ${i.name}`).join('\n') || '';
 
-  // Format process taxonomy with level indication
-  const formatProcesses = (data) =>
+  // Format hierarchical taxonomy with level and parent indication
+  const formatHierarchical = (data) =>
     data?.data
-      ?.map((i) => `${i.code}: ${i.name}${i.level > 1 ? ` (L${i.level})` : ''}`)
+      ?.map((i) => {
+        const indent = '  '.repeat((i.level || 1) - 1);
+        const levelTag = i.level ? `[L${i.level}]` : '';
+        const parentTag = i.parent_code ? ` (parent: ${i.parent_code})` : '';
+        return `${indent}${i.code}: ${i.name} ${levelTag}${parentTag}`;
+      })
       .join('\n') || '';
 
   // Format obligations with regulation and category
@@ -108,15 +128,15 @@ async function loadTaxonomies() {
       .join('\n') || '';
 
   return {
-    industries: format(industries),
-    topics: format(topics),
+    industries: formatHierarchical(industries),
+    topics: formatHierarchical(topics),
     geographies: format(geographies),
     useCases: format(useCases),
     capabilities: format(capabilities),
     regulators: format(regulators),
     regulations: format(regulations),
     obligations: formatObligations(obligations),
-    processes: formatProcesses(processes),
+    processes: formatHierarchical(processes),
   };
 }
 
@@ -137,38 +157,53 @@ export async function runTagger(queueItem) {
 SUMMARY: ${payload.summary?.short || payload.description || ''}
 URL: ${payload.url || ''}
 
-=== GUARDRAIL TAXONOMIES (pick codes from these lists) ===
+=== GRANULAR TAXONOMY EXTRACTION ===
+For each category, extract ALL applicable codes with individual confidence scores (0-1).
+For hierarchical taxonomies (industries, topics, processes), include BOTH:
+- L1 parent category (broader classification)
+- L2/L3 sub-categories (specific classification)
 
-INDUSTRIES (pick ONE primary):
+Example: For an article about retail banking AI, include:
+- {"code": "banking", "confidence": 0.95} (L1 parent)
+- {"code": "retail-banking", "confidence": 0.90} (L2 specific)
+
+=== INDUSTRIES (hierarchical - include parent and sub-categories) ===
 ${taxonomies.industries}
 
-TOPICS (pick ONE primary):
+=== TOPICS (hierarchical - include parent and sub-topics) ===
 ${taxonomies.topics}
 
-GEOGRAPHIES (pick all that apply, or empty):
+=== GEOGRAPHIES (pick all mentioned regions/countries) ===
 ${taxonomies.geographies}
 
-AI USE CASES (pick all that apply if AI-related, or empty):
+=== AI USE CASES (if AI-related content) ===
 ${taxonomies.useCases}
 
-AI CAPABILITIES (pick all that apply if AI-related, or empty):
+=== AI CAPABILITIES (if AI-related content) ===
 ${taxonomies.capabilities}
 
-REGULATORS (pick all that apply if regulatory content, or empty):
+=== REGULATORS (if regulatory content) ===
 ${taxonomies.regulators}
 
-REGULATIONS (pick all that apply if specific regulations mentioned, or empty):
+=== REGULATIONS (if specific regulations mentioned) ===
 ${taxonomies.regulations}
 
 OBLIGATIONS (pick all that apply if specific compliance requirements mentioned, or empty):
 ${taxonomies.obligations}
 
-BFSI PROCESSES (pick all that apply - what business process does this relate to, or empty):
+=== BFSI PROCESSES (hierarchical - what business processes are discussed) ===
 ${taxonomies.processes}
 
 === EXPANDABLE ENTITIES (extract names as found) ===
-- organization_names: Extract names of banks, insurers, asset managers mentioned
-- vendor_names: Extract names of AI/tech vendors mentioned`;
+- organization_names: Banks, insurers, asset managers mentioned by name
+- vendor_names: AI/tech vendors mentioned by name
+
+=== CONFIDENCE SCORING GUIDE ===
+- 0.9-1.0: Explicitly stated, main focus of the article
+- 0.7-0.9: Clearly implied or secondary focus
+- 0.5-0.7: Mentioned but not central
+- 0.3-0.5: Tangentially related
+- Below 0.3: Don't include (too uncertain)`;
 
       const completion = await openai.beta.chat.completions.parse({
         model: 'gpt-4o-mini',

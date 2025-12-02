@@ -205,7 +205,7 @@ pending → fetched → filtered → summarized → tagged → enriched → 👤
 
 Runs automatically at 2 AM UTC via GitHub Actions:
 
-1. **Discovery**: Scrapes RSS feeds, filters by BFSI keywords
+1. **Discovery**: Crawls RSS feeds, sitemaps, or web pages; filters by BFSI keywords
 2. **Enrichment**: Runs filter → summarize → tag → thumbnail (limit 20/night)
 3. **Review**: Human approves at `/admin/review`
 4. **Deploy**: Click "Trigger Build" or push to git
@@ -637,7 +637,7 @@ Admin UI can trigger rebuilds via Cloudflare Deploy Hooks.
 
 - [x] SonarCloud quality gate
 - [ ] More granular taxonomy extraction
-- [ ] Wider crawling in discovery agent
+- [x] Wider crawling in discovery agent (sitemaps, robots.txt compliance)
 - [ ] Embedding-based similarity search
 
 ---
