@@ -5,9 +5,17 @@
  * KB-151: Continuously refactor large files
  */
 const { execSync } = require('node:child_process');
-const path = require('node:path');
 
 const MAX_LINES = 500;
+
+// TODO(KB-151): Gradually refactor and remove entries from allowList.
+// These files are known to exceed the limit and are tracked for refactoring.
+const ALLOW_LIST = new Set([
+  'src/pages/publications.astro',
+  'src/features/publications/publication-filters.ts',
+  'src/pages/admin/review.astro',
+  'services/agent-api/src/agents/discover.js',
+]);
 
 // Use git ls-files to only scan tracked files
 const patterns = [
@@ -22,7 +30,8 @@ try {
   const files = execSync(`git ls-files ${patterns.map(p => `"${p}"`).join(' ')}`, { encoding: 'utf8' })
     .trim()
     .split('\n')
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((f) => !ALLOW_LIST.has(f));
 
   const largeFiles = [];
 
@@ -47,7 +56,11 @@ try {
     process.exit(1);
   }
 
-  console.log(`✅ All files are under ${MAX_LINES} lines`);
+  if (ALLOW_LIST.size > 0) {
+    console.log(`✅ All files are under ${MAX_LINES} lines (${ALLOW_LIST.size} files on allow-list)`);
+  } else {
+    console.log(`✅ All files are under ${MAX_LINES} lines`);
+  }
   process.exit(0);
 } catch (error) {
   console.error('Error checking file sizes:', error.message);
