@@ -111,21 +111,15 @@ ON CONFLICT (column_name) DO UPDATE SET
   sort_order = EXCLUDED.sort_order,
   description = EXCLUDED.description;
 
--- Create view for obligation with regulation info
+-- Create simple view for obligation (regulation join omitted - schema may vary)
 CREATE OR REPLACE VIEW obligation_pretty AS
 SELECT 
-  o.id,
-  o.code,
-  o.name,
-  o.description,
-  o.category,
-  o.article_reference,
-  o.regulation_code,
-  r.title as regulation_title,
-  r.domain,
-  reg.code as regulator_code,
-  reg.name as regulator_name
-FROM obligation o
-LEFT JOIN regulation r ON r.code = o.regulation_code
-LEFT JOIN regulator reg ON reg.id = r.regulator_id
-ORDER BY o.regulation_code, o.sort_order;
+  id,
+  code,
+  name,
+  description,
+  category,
+  article_reference,
+  regulation_code
+FROM obligation
+ORDER BY regulation_code, sort_order;
