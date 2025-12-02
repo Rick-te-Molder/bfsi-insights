@@ -24,13 +24,87 @@ const { data: filterConfig } = await supabase
   .eq('enabled', true)
   .order('sort_order');
 
+// Load hierarchical industry taxonomy
+const { data: industryTaxonomy } = await supabase
+  .from('bfsi_industry')
+  .select('code, name, level, parent_code, sort_order')
+  .order('sort_order');
+
+// Load hierarchical process taxonomy
+const { data: processTaxonomy } = await supabase
+  .from('bfsi_process_taxonomy')
+  .select('code, name, level, parent_code, sort_order')
+  .order('sort_order');
+
+// Build hierarchical structure for industry
+type TaxonomyItem = {
+  code: string;
+  name: string;
+  level: number;
+  parent_code: string | null;
+  sort_order: number;
+  children?: TaxonomyItem[];
+  count?: number;
+};
+const buildHierarchy = (items: TaxonomyItem[] | null): TaxonomyItem[] => {
+  if (!items) return [];
+  const map = new Map<string, TaxonomyItem>();
+  const roots: TaxonomyItem[] = [];
+
+  // First pass: create map
+  items.forEach((item) => {
+    map.set(item.code, { ...item, children: [] });
+  });
+
+  // Second pass: build tree
+  items.forEach((item) => {
+    const node = map.get(item.code)!;
+    if (item.parent_code && map.has(item.parent_code)) {
+      map.get(item.parent_code)!.children!.push(node);
+    } else if (item.level === 1 || !item.parent_code) {
+      roots.push(node);
+    }
+  });
+
+  return roots;
+};
+
+const industryHierarchy = buildHierarchy(industryTaxonomy as TaxonomyItem[] | null);
+const processHierarchy = buildHierarchy(processTaxonomy as TaxonomyItem[] | null);
+
+// Count publications per taxonomy code
+const countByIndustry = new Map<string, number>();
+const countByProcess = new Map<string, number>();
+
+publications.forEach((p) => {
+  // Count industries
+  const industries = p.industries || (p.industry ? [p.industry] : []);
+  industries.forEach((code: string) => {
+    if (code) countByIndustry.set(code, (countByIndustry.get(code) || 0) + 1);
+  });
+
+  // Count processes
+  const processes = p.processes || [];
+  processes.forEach((code: string) => {
+    if (code) countByProcess.set(code, (countByProcess.get(code) || 0) + 1);
+  });
+});
+
+// Add counts to hierarchy
+const addCounts = (items: TaxonomyItem[], countMap: Map<string, number>): TaxonomyItem[] => {
+  return items.map((item) => ({
+    ...item,
+    count: countMap.get(item.code) || 0,
+    children: item.children ? addCounts(item.children, countMap) : [],
+  }));
+};
+
+const industryWithCounts = addCounts(industryHierarchy, countByIndustry);
+const processWithCounts = addCounts(processHierarchy, countByProcess);
+
 const filters = filterConfig || [];
-const primaryFilters = filters.filter((filter) =>
-  ['role', 'industry'].includes(filter.column_name),
-);
-const advancedFiltersList = filters.filter(
-  (filter) => !['role', 'industry'].includes(filter.column_name),
-);
+// Exclude industry from flat filters (we'll render it hierarchically)
+const flatFilters = filters.filter((filter) => !['industry'].includes(filter.column_name));
 
 // Build filter value lists + counts (handles both single values and arrays)
 const createValuesWithCounts = (field: keyof Publication) => {
@@ -91,177 +165,24 @@ const expandItemThumb = (t: string | undefined) => {
   }
 
   <!-- Header -->
-  <section class="mb-6">
+  <section class="mb-4">
     <div class="flex items-center justify-between">
       <h2 class="text-2xl font-semibold tracking-tight">Publications</h2>
-      <div class="flex items-center gap-3">
-        <a
-          href="/"
-          class="text-sm font-medium text-sky-200 underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-        >
-          Home
-        </a>
-      </div>
+      <a
+        href="/"
+        class="text-sm font-medium text-sky-200 underline underline-offset-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+      >
+        Home
+      </a>
     </div>
-
-    <p class="mt-1 text-sm text-neutral-300">
-      Filter publications by attributes to find relevant items. Topic filters now live under “More
-      filters”.
-    </p>
-
-    <p id="count" class="mt-1 text-xs text-neutral-300" aria-live="polite"></p>
+    <p id="count" class="mt-1 text-sm text-neutral-400" aria-live="polite"></p>
   </section>
 
-  <!-- Desktop Filters -->
-  <section class="mb-6 hidden sm:grid gap-3 sm:grid-cols-2">
-    <!-- Search with loading indicator and suggestions -->
-    <div class="hidden sm:col-span-2 sm:flex flex-col gap-1 text-sm relative">
-      <label for="q" class="text-neutral-300">Search</label>
-      <div class="relative">
-        <svg
-          class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-        </svg>
-        <input
-          id="q"
-          type="search"
-          placeholder="Search by title, author, or source…"
-          autocomplete="off"
-          class="w-full rounded-md border border-neutral-700 bg-neutral-900 pl-10 pr-10 py-2 text-base placeholder:text-neutral-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
-        />
-        <!-- Loading spinner (hidden by default) -->
-        <div
-          id="search-spinner"
-          class="absolute right-3 top-1/2 -translate-y-1/2 hidden"
-          aria-hidden="true"
-        >
-          <svg class="animate-spin h-4 w-4 text-sky-400" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-            ></path>
-          </svg>
-        </div>
-      </div>
-      <!-- Search suggestions dropdown -->
-      <div
-        id="search-suggestions"
-        class="absolute top-full left-0 right-0 mt-1 bg-neutral-900 border border-neutral-700 rounded-md shadow-lg z-30 hidden"
-      >
-        <div id="search-history" class="py-1"></div>
-      </div>
-    </div>
-
-    <!-- First three primary filters -->
-    {
-      primaryFilters.map((filter) => {
-        const filterValues = values[filter.column_name] || [];
-        const isRole = filter.column_name === 'role';
-
-        return (
-          <label class="flex flex-col gap-1 text-sm">
-            <span class="text-neutral-300">
-              {filter.display_label}
-              <span class="text-neutral-500">({filterValues.length})</span>
-            </span>
-
-            <select
-              id={`f-${filter.column_name}`}
-              class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5"
-            >
-              <option value={isRole ? 'all' : ''}>
-                {isRole ? `Everyone (${publications.length})` : 'All'}
-              </option>
-
-              {filterValues.map((v) => (
-                <option value={v.value}>{v.label}</option>
-              ))}
-            </select>
-          </label>
-        );
-      })
-    }
-
-    <!-- Advanced Filters Toggle -->
-    <div class="sm:col-span-2">
-      <button
-        id="toggle-advanced-filters"
-        type="button"
-        class="flex items-center gap-2 text-sm text-neutral-400 hover:text-neutral-200 transition-colors"
-        aria-expanded="false"
-        aria-controls="advanced-filters"
-      >
-        <svg
-          id="advanced-filters-icon"
-          class="w-4 h-4 transition-transform"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"
-          ></path>
-        </svg>
-        <span>More filters</span>
-      </button>
-
-      <div id="advanced-filters" class="hidden mt-3 grid gap-3 sm:grid-cols-2">
-        {
-          advancedFiltersList.map((filter) => {
-            const filterValues = values[filter.column_name] || [];
-
-            return (
-              <label class="flex flex-col gap-1 text-sm">
-                <span class="text-neutral-300">
-                  {filter.display_label}
-                  <span class="text-neutral-500">({filterValues.length})</span>
-                </span>
-
-                <select
-                  id={`f-${filter.column_name}`}
-                  class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-1.5"
-                >
-                  <option value="">All</option>
-                  {filterValues.map((v) => (
-                    <option value={v.value}>{v.label}</option>
-                  ))}
-                </select>
-              </label>
-            );
-          })
-        }
-      </div>
-    </div>
-
-    <!-- Clear -->
-    <div class="sm:col-span-2 flex justify-end">
-      <button
-        id="clear-filters"
-        class="rounded-md border border-neutral-700 px-4 py-1.5 text-sm text-neutral-200 hover:bg-neutral-800 transition-colors"
-      >
-        Clear all
-      </button>
-    </div>
-  </section>
-
-  <!-- Mobile sticky search bar -->
-  <section
-    class="mb-4 sm:hidden sticky top-0 z-40 -mx-4 px-4 py-3 bg-neutral-950/95 backdrop-blur-sm border-b border-neutral-800/50"
-  >
-    <!-- Search input always visible -->
-    <div class="relative mb-3">
+  <!-- Search bar (both desktop and mobile) -->
+  <section class="mb-6">
+    <div class="relative">
       <svg
-        class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 pointer-events-none"
+        class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-500 pointer-events-none"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
@@ -273,19 +194,15 @@ const expandItemThumb = (t: string | undefined) => {
           d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
       </svg>
       <input
-        id="m-q-sticky"
+        id="q"
         type="search"
         placeholder="Search publications…"
         autocomplete="off"
-        class="w-full rounded-lg border border-neutral-700 bg-neutral-900 pl-10 pr-10 py-2.5 text-base placeholder:text-neutral-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-colors"
+        class="w-full rounded-xl border border-neutral-700 bg-neutral-900 pl-11 pr-11 py-3 text-base placeholder:text-neutral-500 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
       />
-      <!-- Mobile loading spinner -->
-      <div
-        id="mobile-search-spinner"
-        class="absolute right-3 top-1/2 -translate-y-1/2 hidden"
-        aria-hidden="true"
-      >
-        <svg class="animate-spin h-4 w-4 text-sky-400" fill="none" viewBox="0 0 24 24">
+      <!-- Loading spinner -->
+      <div id="search-spinner" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
+        <svg class="animate-spin h-5 w-5 text-sky-400" fill="none" viewBox="0 0 24 24">
           <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
           ></circle>
           <path
@@ -295,130 +212,330 @@ const expandItemThumb = (t: string | undefined) => {
           ></path>
         </svg>
       </div>
-      <!-- Mobile search suggestions -->
-      <div
-        id="mobile-search-suggestions"
-        class="absolute top-full left-0 right-0 mt-1 bg-neutral-900 border border-neutral-700 rounded-md shadow-lg z-50 hidden"
-      >
-        <div id="mobile-search-history" class="py-1"></div>
-      </div>
     </div>
-
-    <!-- Filter button and count -->
-    <div class="flex items-center gap-2">
-      <button
-        id="open-sheet"
-        class="flex-1 rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm font-medium text-neutral-200 hover:bg-neutral-800 flex items-center justify-center gap-2"
-      >
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-          ></path>
-        </svg>
-        <span>Filters</span>
-        <span
-          id="filter-count"
-          class="hidden ml-1 px-1.5 py-0.5 text-xs font-semibold bg-sky-500 text-white rounded-full"
-        ></span>
-      </button>
-
-      <div id="count-mobile" class="text-xs text-neutral-400 whitespace-nowrap" aria-live="polite">
-      </div>
-    </div>
-
-    <div id="chips" class="mt-2 flex flex-wrap gap-2 empty:hidden"></div>
+    <!-- Active filter chips -->
+    <div id="filter-chips" class="mt-3 flex flex-wrap gap-2 empty:hidden"></div>
   </section>
 
-  <!-- Mobile filter sheet -->
-  <div id="filter-sheet" class="fixed inset-0 z-50 hidden sm:hidden">
-    <div id="sheet-backdrop" class="absolute inset-0 bg-black/70"></div>
+  <!-- Hidden select elements for backward compatibility with filter logic -->
+  <div class="hidden">
+    {
+      filters.map((filter) => (
+        <select id={`f-${filter.column_name}`} data-filter={filter.column_name}>
+          <option value="">All</option>
+        </select>
+      ))
+    }
+  </div>
+
+  <!-- Full-screen filter panel with multi-select -->
+  <div id="filter-panel" class="fixed inset-0 z-50 hidden">
+    <div id="panel-backdrop" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
 
     <div
       role="dialog"
       aria-modal="true"
-      aria-labelledby="sheet-title"
-      class="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-auto rounded-t-2xl border border-neutral-800 bg-neutral-950 p-4"
+      aria-labelledby="panel-title"
+      class="absolute inset-0 sm:inset-4 sm:rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col overflow-hidden"
     >
-      <div class="mx-auto max-w-2xl">
-        <div class="flex items-center justify-between">
-          <h3 id="sheet-title" class="text-lg font-semibold">Filters</h3>
-          <button
-            id="close-sheet"
-            class="rounded p-2 text-neutral-300 hover:text-white"
-            aria-label="Close"
-          >
-            ✕
-          </button>
+      <!-- Header -->
+      <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+        <div class="flex items-center gap-3">
+          <h3 id="panel-title" class="text-lg font-semibold">Filters</h3>
+          <span id="panel-result-count" class="text-sm text-neutral-400">
+            <span id="panel-count-number" class="font-semibold text-sky-300">0</span> results
+          </span>
         </div>
+        <button
+          id="close-panel"
+          class="rounded-lg p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+          aria-label="Close filters"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
 
-        <!-- Mobile search -->
-        <label class="flex flex-col gap-1 mt-3 text-sm">
-          <span class="text-neutral-300">Search</span>
-
-          <input
-            id="m-q"
-            type="search"
-            placeholder="Search title, summary, source, authors…"
-            class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
-          />
-        </label>
-
-        <!-- Mobile filters -->
-        <div class="mt-3 grid gap-3">
+      <!-- Filter groups (scrollable) -->
+      <div class="flex-1 overflow-y-auto p-4">
+        <div class="max-w-3xl mx-auto space-y-3">
+          <!-- View For (Role) - First, collapsible -->
           {
-            filters.map((filter) => {
-              const filterValues = values[filter.column_name] || [];
-              const isRole = filter.column_name === 'role';
-
+            (() => {
+              const roleFilter = flatFilters.find((f) => f.column_name === 'role');
+              const roleValues = roleFilter ? values[roleFilter.column_name] || [] : [];
+              if (!roleFilter || roleValues.length === 0) return null;
               return (
-                <label class="flex flex-col gap-1 text-sm">
-                  <span class="text-neutral-300">{filter.display_label}</span>
-
-                  <select
-                    id={`m-f-${filter.column_name}`}
-                    class="rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2"
-                  >
-                    <option value={isRole ? 'all' : ''}>
-                      {isRole ? `Everyone (${publications.length})` : 'All'}
-                    </option>
-
-                    {filterValues.map((v) => (
-                      <option value={v.value}>{v.label}</option>
-                    ))}
-                  </select>
-                </label>
+                <details
+                  class="filter-group border border-neutral-800 rounded-lg overflow-hidden"
+                  data-filter-key="role"
+                  open
+                >
+                  <summary class="flex items-center justify-between px-4 py-3 cursor-pointer bg-neutral-900/50 hover:bg-neutral-800/50 transition-colors">
+                    <span class="text-sm font-medium text-neutral-200">View for</span>
+                    <svg
+                      class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </summary>
+                  <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
+                    <div class="flex flex-wrap gap-2">
+                      {roleValues.map((v) => (
+                        <label class="filter-checkbox cursor-pointer">
+                          <input
+                            type="checkbox"
+                            name="filter-role"
+                            value={v.value}
+                            class="sr-only peer"
+                          />
+                          <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border border-neutral-700 bg-neutral-900 text-neutral-300 transition-all peer-checked:border-amber-500 peer-checked:bg-amber-500/10 peer-checked:text-amber-300 hover:border-neutral-600 hover:bg-neutral-800">
+                            {v.value}
+                            <span class="text-xs text-neutral-500">{v.count}</span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </details>
               );
-            })
+            })()
+          }
+
+          <!-- Industry Filter - Collapsible with collapsible sub-sections -->
+          <details
+            class="filter-group border border-neutral-800 rounded-lg overflow-hidden"
+            data-filter-key="industry"
+            open
+          >
+            <summary
+              class="flex items-center justify-between px-4 py-3 cursor-pointer bg-neutral-900/50 hover:bg-neutral-800/50 transition-colors"
+            >
+              <span class="text-sm font-medium text-neutral-200">Industry</span>
+              <svg
+                class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </summary>
+            <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800 space-y-2">
+              {
+                industryWithCounts.map((l1) => (
+                  <details class="border border-neutral-800/50 rounded-md overflow-hidden">
+                    <summary class="flex items-center justify-between px-3 py-2 cursor-pointer bg-neutral-900/30 hover:bg-neutral-800/30 transition-colors text-xs">
+                      <span class="font-medium text-neutral-400 uppercase tracking-wider">
+                        {l1.name}
+                      </span>
+                      <svg
+                        class="w-3.5 h-3.5 text-neutral-600 transition-transform [details[open]>&]:rotate-180"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </summary>
+                    <div class="px-3 py-2 bg-neutral-950/30">
+                      <div class="flex flex-wrap gap-1.5">
+                        <label class="filter-checkbox cursor-pointer">
+                          <input
+                            type="checkbox"
+                            name="filter-industry"
+                            value={l1.code}
+                            class="sr-only peer"
+                          />
+                          <span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs border border-dashed border-neutral-600 bg-neutral-900/50 text-neutral-400 transition-all peer-checked:border-solid peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 peer-checked:text-cyan-300 hover:border-neutral-500 hover:bg-neutral-800/50">
+                            All
+                          </span>
+                        </label>
+                        {l1.children?.map((l2) => (
+                          <label class="filter-checkbox cursor-pointer">
+                            <input
+                              type="checkbox"
+                              name="filter-industry"
+                              value={l2.code}
+                              class="sr-only peer"
+                            />
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs border border-neutral-700 bg-neutral-900 text-neutral-300 transition-all peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 peer-checked:text-cyan-300 hover:border-neutral-600 hover:bg-neutral-800">
+                              {l2.name}
+                              {l2.count ? <span class="text-neutral-500">{l2.count}</span> : null}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </details>
+                ))
+              }
+            </div>
+          </details>
+
+          <!-- Process Filter - Collapsible with collapsible sub-sections -->
+          <details
+            class="filter-group border border-neutral-800 rounded-lg overflow-hidden"
+            data-filter-key="process"
+          >
+            <summary
+              class="flex items-center justify-between px-4 py-3 cursor-pointer bg-neutral-900/50 hover:bg-neutral-800/50 transition-colors"
+            >
+              <span class="text-sm font-medium text-neutral-200">Process</span>
+              <svg
+                class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </summary>
+            <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800 space-y-2">
+              {
+                processWithCounts.length > 0 ? (
+                  processWithCounts.map((l1) => (
+                    <details class="border border-neutral-800/50 rounded-md overflow-hidden">
+                      <summary class="flex items-center justify-between px-3 py-2 cursor-pointer bg-neutral-900/30 hover:bg-neutral-800/30 transition-colors text-xs">
+                        <span class="font-medium text-neutral-400 uppercase tracking-wider">
+                          {l1.name}
+                        </span>
+                        <svg
+                          class="w-3.5 h-3.5 text-neutral-600 transition-transform [details[open]>&]:rotate-180"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M19 9l-7 7-7-7"
+                          />
+                        </svg>
+                      </summary>
+                      <div class="px-3 py-2 bg-neutral-950/30">
+                        <div class="flex flex-wrap gap-1.5">
+                          {l1.children?.map((l2) => (
+                            <label class="filter-checkbox cursor-pointer">
+                              <input
+                                type="checkbox"
+                                name="filter-process"
+                                value={l2.code}
+                                class="sr-only peer"
+                              />
+                              <span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs border border-neutral-700 bg-neutral-900 text-neutral-300 transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 peer-checked:text-emerald-300 hover:border-neutral-600 hover:bg-neutral-800">
+                                {l2.name}
+                                {l2.count ? <span class="text-neutral-500">{l2.count}</span> : null}
+                              </span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </details>
+                  ))
+                ) : (
+                  <p class="text-xs text-neutral-500 italic">No process tags yet</p>
+                )
+              }
+            </div>
+          </details>
+
+          <!-- Other flat filters - collapsible, exclude role -->
+          {
+            flatFilters
+              .filter((f) => f.column_name !== 'role')
+              .map((filter) => {
+                const filterValues = values[filter.column_name] || [];
+                if (filterValues.length === 0) return null;
+                return (
+                  <details
+                    class="filter-group border border-neutral-800 rounded-lg overflow-hidden"
+                    data-filter-key={filter.column_name}
+                  >
+                    <summary class="flex items-center justify-between px-4 py-3 cursor-pointer bg-neutral-900/50 hover:bg-neutral-800/50 transition-colors">
+                      <span class="text-sm font-medium text-neutral-200">
+                        {filter.display_label}
+                      </span>
+                      <svg
+                        class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </summary>
+                    <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
+                      <div class="flex flex-wrap gap-2">
+                        {filterValues.map((v) => (
+                          <label class="filter-checkbox cursor-pointer">
+                            <input
+                              type="checkbox"
+                              name={`filter-${filter.column_name}`}
+                              value={v.value}
+                              class="sr-only peer"
+                            />
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border border-neutral-700 bg-neutral-900 text-neutral-300 transition-all peer-checked:border-sky-500 peer-checked:bg-sky-500/10 peer-checked:text-sky-300 hover:border-neutral-600 hover:bg-neutral-800">
+                              {v.value}
+                              <span class="text-xs text-neutral-500">{v.count}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </details>
+                );
+              })
           }
         </div>
+      </div>
 
-        <!-- Live result count -->
-        <div
-          id="m-result-count"
-          class="mt-4 py-2 px-3 rounded-md bg-neutral-800/50 text-sm text-neutral-300 text-center"
-          aria-live="polite"
+      <!-- Footer -->
+      <div class="px-4 py-3 border-t border-neutral-800 flex items-center justify-between gap-4">
+        <button
+          id="clear-all-filters"
+          class="px-4 py-2 text-sm font-medium text-neutral-400 hover:text-white transition-colors"
         >
-          <span id="m-result-number" class="font-semibold text-sky-300">0</span> publications match
-        </div>
-
-        <div class="mt-3 flex items-center justify-between">
-          <button
-            id="m-clear"
-            class="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
-          >
-            Clear all
-          </button>
-
-          <button
-            id="m-done"
-            class="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
-          >
-            Done
-          </button>
-        </div>
+          Clear all
+        </button>
+        <button
+          id="apply-filters"
+          class="px-6 py-2 rounded-lg bg-sky-600 text-sm font-medium text-white hover:bg-sky-500 transition-colors"
+        >
+          Show results
+        </button>
       </div>
     </div>
   </div>
@@ -451,11 +568,31 @@ const expandItemThumb = (t: string | undefined) => {
     </div>
   </section>
 
+  <!-- Floating Filter Button (FAB) -->
+  <button
+    id="open-filter-panel"
+    aria-label="Open filters"
+    class="fixed bottom-6 left-6 z-40 flex h-14 items-center gap-2 px-5 rounded-full bg-sky-600 text-white shadow-lg hover:bg-sky-500 transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-neutral-950"
+  >
+    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+      ></path>
+    </svg>
+    <span class="font-medium">Filters</span>
+    <span
+      id="fab-filter-count"
+      class="hidden px-2 py-0.5 text-xs font-bold bg-white text-sky-600 rounded-full"></span>
+  </button>
+
   <!-- Back to Top -->
   <button
     id="back-to-top"
     aria-label="Back to top"
-    class="fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-sky-600 text-white shadow-lg opacity-0 pointer-events-none transition-opacity duration-300 hover:bg-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-neutral-950"
+    class="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-800 text-white shadow-lg opacity-0 pointer-events-none transition-opacity duration-300 hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2 focus:ring-offset-neutral-950"
   >
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -519,10 +656,10 @@ const expandItemThumb = (t: string | undefined) => {
     else window.addEventListener('DOMContentLoaded', () => enhanceImages());
   </script>
 
-  <!-- Filters JS -->
+  <!-- Multi-select Filters JS -->
   <script>
-    import initPublicationFilters from '../features/publications/publication-filters.ts';
-    initPublicationFilters();
+    import initMultiSelectFilters from '../features/publications/multi-select-filters.ts';
+    initMultiSelectFilters();
   </script>
 
   <!-- Back to Top interaction -->
