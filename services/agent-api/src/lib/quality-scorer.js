@@ -82,11 +82,11 @@ export function calculateQualityScore({
   impactScore = null,
   publishedAt = null,
 } = {}) {
-  // Normalize scores to 0-10
+  // Normalize scores to 0-10 (null values stay null)
   const scores = {
     relevance: normalizeScore(relevanceScore, 1, 10),
-    similarity: similarityScore != null ? normalizeScore(similarityScore, 0, 1) : null,
-    impact: impactScore != null ? normalizeScore(impactScore, 0, 10) : null,
+    similarity: similarityScore == null ? null : normalizeScore(similarityScore, 0, 1),
+    impact: impactScore == null ? null : normalizeScore(impactScore, 0, 10),
     recency: calculateRecencyScore(publishedAt),
   };
 
