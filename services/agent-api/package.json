@@ -19,12 +19,13 @@
     "@supabase/supabase-js": "^2.46.2",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
+    "fast-xml-parser": "^5.3.2",
     "openai": "^4.73.1",
     "playwright": "^1.57.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "vitest": "^2.1.0",
-    "@vitest/coverage-v8": "^2.1.0"
+    "@vitest/coverage-v8": "^2.1.0",
+    "vitest": "^2.1.0"
   }
 }

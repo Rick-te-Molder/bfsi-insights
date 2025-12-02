@@ -7,6 +7,7 @@
 import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 import { scrapeWebsite } from '../lib/scrapers.js';
+import { fetchFromSitemap } from '../lib/sitemap.js';
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -111,7 +112,8 @@ export function clearDiscoveryConfigCache() {
 }
 
 /**
- * Fetch candidates from a single source (RSS or scraper)
+ * Fetch candidates from a single source (RSS, sitemap, or scraper)
+ * Priority: RSS > Sitemap > Scraper
  */
 async function fetchCandidatesFromSource(src, config) {
   // Try RSS first (fast and reliable)
@@ -125,7 +127,19 @@ async function fetchCandidatesFromSource(src, config) {
     }
   }
 
-  // Fallback to Scraper (slower but works when RSS unavailable)
+  // Try Sitemap second (good for sites without RSS)
+  if (src.sitemap_url) {
+    console.log(`   🗺️  Trying sitemap...`);
+    try {
+      const candidates = await fetchFromSitemap(src, config);
+      console.log(`   Found ${candidates.length} potential publications from sitemap`);
+      return candidates;
+    } catch (err) {
+      console.warn(`   ⚠️ Sitemap failed: ${err.message}`);
+    }
+  }
+
+  // Fallback to Scraper (slower but works when RSS/sitemap unavailable)
   if (src.scraper_config) {
     console.log(`   🌐 Using web scraper...`);
     try {
@@ -197,9 +211,9 @@ async function processNewItem(candidate, sourceName, titlePreview) {
 async function loadSources(sourceSlug) {
   let query = supabase
     .from('kb_source')
-    .select('slug, name, domain, tier, category, rss_feed, scraper_config')
+    .select('slug, name, domain, tier, category, rss_feed, sitemap_url, scraper_config')
     .eq('enabled', true)
-    .or('rss_feed.not.is.null,scraper_config.not.is.null')
+    .or('rss_feed.not.is.null,sitemap_url.not.is.null,scraper_config.not.is.null')
     .order('sort_order');
 
   if (sourceSlug) {
