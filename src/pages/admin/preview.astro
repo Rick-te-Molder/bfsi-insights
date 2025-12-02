@@ -1,0 +1,475 @@
+---
+// Static page with client-side data fetching for admin preview
+// Access via /admin/preview?id=<queue-id>
+export const prerender = true;
+
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="Preview Publication">
+  <div class="mx-auto max-w-6xl px-4 py-6">
+    <!-- Loading State -->
+    <div
+      id="loading"
+      class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-12 text-center"
+    >
+      <div class="text-4xl mb-3">⏳</div>
+      <p class="text-neutral-400">Loading preview...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error" class="hidden rounded-xl border border-red-500/20 bg-red-500/5 p-8 text-center">
+      <p class="text-red-300"></p>
+      <a href="/admin/review" class="mt-4 inline-block text-sky-400 hover:text-sky-300"
+        >← Back to Review</a
+      >
+    </div>
+
+    <!-- Main Content (rendered by JS) -->
+    <div id="content" class="hidden"></div>
+  </div>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+    import { marked } from 'marked';
+
+    const supabase = createClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    );
+
+    const loading = document.getElementById('loading');
+    const errorBox = document.getElementById('error');
+    const content = document.getElementById('content');
+
+    const fmt = (iso) => {
+      if (!iso) return '';
+      return new Date(iso).toLocaleDateString('en-GB', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    };
+
+    async function loadPreview() {
+      // Get ID from URL
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+
+      if (!id) {
+        showError('No item ID provided');
+        return;
+      }
+
+      try {
+        // Check auth
+        const session = await supabase.auth.getSession();
+        if (!session.data.session) {
+          window.location.href = '/login';
+          return;
+        }
+
+        // Load queue item and taxonomy
+        const [queueRes, industriesRes, topicsRes] = await Promise.all([
+          supabase.from('ingestion_queue').select('*').eq('id', id).single(),
+          supabase.from('bfsi_industry').select('code, name'),
+          supabase.from('bfsi_topic').select('code, name'),
+        ]);
+
+        if (queueRes.error || !queueRes.data) {
+          showError('Item not found');
+          return;
+        }
+
+        const queueItem = queueRes.data;
+        const payload = queueItem.payload || {};
+        const summary = payload.summary || {};
+
+        const industryMap = new Map((industriesRes.data || []).map((i) => [i.code, i.name]));
+        const topicMap = new Map((topicsRes.data || []).map((t) => [t.code, t.name]));
+
+        // Resolve thumbnail
+        let thumbUrl = payload.thumbnail || null;
+        if (!thumbUrl && payload.thumbnail_path && payload.thumbnail_bucket) {
+          thumbUrl = `${import.meta.env.PUBLIC_SUPABASE_URL}/storage/v1/object/public/${payload.thumbnail_bucket}/${payload.thumbnail_path}`;
+        }
+
+        // Get industry/topic labels
+        const industryLabel = payload.industry_codes?.[0]
+          ? industryMap.get(payload.industry_codes[0]) || payload.industry_codes[0]
+          : null;
+        const topicLabel = payload.topic_codes?.[0]
+          ? topicMap.get(payload.topic_codes[0]) || payload.topic_codes[0]
+          : null;
+
+        // Summary quality metrics
+        const shortLen = summary.short?.length || 0;
+        const mediumLen = summary.medium?.length || 0;
+        const longLen = summary.long?.length || 0;
+        const shortValid = shortLen >= 120 && shortLen <= 150;
+        const mediumValid = mediumLen >= 250 && mediumLen <= 300;
+        const longValid = longLen >= 500 && longLen <= 600;
+
+        // Parse long summary with marked
+        const longSummaryHtml = summary.long ? marked.parse(summary.long) : '';
+
+        // Render the page
+        loading.classList.add('hidden');
+        content.classList.remove('hidden');
+        content.innerHTML = `
+          <!-- Admin Header Bar -->
+          <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+            <div class="flex items-center justify-between flex-wrap gap-4">
+              <div class="flex items-center gap-3">
+                <span class="text-amber-400 text-xl">👁️</span>
+                <div>
+                  <h2 class="font-semibold text-amber-200">Preview Mode</h2>
+                  <p class="text-sm text-neutral-400">This is how the article will appear when published</p>
+                </div>
+              </div>
+              
+              <div class="flex items-center gap-3">
+                <a href="/admin/review" class="rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-700 transition-colors">
+                  ← Back to Review
+                </a>
+                <button id="approve-btn" class="rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-500 transition-colors">
+                  ✓ Approve & Publish
+                </button>
+                <button id="reject-btn" class="rounded-lg bg-red-600/80 px-4 py-2 font-medium text-white hover:bg-red-600 transition-colors">
+                  ✗ Reject
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-[1fr,320px] gap-6">
+            <!-- Main Content: Exact Detail Page Layout -->
+            <article class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6">
+              <div class="text-xs text-neutral-500 uppercase tracking-wide mb-4">Detail Page Preview</div>
+              
+              <!-- Breadcrumbs -->
+              <nav class="mb-4 flex items-center gap-2 text-sm text-neutral-400">
+                <a href="/" class="hover:text-neutral-200">Home</a>
+                <span>/</span>
+                <a href="/publications" class="hover:text-neutral-200">Publications</a>
+                <span>/</span>
+                <span class="text-neutral-300 truncate">${payload.title || 'Untitled'}</span>
+              </nav>
+
+              <header>
+                <h1 class="text-3xl font-bold tracking-tight">${payload.title || 'Untitled'}</h1>
+                <div class="mt-2 text-sm text-neutral-300">
+                  ${payload.published_at ? `<span><span class="text-neutral-400">Published</span> ${fmt(payload.published_at)}</span>` : ''}
+                  ${payload.source_name ? ` · ${payload.source_name}` : ''}
+                </div>
+              </header>
+
+              ${
+                thumbUrl
+                  ? `
+                <div class="mt-3 relative">
+                  <div style="aspect-ratio: 16 / 9" class="rounded-md border border-neutral-800 bg-neutral-800/40 overflow-hidden">
+                    <img src="${thumbUrl}" alt="Preview" class="w-full h-full object-cover" loading="eager" />
+                  </div>
+                </div>
+              `
+                  : ''
+              }
+
+              ${
+                summary.long
+                  ? `
+                <div class="mt-4 text-sm text-neutral-200 prose prose-invert prose-sm max-w-none">
+                  ${longSummaryHtml}
+                </div>
+              `
+                  : ''
+              }
+
+              <div class="mt-4 flex flex-wrap gap-2 text-xs">
+                ${industryLabel ? `<span class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-neutral-300">${industryLabel}</span>` : ''}
+                ${topicLabel ? `<span class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-neutral-300">${topicLabel}</span>` : ''}
+              </div>
+
+              <div class="mt-6">
+                <a href="${queueItem.url}" target="_blank" rel="noopener noreferrer"
+                   class="inline-flex items-center gap-2 rounded-lg border border-sky-600 bg-sky-600/10 px-5 py-2.5 text-sm font-semibold text-sky-300 hover:bg-sky-600/20 transition-colors">
+                  Open on ${payload.source_name || 'original'}
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                  </svg>
+                </a>
+              </div>
+            </article>
+
+            <!-- Admin Sidebar -->
+            <div class="space-y-4">
+              <!-- Quality Metrics -->
+              <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+                <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Quality Metrics</h3>
+                <div class="space-y-2 text-sm">
+                  <div class="flex items-center justify-between">
+                    <span class="text-neutral-400">Short <span class="text-neutral-500">(120-150)</span></span>
+                    <span class="${shortValid ? 'text-emerald-400' : 'text-amber-400'}">${shortValid ? '✓' : '⚠️'} ${shortLen}</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-neutral-400">Medium <span class="text-neutral-500">(250-300)</span></span>
+                    <span class="${mediumValid ? 'text-emerald-400' : 'text-amber-400'}">${mediumValid ? '✓' : '⚠️'} ${mediumLen}</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-neutral-400">Long <span class="text-neutral-500">(500-600)</span></span>
+                    <span class="${longValid ? 'text-emerald-400' : 'text-amber-400'}">${longValid ? '✓' : '⚠️'} ${longLen}</span>
+                  </div>
+                  ${
+                    payload.relevance_confidence
+                      ? `
+                  <div class="flex items-center justify-between">
+                    <span class="text-neutral-400">AI Confidence</span>
+                    <span class="text-emerald-400">${(payload.relevance_confidence * 100).toFixed(0)}%</span>
+                  </div>
+                  `
+                      : ''
+                  }
+                </div>
+              </div>
+
+              <!-- Tags -->
+              <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+                <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Tags</h3>
+                <div class="space-y-2 text-xs">
+                  <div class="flex items-start justify-between gap-2">
+                    <span class="text-neutral-500 shrink-0">Industries</span>
+                    <div class="flex flex-wrap gap-1 justify-end">
+                      ${
+                        (payload.industry_codes || []).length > 0
+                          ? (payload.industry_codes || [])
+                              .map(
+                                (code) =>
+                                  `<span class="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-300">${industryMap.get(code) || code}</span>`,
+                              )
+                              .join('')
+                          : '<span class="text-neutral-600">—</span>'
+                      }
+                    </div>
+                  </div>
+                  <div class="flex items-start justify-between gap-2">
+                    <span class="text-neutral-500 shrink-0">Topics</span>
+                    <div class="flex flex-wrap gap-1 justify-end">
+                      ${
+                        (payload.topic_codes || []).length > 0
+                          ? (payload.topic_codes || [])
+                              .map(
+                                (code) =>
+                                  `<span class="px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300">${topicMap.get(code) || code}</span>`,
+                              )
+                              .join('')
+                          : '<span class="text-neutral-600">—</span>'
+                      }
+                    </div>
+                  </div>
+                  <div class="flex items-start justify-between gap-2">
+                    <span class="text-neutral-500 shrink-0">Persona</span>
+                    <div class="flex flex-wrap gap-1 justify-end">
+                      ${
+                        Object.keys(payload.persona_scores || {}).length > 0
+                          ? Object.entries(payload.persona_scores || {})
+                              .map(
+                                ([p, s]) =>
+                                  `<span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300">${p} ${Math.round(s * 100)}%</span>`,
+                              )
+                              .join('')
+                          : '<span class="text-neutral-600">—</span>'
+                      }
+                    </div>
+                  </div>
+                  <div class="flex items-start justify-between gap-2">
+                    <span class="text-neutral-500 shrink-0">Geography</span>
+                    <div class="flex flex-wrap gap-1 justify-end">
+                      ${
+                        (payload.geography_codes || []).length > 0
+                          ? (payload.geography_codes || [])
+                              .map(
+                                (code) =>
+                                  `<span class="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300">${code}</span>`,
+                              )
+                              .join('')
+                          : '<span class="text-neutral-600">—</span>'
+                      }
+                    </div>
+                  </div>
+                  <div class="flex items-start justify-between gap-2">
+                    <span class="text-neutral-500 shrink-0">Regulators</span>
+                    <div class="flex flex-wrap gap-1 justify-end">
+                      ${
+                        (payload.regulator_codes || []).length > 0
+                          ? (payload.regulator_codes || [])
+                              .map(
+                                (code) =>
+                                  `<span class="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300">${code}</span>`,
+                              )
+                              .join('')
+                          : '<span class="text-neutral-600">—</span>'
+                      }
+                    </div>
+                  </div>
+                  <div class="flex items-start justify-between gap-2">
+                    <span class="text-neutral-500 shrink-0">Regulations</span>
+                    <div class="flex flex-wrap gap-1 justify-end">
+                      ${
+                        (payload.regulation_codes || []).length > 0
+                          ? (payload.regulation_codes || [])
+                              .map(
+                                (code) =>
+                                  `<span class="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-300">${code}</span>`,
+                              )
+                              .join('')
+                          : '<span class="text-neutral-600">—</span>'
+                      }
+                    </div>
+                  </div>
+                  <div class="flex items-start justify-between gap-2">
+                    <span class="text-neutral-500 shrink-0">Vendors</span>
+                    <div class="flex flex-wrap gap-1 justify-end">
+                      ${
+                        (payload.vendor_names || []).length > 0
+                          ? (payload.vendor_names || [])
+                              .map(
+                                (name) =>
+                                  `<span class="px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-300">${name}</span>`,
+                              )
+                              .join('')
+                          : '<span class="text-neutral-600">—</span>'
+                      }
+                    </div>
+                  </div>
+                  <div class="flex items-start justify-between gap-2">
+                    <span class="text-neutral-500 shrink-0">Organizations</span>
+                    <div class="flex flex-wrap gap-1 justify-end">
+                      ${
+                        (payload.organization_names || []).length > 0
+                          ? (payload.organization_names || [])
+                              .map(
+                                (name) =>
+                                  `<span class="px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-300">${name}</span>`,
+                              )
+                              .join('')
+                          : '<span class="text-neutral-600">—</span>'
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              ${
+                thumbUrl
+                  ? `
+              <!-- Thumbnail Full Size -->
+              <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+                <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Full Thumbnail</h3>
+                <a href="${thumbUrl}" target="_blank" class="block">
+                  <img src="${thumbUrl}" alt="Thumbnail" class="w-full rounded-lg border border-neutral-700" />
+                </a>
+                <p class="text-xs text-neutral-500 mt-2">Click to view full size</p>
+              </div>
+              `
+                  : ''
+              }
+
+              <!-- Queue Info -->
+              <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+                <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">Queue Info</h3>
+                <div class="space-y-2 text-xs">
+                  <div class="flex justify-between">
+                    <span class="text-neutral-500">Status</span>
+                    <span class="text-emerald-400">${queueItem.status}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-neutral-500">Fetched</span>
+                    <span class="text-neutral-300">${queueItem.fetched_at ? fmt(queueItem.fetched_at) : 'N/A'}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-neutral-500">Queue ID</span>
+                    <span class="text-neutral-400 font-mono text-[10px]">${id}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Bind action buttons
+        document.getElementById('approve-btn')?.addEventListener('click', () => handleApprove(id));
+        document.getElementById('reject-btn')?.addEventListener('click', () => handleReject(id));
+      } catch (err) {
+        showError(err instanceof Error ? err.message : 'Failed to load preview');
+      }
+    }
+
+    function showError(message) {
+      loading.classList.add('hidden');
+      errorBox.classList.remove('hidden');
+      const p = errorBox.querySelector('p');
+      if (p) p.textContent = '❌ ' + message;
+    }
+
+    async function handleApprove(id) {
+      const btn = document.getElementById('approve-btn');
+      if (!btn) return;
+
+      btn.textContent = '⏳ Publishing...';
+      btn.disabled = true;
+
+      try {
+        const { error } = await supabase.rpc('approve_from_queue', {
+          p_queue_id: id,
+          p_approved_vendors: [],
+          p_approved_organizations: [],
+        });
+
+        if (error) throw error;
+
+        btn.textContent = '✓ Published!';
+        setTimeout(() => (window.location.href = '/admin/review'), 1500);
+      } catch (err) {
+        alert('Approve failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        btn.textContent = '✓ Approve & Publish';
+        btn.disabled = false;
+      }
+    }
+
+    async function handleReject(id) {
+      const btn = document.getElementById('reject-btn');
+      if (!btn) return;
+
+      const reason = window.prompt('Reason for rejection (optional):');
+      if (reason === null) return;
+
+      btn.textContent = '⏳ Rejecting...';
+      btn.disabled = true;
+
+      try {
+        const session = (await supabase.auth.getSession()).data.session;
+        const { error } = await supabase
+          .from('ingestion_queue')
+          .update({
+            status: 'rejected',
+            rejection_reason: reason || null,
+            reviewed_at: new Date().toISOString(),
+            reviewer: session?.user?.id,
+          })
+          .eq('id', id);
+
+        if (error) throw error;
+
+        btn.textContent = '✗ Rejected';
+        setTimeout(() => (window.location.href = '/admin/review'), 1500);
+      } catch (err) {
+        alert('Reject failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        btn.textContent = '✗ Reject';
+        btn.disabled = false;
+      }
+    }
+
+    loadPreview();
+  </script>
+</Base>

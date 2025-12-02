@@ -59,16 +59,10 @@ const SummarySchema = z.object({
         }),
       )
       .describe('Key claims with evidence. Include specific figures, percentages, amounts.'),
-    bfsi_relevance: z.object({
-      why_relevant: z.string().describe('Why this matters for BFSI'),
-      primary_sector: z.string().describe('L1: Banking, Insurance, or Financial Services'),
-      subsectors: z
-        .array(z.string())
-        .describe('L2/L3 specificity: e.g., "Retail Banking", "Mortgages", "Life Insurance"'),
-      actionable_implications: z
-        .array(z.string())
-        .describe('What BFSI professionals should do with this information'),
-    }),
+    why_it_matters: z.string().describe('1-2 sentences on why this matters for BFSI professionals'),
+    actionable_implications: z
+      .array(z.string())
+      .describe('What BFSI professionals should do with this information'),
   }),
 
   // Entities to potentially add to taxonomy
