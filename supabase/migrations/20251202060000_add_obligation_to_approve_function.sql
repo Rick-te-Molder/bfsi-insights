@@ -120,18 +120,22 @@ BEGIN
     RETURNING id INTO v_id;
   END IF;
   
-  -- Insert industry relationships
+  -- Insert industry relationships (filter out nulls)
   FOR v_industry_code IN 
     SELECT jsonb_array_elements_text(COALESCE(v_payload->'industry_codes', '[]'::jsonb))
+    WHERE jsonb_array_elements_text IS NOT NULL 
+      AND jsonb_array_elements_text != 'null'
   LOOP
     INSERT INTO kb_publication_bfsi_industry (publication_id, industry_code)
     VALUES (v_id, v_industry_code)
     ON CONFLICT DO NOTHING;
   END LOOP;
   
-  -- Insert topic relationships  
+  -- Insert topic relationships (filter out nulls)
   FOR v_topic_code IN 
     SELECT jsonb_array_elements_text(COALESCE(v_payload->'topic_codes', '[]'::jsonb))
+    WHERE jsonb_array_elements_text IS NOT NULL 
+      AND jsonb_array_elements_text != 'null'
   LOOP
     INSERT INTO kb_publication_bfsi_topic (publication_id, topic_code)
     VALUES (v_id, v_topic_code)
