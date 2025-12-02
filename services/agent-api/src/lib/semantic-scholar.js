@@ -201,6 +201,44 @@ export function extractCitationMetrics(paper) {
   };
 }
 
+// Threshold-based scoring tables (threshold, score)
+const CITATION_THRESHOLDS = [
+  [500, 4],
+  [100, 3],
+  [10, 2],
+  [1, 1],
+];
+const INFLUENTIAL_THRESHOLDS = [
+  [50, 2],
+  [10, 1.5],
+  [1, 1],
+];
+const HINDEX_THRESHOLDS = [
+  [50, 2],
+  [20, 1.5],
+  [10, 1],
+  [5, 0.5],
+];
+const VELOCITY_THRESHOLDS = [
+  [50, 2],
+  [20, 1.5],
+  [5, 1],
+  [1, 0.5],
+];
+
+/**
+ * Get score based on value and thresholds
+ * @param {number} value - Value to score
+ * @param {Array} thresholds - [[threshold, score], ...]
+ * @returns {number} Score
+ */
+function getThresholdScore(value, thresholds) {
+  for (const [threshold, score] of thresholds) {
+    if (value >= threshold) return score;
+  }
+  return 0;
+}
+
 /**
  * Calculate impact score from citation metrics (0-10 scale)
  * @param {Object} metrics - Citation metrics
@@ -216,38 +254,12 @@ export function calculateImpactScore(metrics) {
     citationsPerYear = 0,
   } = metrics;
 
-  // Citation score (0-4 points)
-  // 0 citations = 0, 10+ = 2, 100+ = 3, 500+ = 4
-  let citationScore = 0;
-  if (citationCount >= 500) citationScore = 4;
-  else if (citationCount >= 100) citationScore = 3;
-  else if (citationCount >= 10) citationScore = 2;
-  else if (citationCount >= 1) citationScore = 1;
+  const citationScore = getThresholdScore(citationCount, CITATION_THRESHOLDS);
+  const influentialScore = getThresholdScore(influentialCitations, INFLUENTIAL_THRESHOLDS);
+  const authorScore = getThresholdScore(maxAuthorHIndex, HINDEX_THRESHOLDS);
+  const velocityScore = getThresholdScore(citationsPerYear, VELOCITY_THRESHOLDS);
 
-  // Influential citations bonus (0-2 points)
-  let influentialScore = 0;
-  if (influentialCitations >= 50) influentialScore = 2;
-  else if (influentialCitations >= 10) influentialScore = 1.5;
-  else if (influentialCitations >= 1) influentialScore = 1;
-
-  // Author authority (0-2 points)
-  let authorScore = 0;
-  if (maxAuthorHIndex >= 50) authorScore = 2;
-  else if (maxAuthorHIndex >= 20) authorScore = 1.5;
-  else if (maxAuthorHIndex >= 10) authorScore = 1;
-  else if (maxAuthorHIndex >= 5) authorScore = 0.5;
-
-  // Velocity bonus (0-2 points) - for newer papers gaining traction
-  let velocityScore = 0;
-  if (citationsPerYear >= 50) velocityScore = 2;
-  else if (citationsPerYear >= 20) velocityScore = 1.5;
-  else if (citationsPerYear >= 5) velocityScore = 1;
-  else if (citationsPerYear >= 1) velocityScore = 0.5;
-
-  const totalScore = citationScore + influentialScore + authorScore + velocityScore;
-
-  // Cap at 10
-  return Math.min(10, totalScore);
+  return Math.min(10, citationScore + influentialScore + authorScore + velocityScore);
 }
 
 /**
