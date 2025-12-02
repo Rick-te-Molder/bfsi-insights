@@ -166,12 +166,15 @@ $$;
 -- Update kb_publication_pretty view to include processes
 -- ============================================================================
 
-CREATE OR REPLACE VIEW kb_publication_pretty AS
+-- Must DROP first because column order/names changed
+DROP VIEW IF EXISTS kb_publication_pretty;
+
+CREATE VIEW kb_publication_pretty AS
 SELECT 
   p.id,
   p.slug,
   p.title,
-  p.author,
+  p.author as authors,
   p.date_published,
   p.source_url,
   p.source_name,
