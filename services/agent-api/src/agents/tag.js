@@ -14,6 +14,7 @@ const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPAB
  * - industry_code, topic_code, geography_code
  * - use_case_codes, capability_codes
  * - regulator_codes, regulation_codes
+ * - process_codes (BFSI business processes)
  *
  * EXPANDABLE (extract names, may create new entries):
  * - organization_names, vendor_names
@@ -44,6 +45,11 @@ const TaggingSchema = z.object({
     .array(z.string())
     .describe('Regulation codes if specific regulations mentioned (empty array if none)'),
 
+  // Process taxonomy (optional)
+  process_codes: z
+    .array(z.string())
+    .describe('BFSI business process codes if applicable (empty array if general content)'),
+
   // Expandable entities (names, not codes)
   organization_names: z
     .array(z.string())
@@ -57,18 +63,33 @@ const TaggingSchema = z.object({
 
 async function loadTaxonomies() {
   // Load all guardrail taxonomies in parallel
-  const [industries, topics, geographies, useCases, capabilities, regulators, regulations] =
-    await Promise.all([
-      supabase.from('bfsi_industry').select('code, name').order('name'),
-      supabase.from('bfsi_topic').select('code, name').order('name'),
-      supabase.from('bfsi_geography').select('code, name').order('name'),
-      supabase.from('ag_use_case').select('code, name').order('name'),
-      supabase.from('ag_capability').select('code, name').order('name'),
-      supabase.from('regulator').select('code, name').order('name'),
-      supabase.from('regulation').select('code, name').order('name'),
-    ]);
+  const [
+    industries,
+    topics,
+    geographies,
+    useCases,
+    capabilities,
+    regulators,
+    regulations,
+    processes,
+  ] = await Promise.all([
+    supabase.from('bfsi_industry').select('code, name').order('name'),
+    supabase.from('bfsi_topic').select('code, name').order('name'),
+    supabase.from('bfsi_geography').select('code, name').order('name'),
+    supabase.from('ag_use_case').select('code, name').order('name'),
+    supabase.from('ag_capability').select('code, name').order('name'),
+    supabase.from('regulator').select('code, name').order('name'),
+    supabase.from('regulation').select('code, name').order('name'),
+    supabase.from('bfsi_process_taxonomy').select('code, name, level').order('name'),
+  ]);
 
   const format = (data) => data?.data?.map((i) => `${i.code}: ${i.name}`).join('\n') || '';
+
+  // Format process taxonomy with level indication
+  const formatProcesses = (data) =>
+    data?.data
+      ?.map((i) => `${i.code}: ${i.name}${i.level > 1 ? ` (L${i.level})` : ''}`)
+      .join('\n') || '';
 
   return {
     industries: format(industries),
@@ -78,6 +99,7 @@ async function loadTaxonomies() {
     capabilities: format(capabilities),
     regulators: format(regulators),
     regulations: format(regulations),
+    processes: formatProcesses(processes),
   };
 }
 
@@ -120,6 +142,9 @@ ${taxonomies.regulators}
 
 REGULATIONS (pick all that apply if specific regulations mentioned, or empty):
 ${taxonomies.regulations}
+
+BFSI PROCESSES (pick all that apply - what business process does this relate to, or empty):
+${taxonomies.processes}
 
 === EXPANDABLE ENTITIES (extract names as found) ===
 - organization_names: Extract names of banks, insurers, asset managers mentioned
