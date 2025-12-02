@@ -177,7 +177,9 @@ $$;
 -- Update kb_publication_pretty view to include obligations
 -- ============================================================================
 
-CREATE OR REPLACE VIEW kb_publication_pretty AS
+-- Drop and recreate to allow column changes
+DROP VIEW IF EXISTS kb_publication_pretty;
+CREATE VIEW kb_publication_pretty AS
 SELECT 
   p.id,
   p.slug,
