@@ -110,11 +110,7 @@ export function extractRssPreview(description) {
   }
 
   // Clean up whitespace and entities
-  const cleaned = textOnly
-    .replace(/&nbsp;/g, ' ')
-    .split(/\s+/)
-    .join(' ')
-    .trim();
+  const cleaned = textOnly.replaceAll('&nbsp;', ' ').split(/\s+/).join(' ').trim();
 
   // Truncate to reasonable preview length
   const preview = cleaned.length > 500 ? cleaned.slice(0, 500) + '...' : cleaned;
