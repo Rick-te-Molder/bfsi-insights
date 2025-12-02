@@ -15,6 +15,12 @@ import {
   HIGH_RELEVANCE_THRESHOLD,
   LOW_RELEVANCE_THRESHOLD,
 } from '../lib/embeddings.js';
+import {
+  isPremiumSource,
+  getPremiumMode,
+  buildPremiumPayload,
+  filterPremiumCandidates,
+} from '../lib/premium-handler.js';
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -286,17 +292,19 @@ async function processNewItem(candidate, sourceName, titlePreview, relevanceResu
 /**
  * Load sources from database based on options
  */
-async function loadSources(sourceSlug) {
+async function loadSources(sourceSlug, includePremium = false) {
   let query = supabase
     .from('kb_source')
-    .select('slug, name, domain, tier, category, rss_feed, sitemap_url, scraper_config')
+    .select(
+      'slug, name, domain, tier, category, rss_feed, sitemap_url, scraper_config, premium_config',
+    )
     .eq('enabled', true)
     .or('rss_feed.not.is.null,sitemap_url.not.is.null,scraper_config.not.is.null')
     .order('sort_order');
 
   if (sourceSlug) {
     query = query.eq('slug', sourceSlug);
-  } else {
+  } else if (!includePremium) {
     query = query.neq('tier', 'premium');
   }
 
@@ -306,8 +314,8 @@ async function loadSources(sourceSlug) {
   return sources || [];
 }
 
-async function logSkippedPremiumSources(sourceSlug) {
-  if (sourceSlug) return;
+async function logSkippedPremiumSources(sourceSlug, includePremium) {
+  if (sourceSlug || includePremium) return;
 
   const { data: premiumSources } = await supabase
     .from('kb_source')
@@ -316,7 +324,9 @@ async function logSkippedPremiumSources(sourceSlug) {
     .eq('tier', 'premium');
 
   if (premiumSources?.length > 0) {
-    console.log(`ℹ️  Skipping ${premiumSources.length} premium sources (require manual curation):`);
+    console.log(
+      `ℹ️  Skipping ${premiumSources.length} premium sources (use --premium to include):`,
+    );
     console.log(`   ${premiumSources.map((s) => s.name).join(', ')}`);
   }
 }
@@ -328,6 +338,7 @@ export async function runDiscovery(options = {}) {
     dryRun = false,
     agentic = false,
     hybrid = false,
+    premium = false,
   } = options;
 
   // Determine scoring mode
@@ -336,6 +347,9 @@ export async function runDiscovery(options = {}) {
   console.log('🔍 Starting discovery...');
   console.log(`   Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}`);
   console.log(`   Scoring: ${scoringMode}`);
+  if (premium) {
+    console.log(`   Premium: ON (headline_only mode)`);
+  }
   if (hybrid) {
     console.log(`      → Embeddings for pre-filter, LLM for uncertain cases`);
     console.log(
@@ -345,14 +359,14 @@ export async function runDiscovery(options = {}) {
   if (limit) console.log(`   Limit: ${limit}`);
 
   const config = await loadDiscoveryConfig();
-  const sources = await loadSources(sourceSlug);
+  const sources = await loadSources(sourceSlug, premium);
 
   if (sources.length === 0) {
     console.log('⚠️  No enabled sources found in database');
     return { found: 0, new: 0, items: [] };
   }
 
-  await logSkippedPremiumSources(sourceSlug);
+  await logSkippedPremiumSources(sourceSlug, premium);
 
   // Load reference embedding for hybrid mode
   let referenceEmbedding = null;
@@ -383,19 +397,36 @@ export async function runDiscovery(options = {}) {
   const results = [];
 
   for (const src of sources) {
-    console.log(`📡 Checking ${src.name}...`);
+    const isPremium = isPremiumSource(src);
+    const premiumMode = isPremium ? getPremiumMode(src) : null;
+    const sourceLabel = isPremium ? `${src.name} [premium:${premiumMode}]` : src.name;
+    console.log(`📡 Checking ${sourceLabel}...`);
 
     try {
       const candidates = await fetchCandidatesFromSource(src, config);
-      const sourceResults = await processCandidates(
-        candidates,
-        src.name,
-        dryRun,
-        limit,
-        stats,
-        scoringConfig,
-      );
-      results.push(...sourceResults);
+
+      // Handle premium sources differently
+      if (isPremium) {
+        const filteredCandidates = filterPremiumCandidates(candidates);
+        const premiumResults = await processPremiumCandidates(
+          filteredCandidates,
+          src,
+          dryRun,
+          limit,
+          stats,
+        );
+        results.push(...premiumResults);
+      } else {
+        const sourceResults = await processCandidates(
+          candidates,
+          src.name,
+          dryRun,
+          limit,
+          stats,
+          scoringConfig,
+        );
+        results.push(...sourceResults);
+      }
 
       if (limit && stats.new >= limit) {
         console.log(`   ⚠️  Reached limit of ${limit} new items, stopping discovery`);
@@ -435,6 +466,68 @@ async function processCandidates(candidates, sourceName, dryRun, limit, stats, s
     stats.new++;
     if (outcome.action === 'retry') stats.retried++;
     if (outcome.result) results.push(outcome.result);
+  }
+
+  return results;
+}
+
+/**
+ * Process premium source candidates (headline_only mode)
+ */
+async function processPremiumCandidates(candidates, source, dryRun, limit, stats) {
+  const results = [];
+
+  for (const candidate of candidates) {
+    if (limit && stats.new >= limit) break;
+
+    stats.found++;
+    const titlePreview = candidate.title.substring(0, 60);
+
+    // Check if already exists
+    const existsStatus = await checkExists(candidate.url);
+    if (existsStatus === 'skip') {
+      continue;
+    }
+
+    // Build premium payload (no LLM scoring for premium - manual review)
+    const payload = buildPremiumPayload(candidate, source);
+
+    if (dryRun) {
+      console.log(`   [DRY] Would add premium: ${titlePreview}...`);
+      console.log(`      Mode: ${payload.premium_mode}, Manual review required`);
+      continue;
+    }
+
+    // Insert to queue with premium status
+    const { data, error } = await supabase
+      .from('ingestion_queue')
+      .insert({
+        url: candidate.url,
+        status: 'pending',
+        payload,
+        // Premium items skip auto-enrichment
+        relevance_score: null,
+        executive_summary: 'Premium source - awaiting manual review',
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      console.error(`   ❌ Failed to queue: ${error.message}`);
+      continue;
+    }
+
+    stats.new++;
+    console.log(`   📰 Premium queued: ${titlePreview}...`);
+
+    results.push({
+      id: data.id,
+      url: candidate.url,
+      title: candidate.title,
+      source: source.name,
+      action: 'premium',
+      premium_mode: payload.premium_mode,
+    });
   }
 
   return results;
