@@ -272,7 +272,7 @@ export async function getCitationData({ title, doi, arxivId, url }) {
 
   // Try arXiv ID first (most reliable for preprints)
   if (arxivId || url?.includes('arxiv.org')) {
-    const id = arxivId || url.match(/(\d{4}\.\d{4,5})/)?.[1];
+    const id = arxivId || /(\d{4}\.\d{4,5})/.exec(url)?.[1];
     if (id) {
       paper = await getPaperByArxiv(id);
     }
