@@ -1,9 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 
-async function openFirstCard(page: Page) {
-  const card = page.locator('li.group').first();
-  await expect(card).toBeVisible();
-  await card.click();
+async function clickPreviewButton(page: Page) {
+  const previewBtn = page.locator('[data-open-modal]').first();
+  await expect(previewBtn).toBeVisible();
+  await previewBtn.click();
 }
 
 async function expectModalOpen(page: Page) {
@@ -18,36 +18,47 @@ async function closeModal(page: Page) {
   }
 }
 
-test.describe('Publication modal', () => {
-  test('opens from card click on index', async ({ page }) => {
+test.describe('Publication card navigation', () => {
+  test('card click navigates to detail page on index', async ({ page }) => {
     await page.goto('/');
-    await openFirstCard(page);
-    await expectModalOpen(page);
-    await closeModal(page);
+    const card = page.locator('li.group').first();
+    await expect(card).toBeVisible();
+
+    // Get the detail page URL from the card link
+    const cardLink = card.locator('a[data-card-link]');
+    const href = await cardLink.getAttribute('href');
+
+    // Click the card and verify navigation
+    await card.click();
+    await expect(page).toHaveURL(new RegExp(`${href}$`));
   });
 
-  test('opens from card click on publications', async ({ page }) => {
+  test('card click navigates to detail page on publications', async ({ page }) => {
     await page.goto('/publications');
-    await openFirstCard(page);
+    const card = page.locator('li.group').first();
+    await expect(card).toBeVisible();
+
+    // Get the detail page URL from the card link
+    const cardLink = card.locator('a[data-card-link]');
+    const href = await cardLink.getAttribute('href');
+
+    // Click the card and verify navigation
+    await card.click();
+    await expect(page).toHaveURL(new RegExp(`${href}$`));
+  });
+});
+
+test.describe('Publication preview modal', () => {
+  test('opens from Preview button', async ({ page }) => {
+    await page.goto('/publications');
+    await clickPreviewButton(page);
     await expectModalOpen(page);
     await closeModal(page);
-  });
-
-  test('opens from read more button when present', async ({ page }) => {
-    await page.goto('/publications');
-    const readMore = page.locator('[data-open-modal]');
-    if (await readMore.count()) {
-      await readMore.first().click();
-      await expectModalOpen(page);
-      await closeModal(page);
-    } else {
-      test.skip(true, 'No read more buttons rendered');
-    }
   });
 
   test('closes with Escape key', async ({ page }) => {
     await page.goto('/publications');
-    await openFirstCard(page);
+    await clickPreviewButton(page);
     await expectModalOpen(page);
 
     // Press Escape to close
@@ -57,43 +68,52 @@ test.describe('Publication modal', () => {
 
   test('closes by clicking overlay background', async ({ page }) => {
     await page.goto('/publications');
-    await openFirstCard(page);
+    await clickPreviewButton(page);
     await expectModalOpen(page);
 
-    // Click the overlay (outside the modal content)
-    const overlay = page.locator('#modal-overlay, [data-modal-overlay]');
-    if ((await overlay.count()) > 0) {
-      await overlay.click({ position: { x: 10, y: 10 } });
-      await expect(page.locator('#modal')).not.toBeVisible();
-    }
+    // Click the backdrop to close
+    const backdrop = page.locator('#modal-backdrop');
+    await backdrop.click({ force: true });
+    await expect(page.locator('#modal')).not.toBeVisible();
   });
 
   test('modal shows publication content', async ({ page }) => {
     await page.goto('/publications');
-    await openFirstCard(page);
+    await clickPreviewButton(page);
     await expectModalOpen(page);
 
     // Modal should contain title
-    const modalTitle = page.locator('#modal h1, #modal h2, #modal [class*="title"]');
-    await expect(modalTitle.first()).toBeVisible();
+    const modalTitle = page.locator('#modal-title-text');
+    await expect(modalTitle).toBeVisible();
 
-    // Modal should contain summary or description
-    const hasContent =
-      (await page.locator('#modal p').count()) > 0 ||
-      (await page.locator('#modal [class*="summary"]').count()) > 0;
-    expect(hasContent).toBeTruthy();
+    // Modal should contain tags
+    const tagsEl = page.locator('#modal-tags');
+    await expect(tagsEl).toBeVisible();
 
     await closeModal(page);
   });
 
-  test('modal has link to full article', async ({ page }) => {
+  test('modal has More details link', async ({ page }) => {
     await page.goto('/publications');
-    await openFirstCard(page);
+    await clickPreviewButton(page);
     await expectModalOpen(page);
 
-    // Should have a link to the full detail page or external source
-    const links = page.locator('#modal a[href]');
-    expect(await links.count()).toBeGreaterThan(0);
+    // Should have "More details" link to the detail page
+    const moreDetailsLink = page.locator('#modal-view-details');
+    await expect(moreDetailsLink).toBeVisible();
+    await expect(moreDetailsLink).toContainText('More details');
+
+    await closeModal(page);
+  });
+
+  test('modal does not show "View full publication" text', async ({ page }) => {
+    await page.goto('/publications');
+    await clickPreviewButton(page);
+    await expectModalOpen(page);
+
+    // Verify the ambiguous label is not present
+    const modal = page.locator('#modal');
+    await expect(modal).not.toContainText('View full publication');
 
     await closeModal(page);
   });

@@ -506,8 +506,6 @@ async function retryRejected(url) {
 }
 
 async function insertToQueue(candidate, sourceName) {
-  const urlNorm = normalizeUrl(candidate.url);
-
   const payload = {
     title: candidate.title,
     authors: [],
@@ -522,7 +520,7 @@ async function insertToQueue(candidate, sourceName) {
     .from('ingestion_queue')
     .insert({
       url: candidate.url,
-      url_norm: urlNorm,
+      // url_norm is a generated column - computed automatically from url
       content_type: 'publication',
       status: 'pending',
       discovered_at: new Date().toISOString(),
