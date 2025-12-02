@@ -9,6 +9,12 @@ import { createClient } from '@supabase/supabase-js';
 import { scrapeWebsite } from '../lib/scrapers.js';
 import { fetchFromSitemap } from '../lib/sitemap.js';
 import { scoreRelevance } from './discovery-relevance.js';
+import {
+  getReferenceEmbedding,
+  scoreWithEmbedding,
+  HIGH_RELEVANCE_THRESHOLD,
+  LOW_RELEVANCE_THRESHOLD,
+} from '../lib/embeddings.js';
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -158,7 +164,7 @@ async function fetchCandidatesFromSource(src, config) {
 /**
  * Process a single candidate - check existence, score relevance, and add/retry as needed
  */
-async function processCandidate(candidate, sourceName, dryRun, agentic, stats) {
+async function processCandidate(candidate, sourceName, dryRun, scoringConfig, stats) {
   const existsStatus = await checkExists(candidate.url);
 
   if (existsStatus === 'skip') {
@@ -166,10 +172,54 @@ async function processCandidate(candidate, sourceName, dryRun, agentic, stats) {
   }
 
   const titlePreview = candidate.title.substring(0, 60);
-
-  // Agentic mode: score relevance before queuing
   let relevanceResult = null;
-  if (agentic && existsStatus !== 'retry') {
+  let needsLlmScoring = false;
+
+  // Skip scoring for retries
+  if (existsStatus === 'retry') {
+    if (dryRun) {
+      console.log(`   [DRY] Would retry: ${titlePreview}...`);
+      return { action: 'dry-run' };
+    }
+    return processRetry(candidate, sourceName, titlePreview);
+  }
+
+  // Hybrid mode: use embeddings first, LLM only for uncertain cases
+  if (scoringConfig.mode === 'hybrid' && scoringConfig.referenceEmbedding) {
+    const embeddingResult = await scoreWithEmbedding(candidate, scoringConfig.referenceEmbedding);
+    stats.embeddingTokens += embeddingResult.tokens;
+
+    if (embeddingResult.action === 'accept') {
+      // High confidence relevant - queue without LLM
+      stats.embeddingAccepts++;
+      console.log(
+        `   ✅ Embed accept (${embeddingResult.similarity.toFixed(2)}): ${titlePreview}...`,
+      );
+      relevanceResult = {
+        relevance_score: Math.round(embeddingResult.similarity * 10),
+        executive_summary: 'High embedding similarity - auto-accepted',
+        skip_reason: null,
+        should_queue: true,
+      };
+    } else if (embeddingResult.action === 'reject') {
+      // High confidence not relevant - skip without LLM
+      stats.embeddingRejects++;
+      console.log(
+        `   ⏭️  Embed reject (${embeddingResult.similarity.toFixed(2)}): ${titlePreview}...`,
+      );
+      return { action: 'skipped-relevance', reason: 'Low embedding similarity' };
+    } else {
+      // Uncertain - need LLM scoring
+      needsLlmScoring = true;
+      console.log(
+        `   🔍 Embed uncertain (${embeddingResult.similarity.toFixed(2)}): ${titlePreview}...`,
+      );
+    }
+  }
+
+  // Agentic mode or hybrid uncertain: use LLM scoring
+  if (scoringConfig.mode === 'agentic' || needsLlmScoring) {
+    stats.llmCalls++;
     relevanceResult = await scoreRelevance({
       title: candidate.title,
       description: candidate.description || '',
@@ -177,16 +227,16 @@ async function processCandidate(candidate, sourceName, dryRun, agentic, stats) {
     });
 
     if (relevanceResult.usage) {
-      stats.totalTokens += relevanceResult.usage.total_tokens;
+      stats.llmTokens += relevanceResult.usage.total_tokens;
     }
 
     if (!relevanceResult.should_queue) {
-      console.log(`   ⏭️  Skip (${relevanceResult.relevance_score}/10): ${titlePreview}...`);
+      console.log(`   ⏭️  LLM skip (${relevanceResult.relevance_score}/10): ${titlePreview}...`);
       console.log(`      Reason: ${relevanceResult.skip_reason}`);
       return { action: 'skipped-relevance', relevanceResult };
     }
 
-    console.log(`   🎯 Score ${relevanceResult.relevance_score}/10: ${titlePreview}...`);
+    console.log(`   🎯 LLM score ${relevanceResult.relevance_score}/10: ${titlePreview}...`);
 
     if (dryRun) {
       console.log(`      Summary: ${relevanceResult.executive_summary}`);
@@ -194,13 +244,8 @@ async function processCandidate(candidate, sourceName, dryRun, agentic, stats) {
   }
 
   if (dryRun) {
-    const action = existsStatus === 'retry' ? 'retry' : 'add';
-    console.log(`   [DRY] Would ${action}: ${titlePreview}...`);
+    console.log(`   [DRY] Would add: ${titlePreview}...`);
     return { action: 'dry-run' };
-  }
-
-  if (existsStatus === 'retry') {
-    return processRetry(candidate, sourceName, titlePreview);
   }
 
   return processNewItem(candidate, sourceName, titlePreview, relevanceResult);
@@ -277,11 +322,26 @@ async function logSkippedPremiumSources(sourceSlug) {
 }
 
 export async function runDiscovery(options = {}) {
-  const { source: sourceSlug, limit = null, dryRun = false, agentic = false } = options;
+  const {
+    source: sourceSlug,
+    limit = null,
+    dryRun = false,
+    agentic = false,
+    hybrid = false,
+  } = options;
+
+  // Determine scoring mode
+  const scoringMode = hybrid ? 'hybrid' : agentic ? 'agentic' : 'rule-based';
 
   console.log('🔍 Starting discovery...');
   console.log(`   Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}`);
-  console.log(`   Agentic: ${agentic ? 'ON (LLM relevance scoring)' : 'OFF (rule-based)'}`);
+  console.log(`   Scoring: ${scoringMode}`);
+  if (hybrid) {
+    console.log(`      → Embeddings for pre-filter, LLM for uncertain cases`);
+    console.log(
+      `      → Accept threshold: ${HIGH_RELEVANCE_THRESHOLD}, Reject: ${LOW_RELEVANCE_THRESHOLD}`,
+    );
+  }
   if (limit) console.log(`   Limit: ${limit}`);
 
   const config = await loadDiscoveryConfig();
@@ -294,7 +354,32 @@ export async function runDiscovery(options = {}) {
 
   await logSkippedPremiumSources(sourceSlug);
 
-  const stats = { found: 0, new: 0, retried: 0, skipped: 0, totalTokens: 0 };
+  // Load reference embedding for hybrid mode
+  let referenceEmbedding = null;
+  if (hybrid) {
+    referenceEmbedding = await getReferenceEmbedding();
+    if (!referenceEmbedding) {
+      console.log('   ⚠️ No reference embedding available, falling back to agentic mode');
+    }
+  }
+
+  // Scoring configuration
+  const scoringConfig = {
+    mode: hybrid && referenceEmbedding ? 'hybrid' : agentic ? 'agentic' : 'rule-based',
+    referenceEmbedding,
+  };
+
+  const stats = {
+    found: 0,
+    new: 0,
+    retried: 0,
+    skipped: 0,
+    embeddingTokens: 0,
+    llmTokens: 0,
+    embeddingAccepts: 0,
+    embeddingRejects: 0,
+    llmCalls: 0,
+  };
   const results = [];
 
   for (const src of sources) {
@@ -308,7 +393,7 @@ export async function runDiscovery(options = {}) {
         dryRun,
         limit,
         stats,
-        agentic,
+        scoringConfig,
       );
       results.push(...sourceResults);
 
@@ -332,14 +417,14 @@ export async function runDiscovery(options = {}) {
   };
 }
 
-async function processCandidates(candidates, sourceName, dryRun, limit, stats, agentic) {
+async function processCandidates(candidates, sourceName, dryRun, limit, stats, scoringConfig) {
   const results = [];
 
   for (const candidate of candidates) {
     if (limit && stats.new >= limit) break;
 
     stats.found++;
-    const outcome = await processCandidate(candidate, sourceName, dryRun, agentic, stats);
+    const outcome = await processCandidate(candidate, sourceName, dryRun, scoringConfig, stats);
 
     if (outcome.action === 'skip') continue;
     if (outcome.action === 'skipped-relevance') {
@@ -362,9 +447,31 @@ function logSummary(stats) {
   console.log(`   Retried: ${stats.retried}`);
   console.log(`   Skipped (low relevance): ${stats.skipped}`);
   console.log(`   Already exists: ${stats.found - stats.new - stats.skipped}`);
-  if (stats.totalTokens > 0) {
-    const estimatedCost = (stats.totalTokens / 1000000) * 0.15; // GPT-4o-mini input pricing
-    console.log(`   Tokens used: ${stats.totalTokens} (~$${estimatedCost.toFixed(4)})`);
+
+  // Hybrid mode stats
+  if (stats.embeddingTokens > 0 || stats.llmTokens > 0) {
+    console.log(`\n   📈 Scoring breakdown:`);
+    if (stats.embeddingAccepts > 0) {
+      console.log(`      Embedding accepts (high confidence): ${stats.embeddingAccepts}`);
+    }
+    if (stats.embeddingRejects > 0) {
+      console.log(`      Embedding rejects (low relevance): ${stats.embeddingRejects}`);
+    }
+    if (stats.llmCalls > 0) {
+      console.log(`      LLM calls (uncertain cases): ${stats.llmCalls}`);
+    }
+
+    // Cost breakdown
+    const embeddingCost = (stats.embeddingTokens / 1000000) * 0.02; // text-embedding-3-small
+    const llmCost = (stats.llmTokens / 1000000) * 0.15; // GPT-4o-mini
+    const totalCost = embeddingCost + llmCost;
+
+    console.log(`\n   💰 Cost breakdown:`);
+    console.log(
+      `      Embeddings: ${stats.embeddingTokens} tokens (~$${embeddingCost.toFixed(6)})`,
+    );
+    console.log(`      LLM: ${stats.llmTokens} tokens (~$${llmCost.toFixed(6)})`);
+    console.log(`      Total: ~$${totalCost.toFixed(6)}`);
   }
 }
 

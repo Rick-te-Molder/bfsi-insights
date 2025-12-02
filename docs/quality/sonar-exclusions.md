@@ -28,6 +28,11 @@ This document explains which files are excluded from coverage requirements in So
 | `services/agent-api/src/index.js`              | Express entry point; server bootstrap only                                             | 2025-12-01    | 2026-06-01 |
 | `**/lib/runner.js`                             | Agent runner infrastructure; Supabase/OpenAI client setup                              | 2025-12-01    | 2026-06-01 |
 | `**/lib/evals.js`                              | Eval orchestration; pure helpers extracted to `eval-helpers.js`                        | 2025-12-01    | 2026-06-01 |
+| `**/lib/scrapers.js`                           | Web scraping infrastructure; Playwright browser automation                             | 2025-12-02    | 2026-06-02 |
+| `**/lib/embeddings.js`                         | OpenAI embeddings + Supabase reference builder; pure math tested, infra excluded       | 2025-12-02    | 2026-06-02 |
+| `**/agents/filter.js`                          | Thin LLM wrapper; AgentRunner orchestration                                            | 2025-12-02    | 2026-06-02 |
+| `**/agents/summarize.js`                       | Thin LLM wrapper; AgentRunner orchestration                                            | 2025-12-02    | 2026-06-02 |
+| `**/agents/thumbnail.js`                       | Thin LLM wrapper; screenshot/image processing                                          | 2025-12-02    | 2026-06-02 |
 | `src/pages/**`                                 | Astro pages; DOM/SSR glue code                                                         | 2025-11-30    | 2026-03-31 |
 | `src/features/**`                              | UI components; DOM wiring (business logic extracted to `src/lib/`)                     | 2025-11-30    | 2026-03-31 |
 | `**/pages/api/**`                              | Astro API routes; minimal glue code                                                    | 2025-11-30    | 2026-03-31 |
@@ -36,12 +41,14 @@ This document explains which files are excluded from coverage requirements in So
 
 These files contain core business logic and **must** have test coverage:
 
-| File                 | Purpose                          | Test File                   |
-| -------------------- | -------------------------------- | --------------------------- |
-| `src/lib/filters.ts` | Publication filtering logic      | `tests/lib/filters.spec.ts` |
-| `src/lib/authors.ts` | Author normalization             | `tests/lib/authors.spec.ts` |
-| `src/lib/text.ts`    | Text utilities (linkify, escape) | `tests/lib/text.spec.ts`    |
-| `src/lib/fmt.ts`     | Date formatting                  | `tests/lib/fmt.spec.ts`     |
+| File                                                   | Purpose                          | Test File                                  |
+| ------------------------------------------------------ | -------------------------------- | ------------------------------------------ |
+| `src/lib/filters.ts`                                   | Publication filtering logic      | `tests/lib/filters.spec.ts`                |
+| `src/lib/authors.ts`                                   | Author normalization             | `tests/lib/authors.spec.ts`                |
+| `src/lib/text.ts`                                      | Text utilities (linkify, escape) | `tests/lib/text.spec.ts`                   |
+| `src/lib/fmt.ts`                                       | Date formatting                  | `tests/lib/fmt.spec.ts`                    |
+| `services/agent-api/src/agents/discovery-relevance.js` | LLM relevance scoring logic      | `tests/agents/discovery-relevance.spec.js` |
+| `services/agent-api/src/lib/sitemap.js`                | Sitemap parsing                  | `tests/lib/sitemap.spec.js`                |
 
 ## 4. Review Policy
 
@@ -62,3 +69,5 @@ Do not configure exclusions in the SonarCloud UI—keep the single source of tru
 | 2025-11-30 | Add pages/** and features/** - business logic extracted to src/lib/ | Rick te Molder |
 | 2025-11-30 | Add lib/content-fetcher.js - extracted from enrich-item.js          | Rick te Molder |
 | 2025-12-01 | Add agent-api infrastructure: middleware, index.js, runner, tag.js  | Rick te Molder |
+| 2025-12-02 | Add agent wrappers (filter, summarize, thumbnail, scrapers)         | Cascade        |
+| 2025-12-02 | Document new tested files: discovery-relevance.js, embeddings.js    | Cascade        |
