@@ -1,4 +1,4 @@
-/* eslint-env node */
+/* global process */
 /**
  * Check for files exceeding the line limit threshold
  * Used by both pre-commit hook and CI
