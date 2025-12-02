@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS obligation (
   code TEXT UNIQUE NOT NULL,
   name TEXT NOT NULL,
   description TEXT,
-  regulation_code TEXT REFERENCES regulation(code) ON DELETE CASCADE,
+  regulation_code TEXT,  -- References regulation(code) when regulation exists
   category TEXT,  -- risk, reporting, security, governance, consumer-protection
   article_reference TEXT,  -- e.g., "Article 5-15"
   sort_order INTEGER DEFAULT 0,
