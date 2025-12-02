@@ -573,6 +573,7 @@ async function insertToQueue(candidate, sourceName, relevanceResult = null) {
     tags: {},
   };
 
+  // url_norm is a generated column - computed automatically from url
   const insertData = {
     url: candidate.url,
     content_type: 'publication',
