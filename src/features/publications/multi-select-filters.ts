@@ -13,6 +13,7 @@ export default function initMultiSelectFilters() {
   const loadMoreBtn = document.getElementById('load-more-btn') as HTMLButtonElement | null;
   const paginationCount = document.getElementById('pagination-count');
   const paginationContainer = document.getElementById('pagination-container');
+  const loadingSkeleton = document.getElementById('loading-skeleton');
 
   // Filter panel elements
   const filterPanel = document.getElementById('filter-panel');
@@ -23,6 +24,8 @@ export default function initMultiSelectFilters() {
   const applyFiltersBtn = document.getElementById('apply-filters');
   const panelCountNumber = document.getElementById('panel-count-number');
   const fabFilterCount = document.getElementById('fab-filter-count');
+  const fabIcon = document.getElementById('fab-icon');
+  const fabSpinner = document.getElementById('fab-spinner');
 
   const STORAGE_KEY = 'publicationMultiFiltersV1';
   const PAGE_SIZE = 30;
@@ -304,13 +307,32 @@ export default function initMultiSelectFilters() {
     document.body.style.overflow = '';
   }
 
-  // Show/hide search spinner
-  function showSpinner() {
+  // Show/hide loading indicators
+  function showLoadingState() {
     searchSpinner?.classList.remove('hidden');
+    if (fabIcon && fabSpinner) {
+      fabIcon.classList.add('hidden');
+      fabSpinner.classList.remove('hidden');
+    }
+    if (list) list.style.opacity = '0.5';
   }
 
-  function hideSpinner() {
+  function hideLoadingState() {
     searchSpinner?.classList.add('hidden');
+    if (fabIcon && fabSpinner) {
+      fabIcon.classList.remove('hidden');
+      fabSpinner.classList.add('hidden');
+    }
+    if (list) list.style.opacity = '1';
+  }
+
+  // Hide skeleton and reveal list with animation
+  function revealList() {
+    loadingSkeleton?.classList.add('hidden');
+    if (list) {
+      list.classList.remove('opacity-0');
+      list.style.opacity = '1';
+    }
   }
 
   // Debounce helper
@@ -318,10 +340,10 @@ export default function initMultiSelectFilters() {
     let t: ReturnType<typeof setTimeout> | undefined;
     return (fn: () => void) => {
       if (t) clearTimeout(t);
-      showSpinner();
+      showLoadingState();
       t = setTimeout(() => {
         fn();
-        hideSpinner();
+        hideLoadingState();
       }, 250);
     };
   })();
@@ -331,6 +353,9 @@ export default function initMultiSelectFilters() {
   loadFilters();
   applyFilterStateToCheckboxes(filterState);
   applyFilters(filterState, searchQuery);
+
+  // Reveal list after initialization (hide skeleton)
+  revealList();
 
   // Event listeners
   openPanelBtn?.addEventListener('click', openPanel);
