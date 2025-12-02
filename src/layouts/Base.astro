@@ -292,7 +292,8 @@ const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.s
               modal.classList.remove('hidden');
               document.body.style.overflow = 'hidden';
 
-              const title = el.querySelector('a')?.textContent || '';
+              const title =
+                el.getAttribute('data-title') || el.querySelector('a')?.textContent || '';
               const href = el.querySelector('a')?.href || '#';
 
               const titleEl = document.getElementById('modal-title-text');

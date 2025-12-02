@@ -69,6 +69,19 @@ const ogImage = thumbCandidates[0];
   }
 
   <article class="mx-auto max-w-3xl">
+    <!-- Back button for returning to scroll position -->
+    <button
+      id="back-btn"
+      type="button"
+      class="mb-4 inline-flex items-center gap-1.5 text-sm text-sky-400 hover:text-sky-300 transition-colors"
+    >
+      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"
+        ></path>
+      </svg>
+      Back
+    </button>
+
     <Breadcrumbs
       segments={[
         { label: 'Home', href: '/' },
@@ -182,4 +195,19 @@ const ogImage = thumbCandidates[0];
       </a>
     </div>
   </article>
+
+  <script>
+    const backBtn = document.getElementById('back-btn');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => {
+        // If there's history, go back (preserves scroll position)
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          // Fallback: navigate to publications
+          window.location.href = '/publications';
+        }
+      });
+    }
+  </script>
 </Base>
