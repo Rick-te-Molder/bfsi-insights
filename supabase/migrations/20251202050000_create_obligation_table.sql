@@ -4,6 +4,16 @@
 -- Completes the Regulator → Regulation → Obligation hierarchy
 -- ============================================================================
 
+-- First, ensure regulation.code has a unique constraint for FK reference
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'regulation_code_unique'
+  ) THEN
+    ALTER TABLE regulation ADD CONSTRAINT regulation_code_unique UNIQUE (code);
+  END IF;
+END $$;
+
 -- Create obligation table
 CREATE TABLE IF NOT EXISTS obligation (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
