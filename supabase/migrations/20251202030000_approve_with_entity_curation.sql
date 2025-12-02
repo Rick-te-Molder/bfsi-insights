@@ -5,6 +5,9 @@
 -- during article approval process.
 -- ============================================================================
 
+-- Drop old function signature if exists (was uuid only)
+DROP FUNCTION IF EXISTS approve_from_queue(uuid);
+
 CREATE OR REPLACE FUNCTION approve_from_queue(
   p_queue_id uuid,
   p_approved_vendors text[] DEFAULT '{}',
@@ -204,4 +207,4 @@ BEGIN
   END IF;
 END $$;
 
-COMMENT ON FUNCTION approve_from_queue IS 'Approves a queue item, creates publication, sets up taxonomy relationships, and optionally upserts new vendors/organizations';
+COMMENT ON FUNCTION approve_from_queue(uuid, text[], text[]) IS 'Approves a queue item, creates publication, sets up taxonomy relationships, and optionally upserts new vendors/organizations';
