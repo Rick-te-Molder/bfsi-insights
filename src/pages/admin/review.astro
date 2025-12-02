@@ -231,8 +231,26 @@ import Base from '../../layouts/Base.astro';
                 : `/thumbs/${item.thumbnail}`;
             }
 
+            // Prepare role from persona scores (highest scoring persona)
+            const topPersona = Object.entries(personaScores).sort(
+              ([, a], [, b]) => Number(b) - Number(a),
+            )[0];
+            const role = topPersona ? topPersona[0] : '';
+
             return `
-            <article class="rounded-xl border border-neutral-800 bg-neutral-900/60 transition hover:border-neutral-700" data-item-id="${item.id}">
+            <li class="group rounded-xl border border-neutral-800 bg-neutral-900/60 transition hover:border-neutral-700" 
+              data-item-id="${item.id}"
+              data-role="${role}"
+              data-industry="${industryCodes.length > 0 ? industryMap.get(industryCodes[0]) || industryCodes[0] : ''}"
+              data-topic="${topicCodes.length > 0 ? topicMap.get(topicCodes[0]) || topicCodes[0] : ''}"
+              data-content_type=""
+              data-geography=""
+              data-slug=""
+              data-url="${item.url}"
+              data-summary-medium="${(summary.medium || '').replace(/"/g, '&quot;')}"
+              data-authors=""
+              data-source_name="">
+              <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="sr-only">${payload.title}</a>
               <div class="flex gap-6 p-6">
                 <!-- Thumbnail -->
                 ${
@@ -252,7 +270,7 @@ import Base from '../../layouts/Base.astro';
                     <div class="flex-1">
                       <h2 class="text-2xl font-semibold text-sky-200 break-words">${payload.title}</h2>
                       <div class="mt-2 flex flex-wrap gap-2 text-sm text-neutral-400">
-                        <span>� ${new Date(payload.published_at).toLocaleDateString()}</span>
+                        <span>📅 ${new Date(payload.published_at).toLocaleDateString()}</span>
                         <span>•</span>
                         <a href="${item.url}" target="_blank" rel="noopener noreferrer" class="text-sky-400 hover:text-sky-300 hover:underline">View original →</a>
                       </div>
@@ -260,6 +278,10 @@ import Base from '../../layouts/Base.astro';
                     
                     <!-- Action Buttons -->
                     <div class="flex flex-col gap-2 flex-shrink-0">
+                      <button class="preview-btn inline-flex items-center justify-center gap-1 rounded-lg border border-neutral-600 bg-neutral-800 px-6 py-2 font-medium text-neutral-300 hover:bg-neutral-700 transition whitespace-nowrap" type="button" data-open-modal="true">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        Preview
+                      </button>
                       <button class="approve-btn rounded-lg bg-emerald-600 px-6 py-2 font-semibold text-white hover:bg-emerald-500 transition whitespace-nowrap" data-id="${item.id}">✓ Approve</button>
                       <button class="reject-btn rounded-lg bg-red-600 px-6 py-2 font-semibold text-white hover:bg-red-500 transition whitespace-nowrap" data-id="${item.id}">✗ Reject</button>
                     </div>
@@ -468,7 +490,7 @@ import Base from '../../layouts/Base.astro';
                   </div>
                 </div>
               </div>
-            </article>
+            </li>
           `;
           })
           .join('');

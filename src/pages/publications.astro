@@ -341,11 +341,25 @@ const expandItemThumb = (t: string | undefined) => {
             <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800 space-y-2">
               {
                 industryWithCounts.map((l1) => (
-                  <details class="border border-neutral-800/50 rounded-md overflow-hidden">
+                  <details
+                    class="industry-l1 border border-neutral-800/50 rounded-md overflow-hidden"
+                    data-code={l1.code}
+                  >
                     <summary class="flex items-center justify-between px-3 py-2 cursor-pointer bg-neutral-900/30 hover:bg-neutral-800/30 transition-colors text-xs">
-                      <span class="font-medium text-neutral-400 uppercase tracking-wider">
-                        {l1.name}
-                      </span>
+                      <div class="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          name="filter-industry"
+                          value={l1.code}
+                          class="industry-checkbox h-3.5 w-3.5 rounded border-neutral-600 bg-neutral-800 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0 cursor-pointer"
+                          data-level="1"
+                          data-code={l1.code}
+                          onclick="event.stopPropagation()"
+                        />
+                        <span class="font-medium text-neutral-400 uppercase tracking-wider">
+                          {l1.name}
+                        </span>
+                      </div>
                       <svg
                         class="w-3.5 h-3.5 text-neutral-600 transition-transform [details[open]>&]:rotate-180"
                         fill="none"
@@ -360,34 +374,76 @@ const expandItemThumb = (t: string | undefined) => {
                         />
                       </svg>
                     </summary>
-                    <div class="px-3 py-2 bg-neutral-950/30">
-                      <div class="flex flex-wrap gap-1.5">
-                        <label class="filter-checkbox cursor-pointer">
-                          <input
-                            type="checkbox"
-                            name="filter-industry"
-                            value={l1.code}
-                            class="sr-only peer"
-                          />
-                          <span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs border border-dashed border-neutral-600 bg-neutral-900/50 text-neutral-400 transition-all peer-checked:border-solid peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 peer-checked:text-cyan-300 hover:border-neutral-500 hover:bg-neutral-800/50">
-                            All
-                          </span>
-                        </label>
-                        {l1.children?.map((l2) => (
-                          <label class="filter-checkbox cursor-pointer">
-                            <input
-                              type="checkbox"
-                              name="filter-industry"
-                              value={l2.code}
-                              class="sr-only peer"
-                            />
-                            <span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs border border-neutral-700 bg-neutral-900 text-neutral-300 transition-all peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 peer-checked:text-cyan-300 hover:border-neutral-600 hover:bg-neutral-800">
-                              {l2.name}
-                              {l2.count ? <span class="text-neutral-500">{l2.count}</span> : null}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
+                    <div class="px-3 py-2 bg-neutral-950/30 space-y-1.5">
+                      {/* L2 items - collapsible sections */}
+                      {l1.children?.map((l2) => (
+                        <details
+                          class="industry-l2 ml-2 border border-neutral-800/40 rounded overflow-hidden"
+                          data-code={l2.code}
+                          data-parent={l1.code}
+                        >
+                          <summary class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer bg-neutral-900/20 hover:bg-neutral-800/30 transition-colors">
+                            <div class="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                name="filter-industry"
+                                value={l2.code}
+                                class="industry-checkbox h-3 w-3 rounded border-neutral-600 bg-neutral-800 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0 cursor-pointer"
+                                data-level="2"
+                                data-code={l2.code}
+                                data-parent={l1.code}
+                                onclick="event.stopPropagation()"
+                              />
+                              <span class="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">
+                                {l2.name}
+                                {l2.count ? (
+                                  <span class="text-neutral-500 font-normal normal-case ml-1">
+                                    {l2.count}
+                                  </span>
+                                ) : null}
+                              </span>
+                            </div>
+                            {l2.children && l2.children.length > 0 && (
+                              <svg
+                                class="w-3 h-3 text-neutral-600 transition-transform [details[open]>&]:rotate-180"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="2"
+                                  d="M19 9l-7 7-7-7"
+                                />
+                              </svg>
+                            )}
+                          </summary>
+                          {l2.children && l2.children.length > 0 && (
+                            <div class="px-2.5 py-2 bg-neutral-950/20 flex flex-wrap gap-1.5">
+                              {l2.children?.map((l3) => (
+                                <label class="filter-checkbox cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    name="filter-industry"
+                                    value={l3.code}
+                                    class="industry-checkbox sr-only peer"
+                                    data-level="3"
+                                    data-code={l3.code}
+                                    data-parent={l2.code}
+                                  />
+                                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-neutral-700/70 bg-neutral-900/70 text-neutral-400 transition-all peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 peer-checked:text-cyan-300 hover:border-neutral-600 hover:bg-neutral-800">
+                                    {l3.name}
+                                    {l3.count ? (
+                                      <span class="text-neutral-500">{l3.count}</span>
+                                    ) : null}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </details>
+                      ))}
                     </div>
                   </details>
                 ))
@@ -638,36 +694,40 @@ const expandItemThumb = (t: string | undefined) => {
     </div>
   </section>
 
-  <!-- Floating Filter Button (FAB) -->
-  <button
-    id="open-filter-panel"
-    aria-label="Open filters"
-    class="fixed bottom-6 left-6 z-40 flex h-14 items-center gap-2 px-5 rounded-full bg-sky-600 text-white shadow-lg hover:bg-sky-500 transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-neutral-950"
-  >
-    <!-- Filter icon (default) -->
-    <svg id="fab-icon" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-      ></path>
-    </svg>
-    <!-- Loading spinner (shown during filtering) -->
-    <svg id="fab-spinner" class="h-5 w-5 animate-spin hidden" fill="none" viewBox="0 0 24 24">
-      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
-      ></circle>
-      <path
-        class="opacity-75"
-        fill="currentColor"
-        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-      ></path>
-    </svg>
-    <span class="font-medium">Filters</span>
-    <span
-      id="fab-filter-count"
-      class="hidden px-2 py-0.5 text-xs font-bold bg-white text-sky-600 rounded-full"></span>
-  </button>
+  <!-- Floating Filter Button (FAB) - aligned with content -->
+  <div class="fixed bottom-6 left-0 right-0 z-40 pointer-events-none">
+    <div class="mx-auto max-w-5xl px-4">
+      <button
+        id="open-filter-panel"
+        aria-label="Open filters"
+        class="pointer-events-auto flex h-14 items-center gap-2 px-5 rounded-full bg-sky-600 text-white shadow-lg hover:bg-sky-500 transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-neutral-950"
+      >
+        <!-- Filter icon (default) -->
+        <svg id="fab-icon" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+          ></path>
+        </svg>
+        <!-- Loading spinner (shown during filtering) -->
+        <svg id="fab-spinner" class="h-5 w-5 animate-spin hidden" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+          ></path>
+        </svg>
+        <span class="font-medium">Filters</span>
+        <span
+          id="fab-filter-count"
+          class="hidden px-2 py-0.5 text-xs font-bold bg-white text-sky-600 rounded-full"></span>
+      </button>
+    </div>
+  </div>
 
   <!-- Back to Top -->
   <button
@@ -741,6 +801,99 @@ const expandItemThumb = (t: string | undefined) => {
   <script>
     import initMultiSelectFilters from '../features/publications/multi-select-filters.ts';
     initMultiSelectFilters();
+  </script>
+
+  <!-- Industry cascading selection -->
+  <script>
+    function initIndustryCascade() {
+      const checkboxes = document.querySelectorAll('.industry-checkbox');
+
+      checkboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', (e) => {
+          const target = e.target as HTMLInputElement;
+          const level = target.dataset.level;
+          const code = target.dataset.code;
+          const isChecked = target.checked;
+
+          if (level === '1') {
+            // L1 checked/unchecked: cascade to all L2s and L3s
+            const l2Checkboxes = document.querySelectorAll(
+              `.industry-checkbox[data-parent="${code}"]`,
+            );
+            l2Checkboxes.forEach((l2) => {
+              (l2 as HTMLInputElement).checked = isChecked;
+              // Also cascade to L3s under this L2
+              const l2Code = (l2 as HTMLInputElement).dataset.code;
+              const l3Checkboxes = document.querySelectorAll(
+                `.industry-checkbox[data-parent="${l2Code}"]`,
+              );
+              l3Checkboxes.forEach((l3) => {
+                (l3 as HTMLInputElement).checked = isChecked;
+              });
+            });
+          } else if (level === '2') {
+            // L2 checked/unchecked: cascade to all L3s
+            const l3Checkboxes = document.querySelectorAll(
+              `.industry-checkbox[data-parent="${code}"]`,
+            );
+            l3Checkboxes.forEach((l3) => {
+              (l3 as HTMLInputElement).checked = isChecked;
+            });
+            // Update parent L1 state
+            updateParentState(target.dataset.parent!, '1');
+          } else if (level === '3') {
+            // L3 changed: update parent L2 and L1 states
+            updateParentState(target.dataset.parent!, '2');
+          }
+
+          // Trigger change event for filter system
+          target.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+      });
+
+      function updateParentState(parentCode: string, parentLevel: string) {
+        const parentCheckbox = document.querySelector(
+          `.industry-checkbox[data-code="${parentCode}"][data-level="${parentLevel}"]`,
+        ) as HTMLInputElement;
+        if (!parentCheckbox) return;
+
+        const childCheckboxes = document.querySelectorAll(
+          `.industry-checkbox[data-parent="${parentCode}"]`,
+        );
+        const children = Array.from(childCheckboxes) as HTMLInputElement[];
+
+        const checkedCount = children.filter((c) => c.checked).length;
+        const indeterminateCount = children.filter((c) => c.indeterminate).length;
+        const totalChildren = children.length;
+
+        if (checkedCount === 0 && indeterminateCount === 0) {
+          // No children checked or indeterminate
+          parentCheckbox.checked = false;
+          parentCheckbox.indeterminate = false;
+        } else if (checkedCount === totalChildren && indeterminateCount === 0) {
+          // All children fully checked
+          parentCheckbox.checked = true;
+          parentCheckbox.indeterminate = false;
+        } else {
+          // Some children checked or some indeterminate
+          parentCheckbox.checked = false;
+          parentCheckbox.indeterminate = true;
+        }
+
+        // If this was L2, also update L1
+        if (parentLevel === '2') {
+          const l1Code = parentCheckbox.dataset.parent;
+          if (l1Code) updateParentState(l1Code, '1');
+        }
+      }
+    }
+
+    // Initialize on load and after any dynamic content changes
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initIndustryCascade);
+    } else {
+      initIndustryCascade();
+    }
   </script>
 
   <!-- Back to Top interaction -->
