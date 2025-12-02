@@ -61,6 +61,7 @@ export default function initMultiSelectFilters() {
       geography: el.dataset.geography || '',
       regulator: el.dataset.regulator || '',
       regulation: el.dataset.regulation || '',
+      obligation: el.dataset.obligation || '',
       process: el.dataset.process || '',
     };
   });

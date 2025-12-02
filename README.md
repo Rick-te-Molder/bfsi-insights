@@ -287,7 +287,7 @@ LLM picks from these pre-defined lists. **Do not auto-create entries.**
 | `ag_capability`  | 24   | AI capabilities (nlp, computer-vision, etc.)           |
 | `regulator`      | 18   | Regulatory bodies (ecb, fca, sec, etc.)                |
 | `regulation`     | 18   | Regulations/laws (gdpr, psd2, mifid, etc.)             |
-| `obligation`     | —    | Compliance requirements (expert-curated)               |
+| `obligation`     | 18   | Compliance requirements (dora-ict-risk, gdpr-dpo, etc) |
 
 #### Regulatory Compliance Feature
 
@@ -297,9 +297,9 @@ The regulatory tables form a hierarchy: **Regulator → Regulation → Obligatio
 Example: ECB (regulator) → DORA (regulation) → "ICT risk assessment" (obligation)
 ```
 
-**Current state:** The tag agent extracts `regulator_codes` and `regulation_codes` from articles, linking publications to known regulations.
+**Current state:** The tag agent extracts `regulator_codes`, `regulation_codes`, and `obligation_codes` from articles, linking publications to specific compliance requirements.
 
-**Planned:** The `obligation` table will store specific compliance requirements per regulation, enabling users to:
+**Features:**
 
 - Browse publications by regulatory impact
 - Track which obligations are covered by AI solutions

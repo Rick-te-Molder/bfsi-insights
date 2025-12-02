@@ -58,8 +58,8 @@ const TaggingSchema = z.object({
     .array(TaggedCode)
     .describe('Regulator codes with confidence (empty array if not regulatory)'),
   regulation_codes: z
-    .array(TaggedCode)
-    .describe('Regulation codes with confidence (empty array if none mentioned)'),
+    .array(z.string())
+    .describe('Regulation codes if specific regulations mentioned (empty array if none)'),
 
   // Process taxonomy with confidence (hierarchical L1/L2/L3)
   process_codes: z
@@ -87,6 +87,7 @@ async function loadTaxonomies() {
     capabilities,
     regulators,
     regulations,
+    obligations,
     processes,
   ] = await Promise.all([
     supabase
@@ -104,11 +105,7 @@ async function loadTaxonomies() {
     supabase.from('ag_capability').select('code, name').order('name'),
     supabase.from('regulator').select('code, name').order('name'),
     supabase.from('regulation').select('code, name').order('name'),
-    supabase
-      .from('bfsi_process_taxonomy')
-      .select('code, name, level, parent_code')
-      .order('level')
-      .order('name'),
+    supabase.from('bfsi_process_taxonomy').select('code, name, level').order('name'),
   ]);
 
   const format = (data) => data?.data?.map((i) => `${i.code}: ${i.name}`).join('\n') || '';
@@ -124,6 +121,12 @@ async function loadTaxonomies() {
       })
       .join('\n') || '';
 
+  // Format obligations with regulation and category
+  const formatObligations = (data) =>
+    data?.data
+      ?.map((i) => `${i.code}: ${i.name} [${i.regulation_code}/${i.category}]`)
+      .join('\n') || '';
+
   return {
     industries: formatHierarchical(industries),
     topics: formatHierarchical(topics),
@@ -132,6 +135,7 @@ async function loadTaxonomies() {
     capabilities: format(capabilities),
     regulators: format(regulators),
     regulations: format(regulations),
+    obligations: formatObligations(obligations),
     processes: formatHierarchical(processes),
   };
 }
@@ -183,6 +187,9 @@ ${taxonomies.regulators}
 
 === REGULATIONS (if specific regulations mentioned) ===
 ${taxonomies.regulations}
+
+OBLIGATIONS (pick all that apply if specific compliance requirements mentioned, or empty):
+${taxonomies.obligations}
 
 === BFSI PROCESSES (hierarchical - what business processes are discussed) ===
 ${taxonomies.processes}

@@ -42,6 +42,7 @@ export interface Publication {
   processes?: string[];
   regulators?: string[];
   regulations?: string[];
+  obligations?: string[];
 
   use_cases: string | null;
   agentic_capabilities: string | null;
