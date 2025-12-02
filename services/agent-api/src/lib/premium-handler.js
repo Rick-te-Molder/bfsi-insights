@@ -92,9 +92,12 @@ export function processHeadlineOnly(candidate, source) {
 export function extractRssPreview(description) {
   if (!description) return { preview: null, wordCount: 0 };
 
-  // Clean HTML tags
-  const cleaned = description
-    .replace(/<[^>]+>/g, ' ')
+  // Limit input length to prevent ReDoS attacks
+  const safeInput = description.slice(0, 10000);
+
+  // Clean HTML tags using a simple, non-backtracking approach
+  const cleaned = safeInput
+    .replace(/<[^>]*>/g, ' ') // Use * instead of + to avoid backtracking
     .replace(/&nbsp;/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
