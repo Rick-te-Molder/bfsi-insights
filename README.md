@@ -376,6 +376,11 @@ node src/index.js
 node services/agent-api/src/cli.js discovery              # Find new publications
 node services/agent-api/src/cli.js discovery --limit=10   # Limit to 10 items
 node services/agent-api/src/cli.js discovery --dry-run    # Preview only
+node services/agent-api/src/cli.js discovery --premium    # Include premium sources
+
+node services/agent-api/src/cli.js classics               # Discover classic papers via Semantic Scholar
+node services/agent-api/src/cli.js classics --no-expand   # Skip citation expansion
+node services/agent-api/src/cli.js classics --dry-run     # Preview only
 
 node services/agent-api/src/cli.js enrich --limit=20      # Full pipeline
 node services/agent-api/src/cli.js filter --limit=10      # Filter only
