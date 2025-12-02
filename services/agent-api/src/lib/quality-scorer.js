@@ -132,7 +132,7 @@ export async function enrichWithCitations(candidate) {
   const { title, url } = candidate;
 
   // Extract arXiv ID if present
-  const arxivMatch = url?.match(/arxiv\.org\/(?:abs|pdf)\/(\d{4}\.\d{4,5})/);
+  const arxivMatch = url ? /arxiv\.org\/(?:abs|pdf)\/(\d{4}\.\d{4,5})/.exec(url) : null;
   const arxivId = arxivMatch ? arxivMatch[1] : null;
 
   try {

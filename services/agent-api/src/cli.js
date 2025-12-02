@@ -58,6 +58,7 @@ async function runDiscoveryCmd(options) {
     dryRun: options['dry-run'] || options.dryRun,
     agentic: options.agentic || false,
     hybrid: options.hybrid || false,
+    premium: options.premium || false,
   });
   console.log('\n✨ Discovery complete!');
   console.log(`   Found: ${result.found}, New: ${result.new}, Retried: ${result.retried || 0}`);
