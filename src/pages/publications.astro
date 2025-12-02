@@ -7,6 +7,8 @@ import { getAllPublications } from '../lib/supabase';
 import type { Publication } from '../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import PublicationCard from '../features/publications/PublicationCard.astro';
+import FloatingFilterButton from '../components/FloatingFilterButton.astro';
+import BackToTopButton from '../components/BackToTopButton.astro';
 
 // Fetch all publications
 const publications: Publication[] = await getAllPublications();
@@ -694,107 +696,14 @@ const expandItemThumb = (t: string | undefined) => {
     </div>
   </section>
 
-  <!-- Floating Filter Button (FAB) - aligned with content -->
-  <div class="fixed bottom-6 left-0 right-0 z-40 pointer-events-none">
-    <div class="mx-auto max-w-5xl px-4">
-      <button
-        id="open-filter-panel"
-        aria-label="Open filters"
-        class="pointer-events-auto flex h-14 items-center gap-2 px-5 rounded-full bg-sky-600 text-white shadow-lg hover:bg-sky-500 transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 focus:ring-offset-neutral-950"
-      >
-        <!-- Filter icon (default) -->
-        <svg id="fab-icon" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-          ></path>
-        </svg>
-        <!-- Loading spinner (shown during filtering) -->
-        <svg id="fab-spinner" class="h-5 w-5 animate-spin hidden" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
-          ></circle>
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-          ></path>
-        </svg>
-        <span class="font-medium">Filters</span>
-        <span
-          id="fab-filter-count"
-          class="hidden px-2 py-0.5 text-xs font-bold bg-white text-sky-600 rounded-full"></span>
-      </button>
-    </div>
-  </div>
+  <FloatingFilterButton />
 
-  <!-- Back to Top -->
-  <button
-    id="back-to-top"
-    aria-label="Back to top"
-    class="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-800 text-white shadow-lg opacity-0 pointer-events-none transition-opacity duration-300 hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2 focus:ring-offset-neutral-950"
-  >
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke-width="2.5"
-      stroke="currentColor"
-      class="h-6 w-6"
-    >
-      <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"></path>
-    </svg>
-  </button>
+  <BackToTopButton />
 
   <!-- Image enhancement -->
-  <script type="module">
-    // @ts-check
-    /**
-     * @param {Document | HTMLElement} [root]
-     */
-    function enhanceImages(root) {
-      const container = root ?? document;
-      /** @type {HTMLImageElement[]} */
-      const imgs = Array.from(container.querySelectorAll('li.group img')).filter(
-        (img) => img instanceof HTMLImageElement,
-      );
-
-      imgs.forEach((img) => {
-        const placeholder = img.previousElementSibling;
-
-        const onload = () => {
-          img.classList.remove('opacity-0');
-          if (placeholder && placeholder instanceof HTMLElement) placeholder.style.display = 'none';
-        };
-
-        const onerror = () => {
-          const n = img.dataset?.next ?? '';
-          if (n) {
-            const parts = n.split('|');
-            const nx = parts.shift();
-            img.dataset.next = parts.join('|');
-            if (nx) {
-              img.src = nx;
-              return;
-            }
-          }
-          img.style.display = 'none';
-          if (placeholder && placeholder instanceof HTMLElement) placeholder.style.display = 'none';
-        };
-
-        img.addEventListener('load', onload, { once: true });
-        img.addEventListener('error', onerror);
-
-        if (img.complete) {
-          if (img.naturalWidth > 0) onload();
-          else onerror();
-        }
-      });
-    }
-
-    if (document.readyState !== 'loading') enhanceImages();
-    else window.addEventListener('DOMContentLoaded', () => enhanceImages());
+  <script>
+    import initImageEnhancement from '../features/publications/image-enhancement.ts';
+    initImageEnhancement();
   </script>
 
   <!-- Multi-select Filters JS -->
@@ -805,167 +714,7 @@ const expandItemThumb = (t: string | undefined) => {
 
   <!-- Industry cascading selection -->
   <script>
-    function initIndustryCascade() {
-      const checkboxes = document.querySelectorAll('.industry-checkbox');
-
-      checkboxes.forEach((checkbox) => {
-        checkbox.addEventListener('change', (e) => {
-          const target = e.target as HTMLInputElement;
-          const level = target.dataset.level;
-          const code = target.dataset.code;
-          const isChecked = target.checked;
-
-          if (level === '1') {
-            // L1 checked/unchecked: cascade to all L2s and L3s
-            const l2Checkboxes = document.querySelectorAll(
-              `.industry-checkbox[data-parent="${code}"]`,
-            );
-            l2Checkboxes.forEach((l2) => {
-              (l2 as HTMLInputElement).checked = isChecked;
-              // Also cascade to L3s under this L2
-              const l2Code = (l2 as HTMLInputElement).dataset.code;
-              const l3Checkboxes = document.querySelectorAll(
-                `.industry-checkbox[data-parent="${l2Code}"]`,
-              );
-              l3Checkboxes.forEach((l3) => {
-                (l3 as HTMLInputElement).checked = isChecked;
-              });
-            });
-          } else if (level === '2') {
-            // L2 checked/unchecked: cascade to all L3s
-            const l3Checkboxes = document.querySelectorAll(
-              `.industry-checkbox[data-parent="${code}"]`,
-            );
-            l3Checkboxes.forEach((l3) => {
-              (l3 as HTMLInputElement).checked = isChecked;
-            });
-            // Update parent L1 state
-            updateParentState(target.dataset.parent!, '1');
-          } else if (level === '3') {
-            // L3 changed: update parent L2 and L1 states
-            updateParentState(target.dataset.parent!, '2');
-          }
-
-          // Trigger change event for filter system
-          target.dispatchEvent(new Event('input', { bubbles: true }));
-        });
-      });
-
-      function updateParentState(parentCode: string, parentLevel: string) {
-        const parentCheckbox = document.querySelector(
-          `.industry-checkbox[data-code="${parentCode}"][data-level="${parentLevel}"]`,
-        ) as HTMLInputElement;
-        if (!parentCheckbox) return;
-
-        const childCheckboxes = document.querySelectorAll(
-          `.industry-checkbox[data-parent="${parentCode}"]`,
-        );
-        const children = Array.from(childCheckboxes) as HTMLInputElement[];
-
-        const checkedCount = children.filter((c) => c.checked).length;
-        const indeterminateCount = children.filter((c) => c.indeterminate).length;
-        const totalChildren = children.length;
-
-        if (checkedCount === 0 && indeterminateCount === 0) {
-          // No children checked or indeterminate
-          parentCheckbox.checked = false;
-          parentCheckbox.indeterminate = false;
-        } else if (checkedCount === totalChildren && indeterminateCount === 0) {
-          // All children fully checked
-          parentCheckbox.checked = true;
-          parentCheckbox.indeterminate = false;
-        } else {
-          // Some children checked or some indeterminate
-          parentCheckbox.checked = false;
-          parentCheckbox.indeterminate = true;
-        }
-
-        // If this was L2, also update L1
-        if (parentLevel === '2') {
-          const l1Code = parentCheckbox.dataset.parent;
-          if (l1Code) updateParentState(l1Code, '1');
-        }
-      }
-    }
-
-    // Initialize on load and after any dynamic content changes
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initIndustryCascade);
-    } else {
-      initIndustryCascade();
-    }
-  </script>
-
-  <!-- Back to Top interaction -->
-  <script type="module">
-    // @ts-check
-    const backToTopBtn = document.getElementById('back-to-top');
-
-    if (backToTopBtn instanceof HTMLButtonElement) {
-      let isVisible = false;
-      const SHOW_THRESHOLD = 400;
-
-      const toggleVisibility = () => {
-        const shouldShow = window.scrollY > SHOW_THRESHOLD;
-        if (shouldShow !== isVisible) {
-          isVisible = shouldShow;
-
-          if (isVisible) {
-            backToTopBtn.classList.remove('opacity-0', 'pointer-events-none');
-            backToTopBtn.classList.add('opacity-100', 'pointer-events-auto');
-          } else {
-            backToTopBtn.classList.remove('opacity-100', 'pointer-events-auto');
-            backToTopBtn.classList.add('opacity-0', 'pointer-events-none');
-          }
-        }
-      };
-
-      /** @type {number | null} */
-      let rafId = null;
-      window.addEventListener(
-        'scroll',
-        () => {
-          if (rafId === null) {
-            rafId = requestAnimationFrame(() => {
-              toggleVisibility();
-              rafId = null;
-            });
-          }
-        },
-        { passive: true },
-      );
-
-      backToTopBtn.addEventListener('click', () => {
-        const startPosition = window.scrollY;
-        const distance = startPosition;
-        const duration = Math.min(800 + distance * 0.3, 1200);
-        /** @type {number | null} */
-        let startTime = null;
-
-        /**
-         * @param {number} t
-         */
-        const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
-
-        /**
-         * @param {number} currentTime
-         */
-        const animateScroll = (currentTime) => {
-          if (startTime === null) startTime = currentTime;
-
-          const elapsed = currentTime - (startTime ?? currentTime);
-          const progress = Math.min(elapsed / duration, 1);
-          const eased = easeInOutCubic(progress);
-
-          window.scrollTo(0, startPosition - distance * eased);
-
-          if (progress < 1) requestAnimationFrame(animateScroll);
-        };
-
-        requestAnimationFrame(animateScroll);
-      });
-
-      toggleVisibility();
-    }
+    import initIndustryCascade from '../features/publications/industry-cascade.ts';
+    initIndustryCascade();
   </script>
 </Base>

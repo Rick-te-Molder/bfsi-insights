@@ -1,0 +1,73 @@
+---
+/**
+ * Back to Top floating button
+ * Extracted from publications.astro for reusability
+ *
+ * Requires the back-to-top.ts script to be loaded for functionality
+ */
+---
+
+<button
+  id="back-to-top"
+  aria-label="Back to top"
+  class="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-800 text-white shadow-lg opacity-0 pointer-events-none transition-opacity duration-300 hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2 focus:ring-offset-neutral-950"
+>
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke-width="2.5"
+    stroke="currentColor"
+    class="h-6 w-6"
+  >
+    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"></path>
+  </svg>
+</button>
+
+<script>
+  const backToTopBtn = document.getElementById('back-to-top');
+
+  if (backToTopBtn instanceof HTMLButtonElement) {
+    let isVisible = false;
+    const SHOW_THRESHOLD = 400;
+
+    const toggleVisibility = () => {
+      const shouldShow = window.scrollY > SHOW_THRESHOLD;
+      if (shouldShow !== isVisible) {
+        isVisible = shouldShow;
+        backToTopBtn.classList.toggle('opacity-0', !isVisible);
+        backToTopBtn.classList.toggle('pointer-events-none', !isVisible);
+        backToTopBtn.classList.toggle('opacity-100', isVisible);
+        backToTopBtn.classList.toggle('pointer-events-auto', isVisible);
+      }
+    };
+
+    window.addEventListener('scroll', toggleVisibility, { passive: true });
+
+    backToTopBtn.addEventListener('click', () => {
+      const startPosition = window.scrollY;
+      const distance = startPosition;
+      const duration = Math.min(800, Math.max(300, distance / 3));
+      let startTime: number | null = null;
+
+      const easeInOutCubic = (t: number) =>
+        t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+      const animateScroll = (currentTime: number) => {
+        if (startTime === null) startTime = currentTime;
+
+        const elapsed = currentTime - (startTime ?? currentTime);
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = easeInOutCubic(progress);
+
+        window.scrollTo(0, startPosition - distance * eased);
+
+        if (progress < 1) requestAnimationFrame(animateScroll);
+      };
+
+      requestAnimationFrame(animateScroll);
+    });
+
+    toggleVisibility();
+  }
+</script>
