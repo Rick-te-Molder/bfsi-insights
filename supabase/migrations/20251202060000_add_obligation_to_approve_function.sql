@@ -2,7 +2,15 @@
 -- KB-135: Add obligation support to approve_from_queue and view
 -- ============================================================================
 
-CREATE OR REPLACE FUNCTION approve_from_queue(p_queue_id uuid)
+-- Drop old function signatures to avoid conflicts
+DROP FUNCTION IF EXISTS approve_from_queue(uuid);
+DROP FUNCTION IF EXISTS approve_from_queue(uuid, text[], text[]);
+
+CREATE OR REPLACE FUNCTION approve_from_queue(
+  p_queue_id uuid,
+  p_approved_vendors text[] DEFAULT '{}',
+  p_approved_organizations text[] DEFAULT '{}'
+)
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -20,6 +28,8 @@ DECLARE
   v_regulation_code text;
   v_obligation_code text;
   v_process_code text;
+  v_vendor_name text;
+  v_org_name text;
   v_thumb_bucket text;
   v_thumb_path text;
 BEGIN
@@ -110,18 +120,22 @@ BEGIN
     RETURNING id INTO v_id;
   END IF;
   
-  -- Insert industry relationships
+  -- Insert industry relationships (filter out nulls)
   FOR v_industry_code IN 
     SELECT jsonb_array_elements_text(COALESCE(v_payload->'industry_codes', '[]'::jsonb))
+    WHERE jsonb_array_elements_text IS NOT NULL 
+      AND jsonb_array_elements_text != 'null'
   LOOP
     INSERT INTO kb_publication_bfsi_industry (publication_id, industry_code)
     VALUES (v_id, v_industry_code)
     ON CONFLICT DO NOTHING;
   END LOOP;
   
-  -- Insert topic relationships  
+  -- Insert topic relationships (filter out nulls)
   FOR v_topic_code IN 
     SELECT jsonb_array_elements_text(COALESCE(v_payload->'topic_codes', '[]'::jsonb))
+    WHERE jsonb_array_elements_text IS NOT NULL 
+      AND jsonb_array_elements_text != 'null'
   LOOP
     INSERT INTO kb_publication_bfsi_topic (publication_id, topic_code)
     VALUES (v_id, v_topic_code)
@@ -161,6 +175,22 @@ BEGIN
   LOOP
     INSERT INTO kb_publication_bfsi_process (publication_id, process_code)
     VALUES (v_id, v_process_code)
+    ON CONFLICT DO NOTHING;
+  END LOOP;
+  
+  -- Upsert approved vendors to ag_vendor
+  FOREACH v_vendor_name IN ARRAY p_approved_vendors
+  LOOP
+    INSERT INTO ag_vendor (name)
+    VALUES (v_vendor_name)
+    ON CONFLICT (name_lc) DO NOTHING;
+  END LOOP;
+  
+  -- Upsert approved organizations to bfsi_organization
+  FOREACH v_org_name IN ARRAY p_approved_organizations
+  LOOP
+    INSERT INTO bfsi_organization (organization_name)
+    VALUES (v_org_name)
     ON CONFLICT DO NOTHING;
   END LOOP;
   

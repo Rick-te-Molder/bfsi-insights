@@ -353,6 +353,18 @@ import PublicationModal from '../../features/publications/PublicationModal.astro
       }));
 
       return `
+        <!-- Edit Title -->
+        <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+          <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-2">Edit Title</h3>
+          <input 
+            type="text" 
+            id="edit-title" 
+            value="${(payload.title || '').replace(/"/g, '&quot;')}"
+            class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-100 focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500"
+          />
+          <p class="text-xs text-neutral-500 mt-1">Edit before approving</p>
+        </div>
+
         <!-- Actions -->
         <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 space-y-3">
           <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide">Actions</h3>
@@ -361,6 +373,9 @@ import PublicationModal from '../../features/publications/PublicationModal.astro
           </button>
           <button id="reject-btn" class="w-full rounded-lg bg-red-600/80 px-4 py-2.5 font-medium text-white hover:bg-red-600 transition-colors">
             ✗ Reject
+          </button>
+          <button id="reenrich-btn" class="w-full rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-300 hover:bg-amber-500/20 transition-colors">
+            🔄 Re-enrich
           </button>
         </div>
 
@@ -591,6 +606,7 @@ import PublicationModal from '../../features/publications/PublicationModal.astro
     function bindActionButtons() {
       document.getElementById('approve-btn')?.addEventListener('click', handleApprove);
       document.getElementById('reject-btn')?.addEventListener('click', handleReject);
+      document.getElementById('reenrich-btn')?.addEventListener('click', handleReenrich);
     }
 
     // Handle approve
@@ -602,6 +618,10 @@ import PublicationModal from '../../features/publications/PublicationModal.astro
       const btn = document.getElementById('approve-btn');
       if (btn) btn.textContent = '⏳ Publishing...';
 
+      // Get edited title
+      const titleInput = document.getElementById('edit-title');
+      const editedTitle = titleInput?.value?.trim() || item.payload?.title;
+
       // Collect selected entities
       const selectedVendors = [...document.querySelectorAll('.vendor-checkbox:checked')]
         .map((cb) => cb.dataset.name)
@@ -611,6 +631,17 @@ import PublicationModal from '../../features/publications/PublicationModal.astro
         .filter(Boolean);
 
       try {
+        // Update title in queue item if changed
+        if (editedTitle !== item.payload?.title) {
+          const { error: updateError } = await supabase
+            .from('ingestion_queue')
+            .update({
+              payload: { ...item.payload, title: editedTitle },
+            })
+            .eq('id', item.id);
+          if (updateError) throw updateError;
+        }
+
         const { error } = await supabase.rpc('approve_from_queue', {
           p_queue_id: item.id,
           p_approved_vendors: selectedVendors,
@@ -630,7 +661,10 @@ import PublicationModal from '../../features/publications/PublicationModal.astro
         }
         updateStats();
       } catch (err) {
-        alert('Approve failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        const msg =
+          err?.message || err?.error_description || JSON.stringify(err) || 'Unknown error';
+        alert('Approve failed: ' + msg);
+        console.error('Approve error:', err);
         if (btn) btn.textContent = '✓ Approve & Publish';
       } finally {
         processing = false;
@@ -675,6 +709,53 @@ import PublicationModal from '../../features/publications/PublicationModal.astro
       } catch (err) {
         alert('Reject failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
         if (btn) btn.textContent = '✗ Reject';
+      } finally {
+        processing = false;
+      }
+    }
+
+    // Handle re-enrich
+    async function handleReenrich() {
+      const item = items[currentIndex];
+      if (!item || processing) return;
+
+      processing = true;
+      const btn = document.getElementById('reenrich-btn');
+      if (btn) btn.textContent = '⏳ Enriching...';
+
+      try {
+        // Get current session for auth header
+        const {
+          data: { session: currentSession },
+        } = await supabase.auth.getSession();
+        if (!currentSession) throw new Error('Not authenticated');
+
+        // Call Edge Function (handles status reset + agent API call securely)
+        const response = await supabase.functions.invoke('trigger-enrichment', {
+          body: { queue_id: item.id },
+        });
+
+        if (response.error) {
+          throw new Error(response.error.message || 'Edge function failed');
+        }
+
+        // Show success and reload
+        if (btn) btn.textContent = '✓ Done!';
+
+        // Wait a moment then reload to show updated item
+        setTimeout(async () => {
+          await loadQueue();
+          // Find the same item (might have new index)
+          const newIndex = items.findIndex((i) => i.id === item.id);
+          if (newIndex >= 0) {
+            currentIndex = newIndex;
+            renderCurrentItem();
+          }
+        }, 1000);
+      } catch (err) {
+        alert('Re-enrich failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        console.error('Re-enrich error:', err);
+        if (btn) btn.textContent = '🔄 Re-enrich';
       } finally {
         processing = false;
       }

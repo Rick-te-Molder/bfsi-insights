@@ -100,19 +100,23 @@ async function stepTag(queueId, payload) {
   console.log('   🏷️ Applying tags...');
   const result = await runTagger({ id: queueId, payload });
 
+  // Extract code strings from TaggedCode objects: {code, confidence} -> code
+  const extractCodes = (arr) => (arr || []).map((item) => item.code || item).filter(Boolean);
+
   const updated = {
     ...payload,
-    industry_codes: [result.industry_code],
-    topic_codes: [result.topic_code],
-    geography_codes: result.geography_codes || [],
-    use_case_codes: result.use_case_codes || [],
-    capability_codes: result.capability_codes || [],
-    regulator_codes: result.regulator_codes || [],
+    industry_codes: extractCodes(result.industry_codes),
+    topic_codes: extractCodes(result.topic_codes),
+    geography_codes: extractCodes(result.geography_codes),
+    use_case_codes: extractCodes(result.use_case_codes),
+    capability_codes: extractCodes(result.capability_codes),
+    regulator_codes: extractCodes(result.regulator_codes),
     regulation_codes: result.regulation_codes || [],
+    process_codes: extractCodes(result.process_codes),
     organization_names: result.organization_names || [],
     vendor_names: result.vendor_names || [],
     tagging_metadata: {
-      confidence: result.confidence,
+      overall_confidence: result.overall_confidence,
       reasoning: result.reasoning,
       tagged_at: new Date().toISOString(),
     },
