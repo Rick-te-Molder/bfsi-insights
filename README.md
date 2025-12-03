@@ -100,35 +100,57 @@ queued → processing → enriched → approved → published
 
 ## 4. System Architecture
 
-### 4.1 High-Level Diagram
+### 4.1 Components
 
-See [`docs/architecture/overview.md`](docs/architecture/overview.md) for architecture diagrams (Mermaid).
+The system has five main components:
 
-### 4.2 Components
+| Component      | Role                             | Tech                | Hosting    |
+| -------------- | -------------------------------- | ------------------- | ---------- |
+| **Database**   | Guardrails, SOR, config, storage | Postgres + Storage  | Supabase   |
+| **Agent API**  | Discover, filter, summarize, tag | Node.js/Express     | Render     |
+| **Website**    | Browse, search, read             | Astro + Tailwind    | Cloudflare |
+| **Admin**      | Review, approve, ingest          | Astro SSR + Edge Fn | Cloudflare |
+| **Automation** | Nightly jobs, tests, CI          | GitHub Actions      | GitHub     |
 
-| Component     | Technology                     | Purpose                           |
-| ------------- | ------------------------------ | --------------------------------- |
-| **Frontend**  | Astro (static + SSR for admin) | Public site and admin UI          |
-| **Agent API** | Express.js (Node)              | Content enrichment pipeline       |
-| **Database**  | Supabase (Postgres, RLS)       | Data storage and security         |
-| **Storage**   | Supabase Storage               | Thumbnails                        |
-| **CI/CD**     | GitHub Actions                 | Nightly ingestion, tests, deploys |
-| **Hosting**   | Cloudflare Pages               | Global CDN deployment             |
+### 4.2 Architecture Layers
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  APPLICATION LAYER                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │   Website    │  │    Admin     │  │  Agent API   │          │
+│  │  (public)    │  │  (internal)  │  │  (pipeline)  │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+├─────────────────────────────────────────────────────────────────┤
+│  DATA LAYER                                                     │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │ Publications │  │  Taxonomies  │  │    Config    │          │
+│  │   (SOR)      │  │ (guardrails) │  │  (prompts)   │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+├─────────────────────────────────────────────────────────────────┤
+│  INFRASTRUCTURE LAYER                                           │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐          │
+│  │   Supabase   │  │  Cloudflare  │  │    Render    │          │
+│  │  (DB + Auth) │  │   (CDN)      │  │   (Agents)   │          │
+│  └──────────────┘  └──────────────┘  └──────────────┘          │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ### 4.3 Build & Deploy Flow
 
-1. Admin approves publication
-2. Admin triggers build (manual button or git push)
+1. Admin approves publication in `/admin/review`
+2. Admin triggers build (button or git push)
 3. Astro rebuilds static site
 4. Cloudflare Pages deploys to CDN
 
-### 4.4 Additional Diagrams
+### 4.4 Detailed Diagrams
 
-- **BPMN ingestion flow**: [`/docs/bpmn/`](/docs/bpmn/) — See [`process-diagrams.md`](/docs/bpmn/process-diagrams.md) for Mermaid source
-- **Data Flow Diagram**: [`/docs/dfd/`](/docs/dfd/) — See [`data-flows.md`](/docs/dfd/data-flows.md) for Mermaid source
-- **Data model**: [`/docs/data-model/`](/docs/data-model/) — See [`schema.md`](/docs/data-model/schema.md) for ER diagram
+For detailed architecture diagrams, see:
 
-> **Note:** Diagrams use Mermaid syntax. See [`/docs/index.md`](/docs/index.md) for viewing instructions.
+- [`docs/architecture/overview.md`](docs/architecture/overview.md) — System overview (Mermaid)
+- [`docs/bpmn/process-diagrams.md`](docs/bpmn/process-diagrams.md) — BPMN ingestion flow
+- [`docs/dfd/data-flows.md`](docs/dfd/data-flows.md) — Data flow diagram
+- [`docs/data-model/schema.md`](docs/data-model/schema.md) — ER diagram
 
 ---
 
@@ -136,13 +158,21 @@ See [`docs/architecture/overview.md`](docs/architecture/overview.md) for archite
 
 ### 5.1 AI Agents
 
-| Agent          | Purpose                                                  |
-| -------------- | -------------------------------------------------------- |
-| `discover.js`  | Discover content from RSS feeds, sitemaps, and web pages |
-| `filter.js`    | Check BFSI relevance (GPT-4o-mini)                       |
-| `summarize.js` | Generate summaries, extract date/author (GPT-4o-mini)    |
-| `tag.js`       | Classify with taxonomies (GPT-4o-mini)                   |
-| `thumbnail.js` | Screenshot article (Playwright)                          |
+```
+Agent           Purpose                              Model/Tool
+────────────────────────────────────────────────────────────────
+discover.js     Find candidates from RSS/sitemaps    GPT-4o-mini
+filter.js       Check BFSI relevance                 GPT-4o-mini
+summarize.js    Generate summaries (short/med/long)  GPT-4o-mini
+tag.js          Classify with taxonomies             GPT-4o-mini
+thumbnail.js    Screenshot article for preview       Playwright
+```
+
+**Discovery modes:**
+
+- `--agentic` — LLM scores relevance (default in nightly workflow)
+- `--hybrid` — Embeddings pre-filter + LLM for uncertain cases
+- _(no flag)_ — Rule-based keyword matching (fast but noisy)
 
 ### 5.2 Workflow States
 
@@ -205,7 +235,7 @@ pending → fetched → filtered → summarized → tagged → enriched → 👤
 
 Runs automatically at 2 AM UTC via GitHub Actions:
 
-1. **Discovery**: Crawls RSS feeds, sitemaps, or web pages; filters by BFSI keywords
+1. **Discovery**: Crawls RSS feeds and sitemaps; LLM scores relevance (`--agentic` mode)
 2. **Enrichment**: Runs filter → summarize → tag → thumbnail (limit 20/night)
 3. **Review**: Human approves at `/admin/review`
 4. **Deploy**: Click "Trigger Build" or push to git
@@ -373,7 +403,9 @@ node src/index.js
 ### 9.2 Agent CLI (Command-Line Interface) Commands
 
 ```bash
-node services/agent-api/src/cli.js discovery              # Find new publications
+node services/agent-api/src/cli.js discovery              # Find new publications (rule-based)
+node services/agent-api/src/cli.js discovery --agentic    # LLM relevance scoring (nightly default)
+node services/agent-api/src/cli.js discovery --hybrid     # Embeddings + LLM for uncertain
 node services/agent-api/src/cli.js discovery --limit=10   # Limit to 10 items
 node services/agent-api/src/cli.js discovery --dry-run    # Preview only
 node services/agent-api/src/cli.js discovery --premium    # Include premium sources
@@ -627,23 +659,20 @@ Admin UI can trigger rebuilds via Cloudflare Deploy Hooks.
 
 ## 15. Tech Stack
 
-| Layer          | Technology                                        |
-| -------------- | ------------------------------------------------- |
-| **Frontend**   | Astro 5, TailwindCSS, TypeScript                  |
-| **Agents**     | Node.js (Express), OpenAI GPT-4o-mini, Playwright |
-| **Backend**    | Supabase (Postgres, RLS, Edge Functions, Storage) |
-| **Testing**    | Vitest, Playwright, Lighthouse CI                 |
-| **CI/CD**      | GitHub Actions, SonarCloud                        |
-| **Deployment** | Cloudflare Pages (frontend), Render (agents)      |
+See [Section 4.1 Components](#41-components) for the full component table.
+
+**Key technologies:** Astro 5, TailwindCSS, TypeScript, Node.js/Express, Supabase (Postgres + RLS), OpenAI GPT-4o-mini, Playwright, GitHub Actions, Cloudflare Pages, Render.
 
 ---
 
 ## 16. Roadmap
 
 - [x] SonarCloud quality gate
-- [ ] More granular taxonomy extraction
 - [x] Wider crawling in discovery agent (sitemaps, robots.txt compliance)
+- [x] Agentic discovery with LLM relevance scoring
 - [ ] Embedding-based similarity search
+- [ ] Taxonomy expansion agent
+- [ ] Source classification (regulator/media/consultancy)
 
 ---
 
