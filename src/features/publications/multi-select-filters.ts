@@ -483,6 +483,29 @@ export default function initMultiSelectFilters() {
   sortSelect?.addEventListener('change', () => {
     sortOrder = sortSelect.value;
     applyFilters(filterState, searchQuery, true);
+    updateDateDisplay();
     saveFilters();
   });
+
+  // Update date display based on sort order
+  function updateDateDisplay() {
+    const isAddedSort = sortOrder.startsWith('date_added');
+    document.querySelectorAll('.date-display').forEach((el) => {
+      const label = el.querySelector('.date-label');
+      const value = el.querySelector('.date-value');
+      if (label && value) {
+        const dateEl = el as HTMLElement;
+        if (isAddedSort) {
+          label.textContent = 'Added';
+          value.textContent = dateEl.dataset.added || dateEl.dataset.published || '';
+        } else {
+          label.textContent = 'Published';
+          value.textContent = dateEl.dataset.published || '';
+        }
+      }
+    });
+  }
+
+  // Initial date display update
+  updateDateDisplay();
 }
