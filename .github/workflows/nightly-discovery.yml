@@ -35,7 +35,7 @@ jobs:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: node services/agent-api/src/cli.js discovery --agentic
+        run: node services/agent-api/src/cli.js discovery --agentic --premium
 
       - name: Notify on failure
         if: failure()
