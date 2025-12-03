@@ -125,13 +125,14 @@ const candidates = [...itemThumbs];
     </div>
 
     <div class="relative mt-1 text-sm text-neutral-200">
-      {
-        item.date_published && (
-          <span title="Date published">
-            <span class="text-neutral-400">Published</span> {fmt(item.date_published)}
-          </span>
-        )
-      }
+      <span
+        class="date-display"
+        data-published={fmt(item.date_published ?? undefined)}
+        data-added={fmt(item.date_added ?? undefined)}
+      >
+        <span class="date-label text-neutral-400">Published</span>
+        <span class="date-value">{fmt(item.date_published ?? undefined)}</span>
+      </span>
       {item.source_name && <span> · {item.source_name}</span>}
       {item.authors?.length && <span> · {item.authors[0]}</span>}
     </div>

@@ -1,0 +1,241 @@
+---
+// Edit published articles
+export const prerender = true;
+
+import Base from '../../layouts/Base.astro';
+---
+
+<Base title="Edit Publications">
+  <div class="mx-auto max-w-7xl px-4 py-8">
+    <!-- Header -->
+    <header class="mb-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold">Published Articles</h1>
+          <p class="mt-1 text-neutral-400">Edit titles and metadata</p>
+        </div>
+        <div class="flex gap-3">
+          <a
+            href="/admin/review"
+            class="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800 transition-colors"
+          >
+            ← Back to Review
+          </a>
+          <button
+            id="trigger-build"
+            class="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-500/20 transition-colors"
+            type="button"
+          >
+            🚀 Trigger Build
+          </button>
+        </div>
+      </div>
+      <div class="mt-4">
+        <input
+          type="search"
+          id="search"
+          placeholder="Search publications..."
+          class="w-full max-w-md rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm placeholder:text-neutral-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+        />
+      </div>
+    </header>
+
+    <!-- Loading -->
+    <div id="loading" class="text-center py-12">
+      <div
+        class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-sky-500 border-r-transparent"
+      >
+      </div>
+      <p class="mt-2 text-neutral-400">Loading publications...</p>
+    </div>
+
+    <!-- Publications List -->
+    <div id="publications" class="hidden space-y-2"></div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm">
+      <div class="flex min-h-full items-center justify-center p-4">
+        <div class="w-full max-w-lg rounded-xl border border-neutral-700 bg-neutral-900 p-6">
+          <h2 class="text-xl font-bold mb-4">Edit Publication</h2>
+          <input type="hidden" id="edit-id" />
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-neutral-300 mb-1">Title</label>
+              <input
+                type="text"
+                id="edit-title"
+                class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+              />
+            </div>
+          </div>
+          <div class="mt-6 flex justify-end gap-3">
+            <button
+              id="cancel-edit"
+              class="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800"
+            >
+              Cancel
+            </button>
+            <button
+              id="save-edit"
+              class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Base>
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+
+  const supabase = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  );
+
+  const loading = document.getElementById('loading');
+  const publicationsEl = document.getElementById('publications');
+  const searchInput = document.getElementById('search') as HTMLInputElement;
+  const editModal = document.getElementById('edit-modal');
+  const editId = document.getElementById('edit-id') as HTMLInputElement;
+  const editTitle = document.getElementById('edit-title') as HTMLInputElement;
+  const cancelEdit = document.getElementById('cancel-edit');
+  const saveEdit = document.getElementById('save-edit');
+  const triggerBuild = document.getElementById('trigger-build');
+
+  let publications: any[] = [];
+
+  async function loadPublications() {
+    const { data, error } = await supabase
+      .from('kb_publication')
+      .select('id, title, slug, date_published, date_added, source_name')
+      .eq('status', 'published')
+      .order('date_added', { ascending: false });
+
+    if (error) {
+      console.error('Error loading publications:', error);
+      return;
+    }
+
+    publications = data || [];
+    renderPublications(publications);
+  }
+
+  function renderPublications(items: any[]) {
+    if (!publicationsEl) return;
+
+    loading?.classList.add('hidden');
+    publicationsEl.classList.remove('hidden');
+
+    publicationsEl.innerHTML = items
+      .map(
+        (pub) => `
+      <div class="flex items-center justify-between rounded-lg border border-neutral-800 bg-neutral-900/50 p-4 hover:border-neutral-700">
+        <div class="flex-1 min-w-0">
+          <h3 class="font-medium text-neutral-200 truncate">${pub.title}</h3>
+          <p class="text-sm text-neutral-500 mt-1">
+            ${pub.source_name || 'Unknown source'} · 
+            Added ${new Date(pub.date_added).toLocaleDateString()}
+          </p>
+        </div>
+        <button
+          class="edit-btn ml-4 rounded-lg border border-neutral-700 px-3 py-1.5 text-sm font-medium text-neutral-300 hover:bg-neutral-800"
+          data-id="${pub.id}"
+          data-title="${pub.title.replace(/"/g, '&quot;')}"
+        >
+          Edit
+        </button>
+      </div>
+    `,
+      )
+      .join('');
+
+    // Add click handlers
+    document.querySelectorAll('.edit-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        openEditModal(target.dataset.id!, target.dataset.title!);
+      });
+    });
+  }
+
+  function openEditModal(id: string, title: string) {
+    editId.value = id;
+    editTitle.value = title;
+    editModal?.classList.remove('hidden');
+  }
+
+  function closeEditModal() {
+    editModal?.classList.add('hidden');
+  }
+
+  async function saveChanges() {
+    const id = editId.value;
+    const newTitle = editTitle.value.trim();
+
+    if (!newTitle) return;
+
+    saveEdit!.textContent = 'Saving...';
+    saveEdit!.setAttribute('disabled', 'true');
+
+    const { error } = await supabase
+      .from('kb_publication')
+      .update({ title: newTitle, last_edited: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) {
+      alert('Error saving: ' + error.message);
+      saveEdit!.textContent = 'Save Changes';
+      saveEdit!.removeAttribute('disabled');
+      return;
+    }
+
+    closeEditModal();
+    saveEdit!.textContent = 'Save Changes';
+    saveEdit!.removeAttribute('disabled');
+
+    // Refresh list
+    await loadPublications();
+  }
+
+  // Search
+  searchInput?.addEventListener('input', () => {
+    const query = searchInput.value.toLowerCase();
+    const filtered = publications.filter(
+      (p) =>
+        p.title.toLowerCase().includes(query) ||
+        (p.source_name || '').toLowerCase().includes(query),
+    );
+    renderPublications(filtered);
+  });
+
+  // Modal controls
+  cancelEdit?.addEventListener('click', closeEditModal);
+  saveEdit?.addEventListener('click', saveChanges);
+  editModal?.addEventListener('click', (e) => {
+    if (e.target === editModal) closeEditModal();
+  });
+
+  // Trigger build
+  triggerBuild?.addEventListener('click', async () => {
+    triggerBuild.textContent = '⏳ Building...';
+    try {
+      const res = await fetch(
+        'https://api.cloudflare.com/client/v4/pages/webhooks/deploy_hooks/YOUR_HOOK',
+        {
+          method: 'POST',
+        },
+      );
+      triggerBuild.textContent = res.ok ? '✅ Build triggered!' : '❌ Failed';
+    } catch {
+      triggerBuild.textContent = '❌ Failed';
+    }
+    setTimeout(() => (triggerBuild.textContent = '🚀 Trigger Build'), 3000);
+  });
+
+  // Initial load
+  loadPublications();
+</script>
