@@ -215,8 +215,22 @@ const expandItemThumb = (t: string | undefined) => {
         </svg>
       </div>
     </div>
-    <!-- Active filter chips -->
-    <div id="filter-chips" class="mt-3 flex flex-wrap gap-2 empty:hidden"></div>
+    <!-- Active filter chips + Sort -->
+    <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+      <div id="filter-chips" class="flex flex-wrap gap-2 empty:hidden"></div>
+      <div class="flex items-center gap-2 text-sm">
+        <label for="sort-select" class="text-neutral-400 whitespace-nowrap">Sort by</label>
+        <select
+          id="sort-select"
+          class="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20"
+        >
+          <option value="date_added_desc">Recently added</option>
+          <option value="date_added_asc">Oldest added</option>
+          <option value="date_published_desc">Recently published</option>
+          <option value="date_published_asc">Oldest published</option>
+        </select>
+      </div>
+    </div>
   </section>
 
   <!-- Hidden select elements for backward compatibility with filter logic -->

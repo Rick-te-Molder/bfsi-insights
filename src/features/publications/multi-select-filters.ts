@@ -27,8 +27,11 @@ export default function initMultiSelectFilters() {
   const fabIcon = document.getElementById('fab-icon');
   const fabSpinner = document.getElementById('fab-spinner');
 
-  const STORAGE_KEY = 'publicationMultiFiltersV1';
+  const STORAGE_KEY = 'publicationMultiFiltersV2';
   const PAGE_SIZE = 30;
+
+  // Sort dropdown
+  const sortSelect = document.getElementById('sort-select') as HTMLSelectElement | null;
 
   if (!list) return;
 
@@ -63,6 +66,8 @@ export default function initMultiSelectFilters() {
       regulation: el.dataset.regulation || '',
       obligation: el.dataset.obligation || '',
       process: el.dataset.process || '',
+      date_published: el.dataset.date_published || '',
+      date_added: el.dataset.date_added || '',
     };
   });
 
@@ -70,6 +75,7 @@ export default function initMultiSelectFilters() {
   type FilterState = Record<string, Set<string>>;
   let filterState: FilterState = {};
   let searchQuery = '';
+  let sortOrder = 'date_added_desc'; // default sort
 
   // Get all filter checkboxes
   const filterCheckboxes = document.querySelectorAll<HTMLInputElement>(
@@ -142,6 +148,30 @@ export default function initMultiSelectFilters() {
     );
   }
 
+  // Sort items based on current sort order
+  function sortIndices(indices: number[]): number[] {
+    return indices.sort((a, b) => {
+      const itemA = data[a];
+      const itemB = data[b];
+
+      let dateA: number, dateB: number;
+
+      if (sortOrder.startsWith('date_published')) {
+        dateA = itemA.date_published ? new Date(itemA.date_published as string).getTime() : 0;
+        dateB = itemB.date_published ? new Date(itemB.date_published as string).getTime() : 0;
+      } else {
+        dateA = itemA.date_added ? new Date(itemA.date_added as string).getTime() : 0;
+        dateB = itemB.date_added ? new Date(itemB.date_added as string).getTime() : 0;
+      }
+
+      if (sortOrder.endsWith('_asc')) {
+        return dateA - dateB;
+      } else {
+        return dateB - dateA;
+      }
+    });
+  }
+
   // Apply filters and return count
   function applyFilters(state: FilterState, query: string, resetPage = false): number {
     if (resetPage) currentPage = 1;
@@ -153,6 +183,9 @@ export default function initMultiSelectFilters() {
         matchingIndices.push(index);
       }
     });
+
+    // Sort matching indices
+    matchingIndices = sortIndices(matchingIndices);
 
     const totalMatching = matchingIndices.length;
     const visibleCount = Math.min(currentPage * PAGE_SIZE, totalMatching);
@@ -260,35 +293,45 @@ export default function initMultiSelectFilters() {
 
   // Save filters to localStorage
   function saveFilters() {
-    try {
-      const serializable: Record<string, string[]> = {};
-      for (const [key, values] of Object.entries(filterState)) {
-        serializable[key] = Array.from(values);
-      }
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ filters: serializable, search: searchQuery }),
-      );
-    } catch {}
+    const serialized: Record<string, string[]> = {};
+    for (const [key, values] of Object.entries(filterState)) {
+      serialized[key] = Array.from(values);
+    }
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ filters: serialized, search: searchQuery, sort: sortOrder }),
+    );
   }
 
   // Load filters from localStorage
   function loadFilters() {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.filters) {
-          for (const [key, values] of Object.entries(parsed.filters)) {
-            filterState[key] = new Set(values as string[]);
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) return;
+
+      const { filters, search, sort } = JSON.parse(stored);
+
+      if (filters) {
+        for (const [key, values] of Object.entries(filters)) {
+          if (Array.isArray(values)) {
+            filterState[key] = new Set(values);
           }
         }
-        if (parsed.search && qEl) {
-          qEl.value = parsed.search;
-          searchQuery = parsed.search;
-        }
+        applyFilterStateToCheckboxes(filterState);
       }
-    } catch {}
+
+      if (search && qEl) {
+        qEl.value = search;
+        searchQuery = search;
+      }
+
+      if (sort && sortSelect) {
+        sortOrder = sort;
+        sortSelect.value = sort;
+      }
+    } catch {
+      // Ignore corrupted data
+    }
   }
 
   // Panel open/close
@@ -430,5 +473,12 @@ export default function initMultiSelectFilters() {
       applyFilters(filterState, searchQuery, true);
       saveFilters();
     }
+  });
+
+  // Sort dropdown
+  sortSelect?.addEventListener('change', () => {
+    sortOrder = sortSelect.value;
+    applyFilters(filterState, searchQuery, true);
+    saveFilters();
   });
 }
