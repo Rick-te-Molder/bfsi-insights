@@ -189,13 +189,17 @@ export default function initMultiSelectFilters() {
 
     const totalMatching = matchingIndices.length;
     const visibleCount = Math.min(currentPage * PAGE_SIZE, totalMatching);
-    const visibleIndices = new Set(matchingIndices.slice(0, visibleCount));
+    const visibleIndices = matchingIndices.slice(0, visibleCount);
 
+    // Reorder DOM elements based on sorted indices
     let visible = 0;
-    data.forEach((item, index) => {
-      const isVisible = visibleIndices.has(index);
-      item.el.classList.toggle('hidden', !isVisible);
-      if (isVisible) visible++;
+    data.forEach((item) => item.el.classList.add('hidden'));
+
+    visibleIndices.forEach((index) => {
+      const item = data[index];
+      item.el.classList.remove('hidden');
+      list.appendChild(item.el); // Move to end = sorted order
+      visible++;
     });
 
     // Update UI
