@@ -282,10 +282,13 @@ export async function handleFormSubmit(e: Event): Promise<void> {
 
   let error;
   if (editSlug) {
-    const { error: updateError } = await supabase
+    console.log('Updating source:', editSlug, sourceData);
+    const { error: updateError, data } = await supabase
       .from('kb_source')
       .update(sourceData)
-      .eq('slug', editSlug);
+      .eq('slug', editSlug)
+      .select();
+    console.log('Update result:', { error: updateError, data });
     error = updateError;
   } else {
     const { error: insertError } = await supabase.from('kb_source').insert(sourceData);

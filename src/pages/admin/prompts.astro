@@ -298,9 +298,9 @@ import Base from '../../layouts/Base.astro';
               ${p.model_id ? `<span class="text-xs text-neutral-500">${p.model_id}</span>` : ''}
             </div>
             <div class="flex items-center gap-2">
-              ${!p.is_current ? `<button class="set-current-btn text-emerald-400 hover:text-emerald-300 text-xs" data-id="${p.id}">Set Current</button>` : ''}
-              <button class="view-btn text-sky-400 hover:text-sky-300 text-xs" data-id="${p.id}">View</button>
-              <button class="edit-btn text-amber-400 hover:text-amber-300 text-xs" data-id="${p.id}">Edit</button>
+              ${!p.is_current ? `<button type="button" class="set-current-btn text-emerald-400 hover:text-emerald-300 text-xs cursor-pointer" data-id="${p.id}">Set Current</button>` : ''}
+              <button type="button" class="view-btn text-sky-400 hover:text-sky-300 text-xs cursor-pointer" data-id="${p.id}">View</button>
+              <button type="button" class="edit-btn text-amber-400 hover:text-amber-300 text-xs cursor-pointer" data-id="${p.id}">Edit</button>
             </div>
           </div>
           <div class="text-xs text-neutral-500">${new Date(p.created_at).toLocaleDateString()} ${p.notes ? `• ${p.notes}` : ''}</div>
