@@ -14,6 +14,7 @@ const MAX_LINES = 500;
 const ALLOW_LIST = new Set([
   'src/pages/publications.astro',
   'src/features/publications/publication-filters.ts',
+  'src/features/publications/multi-select-filters.ts',
   'src/pages/admin/review.astro',
   'services/agent-api/src/agents/discover.js',
 ]);
