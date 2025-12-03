@@ -96,6 +96,16 @@ import Base from '../../layouts/Base.astro';
     import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
   );
 
+  // Check authentication
+  async function checkAuth() {
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      window.location.href = '/login';
+      return false;
+    }
+    return true;
+  }
+
   const loading = document.getElementById('loading');
   const publicationsEl = document.getElementById('publications');
   const searchInput = document.getElementById('search') as HTMLInputElement;
@@ -173,6 +183,8 @@ import Base from '../../layouts/Base.astro';
   }
 
   async function saveChanges() {
+    if (!(await checkAuth())) return;
+
     const id = editId.value;
     const newTitle = editTitle.value.trim();
 
@@ -236,6 +248,10 @@ import Base from '../../layouts/Base.astro';
     setTimeout(() => (triggerBuild.textContent = '🚀 Trigger Build'), 3000);
   });
 
-  // Initial load
-  loadPublications();
+  // Initial load with auth check
+  (async () => {
+    if (await checkAuth()) {
+      loadPublications();
+    }
+  })();
 </script>
