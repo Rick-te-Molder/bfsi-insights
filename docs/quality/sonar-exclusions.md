@@ -35,6 +35,7 @@ This document explains which files are excluded from coverage requirements in So
 | `**/agents/thumbnail.js`                       | Thin LLM wrapper; screenshot/image processing                                          | 2025-12-02    | 2026-06-02 |
 | `src/pages/**`                                 | Astro pages; DOM/SSR glue code                                                         | 2025-11-30    | 2026-03-31 |
 | `src/features/**`                              | UI components; DOM wiring (business logic extracted to `src/lib/`)                     | 2025-11-30    | 2026-03-31 |
+| `src/lib/admin/**`                             | Admin UI orchestration; DOM + Supabase client calls                                    | 2025-12-03    | 2026-06-03 |
 | `**/pages/api/**`                              | Astro API routes; minimal glue code                                                    | 2025-11-30    | 2026-03-31 |
 
 ## 3. Files NOT Excluded (Business Logic)
@@ -71,3 +72,4 @@ Do not configure exclusions in the SonarCloud UI—keep the single source of tru
 | 2025-12-01 | Add agent-api infrastructure: middleware, index.js, runner, tag.js  | Rick te Molder |
 | 2025-12-02 | Add agent wrappers (filter, summarize, thumbnail, scrapers)         | Cascade        |
 | 2025-12-02 | Document new tested files: discovery-relevance.js, embeddings.js    | Cascade        |
+| 2025-12-03 | Add src/lib/admin/\*\* - admin UI orchestration code                | Cascade        |

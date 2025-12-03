@@ -1,0 +1,433 @@
+---
+// Static page with client-side database interactions
+export const prerender = true;
+
+import Base from '../../layouts/Base.astro';
+import SourceFormModal from '../../components/admin/SourceFormModal.astro';
+---
+
+<Base title="Manage Sources">
+  <div class="mx-auto max-w-7xl px-4 py-8">
+    <!-- Header -->
+    <header class="mb-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-3xl font-bold">📡 Source Management</h1>
+          <p class="mt-1 text-neutral-400">Configure discovery sources and priorities</p>
+        </div>
+        <div class="flex gap-3">
+          <button
+            id="add-source-btn"
+            class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 transition-colors"
+            type="button"
+          >
+            ➕ Add Source
+          </button>
+          <a
+            href="/admin/review"
+            class="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800 transition-colors"
+          >
+            ← Review Queue
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Stats -->
+    <div id="stats" class="mb-6 flex gap-4 text-sm"></div>
+
+    <!-- Filters -->
+    <div class="mb-6 flex flex-wrap gap-3">
+      <select
+        id="filter-category"
+        class="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-300"
+      >
+        <option value="">All Categories</option>
+        <option value="financial-media">Financial Media</option>
+        <option value="ai-thought-leader">AI Thought Leaders</option>
+        <option value="strategy-consulting">Strategy Consulting</option>
+        <option value="big4">Big 4</option>
+        <option value="consulting">Consulting</option>
+        <option value="vendor">Vendors</option>
+        <option value="research">Research</option>
+        <option value="regulator">Regulators</option>
+        <option value="publication">Publication</option>
+      </select>
+      <select
+        id="filter-tier"
+        class="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-300"
+      >
+        <option value="">All Tiers</option>
+        <option value="standard">Standard</option>
+        <option value="premium">Premium</option>
+      </select>
+      <select
+        id="filter-enabled"
+        class="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-300"
+      >
+        <option value="">All</option>
+        <option value="true">Enabled</option>
+        <option value="false">Disabled</option>
+      </select>
+    </div>
+
+    <!-- Loading State -->
+    <div
+      id="loading"
+      class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-12 text-center"
+    >
+      <div class="text-4xl mb-3">⏳</div>
+      <p class="text-neutral-400">Loading sources...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="error" class="hidden rounded-xl border border-red-500/20 bg-red-500/5 p-8 text-center">
+      <p class="text-red-300"></p>
+    </div>
+
+    <!-- Sources Table -->
+    <div id="sources-table" class="hidden overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-neutral-700 text-left text-neutral-400">
+            <th class="pb-3 pr-4 font-medium">Priority</th>
+            <th class="pb-3 pr-4 font-medium">Name</th>
+            <th class="pb-3 pr-4 font-medium">Category</th>
+            <th class="pb-3 pr-4 font-medium">Tier</th>
+            <th class="pb-3 pr-4 font-medium">Feed</th>
+            <th class="pb-3 pr-4 font-medium">Enabled</th>
+            <th class="pb-3 font-medium">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="sources-body" class="divide-y divide-neutral-800"></tbody>
+      </table>
+    </div>
+
+    <SourceFormModal />
+  </div>
+
+  <script>
+    import { createClient } from '@supabase/supabase-js';
+
+    const supabase = createClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+    );
+
+    // Elements
+    const loading = document.getElementById('loading');
+    const errorEl = document.getElementById('error');
+    const sourcesTable = document.getElementById('sources-table');
+    const sourcesBody = document.getElementById('sources-body');
+    const statsEl = document.getElementById('stats');
+    const modal = document.getElementById('source-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const form = document.getElementById('source-form') as HTMLFormElement;
+    const filterCategory = document.getElementById('filter-category') as HTMLSelectElement;
+    const filterTier = document.getElementById('filter-tier') as HTMLSelectElement;
+    const filterEnabled = document.getElementById('filter-enabled') as HTMLSelectElement;
+
+    let sources: any[] = [];
+
+    // Check authentication
+    async function checkAuth() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        window.location.href = '/admin/login';
+        return false;
+      }
+      return true;
+    }
+
+    // Load sources
+    async function loadSources() {
+      try {
+        const { data, error } = await supabase
+          .from('kb_source')
+          .select('*')
+          .order('sort_order', { ascending: true });
+
+        if (error) throw error;
+        sources = data || [];
+        renderSources();
+        renderStats();
+      } catch (err: any) {
+        showError(err.message);
+      }
+    }
+
+    // Render stats
+    function renderStats() {
+      const total = sources.length;
+      const enabled = sources.filter((s) => s.enabled).length;
+      const premium = sources.filter((s) => s.tier === 'premium').length;
+      const withRss = sources.filter((s) => s.rss_feed).length;
+
+      statsEl!.innerHTML = `
+        <span class="rounded-full bg-neutral-800 px-3 py-1">${total} total</span>
+        <span class="rounded-full bg-emerald-500/20 text-emerald-300 px-3 py-1">${enabled} enabled</span>
+        <span class="rounded-full bg-amber-500/20 text-amber-300 px-3 py-1">${premium} premium</span>
+        <span class="rounded-full bg-sky-500/20 text-sky-300 px-3 py-1">${withRss} with RSS</span>
+      `;
+    }
+
+    // Render sources table
+    function renderSources() {
+      loading!.classList.add('hidden');
+      sourcesTable!.classList.remove('hidden');
+
+      let filtered = [...sources];
+
+      // Apply filters
+      if (filterCategory.value) {
+        filtered = filtered.filter((s) => s.category === filterCategory.value);
+      }
+      if (filterTier.value) {
+        filtered = filtered.filter((s) => s.tier === filterTier.value);
+      }
+      if (filterEnabled.value) {
+        filtered = filtered.filter((s) => String(s.enabled) === filterEnabled.value);
+      }
+
+      sourcesBody!.innerHTML = filtered
+        .map(
+          (source) => `
+        <tr class="hover:bg-neutral-800/50">
+          <td class="py-3 pr-4">
+            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-neutral-700 text-xs font-medium">
+              ${source.sort_order ? Math.ceil(source.sort_order / 100) : '-'}
+            </span>
+          </td>
+          <td class="py-3 pr-4">
+            <div class="font-medium text-white">${source.name}</div>
+            <div class="text-xs text-neutral-500">${source.domain}</div>
+          </td>
+          <td class="py-3 pr-4">
+            <span class="rounded-full px-2 py-0.5 text-xs ${getCategoryColor(source.category)}">
+              ${source.category || '-'}
+            </span>
+          </td>
+          <td class="py-3 pr-4">
+            <span class="text-xs ${source.tier === 'premium' ? 'text-amber-400' : 'text-neutral-400'}">
+              ${source.tier}
+            </span>
+          </td>
+          <td class="py-3 pr-4">
+            ${source.rss_feed ? '📡' : source.sitemap_url ? '🗺️' : source.scraper_config ? '🤖' : '❌'}
+          </td>
+          <td class="py-3 pr-4">
+            <button
+              class="toggle-enabled w-10 h-5 rounded-full transition-colors ${source.enabled ? 'bg-emerald-500' : 'bg-neutral-700'}"
+              data-slug="${source.slug}"
+              data-enabled="${source.enabled}"
+            >
+              <span class="block w-4 h-4 rounded-full bg-white transform transition-transform ${source.enabled ? 'translate-x-5' : 'translate-x-0.5'}"></span>
+            </button>
+          </td>
+          <td class="py-3">
+            <button
+              class="edit-btn text-sky-400 hover:text-sky-300 text-sm mr-3"
+              data-slug="${source.slug}"
+            >
+              Edit
+            </button>
+            <button
+              class="delete-btn text-red-400 hover:text-red-300 text-sm"
+              data-slug="${source.slug}"
+              data-name="${source.name}"
+            >
+              Delete
+            </button>
+          </td>
+        </tr>
+      `,
+        )
+        .join('');
+
+      // Bind event handlers
+      document.querySelectorAll('.toggle-enabled').forEach((btn) => {
+        btn.addEventListener('click', handleToggleEnabled);
+      });
+      document.querySelectorAll('.edit-btn').forEach((btn) => {
+        btn.addEventListener('click', handleEdit);
+      });
+      document.querySelectorAll('.delete-btn').forEach((btn) => {
+        btn.addEventListener('click', handleDelete);
+      });
+    }
+
+    function getCategoryColor(category: string): string {
+      const colors: Record<string, string> = {
+        'financial-media': 'bg-blue-500/20 text-blue-300',
+        'ai-thought-leader': 'bg-purple-500/20 text-purple-300',
+        'strategy-consulting': 'bg-emerald-500/20 text-emerald-300',
+        big4: 'bg-emerald-500/20 text-emerald-300',
+        consulting: 'bg-teal-500/20 text-teal-300',
+        vendor: 'bg-orange-500/20 text-orange-300',
+        research: 'bg-pink-500/20 text-pink-300',
+        regulator: 'bg-red-500/20 text-red-300',
+        publication: 'bg-sky-500/20 text-sky-300',
+      };
+      return colors[category] || 'bg-neutral-700 text-neutral-300';
+    }
+
+    // Toggle enabled
+    async function handleToggleEnabled(e: Event) {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const slug = btn.dataset.slug;
+      const currentEnabled = btn.dataset.enabled === 'true';
+
+      const { error } = await supabase
+        .from('kb_source')
+        .update({ enabled: !currentEnabled })
+        .eq('slug', slug);
+
+      if (error) {
+        alert('Failed to update: ' + error.message);
+      } else {
+        loadSources();
+      }
+    }
+
+    // Edit source
+    function handleEdit(e: Event) {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const slug = btn.dataset.slug;
+      const source = sources.find((s) => s.slug === slug);
+      if (!source) return;
+
+      modalTitle!.textContent = 'Edit Source';
+      (document.getElementById('edit-slug') as HTMLInputElement).value = source.slug;
+      (document.getElementById('source-name') as HTMLInputElement).value = source.name;
+      (document.getElementById('source-slug') as HTMLInputElement).value = source.slug;
+      (document.getElementById('source-slug') as HTMLInputElement).disabled = true;
+      (document.getElementById('source-domain') as HTMLInputElement).value = source.domain || '';
+      (document.getElementById('source-priority') as HTMLSelectElement).value = String(
+        Math.ceil((source.sort_order || 100) / 100),
+      );
+      (document.getElementById('source-category') as HTMLSelectElement).value =
+        source.category || 'publication';
+      (document.getElementById('source-tier') as HTMLSelectElement).value =
+        source.tier || 'standard';
+      (document.getElementById('source-description') as HTMLTextAreaElement).value =
+        source.description || '';
+      (document.getElementById('source-rss') as HTMLInputElement).value = source.rss_feed || '';
+      (document.getElementById('source-sitemap') as HTMLInputElement).value =
+        source.sitemap_url || '';
+      (document.getElementById('source-enabled') as HTMLInputElement).checked = source.enabled;
+      (document.getElementById('source-show-external') as HTMLInputElement).checked =
+        source.show_on_external_page;
+
+      modal!.classList.remove('hidden');
+      modal!.classList.add('flex');
+    }
+
+    // Delete source
+    async function handleDelete(e: Event) {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const slug = btn.dataset.slug;
+      const name = btn.dataset.name;
+
+      if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+
+      const { error } = await supabase.from('kb_source').delete().eq('slug', slug);
+
+      if (error) {
+        alert('Failed to delete: ' + error.message);
+      } else {
+        loadSources();
+      }
+    }
+
+    // Open add modal
+    document.getElementById('add-source-btn')?.addEventListener('click', () => {
+      modalTitle!.textContent = 'Add Source';
+      form.reset();
+      (document.getElementById('edit-slug') as HTMLInputElement).value = '';
+      (document.getElementById('source-slug') as HTMLInputElement).disabled = false;
+      (document.getElementById('source-enabled') as HTMLInputElement).checked = true;
+      modal!.classList.remove('hidden');
+      modal!.classList.add('flex');
+    });
+
+    // Close modal
+    function closeModal() {
+      modal!.classList.add('hidden');
+      modal!.classList.remove('flex');
+    }
+    document.getElementById('close-modal')?.addEventListener('click', closeModal);
+    document.getElementById('cancel-btn')?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    // Submit form
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const editSlug = (document.getElementById('edit-slug') as HTMLInputElement).value;
+      const priority = parseInt(
+        (document.getElementById('source-priority') as HTMLSelectElement).value,
+      );
+
+      const sourceData = {
+        name: (document.getElementById('source-name') as HTMLInputElement).value,
+        slug: (document.getElementById('source-slug') as HTMLInputElement).value,
+        domain: (document.getElementById('source-domain') as HTMLInputElement).value,
+        sort_order: priority * 100,
+        category: (document.getElementById('source-category') as HTMLSelectElement).value,
+        tier: (document.getElementById('source-tier') as HTMLSelectElement).value,
+        description:
+          (document.getElementById('source-description') as HTMLTextAreaElement).value || null,
+        rss_feed: (document.getElementById('source-rss') as HTMLInputElement).value || null,
+        sitemap_url: (document.getElementById('source-sitemap') as HTMLInputElement).value || null,
+        enabled: (document.getElementById('source-enabled') as HTMLInputElement).checked,
+        show_on_external_page: (document.getElementById('source-show-external') as HTMLInputElement)
+          .checked,
+      };
+
+      let error;
+      if (editSlug) {
+        // Update
+        const { error: updateError } = await supabase
+          .from('kb_source')
+          .update(sourceData)
+          .eq('slug', editSlug);
+        error = updateError;
+      } else {
+        // Insert
+        const { error: insertError } = await supabase.from('kb_source').insert(sourceData);
+        error = insertError;
+      }
+
+      if (error) {
+        alert('Failed to save: ' + error.message);
+      } else {
+        closeModal();
+        loadSources();
+      }
+    });
+
+    // Filter handlers
+    filterCategory?.addEventListener('change', renderSources);
+    filterTier?.addEventListener('change', renderSources);
+    filterEnabled?.addEventListener('change', renderSources);
+
+    function showError(message: string) {
+      loading!.classList.add('hidden');
+      errorEl!.classList.remove('hidden');
+      errorEl!.querySelector('p')!.textContent = message;
+    }
+
+    // Initialize
+    async function init() {
+      if (await checkAuth()) {
+        loadSources();
+      }
+    }
+
+    init();
+  </script>
+</Base>

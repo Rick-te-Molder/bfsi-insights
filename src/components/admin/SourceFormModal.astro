@@ -1,0 +1,158 @@
+---
+// Modal for adding/editing sources
+---
+
+<div
+  id="source-modal"
+  class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4"
+>
+  <div
+    class="w-full max-w-2xl rounded-xl border border-neutral-700 bg-neutral-900 p-6 max-h-[90vh] overflow-y-auto"
+  >
+    <div class="flex items-center justify-between mb-6">
+      <h2 id="modal-title" class="text-xl font-semibold">Add Source</h2>
+      <button id="close-modal" class="text-neutral-400 hover:text-white text-2xl">&times;</button>
+    </div>
+
+    <form id="source-form" class="space-y-4">
+      <input type="hidden" id="edit-slug" />
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-neutral-300 mb-1">Name *</label>
+          <input
+            type="text"
+            id="source-name"
+            required
+            class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none"
+            placeholder="Financial Times"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-neutral-300 mb-1">Slug *</label>
+          <input
+            type="text"
+            id="source-slug"
+            required
+            pattern="[a-z0-9-]+"
+            class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none"
+            placeholder="financial-times"
+          />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-neutral-300 mb-1">Domain *</label>
+          <input
+            type="text"
+            id="source-domain"
+            required
+            class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none"
+            placeholder="ft.com"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-neutral-300 mb-1">Priority</label>
+          <select
+            id="source-priority"
+            class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white focus:border-sky-500 focus:outline-none"
+          >
+            <option value="1">1 - Financial Media</option>
+            <option value="2">2 - AI Thought Leaders</option>
+            <option value="3">3 - Strategy/Big4</option>
+            <option value="4">4 - Vendors</option>
+            <option value="5">5 - Research</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-neutral-300 mb-1">Category *</label>
+          <select
+            id="source-category"
+            required
+            class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white focus:border-sky-500 focus:outline-none"
+          >
+            <option value="financial-media">Financial Media</option>
+            <option value="ai-thought-leader">AI Thought Leader</option>
+            <option value="strategy-consulting">Strategy Consulting</option>
+            <option value="big4">Big 4</option>
+            <option value="consulting">Consulting</option>
+            <option value="vendor">Vendor</option>
+            <option value="research">Research</option>
+            <option value="regulator">Regulator</option>
+            <option value="publication">Publication</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-neutral-300 mb-1">Tier</label>
+          <select
+            id="source-tier"
+            class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white focus:border-sky-500 focus:outline-none"
+          >
+            <option value="standard">Standard (has RSS/sitemap)</option>
+            <option value="premium">Premium (needs scraper)</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-neutral-300 mb-1">Description</label>
+        <textarea
+          id="source-description"
+          rows="2"
+          class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none"
+          placeholder="Brief description of the source..."></textarea>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-neutral-300 mb-1">RSS Feed URL</label>
+        <input
+          type="url"
+          id="source-rss"
+          class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none"
+          placeholder="https://example.com/feed.xml"
+        />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-neutral-300 mb-1">Sitemap URL</label>
+        <input
+          type="url"
+          id="source-sitemap"
+          class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none"
+          placeholder="https://example.com/sitemap.xml"
+        />
+      </div>
+
+      <div class="flex items-center gap-6">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="source-enabled" checked class="rounded border-neutral-600" />
+          <span class="text-sm text-neutral-300">Enabled</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="source-show-external" class="rounded border-neutral-600" />
+          <span class="text-sm text-neutral-300">Show on Sources page</span>
+        </label>
+      </div>
+
+      <div class="flex gap-3 pt-4">
+        <button
+          type="submit"
+          class="rounded-lg bg-sky-600 px-6 py-2 font-medium text-white hover:bg-sky-500"
+        >
+          Save Source
+        </button>
+        <button
+          type="button"
+          id="cancel-btn"
+          class="rounded-lg border border-neutral-700 px-6 py-2 font-medium text-neutral-300 hover:bg-neutral-800"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
