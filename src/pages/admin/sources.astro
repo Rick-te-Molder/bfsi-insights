@@ -221,7 +221,15 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
             </span>
           </td>
           <td class="py-3 pr-4">
-            ${source.rss_feed ? '📡' : source.sitemap_url ? '🗺️' : source.scraper_config ? '🤖' : '❌'}
+            ${
+              source.rss_feed
+                ? '<span title="RSS Feed configured" class="cursor-help">📡</span>'
+                : source.sitemap_url
+                  ? '<span title="Sitemap configured" class="cursor-help">🗺️</span>'
+                  : source.scraper_config
+                    ? '<span title="Web scraper configured" class="cursor-help">🤖</span>'
+                    : '<span title="No feed configured" class="cursor-help">❌</span>'
+            }
           </td>
           <td class="py-3 pr-4">
             <button
