@@ -600,13 +600,17 @@ function parseRSS(xml, source, config) {
   const items = [];
   const itemRegex = /<(?:item|entry)[^>]*>([\s\S]*?)<\/(?:item|entry)>/gi;
   const titleRegex = /<title>(?:<!\[CDATA\[)?([^\]<]+)(?:\]\]>)?<\/title>/i;
-  const linkRegex = /<link[^>]*>([^<]+)<\/link>|<link[^>]*href=["']([^"']+)["']/i;
+  const linkRegex =
+    /<link[^>]*>(?:<!\[CDATA\[)?([^\]<]+)(?:\]\]>)?<\/link>|<link[^>]*href=["']([^"']+)["']/i;
   const dateRegex =
     /<(?:pubDate|published|dc:date|updated|date)>([^<]+)<\/(?:pubDate|published|dc:date|updated|date)>/i;
   const descRegex =
     /<(?:description|summary)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:description|summary)>/i;
 
   const { keywords, exclusionPatterns } = config;
+
+  // Premium regulator sources bypass keyword filtering (always BFSI-relevant)
+  const skipKeywordFilter = source.tier === 'premium' && source.category === 'regulator';
 
   let match;
   while ((match = itemRegex.exec(xml)) !== null) {
@@ -627,13 +631,15 @@ function parseRSS(xml, source, config) {
     // BFSI Relevance Check (using database-driven config)
     const text = (title + ' ' + description).toLowerCase();
 
-    // Check exclusion patterns first
+    // Check exclusion patterns first (always apply)
     const hasExclusion = exclusionPatterns.some((pattern) => pattern.test(text));
     if (hasExclusion) continue;
 
-    // Check for BFSI keywords (loaded from taxonomy)
-    const hasBfsiKeyword = keywords.some((kw) => text.includes(kw));
-    if (!hasBfsiKeyword) continue;
+    // Check for BFSI keywords (skip for premium regulator sources)
+    if (!skipKeywordFilter) {
+      const hasBfsiKeyword = keywords.some((kw) => text.includes(kw));
+      if (!hasBfsiKeyword) continue;
+    }
 
     // Extract date with arXiv fallback
     const publishedAt = extractDate(dateMatch?.[1], url, source.name);
