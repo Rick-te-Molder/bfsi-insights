@@ -235,12 +235,9 @@ import Base from '../../layouts/Base.astro';
   triggerBuild?.addEventListener('click', async () => {
     triggerBuild.textContent = '⏳ Building...';
     try {
-      const res = await fetch(
-        'https://api.cloudflare.com/client/v4/pages/webhooks/deploy_hooks/YOUR_HOOK',
-        {
-          method: 'POST',
-        },
-      );
+      const res = await fetch('https://bfsi-insights.onrender.com/api/trigger-build', {
+        method: 'POST',
+      });
       triggerBuild.textContent = res.ok ? '✅ Build triggered!' : '❌ Failed';
     } catch {
       triggerBuild.textContent = '❌ Failed';
