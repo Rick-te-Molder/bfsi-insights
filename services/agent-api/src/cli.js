@@ -335,6 +335,62 @@ async function runProcessQueueCmd(options) {
   return result;
 }
 
+// Queue health helpers
+const STATUS_ICONS = {
+  pending: '⏳',
+  enriched: '✅',
+  rejected: '❌',
+};
+
+function getStatusIcon(status) {
+  return STATUS_ICONS[status] || '📝';
+}
+
+function categorizePendingByAge(pending) {
+  const now = new Date();
+  const buckets = { last_24h: 0, last_week: 0, last_month: 0, older: 0 };
+  const sourceCount = {};
+
+  pending.forEach((item) => {
+    const days = (now - new Date(item.discovered_at)) / (1000 * 60 * 60 * 24);
+
+    if (days < 1) buckets.last_24h++;
+    else if (days < 7) buckets.last_week++;
+    else if (days < 30) buckets.last_month++;
+    else buckets.older++;
+
+    const source = item.payload?.source || 'unknown';
+    sourceCount[source] = (sourceCount[source] || 0) + 1;
+  });
+
+  return { buckets, sourceCount, now };
+}
+
+function printPendingBreakdown(pending) {
+  const { buckets, sourceCount, now } = categorizePendingByAge(pending);
+
+  console.log('   By age:');
+  console.log(`      Last 24h:  ${buckets.last_24h}`);
+  console.log(`      Last week: ${buckets.last_week}`);
+  console.log(`      Last month: ${buckets.last_month}`);
+  console.log(`      Older:     ${buckets.older}`);
+
+  console.log('\n   By source (top 5):');
+  Object.entries(sourceCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .forEach(([source, count]) => {
+      console.log(`      ${source.padEnd(30)}: ${count}`);
+    });
+
+  const oldest = pending[0];
+  if (oldest) {
+    const oldestAge = Math.round((now - new Date(oldest.discovered_at)) / (1000 * 60 * 60 * 24));
+    console.log(`\n   ⚠️ Oldest pending: ${oldestAge} days old`);
+    console.log(`      ${oldest.payload?.title?.substring(0, 50)}...`);
+  }
+}
+
 // Queue health monitoring
 async function runQueueHealthCmd() {
   console.log('📊 Queue Health Report\n');
@@ -354,15 +410,7 @@ async function runQueueHealthCmd() {
 
   console.log('\n📈 Status Overview:');
   for (const [status, count] of Object.entries(statusCounts || {})) {
-    const icon =
-      status === 'pending'
-        ? '⏳'
-        : status === 'enriched'
-          ? '✅'
-          : status === 'rejected'
-            ? '❌'
-            : '📝';
-    console.log(`   ${icon} ${status.padEnd(12)}: ${count}`);
+    console.log(`   ${getStatusIcon(status)} ${status.padEnd(12)}: ${count}`);
   }
 
   // Pending items by age
@@ -374,45 +422,7 @@ async function runQueueHealthCmd() {
 
   if (pending?.length) {
     console.log(`\n⏳ Pending Items Breakdown (${pending.length} total):`);
-
-    const now = new Date();
-    const buckets = { last_24h: 0, last_week: 0, last_month: 0, older: 0 };
-    const sourceCount = {};
-
-    pending.forEach((item) => {
-      const age = now - new Date(item.discovered_at);
-      const days = age / (1000 * 60 * 60 * 24);
-
-      if (days < 1) buckets.last_24h++;
-      else if (days < 7) buckets.last_week++;
-      else if (days < 30) buckets.last_month++;
-      else buckets.older++;
-
-      const source = item.payload?.source || 'unknown';
-      sourceCount[source] = (sourceCount[source] || 0) + 1;
-    });
-
-    console.log('   By age:');
-    console.log(`      Last 24h:  ${buckets.last_24h}`);
-    console.log(`      Last week: ${buckets.last_week}`);
-    console.log(`      Last month: ${buckets.last_month}`);
-    console.log(`      Older:     ${buckets.older}`);
-
-    console.log('\n   By source (top 5):');
-    const sortedSources = Object.entries(sourceCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-    sortedSources.forEach(([source, count]) => {
-      console.log(`      ${source.padEnd(30)}: ${count}`);
-    });
-
-    // Show oldest pending
-    const oldest = pending[0];
-    if (oldest) {
-      const oldestAge = Math.round((now - new Date(oldest.discovered_at)) / (1000 * 60 * 60 * 24));
-      console.log(`\n   ⚠️ Oldest pending: ${oldestAge} days old`);
-      console.log(`      ${oldest.payload?.title?.substring(0, 50)}...`);
-    }
+    printPendingBreakdown(pending);
   } else {
     console.log('\n✅ No pending items in queue');
   }
