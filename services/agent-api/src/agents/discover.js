@@ -685,20 +685,16 @@ function extractDate(rssDateStr, url, sourceName) {
 }
 
 function normalizeUrl(url) {
-  try {
-    const parsed = new URL(url);
-    return (parsed.origin + parsed.pathname).toLowerCase();
-  } catch {
-    // Strip query string and hash without regex (ReDoS-safe)
-    let normalized = url.toLowerCase();
-    const queryIdx = normalized.indexOf('?');
-    const hashIdx = normalized.indexOf('#');
-    const cutIdx = Math.min(
-      queryIdx === -1 ? normalized.length : queryIdx,
-      hashIdx === -1 ? normalized.length : hashIdx,
-    );
-    return normalized.substring(0, cutIdx);
-  }
+  // Match database exactly: lower(regexp_replace(url, '[?#].*$', ''))
+  // This ensures checkExists() queries match the url_norm unique constraint
+  let normalized = url.toLowerCase();
+  const queryIdx = normalized.indexOf('?');
+  const hashIdx = normalized.indexOf('#');
+  const cutIdx = Math.min(
+    queryIdx === -1 ? normalized.length : queryIdx,
+    hashIdx === -1 ? normalized.length : hashIdx,
+  );
+  return normalized.substring(0, cutIdx);
 }
 
 async function checkExists(url) {

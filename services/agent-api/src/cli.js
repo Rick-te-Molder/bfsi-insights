@@ -335,13 +335,119 @@ async function runProcessQueueCmd(options) {
   return result;
 }
 
+// Queue health monitoring
+async function runQueueHealthCmd() {
+  console.log('📊 Queue Health Report\n');
+  console.log('='.repeat(60));
+
+  // Overall status counts
+  const { data: statusCounts } = await supabase
+    .from('ingestion_queue')
+    .select('status')
+    .then(({ data }) => {
+      const counts = {};
+      data?.forEach((item) => {
+        counts[item.status] = (counts[item.status] || 0) + 1;
+      });
+      return { data: counts };
+    });
+
+  console.log('\n📈 Status Overview:');
+  for (const [status, count] of Object.entries(statusCounts || {})) {
+    const icon =
+      status === 'pending'
+        ? '⏳'
+        : status === 'enriched'
+          ? '✅'
+          : status === 'rejected'
+            ? '❌'
+            : '📝';
+    console.log(`   ${icon} ${status.padEnd(12)}: ${count}`);
+  }
+
+  // Pending items by age
+  const { data: pending } = await supabase
+    .from('ingestion_queue')
+    .select('discovered_at, payload')
+    .eq('status', 'pending')
+    .order('discovered_at', { ascending: true });
+
+  if (pending?.length) {
+    console.log(`\n⏳ Pending Items Breakdown (${pending.length} total):`);
+
+    const now = new Date();
+    const buckets = { last_24h: 0, last_week: 0, last_month: 0, older: 0 };
+    const sourceCount = {};
+
+    pending.forEach((item) => {
+      const age = now - new Date(item.discovered_at);
+      const days = age / (1000 * 60 * 60 * 24);
+
+      if (days < 1) buckets.last_24h++;
+      else if (days < 7) buckets.last_week++;
+      else if (days < 30) buckets.last_month++;
+      else buckets.older++;
+
+      const source = item.payload?.source || 'unknown';
+      sourceCount[source] = (sourceCount[source] || 0) + 1;
+    });
+
+    console.log('   By age:');
+    console.log(`      Last 24h:  ${buckets.last_24h}`);
+    console.log(`      Last week: ${buckets.last_week}`);
+    console.log(`      Last month: ${buckets.last_month}`);
+    console.log(`      Older:     ${buckets.older}`);
+
+    console.log('\n   By source (top 5):');
+    const sortedSources = Object.entries(sourceCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    sortedSources.forEach(([source, count]) => {
+      console.log(`      ${source.padEnd(30)}: ${count}`);
+    });
+
+    // Show oldest pending
+    const oldest = pending[0];
+    if (oldest) {
+      const oldestAge = Math.round((now - new Date(oldest.discovered_at)) / (1000 * 60 * 60 * 24));
+      console.log(`\n   ⚠️ Oldest pending: ${oldestAge} days old`);
+      console.log(`      ${oldest.payload?.title?.substring(0, 50)}...`);
+    }
+  } else {
+    console.log('\n✅ No pending items in queue');
+  }
+
+  // Recent activity
+  const { data: recent } = await supabase
+    .from('ingestion_queue')
+    .select('status, reviewed_at')
+    .not('reviewed_at', 'is', null)
+    .gte('reviewed_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+    .order('reviewed_at', { ascending: false });
+
+  if (recent?.length) {
+    console.log(`\n📅 Last 24h Activity: ${recent.length} items processed`);
+    const recentStatus = {};
+    recent.forEach((item) => {
+      recentStatus[item.status] = (recentStatus[item.status] || 0) + 1;
+    });
+    for (const [status, count] of Object.entries(recentStatus)) {
+      console.log(`      ${status}: ${count}`);
+    }
+  }
+
+  console.log('\n' + '='.repeat(60));
+}
+
 // Main
 async function main() {
   const { command, options } = parseArgs();
 
   if (!command) {
     console.log('Usage: node cli.js <command> [options]');
-    console.log('Commands: discovery, filter, summarize, tag, thumbnail, enrich, process-queue');
+    console.log(
+      'Commands: discovery, filter, summarize, tag, thumbnail, enrich, process-queue, queue-health',
+    );
     process.exit(1);
   }
 
@@ -379,6 +485,10 @@ async function main() {
         break;
       case 'eval-history':
         await runEvalHistoryCmd(options);
+        break;
+      case 'queue-health':
+      case 'health':
+        await runQueueHealthCmd();
         break;
       default:
         console.error(`Unknown command: ${command}`);
