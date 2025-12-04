@@ -2,91 +2,70 @@
 // Edit published articles
 export const prerender = true;
 
-import Base from '../../layouts/Base.astro';
+import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
-<Base title="Edit Publications">
-  <div class="mx-auto max-w-7xl px-4 py-8">
-    <!-- Header -->
-    <header class="mb-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-3xl font-bold">Published Articles</h1>
-          <p class="mt-1 text-neutral-400">Edit titles and metadata</p>
-        </div>
-        <div class="flex gap-3">
-          <a
-            href="/admin/review"
-            class="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800 transition-colors"
-          >
-            ← Back to Review
-          </a>
-          <button
-            id="trigger-build"
-            class="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-500/20 transition-colors"
-            type="button"
-          >
-            🚀 Trigger Build
-          </button>
-        </div>
-      </div>
-      <div class="mt-4">
-        <input
-          type="search"
-          id="search"
-          placeholder="Search publications..."
-          class="w-full max-w-md rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-2 text-sm placeholder:text-neutral-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
-        />
-      </div>
-    </header>
-
-    <!-- Loading -->
-    <div id="loading" class="text-center py-12">
-      <div
-        class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-sky-500 border-r-transparent"
-      >
-      </div>
-      <p class="mt-2 text-neutral-400">Loading publications...</p>
+<AdminLayout title="Published" activeSection="published">
+  <!-- Page Header -->
+  <header class="mb-6">
+    <h1 class="text-2xl font-bold">Published Articles</h1>
+    <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">Edit titles and metadata</p>
+    <div class="mt-4">
+      <input
+        type="search"
+        id="search"
+        placeholder="Search publications..."
+        class="w-full max-w-md rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-4 py-2 text-sm placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+      />
     </div>
+  </header>
 
-    <!-- Publications List -->
-    <div id="publications" class="hidden space-y-2"></div>
+  <!-- Loading -->
+  <div id="loading" class="text-center py-12">
+    <div
+      class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-sky-500 border-r-transparent"
+    >
+    </div>
+    <p class="mt-2 text-neutral-400">Loading publications...</p>
+  </div>
 
-    <!-- Edit Modal -->
-    <div id="edit-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm">
-      <div class="flex min-h-full items-center justify-center p-4">
-        <div class="w-full max-w-lg rounded-xl border border-neutral-700 bg-neutral-900 p-6">
-          <h2 class="text-xl font-bold mb-4">Edit Publication</h2>
-          <input type="hidden" id="edit-id" />
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-neutral-300 mb-1">Title</label>
-              <input
-                type="text"
-                id="edit-title"
-                class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
-              />
-            </div>
+  <!-- Publications List -->
+  <div id="publications" class="hidden space-y-2"></div>
+
+  <!-- Edit Modal -->
+  <div id="edit-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm">
+    <div class="flex min-h-full items-center justify-center p-4">
+      <div class="w-full max-w-lg rounded-xl border border-neutral-700 bg-neutral-900 p-6">
+        <h2 class="text-xl font-bold mb-4">Edit Publication</h2>
+        <input type="hidden" id="edit-id" />
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-neutral-300 mb-1">Title</label>
+            <input
+              type="text"
+              id="edit-title"
+              class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+            />
           </div>
-          <div class="mt-6 flex justify-end gap-3">
-            <button
-              id="cancel-edit"
-              class="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800"
-            >
-              Cancel
-            </button>
-            <button
-              id="save-edit"
-              class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
-            >
-              Save Changes
-            </button>
-          </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+          <button
+            id="cancel-edit"
+            class="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800"
+          >
+            Cancel
+          </button>
+          <button
+            id="save-edit"
+            class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
+          >
+            Save Changes
+          </button>
         </div>
       </div>
     </div>
   </div>
-</Base>
+</AdminLayout>
 
 <script>
   import { createClient } from '@supabase/supabase-js';
@@ -114,7 +93,6 @@ import Base from '../../layouts/Base.astro';
   const editTitle = document.getElementById('edit-title') as HTMLInputElement;
   const cancelEdit = document.getElementById('cancel-edit');
   const saveEdit = document.getElementById('save-edit');
-  const triggerBuild = document.getElementById('trigger-build');
 
   let publications: any[] = [];
 
@@ -229,20 +207,6 @@ import Base from '../../layouts/Base.astro';
   saveEdit?.addEventListener('click', saveChanges);
   editModal?.addEventListener('click', (e) => {
     if (e.target === editModal) closeEditModal();
-  });
-
-  // Trigger build
-  triggerBuild?.addEventListener('click', async () => {
-    triggerBuild.textContent = '⏳ Building...';
-    try {
-      const res = await fetch('https://bfsi-insights.onrender.com/api/trigger-build', {
-        method: 'POST',
-      });
-      triggerBuild.textContent = res.ok ? '✅ Build triggered!' : '❌ Failed';
-    } catch {
-      triggerBuild.textContent = '❌ Failed';
-    }
-    setTimeout(() => (triggerBuild.textContent = '🚀 Trigger Build'), 3000);
   });
 
   // Initial load with auth check

@@ -2,14 +2,17 @@
 // Static page with client-side database interactions
 export const prerender = true;
 
-import Base from '../../layouts/Base.astro';
+import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
-<Base title="Add Publication">
-  <div class="mx-auto max-w-3xl px-4 py-8">
+<AdminLayout title="Add URL" activeSection="add">
+  <div class="max-w-3xl">
+    <!-- Page Header -->
     <header class="mb-8">
-      <h1 class="text-4xl font-bold">➕ Add Publication</h1>
-      <p class="mt-2 text-neutral-300">Manually add a URL to the ingestion queue</p>
+      <h1 class="text-2xl font-bold">Add Publication</h1>
+      <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+        Manually add a URL to the ingestion queue
+      </p>
     </header>
 
     <!-- Success Message -->
@@ -125,7 +128,6 @@ import Base from '../../layouts/Base.astro';
       </div>
     </div>
   </div>
-
   <script>
     import { createClient } from '@supabase/supabase-js';
 
@@ -351,4 +353,4 @@ import Base from '../../layouts/Base.astro';
       poll();
     }
   </script>
-</Base>
+</AdminLayout>
