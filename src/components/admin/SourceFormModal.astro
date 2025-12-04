@@ -67,6 +67,23 @@
         </div>
       </div>
 
+      <!-- Channel (strategic information stream) -->
+      <div>
+        <label class="block text-sm font-medium text-neutral-300 mb-1">Channel *</label>
+        <select
+          id="source-channel"
+          required
+          class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white focus:border-sky-500 focus:outline-none"
+        >
+          <option value="regulatory_intelligence">⚖️ Regulatory Intelligence</option>
+          <option value="prudential_statistics">📊 Prudential & Risk Statistics</option>
+          <option value="market_disclosures">📈 Market Disclosures</option>
+          <option value="vendor_innovation">🚀 Vendor & Innovation Insights</option>
+          <option value="academic_research">🎓 Academic & Technical Research</option>
+          <option value="open_datasets">📦 Open Datasets & Indicators</option>
+        </select>
+      </div>
+
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium text-neutral-300 mb-1">Category *</label>
@@ -75,15 +92,15 @@
             required
             class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white focus:border-sky-500 focus:outline-none"
           >
-            <option value="financial-media">Financial Media</option>
-            <option value="ai-thought-leader">AI Thought Leader</option>
-            <option value="strategy-consulting">Strategy Consulting</option>
-            <option value="big4">Big 4</option>
-            <option value="consulting">Consulting</option>
+            <option value="regulator">Regulator</option>
+            <option value="central_bank">Central Bank</option>
             <option value="vendor">Vendor</option>
             <option value="research">Research</option>
-            <option value="regulator">Regulator</option>
-            <option value="publication">Publication</option>
+            <option value="consulting">Consulting</option>
+            <option value="media_outlet">Media Outlet</option>
+            <option value="standards_body">Standards Body</option>
+            <option value="academic">Academic</option>
+            <option value="government_body">Government Body</option>
           </select>
         </div>
         <div>
