@@ -16,6 +16,7 @@ const ALLOW_LIST = new Set([
   'src/features/publications/publication-filters.ts',
   'src/features/publications/multi-select-filters.ts',
   'src/pages/admin/review.astro',
+  'src/pages/admin/sources.astro',
   'services/agent-api/src/agents/discover.js',
 ]);
 

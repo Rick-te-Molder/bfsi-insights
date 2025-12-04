@@ -2,297 +2,257 @@
 // Static page with client-side real-time data fetching
 export const prerender = true;
 
-import Base from '../../layouts/Base.astro';
+import AdminLayout from '../../layouts/AdminLayout.astro';
 import PublicationModal from '../../features/publications/PublicationModal.astro';
 ---
 
-<Base title="Review Queue">
-  <div class="mx-auto max-w-7xl px-4 py-8">
-    <!-- Header -->
-    <header class="mb-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-3xl font-bold">Review Dashboard</h1>
-          <p class="mt-1 text-neutral-400">Preview and approve publications</p>
-        </div>
-        <div class="flex gap-3">
-          <a
-            href="/admin/publications"
-            class="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800 transition-colors"
-          >
-            📄 Published
-          </a>
-          <a
-            href="/admin/sources"
-            class="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800 transition-colors"
-          >
-            📡 Sources
-          </a>
-          <a
-            href="/admin/prompts"
-            class="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800 transition-colors"
-          >
-            📝 Prompts
-          </a>
-          <a
-            href="/admin/add"
-            class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 transition-colors"
-          >
-            ➕ Add URL
-          </a>
-          <button
-            id="trigger-build"
-            class="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-500/20 transition-colors"
-            type="button"
-          >
-            🚀 Trigger Build
-          </button>
-        </div>
-      </div>
-      <div id="stats" class="mt-4 flex items-center gap-4"></div>
-      <p id="build-status" class="mt-2 text-xs text-neutral-400"></p>
-    </header>
+<AdminLayout title="Review" activeSection="review">
+  <!-- Page Header -->
+  <header class="mb-6">
+    <h1 class="text-2xl font-bold">Review Dashboard</h1>
+    <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+      Preview and approve publications
+    </p>
+    <div id="stats" class="mt-4 flex items-center gap-4"></div>
+  </header>
 
-    <!-- Loading State -->
-    <div
-      id="loading"
-      class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-12 text-center"
-    >
-      <div class="text-4xl mb-3">⏳</div>
-      <p class="text-neutral-400">Loading review queue...</p>
-    </div>
-
-    <!-- Error State -->
-    <div id="error" class="hidden rounded-xl border border-red-500/20 bg-red-500/5 p-8 text-center">
-      <p class="text-red-300"></p>
-    </div>
-
-    <!-- Empty State -->
-    <div
-      id="empty-state"
-      class="hidden rounded-xl border border-neutral-800 bg-neutral-900/60 p-12 text-center"
-    >
-      <div class="text-5xl mb-4">✨</div>
-      <h2 class="text-2xl font-semibold text-neutral-200 mb-2">Queue is empty!</h2>
-      <p class="text-neutral-400">All items have been reviewed. Check back later.</p>
-    </div>
-
-    <!-- Unenriched Notice -->
-    <div
-      id="unenriched-notice"
-      class="hidden mb-6 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4"
-    >
-      <p class="text-amber-300"><span id="unenriched-count"></span> items awaiting enrichment</p>
-    </div>
-
-    <!-- Main Review Area -->
-    <div id="review-area" class="hidden">
-      <!-- Navigation -->
-      <div id="nav-container" class="flex items-center justify-center gap-4 mb-6">
-        <button
-          id="prev-btn"
-          class="rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          ← Previous
-        </button>
-        <div id="dots-container" class="flex gap-1.5"></div>
-        <button
-          id="next-btn"
-          class="rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          Next →
-        </button>
-      </div>
-
-      <!-- Two-column layout: Card Preview + Admin Panel -->
-      <div class="grid grid-cols-1 xl:grid-cols-[1fr,400px] gap-6">
-        <!-- Left: Card Preview (exactly as published) -->
-        <div class="space-y-4">
-          <div class="flex items-center justify-between">
-            <h2 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide">
-              📰 Card Preview (as it will appear)
-            </h2>
-            <span id="viewing-indicator" class="text-sm text-neutral-500"></span>
-          </div>
-
-          <!-- Publication Card Container -->
-          <ul id="card-preview" class="space-y-0"></ul>
-        </div>
-
-        <!-- Right: Admin Panel -->
-        <div id="admin-panel" class="space-y-4"></div>
-      </div>
-    </div>
+  <!-- Loading State -->
+  <div id="loading" class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-12 text-center">
+    <div class="text-4xl mb-3">⏳</div>
+    <p class="text-neutral-400">Loading review queue...</p>
   </div>
 
-  <!-- Modal for preview -->
-  <PublicationModal />
+  <!-- Error State -->
+  <div id="error" class="hidden rounded-xl border border-red-500/20 bg-red-500/5 p-8 text-center">
+    <p class="text-red-300"></p>
+  </div>
 
-  <script>
-    import { createClient } from '@supabase/supabase-js';
-    import initPublicationModal from '../../features/publications/publication-modal';
+  <!-- Empty State -->
+  <div
+    id="empty-state"
+    class="hidden rounded-xl border border-neutral-800 bg-neutral-900/60 p-12 text-center"
+  >
+    <div class="text-5xl mb-4">✨</div>
+    <h2 class="text-2xl font-semibold text-neutral-200 mb-2">Queue is empty!</h2>
+    <p class="text-neutral-400">All items have been reviewed. Check back later.</p>
+  </div>
 
-    const supabase = createClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    );
+  <!-- Unenriched Notice -->
+  <div
+    id="unenriched-notice"
+    class="hidden mb-6 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4"
+  >
+    <p class="text-amber-300"><span id="unenriched-count"></span> items awaiting enrichment</p>
+  </div>
 
-    // State
-    let items = [];
-    let currentIndex = 0;
-    let industryMap = new Map();
-    let topicMap = new Map();
-    let existingVendors = new Set();
-    let existingOrgs = new Set();
-    let processing = false;
+  <!-- Main Review Area -->
+  <div id="review-area" class="hidden">
+    <!-- Navigation -->
+    <div id="nav-container" class="flex items-center justify-center gap-4 mb-6">
+      <button
+        id="prev-btn"
+        class="rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      >
+        ← Previous
+      </button>
+      <div id="dots-container" class="flex gap-1.5"></div>
+      <button
+        id="next-btn"
+        class="rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+      >
+        Next →
+      </button>
+    </div>
 
-    // DOM Elements
-    const loading = document.getElementById('loading');
-    const errorBox = document.getElementById('error');
-    const emptyState = document.getElementById('empty-state');
-    const statsDiv = document.getElementById('stats');
-    const unenrichedNotice = document.getElementById('unenriched-notice');
-    const reviewArea = document.getElementById('review-area');
-    const cardPreview = document.getElementById('card-preview');
-    const adminPanel = document.getElementById('admin-panel');
-    const viewingIndicator = document.getElementById('viewing-indicator');
-    const dotsContainer = document.getElementById('dots-container');
-    const prevBtn = document.getElementById('prev-btn');
-    const nextBtn = document.getElementById('next-btn');
-    const buildBtn = document.getElementById('trigger-build');
-    const buildStatus = document.getElementById('build-status');
+    <!-- Two-column layout: Card Preview + Admin Panel -->
+    <div class="grid grid-cols-1 xl:grid-cols-[1fr,400px] gap-6">
+      <!-- Left: Card Preview (exactly as published) -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide">
+            📰 Card Preview (as it will appear)
+          </h2>
+          <span id="viewing-indicator" class="text-sm text-neutral-500"></span>
+        </div>
 
-    // Initialize modal
-    initPublicationModal();
+        <!-- Publication Card Container -->
+        <ul id="card-preview" class="space-y-0"></ul>
+      </div>
 
-    // Format date helper
-    const formatDate = (iso) => {
-      if (!iso) return '';
-      return new Date(iso).toLocaleDateString('en-GB', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
-    };
+      <!-- Right: Admin Panel -->
+      <div id="admin-panel" class="space-y-4"></div>
+    </div>
+  </div>
+</AdminLayout>
 
-    // Trigger build handler
-    if (buildBtn instanceof HTMLButtonElement && buildStatus) {
-      buildBtn.addEventListener('click', async () => {
-        buildBtn.disabled = true;
-        buildBtn.textContent = '⏳ Triggering…';
-        try {
-          const response = await fetch('https://bfsi-insights.onrender.com/api/trigger-build', {
-            method: 'POST',
-          });
-          const data = await response.json().catch(() => ({}));
-          if (!response.ok || !data.ok) throw new Error(data.message || 'Build hook failed');
-          buildBtn.textContent = '✅ Build queued';
-          setTimeout(() => {
-            buildBtn.textContent = '🚀 Trigger Build';
-            buildBtn.disabled = false;
-          }, 5000);
-        } catch (err) {
+<!-- Modal for preview -->
+<PublicationModal />
+
+<script>
+  import { createClient } from '@supabase/supabase-js';
+  import initPublicationModal from '../../features/publications/publication-modal';
+
+  const supabase = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
+  );
+
+  // State
+  let items = [];
+  let currentIndex = 0;
+  let industryMap = new Map();
+  let topicMap = new Map();
+  let existingVendors = new Set();
+  let existingOrgs = new Set();
+  let processing = false;
+
+  // DOM Elements
+  const loading = document.getElementById('loading');
+  const errorBox = document.getElementById('error');
+  const emptyState = document.getElementById('empty-state');
+  const statsDiv = document.getElementById('stats');
+  const unenrichedNotice = document.getElementById('unenriched-notice');
+  const reviewArea = document.getElementById('review-area');
+  const cardPreview = document.getElementById('card-preview');
+  const adminPanel = document.getElementById('admin-panel');
+  const viewingIndicator = document.getElementById('viewing-indicator');
+  const dotsContainer = document.getElementById('dots-container');
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+  const buildBtn = document.getElementById('trigger-build');
+  const buildStatus = document.getElementById('build-status');
+
+  // Initialize modal
+  initPublicationModal();
+
+  // Format date helper
+  const formatDate = (iso) => {
+    if (!iso) return '';
+    return new Date(iso).toLocaleDateString('en-GB', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  // Trigger build handler
+  if (buildBtn instanceof HTMLButtonElement && buildStatus) {
+    buildBtn.addEventListener('click', async () => {
+      buildBtn.disabled = true;
+      buildBtn.textContent = '⏳ Triggering…';
+      try {
+        const response = await fetch('https://bfsi-insights.onrender.com/api/trigger-build', {
+          method: 'POST',
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.ok) throw new Error(data.message || 'Build hook failed');
+        buildBtn.textContent = '✅ Build queued';
+        setTimeout(() => {
           buildBtn.textContent = '🚀 Trigger Build';
           buildBtn.disabled = false;
-          buildStatus.textContent = `⚠️ ${err instanceof Error ? err.message : 'Failed'}`;
-        }
-      });
-    }
+        }, 5000);
+      } catch (err) {
+        buildBtn.textContent = '🚀 Trigger Build';
+        buildBtn.disabled = false;
+        buildStatus.textContent = `⚠️ ${err instanceof Error ? err.message : 'Failed'}`;
+      }
+    });
+  }
 
-    // Navigation
-    function updateNavigation() {
-      if (prevBtn) prevBtn.disabled = currentIndex === 0;
-      if (nextBtn) nextBtn.disabled = currentIndex >= items.length - 1;
-      if (viewingIndicator) viewingIndicator.textContent = `${currentIndex + 1} of ${items.length}`;
+  // Navigation
+  function updateNavigation() {
+    if (prevBtn) prevBtn.disabled = currentIndex === 0;
+    if (nextBtn) nextBtn.disabled = currentIndex >= items.length - 1;
+    if (viewingIndicator) viewingIndicator.textContent = `${currentIndex + 1} of ${items.length}`;
 
-      // Update dots
-      if (dotsContainer) {
-        dotsContainer.innerHTML = items
-          .map(
-            (_, i) => `
+    // Update dots
+    if (dotsContainer) {
+      dotsContainer.innerHTML = items
+        .map(
+          (_, i) => `
           <button class="w-2.5 h-2.5 rounded-full transition-colors ${i === currentIndex ? 'bg-sky-500' : 'bg-neutral-700 hover:bg-neutral-600'}" data-index="${i}"></button>
         `,
-          )
-          .join('');
-      }
+        )
+        .join('');
+    }
+  }
+
+  prevBtn?.addEventListener('click', () => {
+    if (currentIndex > 0) {
+      currentIndex--;
+      renderCurrentItem();
+    }
+  });
+
+  nextBtn?.addEventListener('click', () => {
+    if (currentIndex < items.length - 1) {
+      currentIndex++;
+      renderCurrentItem();
+    }
+  });
+
+  dotsContainer?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (btn && btn.dataset.index) {
+      currentIndex = parseInt(btn.dataset.index, 10);
+      renderCurrentItem();
+    }
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (processing) return;
+    if (e.key === 'ArrowLeft' && currentIndex > 0) {
+      currentIndex--;
+      renderCurrentItem();
+    } else if (e.key === 'ArrowRight' && currentIndex < items.length - 1) {
+      currentIndex++;
+      renderCurrentItem();
+    } else if (e.key === 'a' && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      handleApprove();
+    } else if (e.key === 'r' && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      handleReject();
+    } else if (e.key === 'p' && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault();
+      const previewBtn = cardPreview?.querySelector('[data-open-modal]');
+      if (previewBtn) previewBtn.click();
+    }
+  });
+
+  // Render the card preview (styled exactly like published cards)
+  function renderCardPreview(item) {
+    const payload = item.payload || {};
+    const summary = payload.summary || {};
+    const industryCodes = (payload.industry_codes || []).filter((c) => c && c !== 'null');
+    const topicCodes = (payload.topic_codes || []).filter((c) => c && c !== 'null');
+
+    // Resolve thumbnail
+    let thumbnailUrl = payload.thumbnail || null;
+    if (!thumbnailUrl && payload.thumbnail_path && payload.thumbnail_bucket) {
+      thumbnailUrl = `${import.meta.env.PUBLIC_SUPABASE_URL}/storage/v1/object/public/${payload.thumbnail_bucket}/${payload.thumbnail_path}`;
     }
 
-    prevBtn?.addEventListener('click', () => {
-      if (currentIndex > 0) {
-        currentIndex--;
-        renderCurrentItem();
-      }
-    });
-
-    nextBtn?.addEventListener('click', () => {
-      if (currentIndex < items.length - 1) {
-        currentIndex++;
-        renderCurrentItem();
-      }
-    });
-
-    dotsContainer?.addEventListener('click', (e) => {
-      const btn = e.target.closest('button');
-      if (btn && btn.dataset.index) {
-        currentIndex = parseInt(btn.dataset.index, 10);
-        renderCurrentItem();
-      }
-    });
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-      if (processing) return;
-      if (e.key === 'ArrowLeft' && currentIndex > 0) {
-        currentIndex--;
-        renderCurrentItem();
-      } else if (e.key === 'ArrowRight' && currentIndex < items.length - 1) {
-        currentIndex++;
-        renderCurrentItem();
-      } else if (e.key === 'a' && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        handleApprove();
-      } else if (e.key === 'r' && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        handleReject();
-      } else if (e.key === 'p' && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        const previewBtn = cardPreview?.querySelector('[data-open-modal]');
-        if (previewBtn) previewBtn.click();
-      }
-    });
-
-    // Render the card preview (styled exactly like published cards)
-    function renderCardPreview(item) {
-      const payload = item.payload || {};
-      const summary = payload.summary || {};
-      const industryCodes = (payload.industry_codes || []).filter((c) => c && c !== 'null');
-      const topicCodes = (payload.topic_codes || []).filter((c) => c && c !== 'null');
-
-      // Resolve thumbnail
-      let thumbnailUrl = payload.thumbnail || null;
-      if (!thumbnailUrl && payload.thumbnail_path && payload.thumbnail_bucket) {
-        thumbnailUrl = `${import.meta.env.PUBLIC_SUPABASE_URL}/storage/v1/object/public/${payload.thumbnail_bucket}/${payload.thumbnail_path}`;
-      }
-
-      // Generate tags HTML
-      const tagsHtml = [
-        ...industryCodes.slice(0, 2).map(
-          (code) => `
+    // Generate tags HTML
+    const tagsHtml = [
+      ...industryCodes.slice(0, 2).map(
+        (code) => `
           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-300 ring-1 ring-inset ring-blue-500/20">
             ${industryMap.get(code) || code}
           </span>
         `,
-        ),
-        ...topicCodes.slice(0, 2).map(
-          (code) => `
+      ),
+      ...topicCodes.slice(0, 2).map(
+        (code) => `
           <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-500/10 text-purple-300 ring-1 ring-inset ring-purple-500/20">
             ${topicMap.get(code) || code}
           </span>
         `,
-        ),
-      ].join('');
+      ),
+    ].join('');
 
-      return `
+    return `
         <li class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition-all hover:border-neutral-700 hover:ring-neutral-700 hover:bg-neutral-900 relative"
             data-item-id="${item.id}"
             data-title="${(payload.title || '').replace(/"/g, '&quot;')}"
@@ -341,36 +301,36 @@ import PublicationModal from '../../features/publications/PublicationModal.astro
           </div>
         </li>
       `;
-    }
+  }
 
-    // Render the admin panel
-    function renderAdminPanel(item) {
-      const payload = item.payload || {};
-      const summary = payload.summary || {};
-      const industryCodes = (payload.industry_codes || []).filter((c) => c && c !== 'null');
-      const topicCodes = (payload.topic_codes || []).filter((c) => c && c !== 'null');
-      const vendorNames = (payload.vendor_names || []).filter((n) => n && n !== 'null');
-      const orgNames = (payload.organization_names || []).filter((n) => n && n !== 'null');
+  // Render the admin panel
+  function renderAdminPanel(item) {
+    const payload = item.payload || {};
+    const summary = payload.summary || {};
+    const industryCodes = (payload.industry_codes || []).filter((c) => c && c !== 'null');
+    const topicCodes = (payload.topic_codes || []).filter((c) => c && c !== 'null');
+    const vendorNames = (payload.vendor_names || []).filter((n) => n && n !== 'null');
+    const orgNames = (payload.organization_names || []).filter((n) => n && n !== 'null');
 
-      // Summary validation
-      const shortLen = summary.short?.length || 0;
-      const mediumLen = summary.medium?.length || 0;
-      const longLen = summary.long?.length || 0;
-      const shortValid = shortLen >= 120 && shortLen <= 150;
-      const mediumValid = mediumLen >= 250 && mediumLen <= 300;
-      const longValid = longLen >= 500 && longLen <= 600;
+    // Summary validation
+    const shortLen = summary.short?.length || 0;
+    const mediumLen = summary.medium?.length || 0;
+    const longLen = summary.long?.length || 0;
+    const shortValid = shortLen >= 120 && shortLen <= 150;
+    const mediumValid = mediumLen >= 250 && mediumLen <= 300;
+    const longValid = longLen >= 500 && longLen <= 600;
 
-      // Entity status
-      const vendorStatus = vendorNames.map((name) => ({
-        name,
-        isNew: !existingVendors.has(name.toLowerCase()),
-      }));
-      const orgStatus = orgNames.map((name) => ({
-        name,
-        isNew: !existingOrgs.has(name.toLowerCase()),
-      }));
+    // Entity status
+    const vendorStatus = vendorNames.map((name) => ({
+      name,
+      isNew: !existingVendors.has(name.toLowerCase()),
+    }));
+    const orgStatus = orgNames.map((name) => ({
+      name,
+      isNew: !existingOrgs.has(name.toLowerCase()),
+    }));
 
-      return `
+    return `
         <!-- Edit Title -->
         <div class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
           <h3 class="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-2">Edit Title</h3>
@@ -608,261 +568,257 @@ import PublicationModal from '../../features/publications/PublicationModal.astro
             : ''
         }
       `;
-    }
+  }
 
-    // Render current item
-    function renderCurrentItem() {
-      if (!items.length) return;
-      const item = items[currentIndex];
-      if (cardPreview) cardPreview.innerHTML = renderCardPreview(item);
-      if (adminPanel) adminPanel.innerHTML = renderAdminPanel(item);
-      updateNavigation();
-      bindActionButtons();
-    }
+  // Render current item
+  function renderCurrentItem() {
+    if (!items.length) return;
+    const item = items[currentIndex];
+    if (cardPreview) cardPreview.innerHTML = renderCardPreview(item);
+    if (adminPanel) adminPanel.innerHTML = renderAdminPanel(item);
+    updateNavigation();
+    bindActionButtons();
+  }
 
-    // Bind action buttons
-    function bindActionButtons() {
-      document.getElementById('approve-btn')?.addEventListener('click', handleApprove);
-      document.getElementById('reject-btn')?.addEventListener('click', handleReject);
-      document.getElementById('reenrich-btn')?.addEventListener('click', handleReenrich);
-    }
+  // Bind action buttons
+  function bindActionButtons() {
+    document.getElementById('approve-btn')?.addEventListener('click', handleApprove);
+    document.getElementById('reject-btn')?.addEventListener('click', handleReject);
+    document.getElementById('reenrich-btn')?.addEventListener('click', handleReenrich);
+  }
 
-    // Handle approve
-    async function handleApprove() {
-      const item = items[currentIndex];
-      if (!item || processing) return;
+  // Handle approve
+  async function handleApprove() {
+    const item = items[currentIndex];
+    if (!item || processing) return;
 
-      processing = true;
-      const btn = document.getElementById('approve-btn');
-      if (btn) btn.textContent = '⏳ Publishing...';
+    processing = true;
+    const btn = document.getElementById('approve-btn');
+    if (btn) btn.textContent = '⏳ Publishing...';
 
-      // Get edited title
-      const titleInput = document.getElementById('edit-title');
-      const editedTitle = titleInput?.value?.trim() || item.payload?.title;
+    // Get edited title
+    const titleInput = document.getElementById('edit-title');
+    const editedTitle = titleInput?.value?.trim() || item.payload?.title;
 
-      // Collect selected entities
-      const selectedVendors = [...document.querySelectorAll('.vendor-checkbox:checked')]
-        .map((cb) => cb.dataset.name)
-        .filter(Boolean);
-      const selectedOrgs = [...document.querySelectorAll('.org-checkbox:checked')]
-        .map((cb) => cb.dataset.name)
-        .filter(Boolean);
+    // Collect selected entities
+    const selectedVendors = [...document.querySelectorAll('.vendor-checkbox:checked')]
+      .map((cb) => cb.dataset.name)
+      .filter(Boolean);
+    const selectedOrgs = [...document.querySelectorAll('.org-checkbox:checked')]
+      .map((cb) => cb.dataset.name)
+      .filter(Boolean);
 
-      try {
-        // Update title in queue item if changed
-        // IMPORTANT: Fetch fresh payload to avoid overwriting re-enriched data
-        if (editedTitle !== item.payload?.title) {
-          const { data: freshItem, error: fetchError } = await supabase
-            .from('ingestion_queue')
-            .select('payload')
-            .eq('id', item.id)
-            .single();
-          if (fetchError) throw fetchError;
+    try {
+      // Update title in queue item if changed
+      // IMPORTANT: Fetch fresh payload to avoid overwriting re-enriched data
+      if (editedTitle !== item.payload?.title) {
+        const { data: freshItem, error: fetchError } = await supabase
+          .from('ingestion_queue')
+          .select('payload')
+          .eq('id', item.id)
+          .single();
+        if (fetchError) throw fetchError;
 
-          const { error: updateError } = await supabase
-            .from('ingestion_queue')
-            .update({
-              payload: { ...freshItem.payload, title: editedTitle },
-            })
-            .eq('id', item.id);
-          if (updateError) throw updateError;
-        }
-
-        const { error } = await supabase.rpc('approve_from_queue', {
-          p_queue_id: item.id,
-          p_approved_vendors: selectedVendors,
-          p_approved_organizations: selectedOrgs,
-        });
-        if (error) throw error;
-
-        // Remove from list
-        items = items.filter((_, i) => i !== currentIndex);
-        if (currentIndex >= items.length) currentIndex = Math.max(0, items.length - 1);
-
-        if (items.length === 0) {
-          reviewArea?.classList.add('hidden');
-          emptyState?.classList.remove('hidden');
-        } else {
-          renderCurrentItem();
-        }
-        updateStats();
-      } catch (err) {
-        const msg =
-          err?.message || err?.error_description || JSON.stringify(err) || 'Unknown error';
-        alert('Approve failed: ' + msg);
-        console.error('Approve error:', err);
-        if (btn) btn.textContent = '✓ Approve & Publish';
-      } finally {
-        processing = false;
-      }
-    }
-
-    // Handle reject
-    async function handleReject() {
-      const item = items[currentIndex];
-      if (!item || processing) return;
-
-      const reason = window.prompt('Reason for rejection (optional):');
-      if (reason === null) return;
-
-      processing = true;
-      const btn = document.getElementById('reject-btn');
-      if (btn) btn.textContent = '⏳ Rejecting...';
-
-      try {
-        const session = (await supabase.auth.getSession()).data.session;
-        const { error } = await supabase
+        const { error: updateError } = await supabase
           .from('ingestion_queue')
           .update({
-            status: 'rejected',
-            rejection_reason: reason || null,
-            reviewed_at: new Date().toISOString(),
-            reviewer: session?.user?.id,
+            payload: { ...freshItem.payload, title: editedTitle },
           })
           .eq('id', item.id);
-        if (error) throw error;
+        if (updateError) throw updateError;
+      }
 
-        items = items.filter((_, i) => i !== currentIndex);
-        if (currentIndex >= items.length) currentIndex = Math.max(0, items.length - 1);
+      const { error } = await supabase.rpc('approve_from_queue', {
+        p_queue_id: item.id,
+        p_approved_vendors: selectedVendors,
+        p_approved_organizations: selectedOrgs,
+      });
+      if (error) throw error;
 
-        if (items.length === 0) {
-          reviewArea?.classList.add('hidden');
-          emptyState?.classList.remove('hidden');
-        } else {
+      // Remove from list
+      items = items.filter((_, i) => i !== currentIndex);
+      if (currentIndex >= items.length) currentIndex = Math.max(0, items.length - 1);
+
+      if (items.length === 0) {
+        reviewArea?.classList.add('hidden');
+        emptyState?.classList.remove('hidden');
+      } else {
+        renderCurrentItem();
+      }
+      updateStats();
+    } catch (err) {
+      const msg = err?.message || err?.error_description || JSON.stringify(err) || 'Unknown error';
+      alert('Approve failed: ' + msg);
+      console.error('Approve error:', err);
+      if (btn) btn.textContent = '✓ Approve & Publish';
+    } finally {
+      processing = false;
+    }
+  }
+
+  // Handle reject
+  async function handleReject() {
+    const item = items[currentIndex];
+    if (!item || processing) return;
+
+    const reason = window.prompt('Reason for rejection (optional):');
+    if (reason === null) return;
+
+    processing = true;
+    const btn = document.getElementById('reject-btn');
+    if (btn) btn.textContent = '⏳ Rejecting...';
+
+    try {
+      const session = (await supabase.auth.getSession()).data.session;
+      const { error } = await supabase
+        .from('ingestion_queue')
+        .update({
+          status: 'rejected',
+          rejection_reason: reason || null,
+          reviewed_at: new Date().toISOString(),
+          reviewer: session?.user?.id,
+        })
+        .eq('id', item.id);
+      if (error) throw error;
+
+      items = items.filter((_, i) => i !== currentIndex);
+      if (currentIndex >= items.length) currentIndex = Math.max(0, items.length - 1);
+
+      if (items.length === 0) {
+        reviewArea?.classList.add('hidden');
+        emptyState?.classList.remove('hidden');
+      } else {
+        renderCurrentItem();
+      }
+      updateStats();
+    } catch (err) {
+      alert('Reject failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      if (btn) btn.textContent = '✗ Reject';
+    } finally {
+      processing = false;
+    }
+  }
+
+  // Handle re-enrich
+  async function handleReenrich() {
+    const item = items[currentIndex];
+    if (!item || processing) return;
+
+    processing = true;
+    const btn = document.getElementById('reenrich-btn');
+    if (btn) btn.textContent = '⏳ Enriching...';
+
+    try {
+      // Get current session for auth header
+      const {
+        data: { session: currentSession },
+      } = await supabase.auth.getSession();
+      if (!currentSession) throw new Error('Not authenticated');
+
+      // Call Edge Function (handles status reset + agent API call securely)
+      const response = await supabase.functions.invoke('trigger-enrichment', {
+        body: { queue_id: item.id },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Edge function failed');
+      }
+
+      // Show success and reload
+      if (btn) btn.textContent = '✓ Done!';
+
+      // Wait a moment then reload to show updated item
+      setTimeout(async () => {
+        await loadQueue();
+        // Find the same item (might have new index)
+        const newIndex = items.findIndex((i) => i.id === item.id);
+        if (newIndex >= 0) {
+          currentIndex = newIndex;
           renderCurrentItem();
         }
-        updateStats();
-      } catch (err) {
-        alert('Reject failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
-        if (btn) btn.textContent = '✗ Reject';
-      } finally {
-        processing = false;
-      }
+      }, 1000);
+    } catch (err) {
+      alert('Re-enrich failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      console.error('Re-enrich error:', err);
+      if (btn) btn.textContent = '🔄 Re-enrich';
+    } finally {
+      processing = false;
     }
+  }
 
-    // Handle re-enrich
-    async function handleReenrich() {
-      const item = items[currentIndex];
-      if (!item || processing) return;
-
-      processing = true;
-      const btn = document.getElementById('reenrich-btn');
-      if (btn) btn.textContent = '⏳ Enriching...';
-
-      try {
-        // Get current session for auth header
-        const {
-          data: { session: currentSession },
-        } = await supabase.auth.getSession();
-        if (!currentSession) throw new Error('Not authenticated');
-
-        // Call Edge Function (handles status reset + agent API call securely)
-        const response = await supabase.functions.invoke('trigger-enrichment', {
-          body: { queue_id: item.id },
-        });
-
-        if (response.error) {
-          throw new Error(response.error.message || 'Edge function failed');
-        }
-
-        // Show success and reload
-        if (btn) btn.textContent = '✓ Done!';
-
-        // Wait a moment then reload to show updated item
-        setTimeout(async () => {
-          await loadQueue();
-          // Find the same item (might have new index)
-          const newIndex = items.findIndex((i) => i.id === item.id);
-          if (newIndex >= 0) {
-            currentIndex = newIndex;
-            renderCurrentItem();
-          }
-        }, 1000);
-      } catch (err) {
-        alert('Re-enrich failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
-        console.error('Re-enrich error:', err);
-        if (btn) btn.textContent = '🔄 Re-enrich';
-      } finally {
-        processing = false;
-      }
-    }
-
-    // Update stats
-    function updateStats() {
-      if (statsDiv) {
-        statsDiv.innerHTML = `
+  // Update stats
+  function updateStats() {
+    if (statsDiv) {
+      statsDiv.innerHTML = `
           <span class="rounded-full bg-sky-500/10 px-3 py-1 text-sky-300">${items.length} ready to review</span>
         `;
-      }
     }
+  }
 
-    // Load data
-    async function loadQueue() {
-      try {
-        const sessionRes = await supabase.auth.getSession();
-        if (!sessionRes?.data?.session) {
-          window.location.href = '/login';
-          return;
-        }
+  // Load data
+  async function loadQueue() {
+    try {
+      const sessionRes = await supabase.auth.getSession();
+      if (!sessionRes?.data?.session) {
+        window.location.href = '/login';
+        return;
+      }
 
-        const [queueResult, industriesResult, topicsResult, vendorsResult, orgsResult] =
-          await Promise.all([
-            supabase
-              .from('ingestion_queue')
-              .select('*')
-              .eq('status', 'enriched')
-              .order('fetched_at', { ascending: false }),
-            supabase.from('bfsi_industry').select('code, name').order('sort_order'),
-            supabase.from('bfsi_topic').select('code, name').order('sort_order'),
-            supabase.from('ag_vendor').select('id, name'),
-            supabase.from('bfsi_organization').select('id, organization_name'),
-          ]);
+      const [queueResult, industriesResult, topicsResult, vendorsResult, orgsResult] =
+        await Promise.all([
+          supabase
+            .from('ingestion_queue')
+            .select('*')
+            .eq('status', 'enriched')
+            .order('fetched_at', { ascending: false }),
+          supabase.from('bfsi_industry').select('code, name').order('sort_order'),
+          supabase.from('bfsi_topic').select('code, name').order('sort_order'),
+          supabase.from('ag_vendor').select('id, name'),
+          supabase.from('bfsi_organization').select('id, organization_name'),
+        ]);
 
-        if (queueResult.error) throw queueResult.error;
+      if (queueResult.error) throw queueResult.error;
 
-        industryMap = new Map((industriesResult.data || []).map((i) => [i.code, i.name]));
-        topicMap = new Map((topicsResult.data || []).map((t) => [t.code, t.name]));
-        existingVendors = new Set((vendorsResult.data || []).map((v) => v.name.toLowerCase()));
-        existingOrgs = new Set(
-          (orgsResult.data || []).map((o) => o.organization_name.toLowerCase()),
-        );
+      industryMap = new Map((industriesResult.data || []).map((i) => [i.code, i.name]));
+      topicMap = new Map((topicsResult.data || []).map((t) => [t.code, t.name]));
+      existingVendors = new Set((vendorsResult.data || []).map((v) => v.name.toLowerCase()));
+      existingOrgs = new Set((orgsResult.data || []).map((o) => o.organization_name.toLowerCase()));
 
-        const pending = queueResult.data || [];
-        items = pending.filter((x) => x.payload?.summary?.short);
-        const notEnriched = pending.filter((x) => !x.payload?.summary?.short);
+      const pending = queueResult.data || [];
+      items = pending.filter((x) => x.payload?.summary?.short);
+      const notEnriched = pending.filter((x) => !x.payload?.summary?.short);
 
-        loading?.classList.add('hidden');
+      loading?.classList.add('hidden');
 
-        // Stats
-        if (statsDiv) {
-          statsDiv.innerHTML = `
+      // Stats
+      if (statsDiv) {
+        statsDiv.innerHTML = `
             <span class="rounded-full bg-sky-500/10 px-3 py-1 text-sky-300">${items.length} ready to review</span>
             <span class="rounded-full bg-amber-500/10 px-3 py-1 text-amber-300">${notEnriched.length} awaiting enrichment</span>
           `;
-        }
+      }
 
-        if (notEnriched.length > 0) {
-          const unenrichedCount = document.getElementById('unenriched-count');
-          if (unenrichedCount) unenrichedCount.textContent = '⏳ ' + notEnriched.length;
-          unenrichedNotice?.classList.remove('hidden');
-        }
+      if (notEnriched.length > 0) {
+        const unenrichedCount = document.getElementById('unenriched-count');
+        if (unenrichedCount) unenrichedCount.textContent = '⏳ ' + notEnriched.length;
+        unenrichedNotice?.classList.remove('hidden');
+      }
 
-        if (items.length === 0) {
-          emptyState?.classList.remove('hidden');
-        } else {
-          reviewArea?.classList.remove('hidden');
-          renderCurrentItem();
-        }
-      } catch (err) {
-        loading?.classList.add('hidden');
-        if (errorBox) {
-          errorBox.classList.remove('hidden');
-          const p = errorBox.querySelector('p');
-          if (p) p.textContent = err instanceof Error ? err.message : 'Failed to load queue';
-        }
+      if (items.length === 0) {
+        emptyState?.classList.remove('hidden');
+      } else {
+        reviewArea?.classList.remove('hidden');
+        renderCurrentItem();
+      }
+    } catch (err) {
+      loading?.classList.add('hidden');
+      if (errorBox) {
+        errorBox.classList.remove('hidden');
+        const p = errorBox.querySelector('p');
+        if (p) p.textContent = err instanceof Error ? err.message : 'Failed to load queue';
       }
     }
+  }
 
-    loadQueue();
-  </script>
-</Base>
+  loadQueue();
+</script>

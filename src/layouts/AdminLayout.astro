@@ -1,0 +1,280 @@
+---
+/**
+ * Shared Admin Layout
+ * Provides consistent navigation and styling across all admin pages
+ */
+
+const { title = 'Admin', activeSection = '' } = Astro.props;
+
+interface Props {
+  title?: string;
+  activeSection?: 'review' | 'published' | 'sources' | 'prompts' | 'add' | '';
+}
+
+const navItems = [
+  { href: '/admin/review', label: 'Review', section: 'review' },
+  { href: '/admin/publications', label: 'Published', section: 'published' },
+  { href: '/admin/sources', label: 'Sources', section: 'sources' },
+  { href: '/admin/prompts', label: 'Prompts', section: 'prompts' },
+  { href: '/admin/add', label: 'Add URL', section: 'add', isPrimary: true },
+];
+
+const isActive = (section: string) => section === activeSection;
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>{title} | BFSI Admin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <!-- Theme initialization (prevents flash) -->
+    <script is:inline>
+      (function () {
+        const stored = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const theme = stored || (prefersDark ? 'dark' : 'light');
+        document.documentElement.classList.toggle('dark', theme === 'dark');
+      })();
+    </script>
+
+    <!-- Favicons -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="/favicon-light.svg?v=2"
+      media="(prefers-color-scheme: light)"
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="/favicon-dark.svg?v=2"
+      media="(prefers-color-scheme: dark)"
+    />
+
+    <slot name="head" />
+  </head>
+
+  <body
+    class="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-800 dark:text-neutral-200 antialiased"
+  >
+    <!-- Admin Header -->
+    <header
+      class="sticky top-0 z-40 border-b border-neutral-200 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-neutral-900/60"
+    >
+      <div class="mx-auto max-w-7xl px-4">
+        <div class="flex h-14 items-center justify-between">
+          <!-- Logo + Admin Badge -->
+          <div class="flex items-center gap-3">
+            <a href="/" class="group inline-flex flex-col items-center">
+              <span class="text-lg font-normal tracking-tight text-neutral-900 dark:text-white"
+                >BFSI</span
+              >
+              <span class="-mt-1 text-xs font-bold uppercase text-sky-500 dark:text-sky-400"
+                >insights</span
+              >
+            </a>
+            <span
+              class="rounded-md bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-500 dark:text-amber-400"
+            >
+              Admin
+            </span>
+          </div>
+
+          <!-- Desktop Navigation -->
+          <nav class="hidden md:flex items-center gap-1" aria-label="Admin navigation">
+            {
+              navItems.map((item) => (
+                <a
+                  href={item.href}
+                  class:list={[
+                    'px-3 py-1.5 rounded-md text-sm font-medium transition-colors',
+                    item.isPrimary && !isActive(item.section)
+                      ? 'bg-sky-600 text-white hover:bg-sky-500'
+                      : isActive(item.section)
+                        ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-white'
+                        : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800',
+                  ]}
+                  aria-current={isActive(item.section) ? 'page' : undefined}
+                >
+                  {item.label}
+                </a>
+              ))
+            }
+          </nav>
+
+          <!-- Right side: Trigger Build + Theme Toggle -->
+          <div class="flex items-center gap-2">
+            <button
+              id="trigger-build"
+              class="hidden sm:flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+              type="button"
+            >
+              <span class="text-xs">🚀</span>
+              <span>Build</span>
+            </button>
+
+            <!-- Theme Toggle -->
+            <button
+              id="theme-toggle"
+              type="button"
+              class="w-9 h-9 flex items-center justify-center rounded-md text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              aria-label="Toggle theme"
+            >
+              <svg
+                class="w-5 h-5 hidden dark:block"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                ></path>
+              </svg>
+              <svg
+                class="w-5 h-5 block dark:hidden"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                ></path>
+              </svg>
+            </button>
+
+            <!-- Mobile Menu Button -->
+            <button
+              id="mobile-menu-btn"
+              type="button"
+              class="md:hidden w-9 h-9 flex items-center justify-center rounded-md text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              aria-expanded="false"
+              aria-controls="mobile-admin-menu"
+              aria-label="Open admin menu"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 6h16M4 12h16M4 18h16"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Navigation Dropdown -->
+      <div
+        id="mobile-admin-menu"
+        class="hidden md:hidden border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900"
+      >
+        <nav class="mx-auto max-w-7xl px-4 py-3 space-y-1" aria-label="Admin mobile navigation">
+          {
+            navItems.map((item) => (
+              <a
+                href={item.href}
+                class:list={[
+                  'block px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                  isActive(item.section)
+                    ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-white'
+                    : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800',
+                ]}
+                aria-current={isActive(item.section) ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            ))
+          }
+          <button
+            id="mobile-trigger-build"
+            class="w-full mt-2 flex items-center justify-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400"
+            type="button"
+          >
+            <span>🚀</span>
+            <span>Trigger Build</span>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="mx-auto max-w-7xl px-4 py-6">
+      <slot />
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-neutral-200 dark:border-neutral-800 mt-auto">
+      <div
+        class="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400"
+      >
+        <span>BFSI Insights Admin</span>
+        <a href="/" class="hover:text-neutral-700 dark:hover:text-neutral-300 transition-colors">
+          ← Back to site
+        </a>
+      </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+      (function () {
+        // Mobile menu toggle
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        const menu = document.getElementById('mobile-admin-menu');
+
+        menuBtn?.addEventListener('click', () => {
+          const isExpanded = menuBtn.getAttribute('aria-expanded') === 'true';
+          menuBtn.setAttribute('aria-expanded', (!isExpanded).toString());
+          menu?.classList.toggle('hidden');
+        });
+
+        // Theme toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const toggleTheme = () => {
+          const isDark = document.documentElement.classList.contains('dark');
+          const newTheme = isDark ? 'light' : 'dark';
+          document.documentElement.classList.toggle('dark', newTheme === 'dark');
+          localStorage.setItem('theme', newTheme);
+        };
+        themeToggle?.addEventListener('click', toggleTheme);
+
+        // Trigger build (both desktop and mobile)
+        const triggerBuild = async (btn: HTMLButtonElement) => {
+          const originalText = btn.innerHTML;
+          btn.innerHTML = '<span class="text-xs">⏳</span><span>Building...</span>';
+          btn.disabled = true;
+
+          try {
+            const res = await fetch('https://bfsi-insights.onrender.com/api/trigger-build', {
+              method: 'POST',
+            });
+            btn.innerHTML = res.ok
+              ? '<span class="text-xs">✅</span><span>Triggered!</span>'
+              : '<span class="text-xs">❌</span><span>Failed</span>';
+          } catch {
+            btn.innerHTML = '<span class="text-xs">❌</span><span>Failed</span>';
+          }
+
+          setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+          }, 3000);
+        };
+
+        document.getElementById('trigger-build')?.addEventListener('click', function () {
+          triggerBuild(this as HTMLButtonElement);
+        });
+        document.getElementById('mobile-trigger-build')?.addEventListener('click', function () {
+          triggerBuild(this as HTMLButtonElement);
+        });
+      })();
+    </script>
+  </body>
+</html>

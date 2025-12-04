@@ -2,176 +2,157 @@
 // Static page with client-side database interactions
 export const prerender = true;
 
-import Base from '../../layouts/Base.astro';
+import AdminLayout from '../../layouts/AdminLayout.astro';
 ---
 
-<Base title="Manage Prompts">
-  <div class="mx-auto max-w-7xl px-4 py-8">
-    <header class="mb-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-3xl font-bold">📝 Prompt Management</h1>
-          <p class="mt-1 text-neutral-400">Configure and version AI agent prompts</p>
-        </div>
-        <div class="flex gap-3">
-          <button
-            id="add-prompt-btn"
-            class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
-            type="button">➕ New Version</button
-          >
-          <a
-            href="/admin/sources"
-            class="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800"
-            >📡 Sources</a
-          >
-          <a
-            href="/admin/review"
-            class="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800"
-            >← Review</a
-          >
-        </div>
-      </div>
-    </header>
-
-    <div id="stats" class="mb-6 flex gap-4 text-sm"></div>
-
-    <div class="mb-6">
-      <select
-        id="filter-agent"
-        class="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-300"
-      >
-        <option value="">All Agents</option>
-      </select>
+<AdminLayout title="Prompts" activeSection="prompts">
+  <!-- Page Header -->
+  <header class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold">Prompt Management</h1>
+      <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+        Configure and version AI agent prompts
+      </p>
     </div>
-
-    <div
-      id="loading"
-      class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-12 text-center"
+    <button
+      id="add-prompt-btn"
+      class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 self-start sm:self-auto"
+      type="button">+ New Version</button
     >
-      <div class="text-4xl mb-3">⏳</div>
-      <p class="text-neutral-400">Loading prompts...</p>
-    </div>
+  </header>
 
-    <div id="error" class="hidden rounded-xl border border-red-500/20 bg-red-500/5 p-8 text-center">
-      <p class="text-red-300"></p>
-    </div>
+  <div id="stats" class="mb-6 flex gap-4 text-sm"></div>
 
-    <div id="prompts-container" class="hidden space-y-4"></div>
-
-    <div
-      id="prompt-modal"
-      class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4"
+  <div class="mb-6">
+    <select
+      id="filter-agent"
+      class="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-300"
     >
-      <div
-        class="w-full max-w-4xl rounded-xl border border-neutral-700 bg-neutral-900 p-6 max-h-[90vh] overflow-y-auto"
-      >
-        <div class="flex items-center justify-between mb-6">
-          <h2 id="modal-title" class="text-xl font-semibold">New Prompt Version</h2>
-          <button id="close-modal" class="text-neutral-400 hover:text-white text-2xl"
-            >&times;</button
-          >
-        </div>
-
-        <form id="prompt-form" class="space-y-4">
-          <input type="hidden" id="edit-id" />
-          <input type="hidden" id="view-only" />
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-neutral-300 mb-1">Agent *</label>
-              <select
-                id="prompt-agent"
-                required
-                class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
-              >
-                <option value="relevance-filter">Relevance Filter</option>
-                <option value="content-summarizer">Content Summarizer</option>
-                <option value="taxonomy-tagger">Taxonomy Tagger</option>
-                <option value="discovery-filter">Discovery Filter</option>
-                <option value="discovery-relevance">Discovery Relevance</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-neutral-300 mb-1">Version *</label>
-              <input
-                type="text"
-                id="prompt-version"
-                required
-                class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
-                placeholder="v2.0"
-              />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-neutral-300 mb-1">Model</label>
-              <select
-                id="prompt-model"
-                class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
-              >
-                <option value="gpt-4o-mini">GPT-4o-mini</option>
-                <option value="gpt-4o">GPT-4o</option>
-                <option value="gpt-4-turbo">GPT-4-turbo</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-neutral-300 mb-1">Stage</label>
-              <select
-                id="prompt-stage"
-                class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
-              >
-                <option value="discovery">Discovery</option>
-                <option value="enrichment">Enrichment</option>
-                <option value="evaluation">Evaluation</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-neutral-300 mb-1">Prompt Text *</label>
-            <textarea
-              id="prompt-text"
-              required
-              rows="12"
-              class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white font-mono text-sm"
-              placeholder="You are an expert..."></textarea>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-neutral-300 mb-1">Notes</label>
-            <input
-              type="text"
-              id="prompt-notes"
-              class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
-              placeholder="Changes in this version..."
-            />
-          </div>
-
-          <label class="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" id="prompt-current" class="rounded border-neutral-600" />
-            <span class="text-sm text-neutral-300">Set as current version</span>
-          </label>
-
-          <div class="flex gap-3 pt-4">
-            <button
-              type="submit"
-              id="submit-btn"
-              class="rounded-lg bg-sky-600 px-6 py-2 font-medium text-white hover:bg-sky-500"
-              >Save Prompt</button
-            >
-            <button
-              type="button"
-              id="cancel-btn"
-              class="rounded-lg border border-neutral-700 px-6 py-2 font-medium text-neutral-300 hover:bg-neutral-800"
-              >Cancel</button
-            >
-          </div>
-        </form>
-      </div>
-    </div>
+      <option value="">All Agents</option>
+    </select>
   </div>
 
+  <div id="loading" class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-12 text-center">
+    <div class="text-4xl mb-3">⏳</div>
+    <p class="text-neutral-400">Loading prompts...</p>
+  </div>
+
+  <div id="error" class="hidden rounded-xl border border-red-500/20 bg-red-500/5 p-8 text-center">
+    <p class="text-red-300"></p>
+  </div>
+
+  <div id="prompts-container" class="hidden space-y-4"></div>
+
+  <div
+    id="prompt-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4"
+  >
+    <div
+      class="w-full max-w-4xl rounded-xl border border-neutral-700 bg-neutral-900 p-6 max-h-[90vh] overflow-y-auto"
+    >
+      <div class="flex items-center justify-between mb-6">
+        <h2 id="modal-title" class="text-xl font-semibold">New Prompt Version</h2>
+        <button id="close-modal" class="text-neutral-400 hover:text-white text-2xl">&times;</button>
+      </div>
+
+      <form id="prompt-form" class="space-y-4">
+        <input type="hidden" id="edit-id" />
+        <input type="hidden" id="view-only" />
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-neutral-300 mb-1">Agent *</label>
+            <select
+              id="prompt-agent"
+              required
+              class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
+            >
+              <option value="relevance-filter">Relevance Filter</option>
+              <option value="content-summarizer">Content Summarizer</option>
+              <option value="taxonomy-tagger">Taxonomy Tagger</option>
+              <option value="discovery-filter">Discovery Filter</option>
+              <option value="discovery-relevance">Discovery Relevance</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-neutral-300 mb-1">Version *</label>
+            <input
+              type="text"
+              id="prompt-version"
+              required
+              class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
+              placeholder="v2.0"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-neutral-300 mb-1">Model</label>
+            <select
+              id="prompt-model"
+              class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
+            >
+              <option value="gpt-4o-mini">GPT-4o-mini</option>
+              <option value="gpt-4o">GPT-4o</option>
+              <option value="gpt-4-turbo">GPT-4-turbo</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-neutral-300 mb-1">Stage</label>
+            <select
+              id="prompt-stage"
+              class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
+            >
+              <option value="discovery">Discovery</option>
+              <option value="enrichment">Enrichment</option>
+              <option value="evaluation">Evaluation</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-neutral-300 mb-1">Prompt Text *</label>
+          <textarea
+            id="prompt-text"
+            required
+            rows="12"
+            class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white font-mono text-sm"
+            placeholder="You are an expert..."></textarea>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-neutral-300 mb-1">Notes</label>
+          <input
+            type="text"
+            id="prompt-notes"
+            class="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
+            placeholder="Changes in this version..."
+          />
+        </div>
+
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="prompt-current" class="rounded border-neutral-600" />
+          <span class="text-sm text-neutral-300">Set as current version</span>
+        </label>
+
+        <div class="flex gap-3 pt-4">
+          <button
+            type="submit"
+            id="submit-btn"
+            class="rounded-lg bg-sky-600 px-6 py-2 font-medium text-white hover:bg-sky-500"
+            >Save Prompt</button
+          >
+          <button
+            type="button"
+            id="cancel-btn"
+            class="rounded-lg border border-neutral-700 px-6 py-2 font-medium text-neutral-300 hover:bg-neutral-800"
+            >Cancel</button
+          >
+        </div>
+      </form>
+    </div>
+  </div>
   <script>
     import { createClient } from '@supabase/supabase-js';
 
@@ -422,4 +403,4 @@ import Base from '../../layouts/Base.astro';
 
     init();
   </script>
-</Base>
+</AdminLayout>

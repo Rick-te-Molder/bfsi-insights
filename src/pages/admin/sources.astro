@@ -2,116 +2,170 @@
 // Static page with client-side database interactions
 export const prerender = true;
 
-import Base from '../../layouts/Base.astro';
+import AdminLayout from '../../layouts/AdminLayout.astro';
 import SourceFormModal from '../../components/admin/SourceFormModal.astro';
 ---
 
-<Base title="Manage Sources">
-  <div class="mx-auto max-w-7xl px-4 py-8">
-    <!-- Header -->
-    <header class="mb-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-3xl font-bold">📡 Source Management</h1>
-          <p class="mt-1 text-neutral-400">Configure discovery sources and priorities</p>
-        </div>
-        <div class="flex gap-3">
+<AdminLayout title="Sources" activeSection="sources">
+  <!-- Page Header -->
+  <header class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold">Source Management</h1>
+      <p class="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+        Configure discovery sources and priorities
+      </p>
+    </div>
+    <button
+      id="add-source-btn"
+      class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 transition-colors self-start sm:self-auto"
+      type="button"
+    >
+      + Add Source
+    </button>
+  </header>
+
+  <!-- Stats -->
+  <div id="stats" class="mb-6 flex flex-wrap gap-3 text-sm"></div>
+
+  <!-- Display Panel (Linear-style) -->
+  <div
+    class="mb-6 rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/60 p-4"
+  >
+    <div class="flex items-center gap-2 mb-4">
+      <svg class="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+        ></path>
+      </svg>
+      <span class="text-sm font-medium text-neutral-700 dark:text-neutral-300">Display</span>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <!-- Grouping -->
+      <div>
+        <label class="block text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">Grouping</label>
+        <select
+          id="grouping"
+          class="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-sm text-neutral-900 dark:text-neutral-200"
+        >
+          <option value="">No grouping</option>
+          <option value="category">Category</option>
+          <option value="tier">Tier</option>
+        </select>
+      </div>
+
+      <!-- Ordering -->
+      <div>
+        <label class="block text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">Ordering</label>
+        <div class="flex gap-1">
+          <select
+            id="ordering"
+            class="flex-1 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-sm text-neutral-900 dark:text-neutral-200"
+          >
+            <option value="sort_order">Priority</option>
+            <option value="name">Name</option>
+            <option value="category">Category</option>
+            <option value="tier">Tier</option>
+            <option value="enabled">Enabled</option>
+            <option value="created_at">Created</option>
+            <option value="updated_at">Updated</option>
+          </select>
           <button
-            id="add-source-btn"
-            class="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 transition-colors"
+            id="order-direction"
             type="button"
+            class="px-2 rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-700"
+            title="Toggle sort direction"
+            data-direction="asc"
           >
-            ➕ Add Source
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
+            </svg>
           </button>
-          <a
-            href="/admin/prompts"
-            class="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800 transition-colors"
-          >
-            📝 Prompts
-          </a>
-          <a
-            href="/admin/review"
-            class="rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800 transition-colors"
-          >
-            ← Review Queue
-          </a>
         </div>
       </div>
-    </header>
 
-    <!-- Stats -->
-    <div id="stats" class="mb-6 flex gap-4 text-sm"></div>
+      <!-- Filter: Category -->
+      <div>
+        <label class="block text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">Category</label>
+        <select
+          id="filter-category"
+          class="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-sm text-neutral-900 dark:text-neutral-200"
+        >
+          <option value="">All Categories</option>
+          <option value="strategy-consulting">Strategy Consulting</option>
+          <option value="big4">Big 4</option>
+          <option value="vendor">Vendors</option>
+          <option value="research">Research</option>
+          <option value="regulator">Regulators</option>
+          <option value="publication">Publication</option>
+        </select>
+      </div>
 
-    <!-- Filters -->
-    <div class="mb-6 flex flex-wrap gap-3">
-      <select
-        id="filter-category"
-        class="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-300"
-      >
-        <option value="">All Categories</option>
-        <option value="financial-media">Financial Media</option>
-        <option value="ai-thought-leader">AI Thought Leaders</option>
-        <option value="strategy-consulting">Strategy Consulting</option>
-        <option value="big4">Big 4</option>
-        <option value="consulting">Consulting</option>
-        <option value="vendor">Vendors</option>
-        <option value="research">Research</option>
-        <option value="regulator">Regulators</option>
-        <option value="publication">Publication</option>
-      </select>
-      <select
-        id="filter-tier"
-        class="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-300"
-      >
-        <option value="">All Tiers</option>
-        <option value="standard">Standard</option>
-        <option value="premium">Premium</option>
-      </select>
-      <select
-        id="filter-enabled"
-        class="rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-neutral-300"
-      >
-        <option value="">All</option>
-        <option value="true">Enabled</option>
-        <option value="false">Disabled</option>
-      </select>
+      <!-- Filter: Tier & Enabled -->
+      <div class="flex gap-2">
+        <div class="flex-1">
+          <label class="block text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">Tier</label>
+          <select
+            id="filter-tier"
+            class="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-sm text-neutral-900 dark:text-neutral-200"
+          >
+            <option value="">All</option>
+            <option value="standard">Standard</option>
+            <option value="premium">Premium</option>
+          </select>
+        </div>
+        <div class="flex-1">
+          <label class="block text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">Enabled</label>
+          <select
+            id="filter-enabled"
+            class="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-sm text-neutral-900 dark:text-neutral-200"
+          >
+            <option value="">All</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+      </div>
     </div>
-
-    <!-- Loading State -->
-    <div
-      id="loading"
-      class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-12 text-center"
-    >
-      <div class="text-4xl mb-3">⏳</div>
-      <p class="text-neutral-400">Loading sources...</p>
-    </div>
-
-    <!-- Error State -->
-    <div id="error" class="hidden rounded-xl border border-red-500/20 bg-red-500/5 p-8 text-center">
-      <p class="text-red-300"></p>
-    </div>
-
-    <!-- Sources Table -->
-    <div id="sources-table" class="hidden overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-neutral-700 text-left text-neutral-400">
-            <th class="pb-3 pr-4 font-medium">Priority</th>
-            <th class="pb-3 pr-4 font-medium">Name</th>
-            <th class="pb-3 pr-4 font-medium">Category</th>
-            <th class="pb-3 pr-4 font-medium">Tier</th>
-            <th class="pb-3 pr-4 font-medium">Feed</th>
-            <th class="pb-3 pr-4 font-medium">Enabled</th>
-            <th class="pb-3 font-medium">Actions</th>
-          </tr>
-        </thead>
-        <tbody id="sources-body" class="divide-y divide-neutral-800"></tbody>
-      </table>
-    </div>
-
-    <SourceFormModal />
   </div>
 
+  <!-- Loading State -->
+  <div id="loading" class="rounded-xl border border-neutral-800 bg-neutral-900/60 p-12 text-center">
+    <div class="text-4xl mb-3">⏳</div>
+    <p class="text-neutral-400">Loading sources...</p>
+  </div>
+
+  <!-- Error State -->
+  <div id="error" class="hidden rounded-xl border border-red-500/20 bg-red-500/5 p-8 text-center">
+    <p class="text-red-300"></p>
+  </div>
+
+  <!-- Sources Table -->
+  <div id="sources-table" class="hidden overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-neutral-700 text-left text-neutral-400">
+          <th class="pb-3 pr-4 font-medium">Priority</th>
+          <th class="pb-3 pr-4 font-medium">Name</th>
+          <th class="pb-3 pr-4 font-medium">Category</th>
+          <th class="pb-3 pr-4 font-medium">Tier</th>
+          <th class="pb-3 pr-4 font-medium">Feed</th>
+          <th class="pb-3 pr-4 font-medium">Enabled</th>
+          <th class="pb-3 font-medium">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="sources-body" class="divide-y divide-neutral-800"></tbody>
+    </table>
+  </div>
+
+  <SourceFormModal />
   <script>
     import { createClient } from '@supabase/supabase-js';
 
@@ -132,8 +186,12 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
     const filterCategory = document.getElementById('filter-category') as HTMLSelectElement;
     const filterTier = document.getElementById('filter-tier') as HTMLSelectElement;
     const filterEnabled = document.getElementById('filter-enabled') as HTMLSelectElement;
+    const groupingSelect = document.getElementById('grouping') as HTMLSelectElement;
+    const orderingSelect = document.getElementById('ordering') as HTMLSelectElement;
+    const orderDirectionBtn = document.getElementById('order-direction') as HTMLButtonElement;
 
     let sources: any[] = [];
+    let orderDirection: 'asc' | 'desc' = 'asc';
 
     // Check authentication
     async function checkAuth() {
@@ -197,9 +255,69 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
         filtered = filtered.filter((s) => String(s.enabled) === filterEnabled.value);
       }
 
-      sourcesBody!.innerHTML = filtered
-        .map(
-          (source) => `
+      // Apply ordering
+      const orderField = orderingSelect?.value || 'sort_order';
+      filtered.sort((a, b) => {
+        let aVal = a[orderField];
+        let bVal = b[orderField];
+
+        // Handle nulls
+        if (aVal == null) aVal = '';
+        if (bVal == null) bVal = '';
+
+        // String comparison
+        if (typeof aVal === 'string') {
+          aVal = aVal.toLowerCase();
+          bVal = (bVal as string).toLowerCase();
+        }
+
+        let result = 0;
+        if (aVal < bVal) result = -1;
+        else if (aVal > bVal) result = 1;
+
+        return orderDirection === 'desc' ? -result : result;
+      });
+
+      // Apply grouping
+      const groupField = groupingSelect?.value;
+      if (groupField) {
+        const groups = new Map<string, any[]>();
+        filtered.forEach((s) => {
+          const key = s[groupField] || 'Other';
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key)!.push(s);
+        });
+
+        let html = '';
+        groups.forEach((items, groupName) => {
+          html += `
+            <tr class="bg-neutral-800/30">
+              <td colspan="7" class="py-2 px-4 font-medium text-neutral-300 text-sm">
+                ${groupName} (${items.length})
+              </td>
+            </tr>
+          `;
+          html += items.map((source) => renderSourceRow(source)).join('');
+        });
+        sourcesBody!.innerHTML = html;
+      } else {
+        sourcesBody!.innerHTML = filtered.map((source) => renderSourceRow(source)).join('');
+      }
+
+      // Bind event handlers
+      document.querySelectorAll('.toggle-enabled').forEach((btn) => {
+        btn.addEventListener('click', handleToggleEnabled);
+      });
+      document.querySelectorAll('.edit-btn').forEach((btn) => {
+        btn.addEventListener('click', handleEdit);
+      });
+      document.querySelectorAll('.delete-btn').forEach((btn) => {
+        btn.addEventListener('click', handleDelete);
+      });
+    }
+
+    function renderSourceRow(source: any): string {
+      return `
         <tr class="hover:bg-neutral-800/50">
           <td class="py-3 pr-4">
             <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-neutral-700 text-xs font-medium">
@@ -256,20 +374,7 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
             </button>
           </td>
         </tr>
-      `,
-        )
-        .join('');
-
-      // Bind event handlers
-      document.querySelectorAll('.toggle-enabled').forEach((btn) => {
-        btn.addEventListener('click', handleToggleEnabled);
-      });
-      document.querySelectorAll('.edit-btn').forEach((btn) => {
-        btn.addEventListener('click', handleEdit);
-      });
-      document.querySelectorAll('.delete-btn').forEach((btn) => {
-        btn.addEventListener('click', handleDelete);
-      });
+      `;
     }
 
     function getCategoryColor(category: string): string {
@@ -429,6 +534,25 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
     filterTier?.addEventListener('change', renderSources);
     filterEnabled?.addEventListener('change', renderSources);
 
+    // Grouping and ordering handlers
+    groupingSelect?.addEventListener('change', renderSources);
+    orderingSelect?.addEventListener('change', renderSources);
+
+    // Order direction toggle
+    orderDirectionBtn?.addEventListener('click', () => {
+      orderDirection = orderDirection === 'asc' ? 'desc' : 'asc';
+      orderDirectionBtn.dataset.direction = orderDirection;
+      // Update icon
+      const svg = orderDirectionBtn.querySelector('svg');
+      if (svg) {
+        svg.innerHTML =
+          orderDirection === 'asc'
+            ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>'
+            : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4"></path>';
+      }
+      renderSources();
+    });
+
     function showError(message: string) {
       loading!.classList.add('hidden');
       errorEl!.classList.remove('hidden');
@@ -444,4 +568,4 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
 
     init();
   </script>
-</Base>
+</AdminLayout>
