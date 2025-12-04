@@ -38,6 +38,14 @@ const { data: processTaxonomy } = await supabase
   .select('code, name, level, parent_code, sort_order')
   .order('sort_order');
 
+// Load geography lookup
+const { data: geographyData } = await supabase
+  .from('kb_geography')
+  .select('code, name, sort_order')
+  .order('sort_order');
+
+// geographyLookup used when displaying geography names in filter chips
+
 // Build hierarchical structure for industry
 type TaxonomyItem = {
   code: string;
@@ -92,6 +100,25 @@ publications.forEach((p) => {
   });
 });
 
+// Count geography usage
+const countByGeography = new Map<string, number>();
+publications.forEach((p) => {
+  if (p.geography) {
+    countByGeography.set(p.geography, (countByGeography.get(p.geography) || 0) + 1);
+  }
+});
+
+// Build geography filter options with counts, sorted by sort_order
+const geographyFilterOptions = (geographyData || [])
+  .filter((g) => countByGeography.has(g.code))
+  .map((g) => ({
+    code: g.code,
+    name: g.name,
+    count: countByGeography.get(g.code) || 0,
+    sort_order: g.sort_order,
+  }))
+  .sort((a, b) => a.sort_order - b.sort_order);
+
 // Add counts to hierarchy
 const addCounts = (items: TaxonomyItem[], countMap: Map<string, number>): TaxonomyItem[] => {
   return items.map((item) => ({
@@ -105,8 +132,10 @@ const industryWithCounts = addCounts(industryHierarchy, countByIndustry);
 const processWithCounts = addCounts(processHierarchy, countByProcess);
 
 const filters = filterConfig || [];
-// Exclude industry from flat filters (we'll render it hierarchically)
-const flatFilters = filters.filter((filter) => !['industry'].includes(filter.column_name));
+// Exclude industry and geography from flat filters (we render them separately)
+const flatFilters = filters.filter(
+  (filter) => !['industry', 'geography'].includes(filter.column_name),
+);
 
 // Build filter value lists + counts (handles both single values and arrays)
 const createValuesWithCounts = (field: keyof Publication) => {
@@ -534,6 +563,54 @@ const expandItemThumb = (t: string | undefined) => {
                   ))
                 ) : (
                   <p class="text-xs text-neutral-500 italic">No process tags yet</p>
+                )
+              }
+            </div>
+          </details>
+
+          <!-- Geography Filter -->
+          <details
+            class="filter-group border border-neutral-800 rounded-lg overflow-hidden"
+            data-filter-key="geography"
+          >
+            <summary
+              class="flex items-center justify-between px-4 py-3 cursor-pointer bg-neutral-900/50 hover:bg-neutral-800/50 transition-colors"
+            >
+              <span class="text-sm font-medium text-neutral-200">Geography</span>
+              <svg
+                class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </summary>
+            <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
+              {
+                geographyFilterOptions.length > 0 ? (
+                  <div class="flex flex-wrap gap-2">
+                    {geographyFilterOptions.map((g) => (
+                      <label class="filter-checkbox cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name="filter-geography"
+                          value={g.code}
+                          class="sr-only peer"
+                        />
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border border-neutral-700 bg-neutral-900 text-neutral-300 transition-all peer-checked:border-sky-500 peer-checked:bg-sky-500/10 peer-checked:text-sky-300 hover:border-neutral-600 hover:bg-neutral-800">
+                          {g.name}
+                          <span class="text-xs text-neutral-500">{g.count}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <p class="text-xs text-neutral-500 italic">No geography tags yet</p>
                 )
               }
             </div>
