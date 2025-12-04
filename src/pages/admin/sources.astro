@@ -165,7 +165,7 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
           <th class="pb-3 pr-4 font-medium">Name</th>
           <th class="pb-3 pr-4 font-medium">Category</th>
           <th class="pb-3 pr-4 font-medium">Tier</th>
-          <th class="pb-3 pr-4 font-medium">Feed</th>
+          <th class="pb-3 pr-4 font-medium">Discovery</th>
           <th class="pb-3 pr-4 font-medium">Enabled</th>
           <th class="pb-3 font-medium">Actions</th>
         </tr>
@@ -352,15 +352,7 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
             </span>
           </td>
           <td class="py-3 pr-4">
-            ${
-              source.rss_feed
-                ? '<span title="RSS Feed configured" class="cursor-help">📡</span>'
-                : source.sitemap_url
-                  ? '<span title="Sitemap configured" class="cursor-help">🗺️</span>'
-                  : source.scraper_config
-                    ? '<span title="Web scraper configured" class="cursor-help">🤖</span>'
-                    : '<span title="No feed configured" class="cursor-help">❌</span>'
-            }
+            ${getDiscoveryStatus(source)}
           </td>
           <td class="py-3 pr-4">
             <button
@@ -403,6 +395,47 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
         government_body: 'bg-slate-500/20 text-slate-300',
       };
       return colors[category] || 'bg-neutral-700 text-neutral-300';
+    }
+
+    function getDiscoveryStatus(source: any): string {
+      const hasRss = !!source.rss_feed;
+      const hasSitemap = !!source.sitemap_url;
+      const hasScraper = !!source.scraper_config;
+      const hasAnyConfig = hasRss || hasSitemap || hasScraper;
+      const isPremium = source.tier === 'premium';
+
+      if (!hasAnyConfig) {
+        return `
+          <span class="inline-flex items-center gap-1 text-xs text-red-400" title="No feed configured - add RSS, sitemap, or scraper">
+            <span class="w-2 h-2 rounded-full bg-red-500"></span>
+            Needs config
+          </span>
+        `;
+      }
+
+      if (isPremium) {
+        // Has config but is premium - will only run with --premium flag
+        const configs = [hasRss && '📡', hasSitemap && '🗺️', hasScraper && '🤖']
+          .filter(Boolean)
+          .join('');
+        return `
+          <span class="inline-flex items-center gap-1 text-xs text-amber-400" title="Premium source - runs with --premium flag only">
+            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+            ${configs} Premium
+          </span>
+        `;
+      }
+
+      // Standard source with config - will be discovered
+      const configs = [hasRss && '📡', hasSitemap && '🗺️', hasScraper && '🤖']
+        .filter(Boolean)
+        .join('');
+      return `
+        <span class="inline-flex items-center gap-1 text-xs text-emerald-400" title="Active - will be discovered">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          ${configs} Active
+        </span>
+      `;
     }
 
     // Toggle enabled
