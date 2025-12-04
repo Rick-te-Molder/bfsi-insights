@@ -74,13 +74,13 @@ COMMENT ON COLUMN kb_source.channel_slug IS 'Strategic channel this source belon
 -- New values: regulator, central_bank, vendor, research, media_outlet, consulting, 
 --             standards_body, academic, government_body
 
--- First, migrate existing values to new taxonomy
+-- Drop old constraint FIRST to allow updates
+ALTER TABLE kb_source DROP CONSTRAINT IF EXISTS ref_source_category_check;
+
+-- Now migrate existing values to new taxonomy
 UPDATE kb_source SET category = 'consulting' WHERE category = 'big4';
 UPDATE kb_source SET category = 'consulting' WHERE category = 'strategy-consulting';
 UPDATE kb_source SET category = 'media_outlet' WHERE category = 'publication';
-
--- Drop old constraint if exists and add new one
-ALTER TABLE kb_source DROP CONSTRAINT IF EXISTS ref_source_category_check;
 ALTER TABLE kb_source ADD CONSTRAINT kb_source_category_check 
   CHECK (category IN (
     'regulator',        -- Supervisory authorities (EBA, ESMA, AFM, FCA, etc.)
