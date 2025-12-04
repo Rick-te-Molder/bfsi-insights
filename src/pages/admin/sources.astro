@@ -43,7 +43,7 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
       <span class="text-sm font-medium text-neutral-700 dark:text-neutral-300">Display</span>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
       <!-- Grouping -->
       <div>
         <label class="block text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">Grouping</label>
@@ -52,6 +52,7 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
           class="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-sm text-neutral-900 dark:text-neutral-200"
         >
           <option value="">No grouping</option>
+          <option value="channel_slug">Channel</option>
           <option value="category">Category</option>
           <option value="tier">Tier</option>
         </select>
@@ -67,6 +68,7 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
           >
             <option value="sort_order">Priority</option>
             <option value="name">Name</option>
+            <option value="channel_slug">Channel</option>
             <option value="category">Category</option>
             <option value="tier">Tier</option>
             <option value="enabled">Enabled</option>
@@ -91,6 +93,23 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
         </div>
       </div>
 
+      <!-- Filter: Channel -->
+      <div>
+        <label class="block text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">Channel</label>
+        <select
+          id="filter-channel"
+          class="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-sm text-neutral-900 dark:text-neutral-200"
+        >
+          <option value="">All Channels</option>
+          <option value="regulatory_intelligence">⚖️ Regulatory</option>
+          <option value="prudential_statistics">📊 Statistics</option>
+          <option value="market_disclosures">📈 Disclosures</option>
+          <option value="vendor_innovation">🚀 Vendor</option>
+          <option value="academic_research">🎓 Academic</option>
+          <option value="open_datasets">📦 Datasets</option>
+        </select>
+      </div>
+
       <!-- Filter: Category -->
       <div>
         <label class="block text-xs text-neutral-500 dark:text-neutral-400 mb-1.5">Category</label>
@@ -99,12 +118,15 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
           class="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-sm text-neutral-900 dark:text-neutral-200"
         >
           <option value="">All Categories</option>
-          <option value="strategy-consulting">Strategy Consulting</option>
-          <option value="big4">Big 4</option>
-          <option value="vendor">Vendors</option>
+          <option value="regulator">Regulator</option>
+          <option value="central_bank">Central Bank</option>
+          <option value="vendor">Vendor</option>
           <option value="research">Research</option>
-          <option value="regulator">Regulators</option>
-          <option value="publication">Publication</option>
+          <option value="consulting">Consulting</option>
+          <option value="media_outlet">Media Outlet</option>
+          <option value="standards_body">Standards Body</option>
+          <option value="academic">Academic</option>
+          <option value="government_body">Government Body</option>
         </select>
       </div>
 
@@ -183,6 +205,7 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
     const modal = document.getElementById('source-modal');
     const modalTitle = document.getElementById('modal-title');
     const form = document.getElementById('source-form') as HTMLFormElement;
+    const filterChannel = document.getElementById('filter-channel') as HTMLSelectElement;
     const filterCategory = document.getElementById('filter-category') as HTMLSelectElement;
     const filterTier = document.getElementById('filter-tier') as HTMLSelectElement;
     const filterEnabled = document.getElementById('filter-enabled') as HTMLSelectElement;
@@ -245,6 +268,9 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
       let filtered = [...sources];
 
       // Apply filters
+      if (filterChannel.value) {
+        filtered = filtered.filter((s) => s.channel_slug === filterChannel.value);
+      }
       if (filterCategory.value) {
         filtered = filtered.filter((s) => s.category === filterCategory.value);
       }
@@ -379,15 +405,15 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
 
     function getCategoryColor(category: string): string {
       const colors: Record<string, string> = {
-        'financial-media': 'bg-blue-500/20 text-blue-300',
-        'ai-thought-leader': 'bg-purple-500/20 text-purple-300',
-        'strategy-consulting': 'bg-emerald-500/20 text-emerald-300',
-        big4: 'bg-emerald-500/20 text-emerald-300',
-        consulting: 'bg-teal-500/20 text-teal-300',
+        regulator: 'bg-red-500/20 text-red-300',
+        central_bank: 'bg-amber-500/20 text-amber-300',
         vendor: 'bg-orange-500/20 text-orange-300',
         research: 'bg-pink-500/20 text-pink-300',
-        regulator: 'bg-red-500/20 text-red-300',
-        publication: 'bg-sky-500/20 text-sky-300',
+        consulting: 'bg-teal-500/20 text-teal-300',
+        media_outlet: 'bg-sky-500/20 text-sky-300',
+        standards_body: 'bg-purple-500/20 text-purple-300',
+        academic: 'bg-indigo-500/20 text-indigo-300',
+        government_body: 'bg-slate-500/20 text-slate-300',
       };
       return colors[category] || 'bg-neutral-700 text-neutral-300';
     }
@@ -426,8 +452,10 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
       (document.getElementById('source-priority') as HTMLSelectElement).value = String(
         Math.ceil((source.sort_order || 100) / 100),
       );
+      (document.getElementById('source-channel') as HTMLSelectElement).value =
+        source.channel_slug || 'vendor_innovation';
       (document.getElementById('source-category') as HTMLSelectElement).value =
-        source.category || 'publication';
+        source.category || 'vendor';
       (document.getElementById('source-tier') as HTMLSelectElement).value =
         source.tier || 'standard';
       (document.getElementById('source-description') as HTMLTextAreaElement).value =
@@ -496,6 +524,7 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
         slug: (document.getElementById('source-slug') as HTMLInputElement).value,
         domain: (document.getElementById('source-domain') as HTMLInputElement).value,
         sort_order: priority * 100,
+        channel_slug: (document.getElementById('source-channel') as HTMLSelectElement).value,
         category: (document.getElementById('source-category') as HTMLSelectElement).value,
         tier: (document.getElementById('source-tier') as HTMLSelectElement).value,
         description:
@@ -530,6 +559,7 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
     });
 
     // Filter handlers
+    filterChannel?.addEventListener('change', renderSources);
     filterCategory?.addEventListener('change', renderSources);
     filterTier?.addEventListener('change', renderSources);
     filterEnabled?.addEventListener('change', renderSources);
