@@ -97,14 +97,15 @@ Four distinct concepts structure content metadata:
 
 Strategic groupings that define why content exists in the platform:
 
-| Slug                      | Name                          | Purpose                                       |
-| ------------------------- | ----------------------------- | --------------------------------------------- |
-| `regulatory_intelligence` | Regulatory Intelligence       | Official regulatory publications, guidelines  |
-| `prudential_statistics`   | Prudential & Risk Statistics  | Statistical data from central banks, BIS, IMF |
-| `market_disclosures`      | Market Disclosures            | Annual reports, 10-K filings, IR content      |
-| `vendor_innovation`       | Vendor & Innovation Insights  | Product updates, case studies from vendors    |
-| `academic_research`       | Academic & Technical Research | Papers from arXiv, SSRN, universities         |
-| `open_datasets`           | Open Datasets & Indicators    | Structured data from Open Banking, CBS, etc.  |
+| Slug                      | Name                          | Purpose                                          |
+| ------------------------- | ----------------------------- | ------------------------------------------------ |
+| `regulatory_intelligence` | Regulatory Intelligence       | Official regulatory publications, guidelines     |
+| `prudential_statistics`   | Prudential & Risk Statistics  | Statistical data from central banks, BIS, IMF    |
+| `market_disclosures`      | Market Disclosures            | Annual reports, 10-K filings, IR content         |
+| `industry_insights`       | Industry Insights             | Thought leadership from consulting & trade media |
+| `vendor_innovation`       | Vendor & Innovation Insights  | Product updates, case studies from tech vendors  |
+| `academic_research`       | Academic & Technical Research | Papers from arXiv, SSRN, universities            |
+| `open_datasets`           | Open Datasets & Indicators    | Structured data from Open Banking, CBS, etc.     |
 
 ### Source Categories (kb_source.category)
 

@@ -101,12 +101,7 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
           class="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-sm text-neutral-900 dark:text-neutral-200"
         >
           <option value="">All Channels</option>
-          <option value="regulatory_intelligence">⚖️ Regulatory</option>
-          <option value="prudential_statistics">📊 Statistics</option>
-          <option value="market_disclosures">📈 Disclosures</option>
-          <option value="vendor_innovation">🚀 Vendor</option>
-          <option value="academic_research">🎓 Academic</option>
-          <option value="open_datasets">📦 Datasets</option>
+          <!-- Populated dynamically from kb_channel -->
         </select>
       </div>
 
@@ -118,15 +113,7 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
           class="w-full rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-sm text-neutral-900 dark:text-neutral-200"
         >
           <option value="">All Categories</option>
-          <option value="regulator">Regulator</option>
-          <option value="central_bank">Central Bank</option>
-          <option value="vendor">Vendor</option>
-          <option value="research">Research</option>
-          <option value="consulting">Consulting</option>
-          <option value="media_outlet">Media Outlet</option>
-          <option value="standards_body">Standards Body</option>
-          <option value="academic">Academic</option>
-          <option value="government_body">Government Body</option>
+          <!-- Populated dynamically from kb_category -->
         </select>
       </div>
 
@@ -589,9 +576,49 @@ import SourceFormModal from '../../components/admin/SourceFormModal.astro';
       errorEl!.querySelector('p')!.textContent = message;
     }
 
+    // Load channels and categories from database and populate dropdowns
+    async function loadTaxonomies() {
+      // Load channels
+      const { data: channels } = await supabase
+        .from('kb_channel')
+        .select('slug, name, icon')
+        .order('sort_order', { ascending: true });
+
+      if (channels) {
+        const channelOptions = channels
+          .map((c) => `<option value="${c.slug}">${c.icon} ${c.name}</option>`)
+          .join('');
+        filterChannel.innerHTML = `<option value="">All Channels</option>${channelOptions}`;
+
+        const formChannelSelect = document.getElementById('source-channel');
+        if (formChannelSelect) {
+          formChannelSelect.innerHTML = channelOptions;
+        }
+      }
+
+      // Load categories
+      const { data: categories } = await supabase
+        .from('kb_category')
+        .select('slug, name')
+        .order('sort_order', { ascending: true });
+
+      if (categories) {
+        const categoryOptions = categories
+          .map((c) => `<option value="${c.slug}">${c.name}</option>`)
+          .join('');
+        filterCategory.innerHTML = `<option value="">All Categories</option>${categoryOptions}`;
+
+        const formCategorySelect = document.getElementById('source-category');
+        if (formCategorySelect) {
+          formCategorySelect.innerHTML = categoryOptions;
+        }
+      }
+    }
+
     // Initialize
     async function init() {
       if (await checkAuth()) {
+        await loadTaxonomies();
         loadSources();
       }
     }
