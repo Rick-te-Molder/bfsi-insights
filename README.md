@@ -421,6 +421,7 @@ node services/agent-api/src/cli.js tag --limit=5          # Tag only
 node services/agent-api/src/cli.js thumbnail --limit=5    # Thumbnails only
 
 node services/agent-api/src/cli.js process-queue          # Process manual submissions
+node services/agent-api/src/cli.js queue-health           # Monitor queue health & backlog
 
 # Evals
 node services/agent-api/src/cli.js eval --agent=relevance-filter --type=golden
