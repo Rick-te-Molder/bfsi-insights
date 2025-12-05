@@ -100,7 +100,7 @@ async function loadTaxonomies() {
       .select('code, name, level, parent_code')
       .order('level')
       .order('name'),
-    supabase.from('bfsi_geography').select('code, name').order('name'),
+    supabase.from('kb_geography').select('code, name').order('sort_order'),
     supabase.from('ag_use_case').select('code, name').order('name'),
     supabase.from('ag_capability').select('code, name').order('name'),
     supabase.from('regulator').select('code, name').order('name'),
