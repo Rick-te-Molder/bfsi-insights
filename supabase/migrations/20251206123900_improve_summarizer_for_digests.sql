@@ -57,27 +57,31 @@ For an EBA email alert:
 1. EXTRACT VERIFIABLE INSIGHTS
    - Identify specific claims with supporting evidence
    - Include exact figures, percentages, and amounts
-   - Note the source of each claim
+   - Note the source of each claim (author, research, case study)
    - Mark whether each insight is independently verifiable
    - For digests: each item is a separate insight
 
 2. EXPLAIN BFSI RELEVANCE
    - Why does this matter for financial services?
-   - Which sector is most impacted? (Banking, Insurance, Asset Management)
+   - Which sector is most impacted? Be specific:
+     * L1: Banking, Insurance, or Financial Services
+     * L2: Retail Banking, Corporate Banking, Life Insurance, General Insurance, Asset Management
+     * L3: Mortgages, Cards, Pensions, Claims Processing, etc.
    - What should BFSI professionals DO with this information?
 
 3. IDENTIFY ENTITIES
-   - BFSI organisations mentioned (banks, insurers, regulators)
+   - BFSI organisations mentioned (banks, insurers, asset managers, regulators)
    - Technology vendors and AI providers
    - Include context: how are they mentioned?
 
 4. AUTHOR AUTHORITY
    - Who wrote this and why should readers trust them?
+   - Include role, affiliation, and relevant credentials
    - For regulators: note official capacity
 
 5. FOR ACADEMIC PAPERS
    - Note if peer-reviewed
-   - Include key citations: "Author (Year). Title."
+   - Include key citations in format: "Author (Year). Title."
 
 ## METADATA EXTRACTION
 
@@ -87,8 +91,9 @@ For an EBA email alert:
 
 ## QUALITY STANDARDS
 
+Follow the writing rules provided. Key principles:
 - Use active voice and short sentences (<25 words)
-- Be concrete: include specific numbers
+- Be concrete: include specific numbers, not vague quantities
 - Front-load key information
 - Every claim needs evidence
 - No marketing language or hype
