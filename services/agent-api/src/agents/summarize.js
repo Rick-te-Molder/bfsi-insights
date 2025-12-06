@@ -49,7 +49,11 @@ const SummarySchema = z.object({
 
   // Long summary broken into sections (for detail page)
   long_summary_sections: z.object({
-    overview: z.string().describe('2-3 sentences summarising the main thesis'),
+    overview: z
+      .string()
+      .describe(
+        '2-3 sentences summarising the main thesis. For newsletters/digests: list the topics covered, do NOT describe the publisher organization.',
+      ),
     key_insights: z
       .array(
         z.object({
