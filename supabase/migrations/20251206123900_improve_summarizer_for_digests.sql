@@ -21,14 +21,36 @@ FIRST, determine the content type:
    → Do NOT describe the publisher/organization in general terms
    → Focus on WHAT is announced, not WHO is announcing it
 
-For DIGESTS/NEWSLETTERS/ALERTS:
-- The overview should list the topics covered (e.g., "This alert covers 4 items: ...")
-- Each key_insight should be a distinct item from the digest
-- Include specific details: consultation deadlines, guideline names, document references
+## FIELD-SPECIFIC INSTRUCTIONS
 
-EXAMPLE for an EBA email alert:
-❌ WRONG: "The EBA is an EU authority that promotes financial stability..."
-✅ RIGHT: "This alert covers: (1) Final guidelines on ICT risk management (EBA/GL/2025/01), (2) Consultation on DORA implementation deadline 15 Jan 2025, (3) Updated Q&A on stress testing..."
+### summary.short (1-2 sentences, max 50 words)
+- Single-topic: Lead with the key finding
+- Digest: "This alert covers X items: [brief list of topics]"
+
+### summary.medium (3-5 sentences, max 150 words)
+- Single-topic: Key findings and implications
+- Digest: Brief overview of each item covered
+
+### long_summary_sections.overview (2-3 sentences)
+- Single-topic: Main thesis of the article
+- Digest: MUST list the topics covered. Example: "This alert covers 3 items: (1) Final guidelines on ICT risk, (2) DORA consultation, (3) Updated stress testing Q&A."
+- NEVER describe what the publisher organization does (e.g., never write "The EBA is an EU authority that...")
+
+### long_summary_sections.key_insights (array)
+- Single-topic: Key claims with evidence
+- Digest: Each item from the digest is a separate insight with its own evidence
+
+### long_summary_sections.why_it_matters (1-2 sentences)
+- Why this matters for BFSI professionals
+
+### long_summary_sections.actionable_implications (array)
+- What BFSI professionals should DO with this information
+
+## EXAMPLES
+
+For an EBA email alert:
+❌ WRONG overview: "The EBA is an EU authority that promotes financial stability..."
+✅ RIGHT overview: "This alert covers 3 items: (1) Final guidelines on ICT risk management (EBA/GL/2025/01), (2) Consultation on DORA implementation with deadline 15 Jan 2025, (3) Updated Q&A on stress testing."
 
 ## PRIMARY OBJECTIVES
 
@@ -61,16 +83,6 @@ EXAMPLE for an EBA email alert:
    - Note if peer-reviewed
    - Include key citations in format: "Author (Year). Title."
 
-## OUTPUT STRUCTURE
-
-Generate a structured summary with:
-- SHORT: 1-2 sentences, lead with key finding (max 50 words)
-  - For digests: "X items covering [main themes]"
-- MEDIUM: 3-5 sentences covering findings and implications (max 150 words)
-  - For digests: brief overview of each item
-- LONG: Comprehensive with sections (overview, key insights, BFSI relevance)
-  - For digests: detailed breakdown of each item
-
 ## METADATA EXTRACTION
 
 - Title: Clean, professional version
@@ -89,9 +101,12 @@ Follow the writing rules provided. Key principles:
 
 Your output will be displayed on a detail page. Make it scannable, actionable, and trustworthy.',
   true  -- Set as current
-);
+)
+ON CONFLICT (agent_name, version) DO UPDATE SET
+  prompt_text = EXCLUDED.prompt_text,
+  is_current = EXCLUDED.is_current;
 
--- Deactivate previous version
+-- Deactivate previous versions
 UPDATE prompt_versions 
 SET is_current = false 
 WHERE agent_name = 'content-summarizer' 

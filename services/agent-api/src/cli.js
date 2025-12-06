@@ -25,24 +25,43 @@ import { runGoldenEval, runLLMJudgeEval, getEvalHistory } from './lib/evals.js';
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
+// Parse a string value, converting to number if numeric
+function parseValue(value) {
+  return /^\d+$/.test(value) ? Number.parseInt(value, 10) : value;
+}
+
 // Parse CLI arguments
+// Supports both --limit=5 and --limit 5 formats
 function parseArgs() {
   const args = process.argv.slice(2);
   const command = args[0];
   const options = {};
 
-  for (const arg of args.slice(1)) {
-    if (arg.startsWith('--')) {
-      const parts = arg.slice(2).split('=');
-      const key = parts[0];
-      const value = parts[1];
+  const remainingArgs = args.slice(1);
+  let skipNext = false;
 
-      if (parts.length === 1) {
-        options[key] = true;
-      } else if (/^\d+$/.test(value)) {
-        options[key] = Number.parseInt(value, 10);
+  for (let i = 0; i < remainingArgs.length; i++) {
+    if (skipNext) {
+      skipNext = false;
+      continue;
+    }
+
+    const arg = remainingArgs[i];
+    if (!arg.startsWith('--')) continue;
+
+    const [key, ...valueParts] = arg.slice(2).split('=');
+    const hasEqualSign = valueParts.length > 0;
+
+    if (hasEqualSign) {
+      options[key] = parseValue(valueParts.join('='));
+    } else {
+      const nextArg = remainingArgs[i + 1];
+      const nextIsValue = nextArg && !nextArg.startsWith('--');
+      if (nextIsValue) {
+        options[key] = parseValue(nextArg);
+        skipNext = true;
       } else {
-        options[key] = value;
+        options[key] = true;
       }
     }
   }
@@ -166,8 +185,16 @@ async function runSummarizeCmd(options) {
           payload: {
             ...item.payload,
             title: result.title,
+            published_at: result.published_at,
+            author: result.author,
+            authors: result.authors,
             summary: result.summary,
+            long_summary_sections: result.long_summary_sections,
             key_takeaways: result.key_takeaways,
+            key_figures: result.key_figures,
+            entities: result.entities,
+            is_academic: result.is_academic,
+            citations: result.citations,
             summarized_at: new Date().toISOString(),
           },
         })
