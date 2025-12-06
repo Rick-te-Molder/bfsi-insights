@@ -185,8 +185,16 @@ async function runSummarizeCmd(options) {
           payload: {
             ...item.payload,
             title: result.title,
+            published_at: result.published_at,
+            author: result.author,
+            authors: result.authors,
             summary: result.summary,
+            long_summary_sections: result.long_summary_sections,
             key_takeaways: result.key_takeaways,
+            key_figures: result.key_figures,
+            entities: result.entities,
+            is_academic: result.is_academic,
+            citations: result.citations,
             summarized_at: new Date().toISOString(),
           },
         })

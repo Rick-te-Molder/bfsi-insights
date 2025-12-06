@@ -1,7 +1,7 @@
 import { AgentRunner } from '../lib/runner.js';
 import { z } from 'zod';
-import { zodResponseFormat } from 'openai/helpers/zod';
 import { createClient } from '@supabase/supabase-js';
+import Anthropic from '@anthropic-ai/sdk';
 import process from 'node:process';
 
 const runner = new AgentRunner('content-summarizer');
@@ -36,37 +36,25 @@ const SummarySchema = z.object({
     )
     .describe('Authors with evidence of relevance and authority'),
 
-  // Structured summary
+  // Structured summary - format/length only, behavior in prompt
   summary: z.object({
-    short: z.string().describe('1-2 sentences. Lead with the key finding. Max 50 words.'),
-    medium: z.string().describe('3-5 sentences. Key findings and implications. Max 150 words.'),
-    long: z
-      .string()
-      .describe(
-        'Comprehensive summary with structure. See long_summary_sections for structured version.',
-      ),
+    short: z.string().describe('1-2 sentences, max 50 words'),
+    medium: z.string().describe('3-5 sentences, max 150 words'),
+    long: z.string().describe('Comprehensive summary paragraph'),
   }),
 
   // Long summary broken into sections (for detail page)
   long_summary_sections: z.object({
-    overview: z
-      .string()
-      .describe(
-        '2-3 sentences summarising the main thesis. For newsletters/digests: list the topics covered, do NOT describe the publisher organization.',
-      ),
-    key_insights: z
-      .array(
-        z.object({
-          insight: z.string().describe('The claim or finding'),
-          evidence: z.string().nullable().describe('Supporting data, figures, or source'),
-          verifiable: z.boolean().describe('Can this be independently verified?'),
-        }),
-      )
-      .describe('Key claims with evidence. Include specific figures, percentages, amounts.'),
-    why_it_matters: z.string().describe('1-2 sentences on why this matters for BFSI professionals'),
-    actionable_implications: z
-      .array(z.string())
-      .describe('What BFSI professionals should do with this information'),
+    overview: z.string().describe('2-3 sentences listing main topics covered'),
+    key_insights: z.array(
+      z.object({
+        insight: z.string().describe('The claim or finding'),
+        evidence: z.string().nullable().describe('Supporting data or source'),
+        verifiable: z.boolean().describe('Can be independently verified?'),
+      }),
+    ),
+    why_it_matters: z.string().describe('1-2 sentences'),
+    actionable_implications: z.array(z.string()).describe('List of action items'),
   }),
 
   // Entities to potentially add to taxonomy
@@ -133,15 +121,54 @@ async function loadWritingRules() {
     .join('\n\n');
 }
 
+// JSON schema description for Claude (must match SummarySchema)
+const JSON_SCHEMA_DESCRIPTION = `
+Output a JSON object with this exact structure:
+{
+  "title": "string - cleaned-up professional title",
+  "published_at": "string|null - ISO 8601 date (YYYY-MM-DD) or null",
+  "authors": [{"name": "string", "role": "string|null", "authority": "string|null"}],
+  "summary": {
+    "short": "string - 1-2 sentences, max 50 words",
+    "medium": "string - 3-5 sentences, max 150 words", 
+    "long": "string - comprehensive summary paragraph"
+  },
+  "long_summary_sections": {
+    "overview": "string - 2-3 sentences listing main topics covered",
+    "key_insights": [{"insight": "string", "evidence": "string|null", "verifiable": boolean}],
+    "why_it_matters": "string - 1-2 sentences",
+    "actionable_implications": ["string"]
+  },
+  "entities": {
+    "organizations": [{"name": "string", "type": "string", "context": "string"}],
+    "vendors": [{"name": "string", "product_or_service": "string|null", "context": "string"}]
+  },
+  "is_academic": boolean,
+  "citations": ["string"]|null,
+  "key_figures": [{"metric": "string", "value": "string", "context": "string"}]
+}`;
+
+// Lazy-load Anthropic client
+let _anthropic = null;
+function getAnthropic() {
+  if (!_anthropic) {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error('ANTHROPIC_API_KEY environment variable is required for summarizer');
+    }
+    _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+  return _anthropic;
+}
+
 export async function runSummarizer(queueItem) {
   return runner.run(
     {
       queueId: queueItem.id,
       payload: queueItem.payload,
     },
-    async (context, promptTemplate, tools) => {
+    async (context, promptTemplate) => {
       const { payload } = context;
-      const { openai } = tools;
+      const anthropic = getAnthropic();
 
       // Load writing rules dynamically
       const writingRules = await loadWritingRules();
@@ -149,28 +176,54 @@ export async function runSummarizer(queueItem) {
       // Use full text content if available, otherwise fall back to description
       const content = payload.textContent || payload.description || payload.title;
 
-      // Combine base prompt with writing rules
+      // Combine base prompt with writing rules and JSON schema
       const fullPrompt = `${promptTemplate}
 
 ---
 WRITING RULES (follow these strictly):
-${writingRules}`;
+${writingRules}
 
-      const completion = await openai.beta.chat.completions.parse({
-        model: 'gpt-4o',
+---
+OUTPUT FORMAT:
+${JSON_SCHEMA_DESCRIPTION}
+
+Respond with ONLY the JSON object, no markdown code blocks or other text.`;
+
+      const message = await anthropic.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
         messages: [
-          { role: 'system', content: fullPrompt },
           {
             role: 'user',
-            content: `Title: ${payload.title}\nURL: ${payload.url || ''}\n\nContent:\n${content}`,
+            content: `${fullPrompt}\n\n---\n\nTitle: ${payload.title}\nURL: ${payload.url || ''}\n\nContent:\n${content}`,
           },
         ],
-        response_format: zodResponseFormat(SummarySchema, 'summary'),
-        temperature: 0.2,
       });
 
-      const result = completion.choices[0].message.parsed;
-      const usage = completion.usage;
+      // Parse JSON response
+      const responseText = message.content[0].text;
+      let parsed;
+      try {
+        // Handle potential markdown code blocks
+        const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)```/) || [
+          null,
+          responseText,
+        ];
+        parsed = JSON.parse(jsonMatch[1].trim());
+      } catch (e) {
+        throw new Error(
+          `Failed to parse Claude response as JSON: ${e.message}\nResponse: ${responseText.substring(0, 500)}`,
+        );
+      }
+
+      // Validate with Zod schema
+      const result = SummarySchema.parse(parsed);
+
+      const usage = {
+        input_tokens: message.usage.input_tokens,
+        output_tokens: message.usage.output_tokens,
+        model: 'claude-sonnet-4-20250514',
+      };
 
       // Flatten for backward compatibility
       return {
