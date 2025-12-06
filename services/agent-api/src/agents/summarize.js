@@ -204,12 +204,16 @@ Respond with ONLY the JSON object, no markdown code blocks or other text.`;
       const responseText = message.content[0].text;
       let parsed;
       try {
-        // Handle potential markdown code blocks
-        const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)```/) || [
-          null,
-          responseText,
-        ];
-        parsed = JSON.parse(jsonMatch[1].trim());
+        // Extract JSON from response, handling optional markdown code blocks
+        let jsonContent = responseText.trim();
+        if (jsonContent.startsWith('```')) {
+          const endIndex = jsonContent.lastIndexOf('```');
+          const startIndex = jsonContent.indexOf('\n') + 1;
+          if (endIndex > startIndex) {
+            jsonContent = jsonContent.slice(startIndex, endIndex).trim();
+          }
+        }
+        parsed = JSON.parse(jsonContent);
       } catch (e) {
         throw new Error(
           `Failed to parse Claude response as JSON: ${e.message}\nResponse: ${responseText.substring(0, 500)}`,
