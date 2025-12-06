@@ -12,7 +12,7 @@ const RETRIES = 3;
 const SKIP_PATTERNS = [
   // Add patterns to skip domains if needed, e.g. /example\.com/,
 ];
-const SOFT_FAIL_DOMAINS_DEFAULT = [/mckinsey\.com/];
+const SOFT_FAIL_DOMAINS_DEFAULT = [/mckinsey\.com/, /openai\.com/];
 function parseSoftFailDomains() {
   const env = process.env.SOFT_FAIL_DOMAINS;
   if (!env) return SOFT_FAIL_DOMAINS_DEFAULT;
