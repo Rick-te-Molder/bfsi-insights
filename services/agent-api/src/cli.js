@@ -26,23 +26,42 @@ import { runGoldenEval, runLLMJudgeEval, getEvalHistory } from './lib/evals.js';
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 // Parse CLI arguments
+// Supports both --limit=5 and --limit 5 formats
 function parseArgs() {
   const args = process.argv.slice(2);
   const command = args[0];
   const options = {};
 
-  for (const arg of args.slice(1)) {
+  const remainingArgs = args.slice(1);
+  for (let i = 0; i < remainingArgs.length; i++) {
+    const arg = remainingArgs[i];
     if (arg.startsWith('--')) {
       const parts = arg.slice(2).split('=');
       const key = parts[0];
-      const value = parts[1];
 
-      if (parts.length === 1) {
-        options[key] = true;
-      } else if (/^\d+$/.test(value)) {
-        options[key] = Number.parseInt(value, 10);
+      if (parts.length > 1) {
+        // Format: --key=value
+        const value = parts[1];
+        if (/^\d+$/.test(value)) {
+          options[key] = Number.parseInt(value, 10);
+        } else {
+          options[key] = value;
+        }
       } else {
-        options[key] = value;
+        // Format: --key value OR --flag
+        const nextArg = remainingArgs[i + 1];
+        if (nextArg && !nextArg.startsWith('--')) {
+          // Next arg is the value
+          if (/^\d+$/.test(nextArg)) {
+            options[key] = Number.parseInt(nextArg, 10);
+          } else {
+            options[key] = nextArg;
+          }
+          i++; // Skip the next arg since we consumed it
+        } else {
+          // Boolean flag
+          options[key] = true;
+        }
       }
     }
   }
