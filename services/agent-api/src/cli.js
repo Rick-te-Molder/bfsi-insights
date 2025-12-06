@@ -25,6 +25,11 @@ import { runGoldenEval, runLLMJudgeEval, getEvalHistory } from './lib/evals.js';
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
+// Parse a string value, converting to number if numeric
+function parseValue(value) {
+  return /^\d+$/.test(value) ? Number.parseInt(value, 10) : value;
+}
+
 // Parse CLI arguments
 // Supports both --limit=5 and --limit 5 formats
 function parseArgs() {
@@ -33,35 +38,30 @@ function parseArgs() {
   const options = {};
 
   const remainingArgs = args.slice(1);
-  for (let i = 0; i < remainingArgs.length; i++) {
-    const arg = remainingArgs[i];
-    if (arg.startsWith('--')) {
-      const parts = arg.slice(2).split('=');
-      const key = parts[0];
+  let skipNext = false;
 
-      if (parts.length > 1) {
-        // Format: --key=value
-        const value = parts[1];
-        if (/^\d+$/.test(value)) {
-          options[key] = Number.parseInt(value, 10);
-        } else {
-          options[key] = value;
-        }
+  for (let i = 0; i < remainingArgs.length; i++) {
+    if (skipNext) {
+      skipNext = false;
+      continue;
+    }
+
+    const arg = remainingArgs[i];
+    if (!arg.startsWith('--')) continue;
+
+    const [key, ...valueParts] = arg.slice(2).split('=');
+    const hasEqualSign = valueParts.length > 0;
+
+    if (hasEqualSign) {
+      options[key] = parseValue(valueParts.join('='));
+    } else {
+      const nextArg = remainingArgs[i + 1];
+      const nextIsValue = nextArg && !nextArg.startsWith('--');
+      if (nextIsValue) {
+        options[key] = parseValue(nextArg);
+        skipNext = true;
       } else {
-        // Format: --key value OR --flag
-        const nextArg = remainingArgs[i + 1];
-        if (nextArg && !nextArg.startsWith('--')) {
-          // Next arg is the value
-          if (/^\d+$/.test(nextArg)) {
-            options[key] = Number.parseInt(nextArg, 10);
-          } else {
-            options[key] = nextArg;
-          }
-          i++; // Skip the next arg since we consumed it
-        } else {
-          // Boolean flag
-          options[key] = true;
-        }
+        options[key] = true;
       }
     }
   }
