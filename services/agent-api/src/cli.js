@@ -4,11 +4,12 @@
  *
  * Usage:
  *   node services/agent-api/src/cli.js discovery [--limit=N] [--source=slug] [--dry-run]
+ *   node services/agent-api/src/cli.js fetch [--limit=N]     # Fetch page content for RSS items
  *   node services/agent-api/src/cli.js filter [--limit=N]
  *   node services/agent-api/src/cli.js summarize [--limit=N]
  *   node services/agent-api/src/cli.js tag [--limit=N]
  *   node services/agent-api/src/cli.js thumbnail [--limit=N]
- *   node services/agent-api/src/cli.js enrich [--limit=N]  # Runs filter → summarize → tag → thumbnail
+ *   node services/agent-api/src/cli.js enrich [--limit=N]    # Runs filter → summarize → tag → thumbnail
  */
 
 import process from 'node:process';
@@ -22,6 +23,7 @@ import { runTagger } from './agents/tag.js';
 import { runThumbnailer } from './agents/thumbnail.js';
 import { processQueue } from './agents/enrich-item.js';
 import { runGoldenEval, runLLMJudgeEval, getEvalHistory } from './lib/evals.js';
+import { fetchContent } from './lib/content-fetcher.js';
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -100,6 +102,72 @@ async function runClassicsCmd(options) {
   console.log(`   Classics queued: ${result.classics}`);
   console.log(`   Expansion papers: ${result.expansions}`);
   return result;
+}
+
+// Fetch page content for items that only have RSS metadata
+async function runFetchCmd(options) {
+  console.log('📥 Running Content Fetch...\n');
+
+  // Get items with status 'fetched' that don't have textContent
+  const { data: items, error } = await supabase
+    .from('ingestion_queue')
+    .select('*')
+    .eq('status', 'fetched')
+    .is('payload->textContent', null)
+    .order('discovered_at', { ascending: true })
+    .limit(options.limit || 10);
+
+  if (error) throw error;
+  if (!items?.length) {
+    console.log('✅ No items need content fetching');
+    return { processed: 0, fetched: 0, failed: 0 };
+  }
+
+  console.log(`📋 Found ${items.length} items to fetch content for\n`);
+
+  let fetched = 0;
+  let failed = 0;
+
+  for (const item of items) {
+    const titlePreview = item.payload?.title?.substring(0, 50) || item.url;
+    try {
+      console.log(`   📥 Fetching: ${titlePreview}...`);
+      const content = await fetchContent(item.url);
+
+      // Update payload with fetched content
+      const updatedPayload = {
+        ...item.payload,
+        title: content.title || item.payload?.title,
+        description: content.description || item.payload?.description,
+        textContent: content.textContent,
+        published_at: content.date || item.payload?.published_at,
+      };
+
+      await supabase
+        .from('ingestion_queue')
+        .update({
+          payload: updatedPayload,
+          fetched_at: new Date().toISOString(),
+        })
+        .eq('id', item.id);
+
+      console.log(`   ✅ Fetched (${content.textContent?.length || 0} chars)`);
+      fetched++;
+    } catch (err) {
+      console.error(`   ❌ Failed: ${err.message}`);
+      // Mark as requiring manual fetch
+      await supabase
+        .from('ingestion_queue')
+        .update({
+          payload: { ...item.payload, requires_manual_fetch: true, fetch_error: err.message },
+        })
+        .eq('id', item.id);
+      failed++;
+    }
+  }
+
+  console.log(`\n✨ Fetch complete! Fetched: ${fetched}, Failed: ${failed}`);
+  return { processed: items.length, fetched, failed };
 }
 
 // Run filter agent on fetched items
@@ -497,6 +565,9 @@ async function main() {
       case 'classics':
       case 'discover-classics':
         await runClassicsCmd(options);
+        break;
+      case 'fetch':
+        await runFetchCmd(options);
         break;
       case 'filter':
         await runFilterCmd(options);
