@@ -129,13 +129,22 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
             Added ${new Date(pub.date_added).toLocaleDateString()}
           </p>
         </div>
-        <button
-          class="edit-btn ml-4 rounded-lg border border-neutral-700 px-3 py-1.5 text-sm font-medium text-neutral-300 hover:bg-neutral-800"
-          data-id="${pub.id}"
-          data-title="${pub.title.replace(/"/g, '&quot;')}"
-        >
-          Edit
-        </button>
+        <div class="flex gap-2 ml-4">
+          <button
+            class="edit-btn rounded-lg border border-neutral-700 px-3 py-1.5 text-sm font-medium text-neutral-300 hover:bg-neutral-800"
+            data-id="${pub.id}"
+            data-title="${pub.title.replace(/"/g, '&quot;')}"
+          >
+            Edit
+          </button>
+          <button
+            class="delete-btn rounded-lg border border-red-500/30 px-3 py-1.5 text-sm font-medium text-red-400 hover:bg-red-500/10"
+            data-id="${pub.id}"
+            data-title="${pub.title.replace(/"/g, '&quot;')}"
+          >
+            🗑️
+          </button>
+        </div>
       </div>
     `,
       )
@@ -148,6 +157,31 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
         openEditModal(target.dataset.id!, target.dataset.title!);
       });
     });
+
+    document.querySelectorAll('.delete-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        deletePublication(target.dataset.id!, target.dataset.title!);
+      });
+    });
+  }
+
+  async function deletePublication(id: string, title: string) {
+    if (!confirm(`Are you sure you want to delete "${title}"?\n\nThis action cannot be undone.`)) {
+      return;
+    }
+
+    if (!(await checkAuth())) return;
+
+    const { error } = await supabase.from('kb_publication').delete().eq('id', id);
+
+    if (error) {
+      alert('Error deleting: ' + error.message);
+      return;
+    }
+
+    // Refresh list
+    await loadPublications();
   }
 
   function openEditModal(id: string, title: string) {
