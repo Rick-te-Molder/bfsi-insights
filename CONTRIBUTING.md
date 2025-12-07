@@ -111,6 +111,63 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ---
 
+## Database Migration Checklist
+
+When creating Supabase migrations, **always** verify:
+
+### Tables
+
+- [ ] **RLS enabled:** `ALTER TABLE ... ENABLE ROW LEVEL SECURITY;`
+- [ ] **Service role policy:** At minimum, add a policy for `service_role`
+- [ ] **Authenticated policy:** Add read/write policies for `authenticated` if needed
+
+```sql
+-- Template: New public table
+CREATE TABLE public.my_table (...);
+
+ALTER TABLE public.my_table ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service role full access" ON public.my_table
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+```
+
+### Functions (SECURITY DEFINER)
+
+- [ ] **Set search_path:** `SET search_path = ''`
+- [ ] **Use fully qualified names:** `public.table_name` instead of `table_name`
+
+```sql
+CREATE OR REPLACE FUNCTION my_function()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''  -- REQUIRED
+AS $$
+BEGIN
+  SELECT * FROM public.my_table;  -- Fully qualified
+END;
+$$;
+```
+
+### Views
+
+- [ ] **Use security_invoker:** `WITH (security_invoker = true)`
+
+```sql
+CREATE VIEW my_view
+WITH (security_invoker = true)
+AS SELECT * FROM my_table;
+```
+
+### Before Pushing
+
+```bash
+# Lint migrations locally
+npx supabase db lint
+```
+
+---
+
 ## Development Setup
 
 ```bash
