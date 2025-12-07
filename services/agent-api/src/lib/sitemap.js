@@ -289,6 +289,56 @@ export async function fetchFromSitemap(source, config = {}) {
 }
 
 /**
+ * Fetch page metadata (title and description) from a URL
+ * Used to enrich sitemap candidates before LLM scoring
+ * @param {string} url - URL to fetch
+ * @param {number} timeoutMs - Timeout in milliseconds
+ * @returns {Promise<{title: string, description: string}>}
+ */
+export async function fetchPageMetadata(url, timeoutMs = 10000) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; BFSIInsightsBot/1.0; +https://bfsiinsights.com)',
+        Accept: 'text/html',
+      },
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      return { title: null, description: null };
+    }
+
+    const html = await response.text();
+
+    // Extract title from <title> tag
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    const title = titleMatch ? titleMatch[1].trim() : null;
+
+    // Extract description from meta tag
+    const descMatch = html.match(
+      /<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["']/i,
+    );
+    const descMatchAlt = html.match(
+      /<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["']/i,
+    );
+    const description = descMatch?.[1] || descMatchAlt?.[1] || null;
+
+    return {
+      title: title?.substring(0, 200), // Limit title length
+      description: description?.substring(0, 500), // Limit description length
+    };
+  } catch {
+    return { title: null, description: null };
+  }
+}
+
+/**
  * Extract a readable title from URL path
  */
 function extractTitleFromUrl(url) {
@@ -308,6 +358,7 @@ function extractTitleFromUrl(url) {
 
 export default {
   fetchFromSitemap,
+  fetchPageMetadata,
   checkRobotsTxt,
   isUrlAllowed,
 };

@@ -7,7 +7,7 @@
 import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 import { scrapeWebsite } from '../lib/scrapers.js';
-import { fetchFromSitemap } from '../lib/sitemap.js';
+import { fetchFromSitemap, fetchPageMetadata } from '../lib/sitemap.js';
 import { scoreRelevance } from './discovery-relevance.js';
 import {
   getReferenceEmbedding,
@@ -125,10 +125,65 @@ export function clearDiscoveryConfigCache() {
 }
 
 /**
+ * Check if a title looks like it was extracted from a URL slug (poor quality)
+ * These titles need metadata prefetch to get the real title
+ */
+function isPoorTitle(title) {
+  if (!title) return true;
+  // Too short
+  if (title.length < 10) return true;
+  // No spaces (likely a slug)
+  if (!title.includes(' ')) return true;
+  // Looks like a file reference (fil123, nr-occ-2025, etc.)
+  if (/^(fil|nr|bulletin)\d+/i.test(title.replace(/\s+/g, ''))) return true;
+  return false;
+}
+
+/**
+ * Enrich sitemap candidates with actual page metadata
+ * Only fetches metadata for candidates with poor titles
+ */
+async function enrichSitemapCandidates(candidates, stats) {
+  const PREFETCH_LIMIT = 20; // Limit to avoid too many requests
+  const CONCURRENCY = 3;
+
+  const needsEnrichment = candidates.filter((c) => isPoorTitle(c.title)).slice(0, PREFETCH_LIMIT);
+
+  if (needsEnrichment.length === 0) {
+    return candidates;
+  }
+
+  console.log(`   📑 Prefetching metadata for ${needsEnrichment.length} URLs...`);
+
+  // Process in batches with concurrency
+  for (let i = 0; i < needsEnrichment.length; i += CONCURRENCY) {
+    const batch = needsEnrichment.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(
+      batch.map(async (candidate) => {
+        const metadata = await fetchPageMetadata(candidate.url);
+        stats.metadataFetches++;
+        return { url: candidate.url, metadata };
+      }),
+    );
+
+    // Update candidates with fetched metadata
+    for (const { url, metadata } of results) {
+      const candidate = candidates.find((c) => c.url === url);
+      if (candidate && metadata.title) {
+        candidate.title = metadata.title;
+        candidate.description = metadata.description || candidate.description;
+      }
+    }
+  }
+
+  return candidates;
+}
+
+/**
  * Fetch candidates from a single source (RSS, sitemap, or scraper)
  * Priority: RSS > Sitemap > Scraper
  */
-async function fetchCandidatesFromSource(src, config) {
+async function fetchCandidatesFromSource(src, config, stats = null) {
   // Try RSS first (fast and reliable)
   if (src.rss_feed) {
     try {
@@ -144,8 +199,14 @@ async function fetchCandidatesFromSource(src, config) {
   if (src.sitemap_url) {
     console.log(`   🗺️  Trying sitemap...`);
     try {
-      const candidates = await fetchFromSitemap(src, config);
+      let candidates = await fetchFromSitemap(src, config);
       console.log(`   Found ${candidates.length} potential publications from sitemap`);
+
+      // Enrich sitemap candidates with actual page metadata (titles are often just URL slugs)
+      if (stats && candidates.length > 0) {
+        candidates = await enrichSitemapCandidates(candidates, stats);
+      }
+
       return candidates;
     } catch (err) {
       console.warn(`   ⚠️ Sitemap failed: ${err.message}`);
@@ -225,27 +286,33 @@ async function processCandidate(candidate, sourceName, dryRun, scoringConfig, st
 
   // Agentic mode or hybrid uncertain: use LLM scoring
   if (scoringConfig.mode === 'agentic' || needsLlmScoring) {
-    stats.llmCalls++;
     relevanceResult = await scoreRelevance({
       title: candidate.title,
       description: candidate.description || '',
       source: sourceName,
     });
 
-    if (relevanceResult.usage) {
-      stats.llmTokens += relevanceResult.usage.total_tokens;
-    }
+    // Track trusted source passes vs LLM calls
+    if (relevanceResult.trusted_source) {
+      stats.trustedSourcePasses++;
+      console.log(`   ✅ Trusted source: ${titlePreview}...`);
+    } else {
+      stats.llmCalls++;
+      if (relevanceResult.usage) {
+        stats.llmTokens += relevanceResult.usage.total_tokens;
+      }
 
-    if (!relevanceResult.should_queue) {
-      console.log(`   ⏭️  LLM skip (${relevanceResult.relevance_score}/10): ${titlePreview}...`);
-      console.log(`      Reason: ${relevanceResult.skip_reason}`);
-      return { action: 'skipped-relevance', relevanceResult };
-    }
+      if (!relevanceResult.should_queue) {
+        console.log(`   ⏭️  LLM skip (${relevanceResult.relevance_score}/10): ${titlePreview}...`);
+        console.log(`      Reason: ${relevanceResult.skip_reason}`);
+        return { action: 'skipped-relevance', relevanceResult };
+      }
 
-    console.log(`   🎯 LLM score ${relevanceResult.relevance_score}/10: ${titlePreview}...`);
+      console.log(`   🎯 LLM score ${relevanceResult.relevance_score}/10: ${titlePreview}...`);
 
-    if (dryRun) {
-      console.log(`      Summary: ${relevanceResult.executive_summary}`);
+      if (dryRun) {
+        console.log(`      Summary: ${relevanceResult.executive_summary}`);
+      }
     }
   }
 
@@ -393,6 +460,8 @@ export async function runDiscovery(options = {}) {
     embeddingAccepts: 0,
     embeddingRejects: 0,
     llmCalls: 0,
+    trustedSourcePasses: 0,
+    metadataFetches: 0,
   };
   const results = [];
 
@@ -403,7 +472,7 @@ export async function runDiscovery(options = {}) {
     console.log(`📡 Checking ${sourceLabel}...`);
 
     try {
-      const candidates = await fetchCandidatesFromSource(src, config);
+      const candidates = await fetchCandidatesFromSource(src, config, stats);
 
       // Handle premium sources differently
       if (isPremium) {
@@ -542,8 +611,14 @@ function logSummary(stats) {
   console.log(`   Already exists: ${stats.found - stats.new - stats.skipped}`);
 
   // Hybrid mode stats
-  if (stats.embeddingTokens > 0 || stats.llmTokens > 0) {
+  if (stats.embeddingTokens > 0 || stats.llmTokens > 0 || stats.trustedSourcePasses > 0) {
     console.log(`\n   📈 Scoring breakdown:`);
+    if (stats.trustedSourcePasses > 0) {
+      console.log(`      Trusted source passes (no LLM needed): ${stats.trustedSourcePasses}`);
+    }
+    if (stats.metadataFetches > 0) {
+      console.log(`      Metadata prefetches (sitemap enrichment): ${stats.metadataFetches}`);
+    }
     if (stats.embeddingAccepts > 0) {
       console.log(`      Embedding accepts (high confidence): ${stats.embeddingAccepts}`);
     }
