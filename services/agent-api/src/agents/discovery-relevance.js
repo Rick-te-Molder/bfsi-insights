@@ -22,6 +22,35 @@ function getOpenAI() {
 // Minimum score to queue (below this = auto-skip)
 const MIN_RELEVANCE_SCORE = 4;
 
+// Trusted sources that auto-pass relevance filter (core BFSI institutions)
+// These sources publish content that is always relevant to BFSI executives
+// Slugs must match kb_source.slug in the database
+const TRUSTED_SOURCES = new Set([
+  // Central Banks
+  'bis', // Bank for International Settlements
+  'bis-research', // BIS Working Papers
+  'bis-innovation', // BIS Innovation Hub
+  'ecb', // European Central Bank
+  'fed', // Federal Reserve
+  'boe', // Bank of England
+  'dnb', // De Nederlandsche Bank
+  // Regulators
+  'eba', // European Banking Authority
+  'esma', // European Securities and Markets Authority
+  'eiopa', // European Insurance and Occupational Pensions Authority
+  'fca', // Financial Conduct Authority
+  'pra', // Prudential Regulation Authority
+  'fsb', // Financial Stability Board
+  'bcbs', // Basel Committee on Banking Supervision
+  'fatf', // Financial Action Task Force
+  // International Organizations
+  'imf', // International Monetary Fund
+  // Premium Consultants (their content is curated, always relevant)
+  'mckinsey',
+  'bcg', // Boston Consulting Group
+  'bain',
+]);
+
 // System prompt for executive relevance scoring
 const SYSTEM_PROMPT = `You are an expert content curator for BFSI (Banking, Financial Services, Insurance) executives.
 
@@ -61,12 +90,46 @@ Respond with JSON:
 }`;
 
 /**
+ * Check if a source is in the trusted allowlist
+ * @param {string} sourceSlug - Source slug to check
+ * @returns {boolean}
+ */
+export function isTrustedSource(sourceSlug) {
+  if (!sourceSlug) return false;
+  const normalized = sourceSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  return TRUSTED_SOURCES.has(normalized);
+}
+
+/**
  * Score a candidate for executive relevance
  * @param {Object} candidate - { title, description, source }
  * @returns {Object} - { relevance_score, executive_summary, skip_reason, usage }
  */
 export async function scoreRelevance(candidate) {
   const { title, description = '', source = '' } = candidate;
+
+  // Fast path: trusted sources auto-pass without LLM call
+  if (isTrustedSource(source)) {
+    return {
+      relevance_score: 8,
+      executive_summary: `Trusted source: ${source}`,
+      skip_reason: null,
+      should_queue: true,
+      usage: null,
+      trusted_source: true,
+    };
+  }
+
+  // Skip LLM call if no meaningful content to score (empty or whitespace-only)
+  if (!title || title.trim().length === 0) {
+    return {
+      relevance_score: 1,
+      executive_summary: 'No title available',
+      skip_reason: 'No title',
+      should_queue: false,
+      usage: null,
+    };
+  }
 
   const userContent = `Source: ${source}
 Title: ${title}

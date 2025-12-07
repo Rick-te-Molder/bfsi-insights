@@ -30,6 +30,7 @@ vi.mock('openai', () => ({
 import {
   scoreRelevance,
   scoreRelevanceBatch,
+  isTrustedSource,
   MIN_RELEVANCE_SCORE,
 } from '../../src/agents/discovery-relevance.js';
 
@@ -366,5 +367,72 @@ describe('MIN_RELEVANCE_SCORE', () => {
     expect(typeof MIN_RELEVANCE_SCORE).toBe('number');
     expect(MIN_RELEVANCE_SCORE).toBeGreaterThanOrEqual(1);
     expect(MIN_RELEVANCE_SCORE).toBeLessThanOrEqual(10);
+  });
+});
+
+describe('isTrustedSource', () => {
+  it('returns true for known trusted sources', () => {
+    expect(isTrustedSource('bis')).toBe(true);
+    expect(isTrustedSource('ecb')).toBe(true);
+    expect(isTrustedSource('fed')).toBe(true);
+    expect(isTrustedSource('mckinsey')).toBe(true);
+    expect(isTrustedSource('bcg')).toBe(true);
+  });
+
+  it('returns false for non-trusted sources', () => {
+    expect(isTrustedSource('random-blog')).toBe(false);
+    expect(isTrustedSource('arxiv')).toBe(false);
+    expect(isTrustedSource('unknown')).toBe(false);
+  });
+
+  it('handles empty or null input', () => {
+    expect(isTrustedSource(null)).toBe(false);
+    expect(isTrustedSource('')).toBe(false);
+    expect(isTrustedSource(undefined)).toBe(false);
+  });
+
+  it('normalizes source slugs', () => {
+    // Should handle variations in formatting
+    expect(isTrustedSource('BIS')).toBe(true);
+    expect(isTrustedSource('Bis')).toBe(true);
+  });
+});
+
+describe('trusted source scoring', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('auto-passes trusted sources without LLM call', async () => {
+    const createMock = getCreateMock();
+
+    const result = await scoreRelevance({
+      title: 'BIS Working Paper on Financial Stability',
+      source: 'bis',
+    });
+
+    // Should NOT call OpenAI
+    expect(createMock).not.toHaveBeenCalled();
+
+    // Should return trusted source response
+    expect(result.relevance_score).toBe(8);
+    expect(result.should_queue).toBe(true);
+    expect(result.trusted_source).toBe(true);
+    expect(result.usage).toBeNull();
+  });
+
+  it('calls LLM for non-trusted sources', async () => {
+    const createMock = getCreateMock();
+    createMock.mockResolvedValue(
+      mockOpenAIResponse({ relevance_score: 5, executive_summary: 'Test', skip_reason: null }),
+    );
+
+    await scoreRelevance({
+      title: 'Some Random Article',
+      source: 'random-blog',
+    });
+
+    // Should call OpenAI
+    expect(createMock).toHaveBeenCalled();
   });
 });
