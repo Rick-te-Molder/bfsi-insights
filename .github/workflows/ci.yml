@@ -34,8 +34,13 @@ jobs:
         with:
           version: latest
 
-      - name: Lint database migrations
-        run: npx supabase db lint
+      - name: Link Supabase project
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Lint database (remote)
+        run: supabase db lint --linked
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
