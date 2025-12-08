@@ -319,8 +319,10 @@ export default function initMultiSelectFilters() {
 
     for (const [key, count] of Object.entries(categoryCounts)) {
       const label = categoryLabels[key] || key;
-      const plural =
-        count > 1 ? (label.endsWith('y') ? label.slice(0, -1) + 'ies' : label + 's') : label;
+      let plural = label;
+      if (count > 1) {
+        plural = label.endsWith('y') ? label.slice(0, -1) + 'ies' : label + 's';
+      }
       parts.push(`${count} ${plural}`);
     }
 
@@ -420,28 +422,7 @@ export default function initMultiSelectFilters() {
 
       // Add filter chips grouped by category
       categories.forEach(([key, values]) => {
-        const group = document.createElement('div');
-        group.className = 'mb-2';
-
-        const label = document.createElement('span');
-        label.className = 'text-xs text-neutral-500 mr-2';
-        label.textContent = `${key}:`;
-        group.appendChild(label);
-
-        const chipsWrapper = document.createElement('span');
-        chipsWrapper.className = 'inline-flex flex-wrap gap-1.5';
-
-        values.forEach((value) => {
-          const chip = createChip(value, () => {
-            filterState[key].delete(value);
-            applyFilterStateToCheckboxes(filterState);
-            applyFilters(filterState, searchQuery, true);
-            saveFilters();
-          });
-          chipsWrapper.appendChild(chip);
-        });
-
-        group.appendChild(chipsWrapper);
+        const group = createCategoryChipGroup(key, values);
         expandedContainer.appendChild(group);
       });
 
@@ -449,6 +430,33 @@ export default function initMultiSelectFilters() {
     }
 
     filterChipsEl.appendChild(container);
+  }
+
+  // Create a category chip group with label and removable chips
+  function createCategoryChipGroup(key: string, values: Set<string>): HTMLElement {
+    const group = document.createElement('div');
+    group.className = 'mb-2';
+
+    const label = document.createElement('span');
+    label.className = 'text-xs text-neutral-500 mr-2';
+    label.textContent = `${key}:`;
+    group.appendChild(label);
+
+    const chipsWrapper = document.createElement('span');
+    chipsWrapper.className = 'inline-flex flex-wrap gap-1.5';
+
+    values.forEach((value) => {
+      const chip = createChip(value, () => {
+        filterState[key].delete(value);
+        applyFilterStateToCheckboxes(filterState);
+        applyFilters(filterState, searchQuery, true);
+        saveFilters();
+      });
+      chipsWrapper.appendChild(chip);
+    });
+
+    group.appendChild(chipsWrapper);
+    return group;
   }
 
   // Create a removable chip
