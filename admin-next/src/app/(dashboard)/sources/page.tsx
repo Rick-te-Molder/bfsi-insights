@@ -7,13 +7,26 @@ import type { Source } from '@/types/database';
 type FilterCategory = 'all' | string;
 type FilterTier = 'all' | 'standard' | 'premium';
 type FilterEnabled = 'all' | 'true' | 'false';
+type FilterHealth = 'all' | 'healthy' | 'warning' | 'error' | 'inactive';
+
+interface SourceHealth {
+  source_slug: string;
+  last_discovery: string | null;
+  items_7d: number;
+  items_30d: number;
+  failed_7d: number;
+  error_rate: number;
+  health_status: 'healthy' | 'warning' | 'error' | 'inactive';
+}
 
 export default function SourcesPage() {
   const [sources, setSources] = useState<Source[]>([]);
+  const [healthData, setHealthData] = useState<Map<string, SourceHealth>>(new Map());
   const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState<FilterCategory>('all');
   const [filterTier, setFilterTier] = useState<FilterTier>('all');
   const [filterEnabled, setFilterEnabled] = useState<FilterEnabled>('all');
+  const [filterHealth, setFilterHealth] = useState<FilterHealth>('all');
   const [editingSource, setEditingSource] = useState<Source | null>(null);
   const [showModal, setShowModal] = useState(false);
 
@@ -37,9 +50,26 @@ export default function SourcesPage() {
     [supabase],
   );
 
+  const loadHealth = useCallback(async function loadHealth() {
+    try {
+      const res = await fetch('/api/source-health');
+      if (res.ok) {
+        const data = await res.json();
+        const healthMap = new Map<string, SourceHealth>();
+        for (const h of data.health || []) {
+          healthMap.set(h.source_slug, h);
+        }
+        setHealthData(healthMap);
+      }
+    } catch (error) {
+      console.error('Error loading health:', error);
+    }
+  }, []);
+
   useEffect(() => {
     loadSources();
-  }, [loadSources]);
+    loadHealth();
+  }, [loadSources, loadHealth]);
 
   async function toggleEnabled(source: Source) {
     const { error } = await supabase
@@ -59,6 +89,11 @@ export default function SourcesPage() {
     if (filterCategory !== 'all' && s.category !== filterCategory) return false;
     if (filterTier !== 'all' && s.tier !== filterTier) return false;
     if (filterEnabled !== 'all' && String(s.enabled) !== filterEnabled) return false;
+    if (filterHealth !== 'all') {
+      const health = healthData.get(s.slug);
+      const status = health?.health_status || 'inactive';
+      if (status !== filterHealth) return false;
+    }
     return true;
   });
 
@@ -74,12 +109,41 @@ export default function SourcesPage() {
     withScraper: sources.filter((s) => s.scraper_config).length,
   };
 
-  function getDiscoveryIcon(source: Source) {
-    const icons = [];
-    if (source.rss_feed) icons.push('📡');
-    if (source.sitemap_url) icons.push('🗺️');
-    if (source.scraper_config) icons.push('🤖');
-    return icons.length > 0 ? icons.join('') : '❌';
+  function getDiscoveryInfo(source: Source) {
+    const methods = [];
+    if (source.rss_feed) methods.push({ icon: '📡', label: 'RSS Feed', url: source.rss_feed });
+    if (source.sitemap_url) methods.push({ icon: '🗺️', label: 'Sitemap', url: source.sitemap_url });
+    if (source.scraper_config) methods.push({ icon: '🤖', label: 'Scraper', url: null });
+    return methods;
+  }
+
+  function getHealthBadge(health: SourceHealth | undefined) {
+    if (!health) {
+      return { icon: '⚪', label: 'No data', className: 'text-neutral-500' };
+    }
+    switch (health.health_status) {
+      case 'healthy':
+        return { icon: '🟢', label: 'Healthy', className: 'text-emerald-400' };
+      case 'warning':
+        return { icon: '🟡', label: 'Warning', className: 'text-amber-400' };
+      case 'error':
+        return { icon: '🔴', label: 'Errors', className: 'text-red-400' };
+      case 'inactive':
+        return { icon: '⚪', label: 'Inactive', className: 'text-neutral-500' };
+      default:
+        return { icon: '⚪', label: 'Unknown', className: 'text-neutral-500' };
+    }
+  }
+
+  function formatTimeAgo(date: string | null): string {
+    if (!date) return 'Never';
+    const diff = Date.now() - new Date(date).getTime();
+    const hours = Math.floor(diff / (60 * 60 * 1000));
+    if (hours < 1) return 'Just now';
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return '1 day ago';
+    return `${days} days ago`;
   }
 
   function getCategoryColor(category: string) {
@@ -143,6 +207,19 @@ export default function SourcesPage() {
         </span>
       </div>
 
+      {/* Legend */}
+      <div className="mb-6 flex flex-wrap items-center gap-6 text-xs text-neutral-500">
+        <span className="font-medium">Discovery:</span>
+        <span title="RSS Feed">📡 RSS</span>
+        <span title="Sitemap">🗺️ Sitemap</span>
+        <span title="Custom scraper">🤖 Scraper</span>
+        <span className="ml-4 font-medium">Health:</span>
+        <span className="text-emerald-400">🟢 Healthy</span>
+        <span className="text-amber-400">🟡 Warning (low yield or minor errors)</span>
+        <span className="text-red-400">🔴 Errors (&gt;30% fail rate)</span>
+        <span className="text-neutral-500">⚪ Inactive (&gt;7d since last run)</span>
+      </div>
+
       {/* Filters */}
       <div className="mb-6 flex flex-wrap gap-4 rounded-lg border border-neutral-800 bg-neutral-900/60 p-4">
         <div>
@@ -184,6 +261,20 @@ export default function SourcesPage() {
             <option value="false">Disabled</option>
           </select>
         </div>
+        <div>
+          <label className="block text-xs text-neutral-400 mb-1">Health</label>
+          <select
+            value={filterHealth}
+            onChange={(e) => setFilterHealth(e.target.value as FilterHealth)}
+            className="rounded-md border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm text-white"
+          >
+            <option value="all">All health</option>
+            <option value="healthy">🟢 Healthy</option>
+            <option value="warning">🟡 Warning</option>
+            <option value="error">🔴 Errors</option>
+            <option value="inactive">⚪ Inactive</option>
+          </select>
+        </div>
       </div>
 
       {/* Table */}
@@ -191,76 +282,135 @@ export default function SourcesPage() {
         <table className="w-full">
           <thead className="bg-neutral-900">
             <tr className="text-left text-xs font-medium uppercase tracking-wider text-neutral-400">
-              <th className="px-4 py-3">Priority</th>
               <th className="px-4 py-3">Source</th>
               <th className="px-4 py-3">Category</th>
-              <th className="px-4 py-3">Tier</th>
               <th className="px-4 py-3">Discovery</th>
+              <th className="px-4 py-3">Health</th>
+              <th className="px-4 py-3">Last Run</th>
+              <th className="px-4 py-3">Items (7d)</th>
               <th className="px-4 py-3">Enabled</th>
               <th className="px-4 py-3">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-neutral-800">
-            {filteredSources.map((source) => (
-              <tr key={source.slug} className="hover:bg-neutral-800/50">
-                <td className="px-4 py-3">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-neutral-700 text-xs font-medium">
-                    {source.sort_order ? Math.ceil(source.sort_order / 100) : '-'}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="font-medium text-white">{source.name}</div>
-                  <div className="text-xs text-neutral-500">{source.domain}</div>
-                  {source.disabled_reason && (
-                    <div className="text-xs text-red-400 mt-1">⚠️ {source.disabled_reason}</div>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${getCategoryColor(source.category)}`}
-                  >
-                    {source.category || '-'}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`text-xs ${source.tier === 'premium' ? 'text-amber-400' : 'text-neutral-400'}`}
-                  >
-                    {source.tier}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <span title={source.rss_feed || source.sitemap_url || 'No config'}>
-                    {getDiscoveryIcon(source)}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => toggleEnabled(source)}
-                    className={`w-10 h-5 rounded-full transition-colors ${
-                      source.enabled ? 'bg-emerald-500' : 'bg-neutral-700'
-                    }`}
-                  >
+            {filteredSources.map((source) => {
+              const health = healthData.get(source.slug);
+              const healthBadge = getHealthBadge(health);
+              const discoveryMethods = getDiscoveryInfo(source);
+
+              return (
+                <tr key={source.slug} className="hover:bg-neutral-800/50">
+                  {/* Source */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-neutral-700 text-xs font-medium">
+                        {source.sort_order ? Math.ceil(source.sort_order / 100) : '-'}
+                      </span>
+                      <div>
+                        <div className="font-medium text-white">{source.name}</div>
+                        <div className="text-xs text-neutral-500">{source.domain}</div>
+                      </div>
+                    </div>
+                    {source.disabled_reason && (
+                      <div className="text-xs text-red-400 mt-1 ml-8">
+                        ⚠️ {source.disabled_reason}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Category */}
+                  <td className="px-4 py-3">
                     <span
-                      className={`block w-4 h-4 rounded-full bg-white transform transition-transform ${
-                        source.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                      className={`rounded-full px-2 py-0.5 text-xs ${getCategoryColor(source.category)}`}
+                    >
+                      {source.category || '-'}
+                    </span>
+                    {source.tier === 'premium' && (
+                      <span className="ml-1 text-xs text-amber-400">★</span>
+                    )}
+                  </td>
+
+                  {/* Discovery */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      {discoveryMethods.length > 0 ? (
+                        discoveryMethods.map((method, i) => (
+                          <span
+                            key={i}
+                            title={`${method.label}${method.url ? `: ${method.url}` : ''}`}
+                            className="cursor-help"
+                          >
+                            {method.icon}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-neutral-600" title="No discovery configured">
+                          ❌
+                        </span>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Health */}
+                  <td className="px-4 py-3">
+                    <span
+                      className={`text-sm ${healthBadge.className}`}
+                      title={`${healthBadge.label}${health ? ` (${health.error_rate}% errors)` : ''}`}
+                    >
+                      {healthBadge.icon}
+                    </span>
+                  </td>
+
+                  {/* Last Run */}
+                  <td className="px-4 py-3">
+                    <span className="text-xs text-neutral-400">
+                      {formatTimeAgo(health?.last_discovery || null)}
+                    </span>
+                  </td>
+
+                  {/* Items */}
+                  <td className="px-4 py-3">
+                    <span
+                      className={`text-sm ${health?.items_7d ? 'text-white' : 'text-neutral-600'}`}
+                    >
+                      {health?.items_7d || 0}
+                    </span>
+                    {health?.failed_7d ? (
+                      <span className="text-xs text-red-400 ml-1">({health.failed_7d} failed)</span>
+                    ) : null}
+                  </td>
+
+                  {/* Enabled */}
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => toggleEnabled(source)}
+                      className={`w-10 h-5 rounded-full transition-colors ${
+                        source.enabled ? 'bg-emerald-500' : 'bg-neutral-700'
                       }`}
-                    />
-                  </button>
-                </td>
-                <td className="px-4 py-3">
-                  <button
-                    onClick={() => {
-                      setEditingSource(source);
-                      setShowModal(true);
-                    }}
-                    className="text-sky-400 hover:text-sky-300 text-sm mr-3"
-                  >
-                    Edit
-                  </button>
-                </td>
-              </tr>
-            ))}
+                    >
+                      <span
+                        className={`block w-4 h-4 rounded-full bg-white transform transition-transform ${
+                          source.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                        }`}
+                      />
+                    </button>
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => {
+                        setEditingSource(source);
+                        setShowModal(true);
+                      }}
+                      className="text-sky-400 hover:text-sky-300 text-xs"
+                    >
+                      Edit
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
