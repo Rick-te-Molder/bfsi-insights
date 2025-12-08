@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { formatDateTime, getStatusColor, truncate } from '@/lib/utils';
+import { bulkReenrichAction } from './actions';
 
 interface QueueItem {
   id: string;
@@ -138,34 +139,16 @@ export function ReviewList({ items, status }: ReviewListProps) {
 
     const count = selectedIds.size;
     setLoading('reenrich');
-
-    const { error } = await supabase
-      .from('ingestion_queue')
-      .update({ status: 'queued' })
-      .in('id', Array.from(selectedIds));
-
-    if (error) {
-      setLoading(null);
-      setSelectedIds(new Set());
-      showSuccess(`❌ Failed to queue items: ${error.message}`);
-      router.refresh();
-      return;
-    }
-
-    // Trigger processing automatically
     showSuccess(`⏳ ${count} items queued, starting enrichment...`);
 
-    try {
-      const res = await fetch('/api/process-queue', { method: 'POST' });
-      const data = await res.json();
+    const result = await bulkReenrichAction(Array.from(selectedIds));
 
-      if (res.ok) {
-        showSuccess(`✅ Processing started: ${data.processed || count} items`);
-      } else {
-        showSuccess(`⚠️ Queued but processing failed: ${data.error}`);
-      }
-    } catch {
-      showSuccess(`⚠️ Queued but couldn't trigger processing`);
+    if (!result.success) {
+      showSuccess(`❌ Failed to queue items: ${result.error}`);
+    } else if (result.warning) {
+      showSuccess(`⚠️ ${result.warning}`);
+    } else {
+      showSuccess(`✅ Processing started: ${result.processed} items`);
     }
 
     setLoading(null);
