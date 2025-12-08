@@ -285,16 +285,20 @@ export function CarouselReview({ initialItems, industries, topics }: CarouselRev
               {payload.title || 'Untitled'}
             </h3>
 
-            {payload.published_at && (
-              <div className="mt-1 text-sm text-neutral-200">
-                <span className="text-neutral-400">Published</span>{' '}
-                {new Date(payload.published_at).toLocaleDateString('en-GB', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </div>
-            )}
+            <div className="mt-1 text-sm">
+              <span className="text-neutral-400">Published</span>{' '}
+              {payload.published_at ? (
+                <span className="text-neutral-200">
+                  {new Date(payload.published_at).toLocaleDateString('en-GB', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </span>
+              ) : (
+                <span className="text-red-400">⚠️ Not extracted</span>
+              )}
+            </div>
 
             {/* Thumbnail */}
             <div
