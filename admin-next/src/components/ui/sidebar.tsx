@@ -9,11 +9,10 @@ const navItems = [
   { href: '/review', label: 'Review Queue', icon: '📋' },
   { href: '/published', label: 'Published', icon: '✅' },
   { href: '/proposals', label: 'Proposals', icon: '📥' },
-  { href: '/evaluate', label: 'Evaluate', icon: '🔬' },
-  { href: '/compare', label: 'Compare', icon: '⚖️' },
-  { href: '/playground', label: 'Playground', icon: '🧪' },
   { href: '/sources', label: 'Sources', icon: '📡' },
   { href: '/prompts', label: 'Prompts', icon: '💬' },
+  { href: '/ab-tests', label: 'A/B Tests', icon: '🔀' },
+  { href: '/golden-sets', label: 'Golden Sets', icon: '⭐' },
 ];
 
 export function Sidebar() {
