@@ -13,17 +13,22 @@ const runner = new AgentRunner('content-summarizer');
 function cleanTitle(title) {
   if (!title) return title;
 
-  // Common patterns: "Title | Source", "Title - Source", "Title — Source"
-  // Only remove if the suffix looks like a source name (short, usually 1-3 words)
-  const patterns = [
-    /\s*\|\s*[A-Z][A-Za-z0-9\s&]{1,30}$/, // | OCC, | McKinsey & Company
-    /\s*[-–—]\s*[A-Z][A-Za-z0-9\s&]{1,30}$/, // - Reuters, — Bloomberg
-    /\s*::\s*[A-Z][A-Za-z0-9\s&]{1,30}$/, // :: Source
-  ];
+  // Use string operations to avoid ReDoS vulnerability
+  const separators = [' | ', ' - ', ' – ', ' — ', ' :: '];
 
   let cleaned = title;
-  for (const pattern of patterns) {
-    cleaned = cleaned.replace(pattern, '');
+  for (const sep of separators) {
+    const lastIndex = cleaned.lastIndexOf(sep);
+    if (lastIndex > 0) {
+      const suffix = cleaned.slice(lastIndex + sep.length).trim();
+      // Only remove if suffix looks like a source name (1-4 words, starts with capital)
+      if (suffix.length > 0 && suffix.length <= 40 && /^[A-Z]/.test(suffix)) {
+        const wordCount = suffix.split(/\s+/).length;
+        if (wordCount <= 4) {
+          cleaned = cleaned.slice(0, lastIndex);
+        }
+      }
+    }
   }
 
   return cleaned.trim();
