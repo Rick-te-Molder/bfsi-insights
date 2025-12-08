@@ -136,13 +136,13 @@ For detailed architecture diagrams, see:
 ### 5.1 AI Agents
 
 ```
-Agent           Purpose                              Model/Tool
-────────────────────────────────────────────────────────────────
-discover.js     Find candidates from RSS/sitemaps    GPT-4o-mini
-filter.js       Check BFSI relevance                 GPT-4o-mini
-summarize.js    Generate summaries (short/med/long)  GPT-4o-mini
-tag.js          Classify with taxonomies             GPT-4o-mini
-thumbnail.js    Screenshot article for preview       Playwright
+Agent                    Purpose                              Model/Tool
+─────────────────────────────────────────────────────────────────────────
+discovery-relevance.js   Find candidates from RSS/sitemaps    GPT-4o-mini
+filter.js                Check BFSI relevance                 GPT-4o-mini
+summarize.js             Generate summaries (short/med/long)  Claude Sonnet 4
+tag.js                   Classify with taxonomies             GPT-4o-mini
+thumbnail.js             Screenshot article for preview       Playwright
 ```
 
 **Discovery modes:**
