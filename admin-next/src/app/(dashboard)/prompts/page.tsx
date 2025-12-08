@@ -9,6 +9,20 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
+// Stage badge styling
+function getStageBadge(stage?: string) {
+  switch (stage) {
+    case 'production':
+      return { label: 'Live', className: 'bg-emerald-500/20 text-emerald-300' };
+    case 'staging':
+      return { label: 'Staged', className: 'bg-amber-500/20 text-amber-300' };
+    case 'development':
+      return { label: 'Draft', className: 'bg-neutral-500/20 text-neutral-300' };
+    default:
+      return { label: stage || 'Unknown', className: 'bg-neutral-500/20 text-neutral-400' };
+  }
+}
+
 export default function PromptsPage() {
   const [prompts, setPrompts] = useState<PromptVersion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,6 +30,7 @@ export default function PromptsPage() {
   const [viewingVersion, setViewingVersion] = useState<PromptVersion | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<PromptVersion | null>(null);
   const [diffMode, setDiffMode] = useState<{ a: PromptVersion; b: PromptVersion } | null>(null);
+  const [testingPrompt, setTestingPrompt] = useState<PromptVersion | null>(null);
 
   const supabase = createClient();
 
@@ -160,9 +175,18 @@ export default function PromptsPage() {
                   </td>
                   <td className="px-4 py-3">
                     {currentPrompt ? (
-                      <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-xs">
-                        ✅ Active
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-xs">
+                          ✅ Active
+                        </span>
+                        {currentPrompt.stage && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs ${getStageBadge(currentPrompt.stage).className}`}
+                          >
+                            {getStageBadge(currentPrompt.stage).label}
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <span className="rounded-full bg-red-500/20 text-red-300 px-2 py-0.5 text-xs">
                         ⚠️ Missing
@@ -173,6 +197,13 @@ export default function PromptsPage() {
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       {currentPrompt && (
                         <>
+                          <button
+                            onClick={() => setTestingPrompt(currentPrompt)}
+                            className="text-purple-400 hover:text-purple-300 text-xs"
+                          >
+                            Test
+                          </button>
+                          <span className="text-neutral-600">•</span>
                           <button
                             onClick={() => setEditingPrompt(currentPrompt)}
                             className="text-sky-400 hover:text-sky-300 text-xs"
@@ -203,6 +234,7 @@ export default function PromptsPage() {
           onRollback={rollbackToVersion}
           onDiff={(a, b) => setDiffMode({ a, b })}
           onView={setViewingVersion}
+          onTest={setTestingPrompt}
         />
       )}
 
@@ -233,6 +265,11 @@ export default function PromptsPage() {
           }}
         />
       )}
+
+      {/* Test Playground modal */}
+      {testingPrompt && (
+        <PromptPlayground prompt={testingPrompt} onClose={() => setTestingPrompt(null)} />
+      )}
     </div>
   );
 }
@@ -245,9 +282,18 @@ interface AgentDetailProps {
   onRollback: (p: PromptVersion) => void;
   onDiff: (a: PromptVersion, b: PromptVersion) => void;
   onView: (p: PromptVersion) => void;
+  onTest: (p: PromptVersion) => void;
 }
 
-function AgentDetail({ agentName, prompts, onEdit, onRollback, onDiff, onView }: AgentDetailProps) {
+function AgentDetail({
+  agentName,
+  prompts,
+  onEdit,
+  onRollback,
+  onDiff,
+  onView,
+  onTest,
+}: AgentDetailProps) {
   const currentPrompt = prompts.find((p) => p.is_current);
 
   return (
@@ -255,12 +301,20 @@ function AgentDetail({ agentName, prompts, onEdit, onRollback, onDiff, onView }:
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-white">{agentName}</h2>
         {currentPrompt && (
-          <button
-            onClick={() => onEdit(currentPrompt)}
-            className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
-          >
-            Edit Current
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onTest(currentPrompt)}
+              className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-500"
+            >
+              🧪 Test
+            </button>
+            <button
+              onClick={() => onEdit(currentPrompt)}
+              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
+            >
+              Edit Current
+            </button>
+          </div>
         )}
       </div>
 
@@ -648,6 +702,142 @@ function ViewVersionModal({ prompt, onClose, onRollback }: ViewVersionModalProps
         </div>
 
         <div className="p-4 border-t border-neutral-800 flex justify-end">
+          <button
+            onClick={onClose}
+            className="rounded-md px-4 py-2 text-sm text-neutral-400 hover:text-white"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Prompt Playground for testing
+interface PromptPlaygroundProps {
+  prompt: PromptVersion;
+  onClose: () => void;
+}
+
+function PromptPlayground({ prompt, onClose }: PromptPlaygroundProps) {
+  const [testInput, setTestInput] = useState('');
+  const [testOutput, setTestOutput] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function runTest() {
+    if (!testInput.trim()) {
+      setError('Please enter some test content');
+      return;
+    }
+
+    setTesting(true);
+    setError(null);
+    setTestOutput(null);
+
+    try {
+      const response = await fetch('/api/test-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentName: prompt.agent_name,
+          promptText: prompt.prompt_text,
+          testInput: testInput,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Test failed');
+      } else {
+        setTestOutput(JSON.stringify(data.result, null, 2));
+      }
+    } catch (err) {
+      setError('Failed to run test: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-4xl max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <span>🧪</span> Test Playground
+            </h2>
+            <p className="text-sm text-neutral-400">
+              {prompt.agent_name} • {prompt.version}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-neutral-500">
+              ~{estimateTokens(prompt.prompt_text).toLocaleString()} tokens
+            </span>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto p-4 space-y-4">
+          {/* Prompt preview */}
+          <div>
+            <label className="block text-sm text-neutral-400 mb-1">
+              Prompt ({prompt.prompt_text.length.toLocaleString()} chars)
+            </label>
+            <pre className="p-3 rounded-md bg-neutral-950 text-xs text-neutral-400 max-h-32 overflow-y-auto whitespace-pre-wrap">
+              {prompt.prompt_text.slice(0, 500)}
+              {prompt.prompt_text.length > 500 && '...'}
+            </pre>
+          </div>
+
+          {/* Test input */}
+          <div>
+            <label className="block text-sm text-neutral-400 mb-1">
+              Test Input (sample content to classify/process)
+            </label>
+            <textarea
+              value={testInput}
+              onChange={(e) => setTestInput(e.target.value)}
+              placeholder="Paste article text, title, or any content you want to test the prompt against..."
+              className="w-full h-40 rounded-md border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-neutral-300 resize-none"
+            />
+          </div>
+
+          {/* Run button */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={runTest}
+              disabled={testing || !testInput.trim()}
+              className="rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-500 disabled:opacity-50"
+            >
+              {testing ? 'Running...' : '▶ Run Test'}
+            </button>
+            {error && <span className="text-sm text-red-400">{error}</span>}
+          </div>
+
+          {/* Output */}
+          {testOutput && (
+            <div>
+              <label className="block text-sm text-neutral-400 mb-1">Output</label>
+              <pre className="p-4 rounded-md bg-emerald-950/50 border border-emerald-500/20 text-sm text-emerald-300 overflow-auto max-h-64 whitespace-pre-wrap">
+                {testOutput}
+              </pre>
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 border-t border-neutral-800 flex justify-between items-center">
+          <p className="text-xs text-neutral-500">
+            Note: This runs the prompt against the test input using the configured model
+          </p>
           <button
             onClick={onClose}
             className="rounded-md px-4 py-2 text-sm text-neutral-400 hover:text-white"
