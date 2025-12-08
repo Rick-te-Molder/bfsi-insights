@@ -2,6 +2,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { ReviewList } from './review-list';
 import { SourceFilter } from './source-filter';
+import { MasterDetailView } from './master-detail';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -90,12 +91,13 @@ async function getAllSources() {
 export default async function ReviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; source?: string; time?: string }>;
+  searchParams: Promise<{ status?: string; source?: string; time?: string; view?: string }>;
 }) {
   const params = await searchParams;
   const status = params.status || 'enriched';
   const source = params.source || '';
   const timeWindow = params.time || '';
+  const viewMode = params.view || 'split'; // 'list' or 'split'
 
   const { items, sources } = await getQueueItems(status, source, timeWindow);
   const allSources = await getAllSources();
@@ -120,9 +122,9 @@ export default async function ReviewPage({
   // Build URL with current filters
   const buildFilterUrl = (newParams: Record<string, string>) => {
     const searchParams = new URLSearchParams();
-    const merged = { status, source, time: timeWindow, ...newParams };
+    const merged = { status, source, time: timeWindow, view: viewMode, ...newParams };
     Object.entries(merged).forEach(([key, value]) => {
-      if (value) searchParams.set(key, value);
+      if (value && value !== 'split') searchParams.set(key, value); // split is default
     });
     return `/review?${searchParams.toString()}`;
   };
@@ -140,13 +142,36 @@ export default async function ReviewPage({
             {timeWindow && ` · ${timeWindow}`}
           </p>
         </div>
-        <Link
-          href="/review/carousel"
-          className="flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 transition-colors"
-        >
-          <span>🎠</span>
-          <span>Carousel View</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          {/* View Toggle */}
+          <div className="flex rounded-lg bg-neutral-800 p-1">
+            <Link
+              href={buildFilterUrl({ view: 'split' })}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                viewMode === 'split' ? 'bg-sky-600 text-white' : 'text-neutral-400 hover:text-white'
+              }`}
+              title="Split view with keyboard shortcuts"
+            >
+              ⬛ Split
+            </Link>
+            <Link
+              href={buildFilterUrl({ view: 'list' })}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                viewMode === 'list' ? 'bg-sky-600 text-white' : 'text-neutral-400 hover:text-white'
+              }`}
+              title="List view with bulk actions"
+            >
+              ☰ List
+            </Link>
+          </div>
+          <Link
+            href="/review/carousel"
+            className="flex items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm font-medium text-neutral-300 hover:bg-neutral-700 transition-colors"
+          >
+            <span>🎠</span>
+            <span>Carousel</span>
+          </Link>
+        </div>
       </header>
 
       {/* Status Filters */}
@@ -201,8 +226,12 @@ export default async function ReviewPage({
         )}
       </div>
 
-      {/* Items List with Bulk Actions */}
-      <ReviewList items={items} status={status} />
+      {/* Content View */}
+      {viewMode === 'split' ? (
+        <MasterDetailView items={items} status={status} />
+      ) : (
+        <ReviewList items={items} status={status} />
+      )}
     </div>
   );
 }
