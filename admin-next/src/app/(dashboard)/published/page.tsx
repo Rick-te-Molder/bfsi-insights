@@ -10,8 +10,8 @@ interface Publication {
   slug: string;
   title: string;
   source_url: string;
-  published_at: string;
-  created_at: string;
+  date_published: string;
+  date_added: string;
 }
 
 async function getPublications(search?: string) {
@@ -19,21 +19,25 @@ async function getPublications(search?: string) {
 
   let query = supabase
     .from('kb_publication')
-    .select('id, slug, title, source_url, published_at, created_at')
-    .order('created_at', { ascending: false })
-    .limit(100);
+    .select('id, slug, title, source_url, date_published, date_added')
+    .eq('status', 'published')
+    .order('date_added', { ascending: false })
+    .limit(200);
 
   if (search) {
     query = query.ilike('title', `%${search}%`);
   }
 
-  const { data, error } = await query;
+  const { data, error, count } = await query;
 
   if (error) {
     console.error('Error fetching publications:', error);
+    console.error('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.error('Service Key exists:', !!process.env.SUPABASE_SERVICE_KEY);
     return [];
   }
 
+  console.log(`Fetched ${data?.length || 0} publications`);
   return data as Publication[];
 }
 
@@ -84,8 +88,8 @@ export default async function PublishedPage({
                     {pub.source_url}
                   </a>
                   <div className="flex items-center gap-4 mt-2 text-xs text-neutral-500">
-                    <span>Published: {formatDateTime(pub.published_at)}</span>
-                    <span>Added: {formatDateTime(pub.created_at)}</span>
+                    <span>Published: {formatDateTime(pub.date_published)}</span>
+                    <span>Added: {formatDateTime(pub.date_added)}</span>
                   </div>
                 </div>
                 <PublicationActions publicationId={pub.id} title={pub.title} />
