@@ -2,6 +2,9 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 import { formatDateTime } from '@/lib/utils';
 import { PublicationActions } from './publication-actions';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface Publication {
   id: string;
   slug: string;
