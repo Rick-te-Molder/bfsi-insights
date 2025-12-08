@@ -27,8 +27,15 @@ interface ReviewListProps {
 export function ReviewList({ items, status }: ReviewListProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState<string | null>(null);
+  const [processingCount, setProcessingCount] = useState(0);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
+
+  const showSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(null), 5000);
+  };
 
   const toggleSelect = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
@@ -54,8 +61,11 @@ export function ReviewList({ items, status }: ReviewListProps) {
     if (selectedIds.size === 0) return;
     if (!confirm(`Approve ${selectedIds.size} items?`)) return;
 
+    const count = selectedIds.size;
     setLoading('approve');
+    setProcessingCount(0);
 
+    let processed = 0;
     for (const id of selectedIds) {
       const item = items.find((i) => i.id === id);
       if (!item) continue;
@@ -81,10 +91,13 @@ export function ReviewList({ items, status }: ReviewListProps) {
       });
 
       await supabase.from('ingestion_queue').update({ status: 'approved' }).eq('id', id);
+      processed++;
+      setProcessingCount(processed);
     }
 
     setLoading(null);
     setSelectedIds(new Set());
+    showSuccess(`✅ ${count} items approved and published`);
     router.refresh();
   };
 
@@ -93,8 +106,11 @@ export function ReviewList({ items, status }: ReviewListProps) {
     const reason = prompt(`Rejection reason for ${selectedIds.size} items:`);
     if (!reason) return;
 
+    const count = selectedIds.size;
     setLoading('reject');
+    setProcessingCount(0);
 
+    let processed = 0;
     for (const id of selectedIds) {
       const item = items.find((i) => i.id === id);
       if (!item) continue;
@@ -106,10 +122,13 @@ export function ReviewList({ items, status }: ReviewListProps) {
           payload: { ...item.payload, rejection_reason: reason },
         })
         .eq('id', id);
+      processed++;
+      setProcessingCount(processed);
     }
 
     setLoading(null);
     setSelectedIds(new Set());
+    showSuccess(`✅ ${count} items rejected`);
     router.refresh();
   };
 
@@ -117,15 +136,22 @@ export function ReviewList({ items, status }: ReviewListProps) {
     if (selectedIds.size === 0) return;
     if (!confirm(`Re-enrich ${selectedIds.size} items?`)) return;
 
+    const count = selectedIds.size;
     setLoading('reenrich');
 
-    await supabase
+    const { error } = await supabase
       .from('ingestion_queue')
       .update({ status: 'queued' })
       .in('id', Array.from(selectedIds));
 
     setLoading(null);
     setSelectedIds(new Set());
+
+    if (error) {
+      showSuccess(`❌ Failed to queue items: ${error.message}`);
+    } else {
+      showSuccess(`✅ ${count} items queued for re-enrichment`);
+    }
     router.refresh();
   };
 
@@ -135,6 +161,25 @@ export function ReviewList({ items, status }: ReviewListProps) {
 
   return (
     <div className="space-y-4">
+      {/* Success/Status Banner */}
+      {successMessage && (
+        <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 text-emerald-400 text-sm font-medium animate-pulse">
+          {successMessage}
+        </div>
+      )}
+
+      {/* Processing Indicator */}
+      {loading && (
+        <div className="rounded-lg bg-sky-500/10 border border-sky-500/20 px-4 py-3 flex items-center gap-3">
+          <div className="animate-spin rounded-full h-4 w-4 border-2 border-sky-500 border-t-transparent"></div>
+          <span className="text-sky-400 text-sm font-medium">
+            {loading === 'approve' && `Approving... ${processingCount}/${selectedIds.size}`}
+            {loading === 'reject' && `Rejecting... ${processingCount}/${selectedIds.size}`}
+            {loading === 'reenrich' && 'Queuing for re-enrichment...'}
+          </span>
+        </div>
+      )}
+
       {/* Bulk Actions Bar */}
       {items.length > 0 && (
         <div className="flex items-center justify-between rounded-lg bg-neutral-800/50 px-4 py-3">
