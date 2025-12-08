@@ -6,6 +6,29 @@ import process from 'node:process';
 
 const runner = new AgentRunner('content-summarizer');
 
+/**
+ * Clean title by removing common source suffixes
+ * Examples: "Title | OCC", "Title - McKinsey", "Title | Reuters"
+ */
+function cleanTitle(title) {
+  if (!title) return title;
+
+  // Common patterns: "Title | Source", "Title - Source", "Title — Source"
+  // Only remove if the suffix looks like a source name (short, usually 1-3 words)
+  const patterns = [
+    /\s*\|\s*[A-Z][A-Za-z0-9\s&]{1,30}$/, // | OCC, | McKinsey & Company
+    /\s*[-–—]\s*[A-Z][A-Za-z0-9\s&]{1,30}$/, // - Reuters, — Bloomberg
+    /\s*::\s*[A-Z][A-Za-z0-9\s&]{1,30}$/, // :: Source
+  ];
+
+  let cleaned = title;
+  for (const pattern of patterns) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+
+  return cleaned.trim();
+}
+
 const supabase = createClient(
   process.env.SUPABASE_URL || process.env.PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY,
@@ -231,7 +254,7 @@ Respond with ONLY the JSON object, no markdown code blocks or other text.`;
 
       // Flatten for backward compatibility
       return {
-        title: result.title,
+        title: cleanTitle(result.title),
         published_at: result.published_at,
         author: result.authors?.map((a) => a.name).join(', ') || null,
         authors: result.authors,
