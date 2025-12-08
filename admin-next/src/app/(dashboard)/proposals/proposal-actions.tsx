@@ -9,7 +9,11 @@ interface ProposalActionsProps {
   name: string;
 }
 
-export function ProposalActions({ proposalId, entityType, name }: ProposalActionsProps) {
+export function ProposalActions({
+  proposalId,
+  entityType: _entityType,
+  name,
+}: ProposalActionsProps) {
   const [loading, setLoading] = useState<'approve' | 'reject' | null>(null);
   const router = useRouter();
 

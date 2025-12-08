@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
 async function getStats() {
@@ -81,7 +82,7 @@ export default async function DashboardPage() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Review Queue CTA */}
-        <a
+        <Link
           href="/review"
           className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 hover:border-sky-500/50 transition-colors group"
         >
@@ -96,10 +97,10 @@ export default async function DashboardPage() {
             </div>
             <span className="text-3xl">📋</span>
           </div>
-        </a>
+        </Link>
 
         {/* Evaluation CTA */}
-        <a
+        <Link
           href="/evaluate"
           className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 hover:border-purple-500/50 transition-colors group"
         >
@@ -114,7 +115,7 @@ export default async function DashboardPage() {
             </div>
             <span className="text-3xl">🔬</span>
           </div>
-        </a>
+        </Link>
       </div>
 
       {/* Recent Failures */}
