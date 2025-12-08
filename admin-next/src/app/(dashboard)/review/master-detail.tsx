@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { formatDateTime, getStatusColor, truncate } from '@/lib/utils';
@@ -31,6 +31,12 @@ export function MasterDetailView({ items, status }: MasterDetailViewProps) {
   const [selectedId, setSelectedId] = useState<string | null>(items[0]?.id || null);
   const [listItems, setListItems] = useState(items);
   const router = useRouter();
+
+  // Sync items from props when they change (e.g., status filter changed)
+  useEffect(() => {
+    setListItems(items);
+    setSelectedId(items[0]?.id || null);
+  }, [items]);
 
   const selectedIndex = listItems.findIndex((item) => item.id === selectedId);
 
