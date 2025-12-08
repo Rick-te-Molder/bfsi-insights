@@ -77,6 +77,21 @@ async function stepSummarize(queueId, payload) {
   console.log('   📝 Generating summary...');
   const result = await runSummarizer({ id: queueId, payload });
 
+  // Filter out source_name from extracted organizations (redundant)
+  const sourceName = payload.source_name?.toLowerCase() || '';
+  const sourceVariants = [
+    sourceName,
+    sourceName.replace('www.', ''),
+    sourceName.replace('.com', '').replace('.org', '').replace('.gov', ''),
+  ].filter(Boolean);
+
+  const filteredOrganizations = (result.entities?.organizations || []).filter((org) => {
+    const orgLower = org.name?.toLowerCase() || '';
+    return !sourceVariants.some(
+      (variant) => orgLower.includes(variant) || variant.includes(orgLower),
+    );
+  });
+
   const updated = {
     ...payload,
     summary: result.summary,
@@ -86,7 +101,10 @@ async function stepSummarize(queueId, payload) {
     authors: result.authors,
     long_summary_sections: result.long_summary_sections,
     key_figures: result.key_figures,
-    entities: result.entities,
+    entities: {
+      ...result.entities,
+      organizations: filteredOrganizations,
+    },
     is_academic: result.is_academic,
     citations: result.citations,
   };

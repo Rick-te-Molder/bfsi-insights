@@ -36,11 +36,11 @@ const SummarySchema = z.object({
     )
     .describe('Authors with evidence of relevance and authority'),
 
-  // Structured summary - format/length only, behavior in prompt
+  // Structured summary - CHARACTER counts for UI display
   summary: z.object({
-    short: z.string().describe('1-2 sentences, max 50 words'),
-    medium: z.string().describe('3-5 sentences, max 150 words'),
-    long: z.string().describe('Comprehensive summary paragraph'),
+    short: z.string().describe('1-2 sentences, 120-150 characters total. Used on cards.'),
+    medium: z.string().describe('2-3 sentences, 250-300 characters total. Used in modals.'),
+    long: z.string().describe('Full paragraph, 500-600 characters total. Used on detail pages.'),
   }),
 
   // Long summary broken into sections (for detail page)
@@ -129,9 +129,9 @@ Output a JSON object with this exact structure:
   "published_at": "string|null - ISO 8601 date (YYYY-MM-DD) or null",
   "authors": [{"name": "string", "role": "string|null", "authority": "string|null"}],
   "summary": {
-    "short": "string - 1-2 sentences, max 50 words",
-    "medium": "string - 3-5 sentences, max 150 words", 
-    "long": "string - comprehensive summary paragraph"
+    "short": "string - 1-2 sentences, 120-150 characters total (for cards)",
+    "medium": "string - 2-3 sentences, 250-300 characters total (for modals)", 
+    "long": "string - full paragraph, 500-600 characters total (for detail pages)"
   },
   "long_summary_sections": {
     "overview": "string - 2-3 sentences listing main topics covered",

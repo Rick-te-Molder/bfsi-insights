@@ -125,10 +125,12 @@ import PublicationModal from '../../features/publications/PublicationModal.astro
   // Initialize modal
   initPublicationModal();
 
-  // Format date helper
+  // Format date helper - handles null/undefined and invalid dates
   const formatDate = (iso) => {
     if (!iso) return '';
-    return new Date(iso).toLocaleDateString('en-GB', {
+    const date = new Date(iso);
+    if (isNaN(date.getTime())) return ''; // Invalid date
+    return date.toLocaleDateString('en-GB', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

@@ -5,17 +5,25 @@ vi.stubEnv('PUBLIC_SUPABASE_URL', 'https://test.supabase.co');
 vi.stubEnv('SUPABASE_SERVICE_KEY', 'test-key');
 
 // Mock Supabase before importing - support chained .order() calls
+// Include all codes that tests expect to be validated
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({
-    from: vi.fn(() => ({
+    from: vi.fn((tableName) => ({
       select: vi.fn(() => {
-        const orderFn = vi.fn(() => ({
-          order: orderFn,
-          data: [
+        // Return different data based on table
+        const mockData = {
+          bfsi_industry: [
             { code: 'banking', name: 'Banking', level: 1, parent_code: null },
             { code: 'retail-banking', name: 'Retail Banking', level: 2, parent_code: 'banking' },
             { code: 'insurance', name: 'Insurance', level: 1, parent_code: null },
           ],
+          bfsi_topic: [{ code: 'ai-strategy', name: 'AI Strategy', level: 1, parent_code: null }],
+          kb_geography: [{ code: 'global', name: 'Global', sort_order: 1 }],
+        };
+        const data = mockData[tableName] || [];
+        const orderFn = vi.fn(() => ({
+          order: orderFn,
+          data,
         }));
         return { order: orderFn };
       }),
