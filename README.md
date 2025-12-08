@@ -281,20 +281,31 @@ Optimization:       Periodic analysis → Prompt tuning → A/B testing
 | `kb_source`             | RSS feed sources            |
 | `prompt_versions`       | Versioned AI prompts        |
 
-### 6.2 Guardrail Taxonomies (curated, fixed lists)
+### 6.2 Tables Used by Agents
 
-LLM picks from these pre-defined lists. **Do not auto-create entries.**
-
-| Table           | Rows | Purpose                                                |
-| --------------- | ---- | ------------------------------------------------------ |
-| `bfsi_industry` | 53   | Banking sectors (banking, insurance, payments, etc.)   |
-| `bfsi_topic`    | 5    | Content categories (strategy, technology, regulatory)  |
-| `kb_geography`  | 30   | Countries/regions (global, eu, uk, us, gcc, etc.)      |
-| `ag_use_case`   | 16   | AI use cases (customer-service, fraud-detection, etc.) |
-| `ag_capability` | 24   | AI capabilities (nlp, computer-vision, etc.)           |
-| `regulator`     | 18   | Regulatory bodies (ecb, fca, sec, etc.)                |
-| `regulation`    | 18   | Regulations/laws (gdpr, psd2, mifid, etc.)             |
-| `obligation`    | 18   | Compliance requirements (dora-ict-risk, gdpr-dpo, etc) |
+| Table                    | Type       | Used By        | Purpose                                          |
+| ------------------------ | ---------- | -------------- | ------------------------------------------------ |
+| **Core Pipeline**        |            |                |                                                  |
+| `ingestion_queue`        | Core       | All agents     | Processing pipeline queue                        |
+| `kb_publication`         | Core       | summarize, tag | Final published articles                         |
+| `kb_source`              | Core       | discover       | RSS feed sources configuration                   |
+| `prompt_versions`        | Core       | All agents     | Versioned AI prompts                             |
+| `writing_rules`          | Core       | summarize      | Editorial guidelines for summaries               |
+| **Guardrail Taxonomies** |            |                | _LLM picks from list, cannot create new entries_ |
+| `bfsi_industry`          | Guardrail  | discover, tag  | 53 BFSI sectors (banking, insurance, etc.)       |
+| `bfsi_topic`             | Guardrail  | discover, tag  | 5 content categories (strategy, tech, etc.)      |
+| `kb_geography`           | Guardrail  | tag            | 30 regions/countries (global, eu, uk, gcc, etc.) |
+| `bfsi_process_taxonomy`  | Guardrail  | tag            | Business processes (claims, underwriting, etc.)  |
+| `ag_use_case`            | Guardrail  | tag            | 16 AI use cases (fraud-detection, etc.)          |
+| `ag_capability`          | Guardrail  | tag            | 24 AI capabilities (nlp, vision, etc.)           |
+| `regulator`              | Guardrail  | tag            | 18 regulatory bodies (ecb, fca, sec, etc.)       |
+| `regulation`             | Guardrail  | tag            | 18 regulations (gdpr, psd2, dora, etc.)          |
+| `obligation`             | Guardrail  | tag            | Compliance requirements per regulation           |
+| **Expandable Entities**  |            |                | _LLM extracts names, may create new entries_     |
+| `ag_vendor`              | Expandable | tag            | AI/tech vendors mentioned in articles            |
+| `bfsi_organization`      | Expandable | tag            | Banks, insurers, asset managers mentioned        |
+| **Reference Data**       |            |                |                                                  |
+| `classic_papers`         | Reference  | discover       | Academic papers reference list                   |
 
 #### Regulatory Compliance Feature
 
