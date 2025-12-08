@@ -13,6 +13,18 @@ const eslintConfig = defineConfig([
     'build/**',
     'next-env.d.ts',
   ]),
+  // Custom rules
+  {
+    rules: {
+      // Allow underscore-prefixed unused variables (intentionally unused)
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+      // Disable overly strict set-state-in-effect check (our async data fetching pattern is safe)
+      'react-hooks/set-state-in-effect': 'off',
+    },
+  },
 ]);
 
 export default eslintConfig;

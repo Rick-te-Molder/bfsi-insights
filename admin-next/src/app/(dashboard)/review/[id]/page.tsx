@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { formatDateTime, getStatusColor } from '@/lib/utils';
 import { notFound } from 'next/navigation';
@@ -119,9 +120,9 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <a href="/review" className="text-neutral-400 hover:text-white text-sm">
+            <Link href="/review" className="text-neutral-400 hover:text-white text-sm">
               ← Back to queue
-            </a>
+            </Link>
             <span
               className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(item.status)}`}
             >
@@ -362,39 +363,41 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
                 <dt className="text-neutral-500">Discovered</dt>
                 <dd className="text-neutral-300">{formatDateTime(item.discovered_at)}</dd>
               </div>
-              {(payload.source_slug as string) && (
+              {!!payload.source_slug && (
                 <div className="flex justify-between">
                   <dt className="text-neutral-500">Source</dt>
-                  <dd className="text-neutral-300">{payload.source_slug as string}</dd>
+                  <dd className="text-neutral-300">{String(payload.source_slug)}</dd>
                 </div>
               )}
-              {payload.relevance_confidence && (
+              {typeof payload.relevance_confidence === 'number' && (
                 <div className="flex justify-between">
                   <dt className="text-neutral-500">AI Confidence</dt>
                   <dd className="text-emerald-400">
-                    {Math.round((payload.relevance_confidence as number) * 100)}%
+                    {Math.round(payload.relevance_confidence * 100)}%
                   </dd>
                 </div>
               )}
-              {payload.content_length && (
+              {typeof payload.content_length === 'number' && (
                 <div className="flex justify-between">
                   <dt className="text-neutral-500">Content Length</dt>
-                  <dd className="text-neutral-300">{String(payload.content_length)} chars</dd>
+                  <dd className="text-neutral-300">
+                    {payload.content_length.toLocaleString()} chars
+                  </dd>
                 </div>
               )}
             </dl>
           </div>
 
           {/* Raw Content Preview */}
-          {payload.raw_content && (
+          {typeof payload.raw_content === 'string' && (
             <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
               <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">
                 Original Content Preview
               </h3>
               <div className="text-xs text-neutral-400 bg-neutral-800/50 rounded-lg p-3 max-h-64 overflow-y-auto">
                 <pre className="whitespace-pre-wrap font-mono">
-                  {(payload.raw_content as string).slice(0, 2000)}
-                  {(payload.raw_content as string).length > 2000 && '...'}
+                  {payload.raw_content.slice(0, 2000)}
+                  {payload.raw_content.length > 2000 && '...'}
                 </pre>
               </div>
             </div>
