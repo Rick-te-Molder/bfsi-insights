@@ -3,6 +3,11 @@
  * Used by: enrich-item.js, backfill scripts
  */
 
+import { chromium } from 'playwright';
+
+// Domains that require Playwright (bot protection)
+const PLAYWRIGHT_DOMAINS = ['mckinsey.com', 'bcg.com', 'bain.com', 'deloitte.com'];
+
 const FETCH_HEADERS = {
   'User-Agent':
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -181,12 +186,80 @@ async function attemptFetch(url, attempt, retries) {
 }
 
 /**
+ * Check if URL requires Playwright (protected domain)
+ */
+function requiresPlaywright(url) {
+  try {
+    const hostname = new URL(url).hostname;
+    return PLAYWRIGHT_DOMAINS.some((domain) => hostname.includes(domain));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Fetch content using Playwright (for bot-protected sites)
+ */
+async function fetchWithPlaywright(url) {
+  console.log('   🎭 Using Playwright for protected site...');
+
+  const browser = await chromium.launch({
+    headless: true,
+    args: [
+      '--disable-blink-features=AutomationControlled',
+      '--no-sandbox',
+      '--disable-dev-shm-usage',
+    ],
+  });
+
+  try {
+    const context = await browser.newContext({
+      userAgent:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      viewport: { width: 1920, height: 1080 },
+      locale: 'en-US',
+      timezoneId: 'America/New_York',
+    });
+
+    const page = await context.newPage();
+
+    // Hide automation indicators
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+      Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+    });
+
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+
+    // Wait for content to load
+    await delay(3000);
+
+    const html = await page.content();
+    return { success: true, html };
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * Fetch content from URL with retry logic
  * Returns parsed HTML with title, description, date, textContent
  */
 export async function fetchContent(url, options = {}) {
   const { retries = 3, parseResult = true } = options;
 
+  // Use Playwright for protected domains
+  if (requiresPlaywright(url)) {
+    try {
+      const result = await fetchWithPlaywright(url);
+      return parseResult ? parseHtml(result.html, url) : { html: result.html };
+    } catch (error) {
+      throw new Error(`Playwright fetch failed: ${error.message}`);
+    }
+  }
+
+  // Standard fetch with retries
   for (let attempt = 1; attempt <= retries; attempt++) {
     const result = await attemptFetch(url, attempt, retries);
     if (result.success) {
