@@ -3,6 +3,11 @@
  * Used by: enrich-item.js, backfill scripts
  */
 
+import { chromium } from 'playwright';
+
+// Domains that require Playwright (bot protection)
+const PLAYWRIGHT_DOMAINS = ['mckinsey.com', 'bcg.com', 'bain.com', 'deloitte.com'];
+
 const FETCH_HEADERS = {
   'User-Agent':
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
@@ -181,12 +186,113 @@ async function attemptFetch(url, attempt, retries) {
 }
 
 /**
+ * Check if URL requires Playwright (protected domain)
+ */
+function requiresPlaywright(url) {
+  try {
+    const hostname = new URL(url).hostname;
+    return PLAYWRIGHT_DOMAINS.some((domain) => hostname.includes(domain));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Try fetching from Google Cache
+ */
+async function fetchFromGoogleCache(url) {
+  const cacheUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`;
+  console.log('   🔍 Trying Google Cache...');
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const response = await fetch(cacheUrl, {
+      headers: FETCH_HEADERS,
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) return { success: false };
+
+    const html = await response.text();
+    if (html.includes('not available') || html.length < 1000) return { success: false };
+
+    return { success: true, html };
+  } catch {
+    clearTimeout(timeout);
+    return { success: false };
+  }
+}
+
+/**
+ * Fetch content using Playwright (for bot-protected sites)
+ */
+async function fetchWithPlaywright(url) {
+  console.log('   🎭 Using Playwright for protected site...');
+
+  const browser = await chromium.launch({
+    headless: true,
+    args: [
+      '--disable-blink-features=AutomationControlled',
+      '--no-sandbox',
+      '--disable-dev-shm-usage',
+    ],
+  });
+
+  try {
+    const context = await browser.newContext({
+      userAgent:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      viewport: { width: 1920, height: 1080 },
+      locale: 'en-US',
+      timezoneId: 'America/New_York',
+    });
+
+    const page = await context.newPage();
+
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+      Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+    });
+
+    await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+    await delay(3000);
+
+    const html = await page.content();
+    return { success: true, html };
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
  * Fetch content from URL with retry logic
  * Returns parsed HTML with title, description, date, textContent
  */
 export async function fetchContent(url, options = {}) {
   const { retries = 3, parseResult = true } = options;
 
+  // Use Playwright for protected domains
+  if (requiresPlaywright(url)) {
+    try {
+      const result = await fetchWithPlaywright(url);
+      return parseResult ? parseHtml(result.html, url) : { html: result.html };
+    } catch (error) {
+      console.log(`   ⚠️ Playwright failed: ${error.message}`);
+      // Try Google Cache as fallback
+      const cacheResult = await fetchFromGoogleCache(url);
+      if (cacheResult.success) {
+        console.log('   ✅ Got content from Google Cache');
+        return parseResult ? parseHtml(cacheResult.html, url) : { html: cacheResult.html };
+      }
+      throw new Error(`Protected site fetch failed: ${error.message}`);
+    }
+  }
+
+  // Standard fetch with retries
   for (let attempt = 1; attempt <= retries; attempt++) {
     const result = await attemptFetch(url, attempt, retries);
     if (result.success) {
