@@ -1,6 +1,7 @@
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { ReviewList } from './review-list';
+import { SourceFilter } from './source-filter';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -18,7 +19,7 @@ interface QueueItem {
   discovered_at: string;
 }
 
-async function getQueueItems(status?: string) {
+async function getQueueItems(status?: string, source?: string, timeWindow?: string) {
   const supabase = createServiceRoleClient();
 
   let query = supabase
@@ -31,26 +32,73 @@ async function getQueueItems(status?: string) {
     query = query.eq('status', status);
   }
 
+  // Apply time window filter
+  if (timeWindow) {
+    const now = new Date();
+    let cutoff: Date;
+    switch (timeWindow) {
+      case '24h':
+        cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        break;
+      case '7d':
+        cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case '30d':
+        cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        break;
+      default:
+        cutoff = new Date(0);
+    }
+    query = query.gte('discovered_at', cutoff.toISOString());
+  }
+
   const { data, error } = await query;
 
   if (error) {
     console.error('Error fetching queue items:', JSON.stringify(error, null, 2));
     console.error('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'MISSING');
     console.error('Service Key:', process.env.SUPABASE_SERVICE_KEY ? 'SET' : 'MISSING');
-    return [];
+    return { items: [], sources: [] };
   }
 
-  return data as QueueItem[];
+  // Filter by source client-side (payload filtering is complex in Supabase)
+  let items = data as QueueItem[];
+  if (source) {
+    items = items.filter((item) => item.payload?.source_slug === source);
+  }
+
+  // Extract unique sources for filter dropdown
+  const sources = Array.from(
+    new Set(
+      (data as QueueItem[]).map((item) => item.payload?.source_slug).filter(Boolean) as string[],
+    ),
+  ).sort();
+
+  return { items, sources };
+}
+
+async function getAllSources() {
+  const supabase = createServiceRoleClient();
+  const { data } = await supabase
+    .from('source')
+    .select('slug, name')
+    .eq('is_active', true)
+    .order('name');
+  return data || [];
 }
 
 export default async function ReviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; source?: string; time?: string }>;
 }) {
   const params = await searchParams;
   const status = params.status || 'enriched';
-  const items = await getQueueItems(status);
+  const source = params.source || '';
+  const timeWindow = params.time || '';
+
+  const { items, sources } = await getQueueItems(status, source, timeWindow);
+  const allSources = await getAllSources();
 
   const statusFilters = [
     { value: 'enriched', label: 'Pending Review' },
@@ -62,6 +110,23 @@ export default async function ReviewPage({
     { value: 'all', label: 'All' },
   ];
 
+  const timeFilters = [
+    { value: '', label: 'All time' },
+    { value: '24h', label: 'Last 24h' },
+    { value: '7d', label: 'Last 7 days' },
+    { value: '30d', label: 'Last 30 days' },
+  ];
+
+  // Build URL with current filters
+  const buildFilterUrl = (newParams: Record<string, string>) => {
+    const searchParams = new URLSearchParams();
+    const merged = { status, source, time: timeWindow, ...newParams };
+    Object.entries(merged).forEach(([key, value]) => {
+      if (value) searchParams.set(key, value);
+    });
+    return `/review?${searchParams.toString()}`;
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -69,7 +134,10 @@ export default async function ReviewPage({
         <div>
           <h1 className="text-2xl font-bold">Review Queue</h1>
           <p className="mt-1 text-sm text-neutral-400">
-            {items.length} items {status !== 'all' ? `with status "${status}"` : 'total'}
+            {items.length} items
+            {status !== 'all' && ` · ${status}`}
+            {source && ` · ${source}`}
+            {timeWindow && ` · ${timeWindow}`}
           </p>
         </div>
         <Link
@@ -86,7 +154,7 @@ export default async function ReviewPage({
         {statusFilters.map((filter) => (
           <Link
             key={filter.value}
-            href={`/review?status=${filter.value}`}
+            href={buildFilterUrl({ status: filter.value })}
             className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               status === filter.value
                 ? 'bg-sky-600 text-white'
@@ -96,6 +164,41 @@ export default async function ReviewPage({
             {filter.label}
           </Link>
         ))}
+      </div>
+
+      {/* Advanced Filters */}
+      <div className="flex flex-wrap items-center gap-4 rounded-lg bg-neutral-800/30 px-4 py-3">
+        <span className="text-xs font-medium text-neutral-500 uppercase">Filters:</span>
+
+        {/* Time Window */}
+        <div className="flex items-center gap-1">
+          {timeFilters.map((filter) => (
+            <Link
+              key={filter.value}
+              href={buildFilterUrl({ time: filter.value })}
+              className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                timeWindow === filter.value
+                  ? 'bg-purple-600 text-white'
+                  : 'text-neutral-400 hover:bg-neutral-700 hover:text-white'
+              }`}
+            >
+              {filter.label}
+            </Link>
+          ))}
+        </div>
+
+        {/* Source Filter */}
+        <SourceFilter sources={allSources} currentSource={source} baseUrl={buildFilterUrl({})} />
+
+        {/* Clear Filters */}
+        {(source || timeWindow) && (
+          <Link
+            href={`/review?status=${status}`}
+            className="text-xs text-red-400 hover:text-red-300"
+          >
+            Clear filters
+          </Link>
+        )}
       </div>
 
       {/* Items List with Bulk Actions */}

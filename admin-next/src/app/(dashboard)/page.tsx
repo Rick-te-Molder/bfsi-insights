@@ -62,6 +62,27 @@ async function getStats() {
     .order('updated_at', { ascending: false })
     .limit(5);
 
+  // Get failed count in last 24h for alerts
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count: failedLast24h } = await supabase
+    .from('ingestion_queue')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'failed')
+    .gte('updated_at', oneDayAgo);
+
+  // Get sources with no items in last 72h (potential dead sources)
+  const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
+  const { data: recentSources } = await supabase
+    .from('ingestion_queue')
+    .select('payload')
+    .gte('discovered_at', threeDaysAgo);
+
+  const activeSourceSlugs = new Set(
+    (recentSources || [])
+      .map((r) => (r.payload as { source_slug?: string })?.source_slug)
+      .filter(Boolean),
+  );
+
   // Get publication count
   const { count: publishedCount } = await supabase
     .from('kb_publication')
@@ -89,6 +110,8 @@ async function getStats() {
     failedCount: statusCounts.failed || 0,
     activeTests: activeTests || 0,
     pendingProposals: pendingProposals || 0,
+    failedLast24h: failedLast24h || 0,
+    activeSourceCount: activeSourceSlugs.size,
   };
 }
 
@@ -102,6 +125,8 @@ export default async function DashboardPage() {
     recentItemsCount,
     activeTests,
     pendingProposals,
+    failedLast24h,
+    activeSourceCount,
   } = await getStats();
 
   return (
@@ -186,58 +211,115 @@ export default async function DashboardPage() {
         {/* Review Queue CTA */}
         <Link
           href="/review"
-          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 hover:border-sky-500/50 transition-colors group"
+          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 hover:border-sky-500/50 transition-all group hover:scale-[1.02]"
         >
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold group-hover:text-sky-400 transition-colors">
+              <h2 className="text-lg font-semibold group-hover:text-sky-400 transition-colors flex items-center gap-2">
                 Review Queue
+                <span className="text-neutral-600 group-hover:text-sky-400/50 transition-colors">
+                  →
+                </span>
               </h2>
-              <p className="mt-1 text-sm text-neutral-400">
-                {statusCounts.enriched || 0} items waiting for review
+              <p className="mt-0.5 text-xs text-neutral-500">Triage and approve new content</p>
+              <p className="mt-2 text-sm text-neutral-300">
+                {statusCounts.enriched || 0} items waiting
               </p>
             </div>
-            <span className="text-3xl">📋</span>
+            <span className="text-3xl opacity-80 group-hover:opacity-100 transition-opacity">
+              📋
+            </span>
           </div>
         </Link>
 
         {/* Prompts CTA */}
         <Link
           href="/prompts"
-          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 hover:border-purple-500/50 transition-colors group"
+          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 hover:border-purple-500/50 transition-all group hover:scale-[1.02]"
         >
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold group-hover:text-purple-400 transition-colors">
+              <h2 className="text-lg font-semibold group-hover:text-purple-400 transition-colors flex items-center gap-2">
                 Prompt Engineering
+                <span className="text-neutral-600 group-hover:text-purple-400/50 transition-colors">
+                  →
+                </span>
               </h2>
-              <p className="mt-1 text-sm text-neutral-400">Manage and version LLM prompts</p>
+              <p className="mt-0.5 text-xs text-neutral-500">Edit and test agent prompts</p>
+              <p className="mt-2 text-sm text-neutral-300">Manage prompt versions</p>
             </div>
-            <span className="text-3xl">💬</span>
+            <span className="text-3xl opacity-80 group-hover:opacity-100 transition-opacity">
+              💬
+            </span>
           </div>
         </Link>
 
         {/* Golden Sets CTA */}
         <Link
           href="/golden-sets"
-          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 hover:border-amber-500/50 transition-colors group"
+          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 hover:border-amber-500/50 transition-all group hover:scale-[1.02]"
         >
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold group-hover:text-amber-400 transition-colors">
+              <h2 className="text-lg font-semibold group-hover:text-amber-400 transition-colors flex items-center gap-2">
                 Golden Sets
+                <span className="text-neutral-600 group-hover:text-amber-400/50 transition-colors">
+                  →
+                </span>
               </h2>
-              <p className="mt-1 text-sm text-neutral-400">Curated test cases for evaluation</p>
+              <p className="mt-0.5 text-xs text-neutral-500">Maintain evaluation datasets</p>
+              <p className="mt-2 text-sm text-neutral-300">Test prompts against curated cases</p>
             </div>
-            <span className="text-3xl">⭐</span>
+            <span className="text-3xl opacity-80 group-hover:opacity-100 transition-opacity">
+              ⭐
+            </span>
           </div>
         </Link>
       </div>
 
+      {/* Issues / Alerts Section */}
+      {(failedLast24h > 0 || pendingProposals > 0) && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-neutral-400 uppercase tracking-wide">
+            Issues requiring attention
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {failedLast24h > 0 && (
+              <Link
+                href="/review?status=failed"
+                className="flex items-center gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-4 hover:bg-red-500/15 transition-colors"
+              >
+                <span className="text-2xl">⚠️</span>
+                <div>
+                  <p className="text-sm font-medium text-red-300">
+                    {failedLast24h} item{failedLast24h !== 1 ? 's' : ''} failed in the last 24h
+                  </p>
+                  <p className="text-xs text-red-400/70">Click to view failed items</p>
+                </div>
+              </Link>
+            )}
+            {pendingProposals > 0 && (
+              <Link
+                href="/proposals"
+                className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 hover:bg-amber-500/15 transition-colors"
+              >
+                <span className="text-2xl">📥</span>
+                <div>
+                  <p className="text-sm font-medium text-amber-300">
+                    {pendingProposals} entity proposal{pendingProposals !== 1 ? 's' : ''} pending
+                  </p>
+                  <p className="text-xs text-amber-400/70">Review proposed entities</p>
+                </div>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Recent Failures */}
       {recentFailures.length > 0 && (
         <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-6">
-          <h2 className="text-lg font-semibold text-red-300 mb-4">⚠️ Recent Failures</h2>
+          <h2 className="text-lg font-semibold text-red-300 mb-4">Recent Failures</h2>
           <div className="space-y-3">
             {recentFailures.map((item) => (
               <div
