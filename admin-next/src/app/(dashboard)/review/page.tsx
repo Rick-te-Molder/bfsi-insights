@@ -69,6 +69,13 @@ export default async function ReviewPage({
             {items.length} items {status !== 'all' ? `with status "${status}"` : 'total'}
           </p>
         </div>
+        <Link
+          href="/review/carousel"
+          className="flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 transition-colors"
+        >
+          <span>🎠</span>
+          <span>Carousel View</span>
+        </Link>
       </header>
 
       {/* Status Filters */}
