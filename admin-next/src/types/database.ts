@@ -105,13 +105,96 @@ export interface EvalRun {
   id: string;
   agent_name: string;
   prompt_version: string;
-  model_id: string;
+  eval_type: 'golden' | 'llm_judge' | 'ab_test';
+  golden_set_id?: string;
+  compare_prompt_version?: string;
+  status: 'running' | 'success' | 'failed';
+  total_examples?: number;
+  passed?: number;
+  failed?: number;
+  score?: number;
+  results?: Record<string, unknown>;
+  started_at: string;
+  finished_at?: string;
+  duration_ms?: number;
+}
+
+export interface EvalGoldenSet {
+  id: string;
+  agent_name: string;
+  name: string;
+  description?: string;
+  input: Record<string, unknown>;
+  expected_output: Record<string, unknown>;
+  created_by?: string;
   created_at: string;
-  total_items: number;
-  passed: number;
-  failed: number;
-  scores: Record<string, number>;
+  updated_at: string;
+}
+
+export interface EvalResult {
+  id: string;
+  run_id: string;
+  input: Record<string, unknown>;
+  expected_output?: Record<string, unknown>;
+  actual_output?: Record<string, unknown>;
+  passed?: boolean;
+  score?: number;
+  judge_reasoning?: string;
+  judge_model?: string;
+  output_a?: Record<string, unknown>;
+  output_b?: Record<string, unknown>;
+  winner?: 'a' | 'b' | 'tie';
+  created_at: string;
+}
+
+export interface PromptABTest {
+  id: string;
+  agent_name: string;
+  variant_a_version: string;
+  variant_b_version: string;
+  traffic_split: number;
+  sample_size: number;
+  items_processed: number;
+  items_variant_a: number;
+  items_variant_b: number;
+  status: 'draft' | 'running' | 'paused' | 'completed' | 'cancelled';
+  results?: ABTestResults;
+  winner?: 'a' | 'b' | 'tie';
+  name?: string;
   notes?: string;
+  created_by?: string;
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+}
+
+export interface ABTestResults {
+  variant_a: ABTestMetrics;
+  variant_b: ABTestMetrics;
+  statistical_significance?: number;
+}
+
+export interface ABTestMetrics {
+  avg_confidence: number;
+  avg_latency_ms: number;
+  error_rate: number;
+  validation_pass_rate: number;
+  total_items: number;
+}
+
+export interface PromptABTestItem {
+  id: string;
+  test_id: string;
+  queue_item_id?: string;
+  variant: 'a' | 'b';
+  output?: Record<string, unknown>;
+  latency_ms?: number;
+  input_tokens?: number;
+  output_tokens?: number;
+  confidence?: number;
+  error_count: number;
+  validation_passed?: boolean;
+  created_at: string;
 }
 
 // UI-specific types
