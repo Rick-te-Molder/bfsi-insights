@@ -1,13 +1,21 @@
 import Link from 'next/link';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
+// Force dynamic rendering to always get fresh data
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function getStats() {
   const supabase = createServiceRoleClient();
 
   // Get queue counts by status
-  const { data: queueItems } = await supabase
+  const { data: queueItems, error: queueError } = await supabase
     .from('ingestion_queue')
     .select('status, updated_at, payload');
+
+  if (queueError) {
+    console.error('Dashboard queue query error:', queueError);
+  }
 
   const statusCounts = (queueItems || []).reduce(
     (acc, item) => {
