@@ -72,6 +72,27 @@ const TaggingSchema = z.object({
     .describe('BFSI organizations mentioned (banks, insurers, asset managers)'),
   vendor_names: z.array(z.string()).describe('AI/tech vendors mentioned'),
 
+  // Persona relevance scores (0-1 for each audience type)
+  persona_scores: z
+    .object({
+      executive: z
+        .number()
+        .min(0)
+        .max(1)
+        .describe('Relevance for C-suite/executives (strategy, business impact)'),
+      technical: z
+        .number()
+        .min(0)
+        .max(1)
+        .describe('Relevance for technical roles (implementation, architecture)'),
+      compliance: z
+        .number()
+        .min(0)
+        .max(1)
+        .describe('Relevance for compliance/risk roles (regulatory, risk)'),
+    })
+    .describe('Relevance scores per persona/audience type'),
+
   // Overall metadata
   overall_confidence: z.number().min(0).max(1).describe('Overall confidence in classification 0-1'),
   reasoning: z.string().describe('Brief explanation of classification choices'),
@@ -261,6 +282,11 @@ ${taxonomies.processes}
 === EXPANDABLE ENTITIES (extract names as found) ===
 - organization_names: Banks, insurers, asset managers mentioned by name
 - vendor_names: AI/tech vendors mentioned by name
+
+=== PERSONA RELEVANCE (score 0-1 for each audience) ===
+- executive: C-suite, strategy leaders (interested in: business impact, market trends, competitive advantage)
+- technical: Engineers, architects, IT leaders (interested in: implementation, architecture, technical details)
+- compliance: Risk, compliance, legal (interested in: regulations, risk management, audit, governance)
 
 === CONFIDENCE SCORING GUIDE ===
 - 0.9-1.0: Explicitly stated, main focus of the article

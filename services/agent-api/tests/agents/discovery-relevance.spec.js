@@ -26,6 +26,21 @@ vi.mock('openai', () => ({
   })),
 }));
 
+// Mock Supabase to return fallback prompt
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn(() => Promise.resolve({ data: null, error: { message: 'Not found' } })),
+          })),
+        })),
+      })),
+    })),
+  })),
+}));
+
 // Import after mocking
 import {
   scoreRelevance,

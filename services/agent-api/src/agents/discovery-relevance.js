@@ -8,15 +8,46 @@
  */
 
 import OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
 import process from 'node:process';
 
-// Lazy-load OpenAI client to avoid error at import time when key is missing
+// Lazy-load clients
 let openai = null;
+let supabase = null;
+let cachedPrompt = null;
+
 function getOpenAI() {
   if (!openai) {
     openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
   return openai;
+}
+
+function getSupabase() {
+  if (!supabase) {
+    supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  }
+  return supabase;
+}
+
+// Load prompt from DB (cached for performance)
+async function getSystemPrompt() {
+  if (cachedPrompt) return cachedPrompt;
+
+  const { data, error } = await getSupabase()
+    .from('prompt_versions')
+    .select('prompt_text')
+    .eq('agent_name', 'discovery-relevance')
+    .eq('is_current', true)
+    .single();
+
+  if (error || !data) {
+    console.warn('⚠️ No DB prompt for discovery-relevance, using fallback');
+    return FALLBACK_PROMPT;
+  }
+
+  cachedPrompt = data.prompt_text;
+  return cachedPrompt;
 }
 
 // Minimum score to queue (below this = auto-skip)
@@ -51,8 +82,8 @@ const TRUSTED_SOURCES = new Set([
   'bain',
 ]);
 
-// System prompt for executive relevance scoring
-const SYSTEM_PROMPT = `You are an expert content curator for BFSI (Banking, Financial Services, Insurance) executives.
+// Fallback prompt (used if DB prompt not found)
+const FALLBACK_PROMPT = `You are an expert content curator for BFSI (Banking, Financial Services, Insurance) executives.
 
 TARGET AUDIENCE:
 - C-suite executives (CEO, CTO, CDO, CRO, CFO)
@@ -136,10 +167,11 @@ Title: ${title}
 Description: ${description || '(no description available)'}`;
 
   try {
+    const systemPrompt = await getSystemPrompt();
     const completion = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: userContent },
       ],
       response_format: { type: 'json_object' },
