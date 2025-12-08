@@ -151,44 +151,64 @@ thumbnail.js             Screenshot article for preview       Playwright
 - `--hybrid` — Embeddings pre-filter + LLM for uncertain cases
 - _(no flag)_ — Rule-based keyword matching (fast but noisy)
 
-### 5.2 Workflow States
+### 5.2 Pipeline Processes
 
-#### Ingestion Queue (`ingestion_queue.status`)
+#### Process 1: Discovery (nightly)
 
-| Status       | Actor | Description                                          |
-| ------------ | ----- | ---------------------------------------------------- |
-| `pending`    | 🤖    | Discovered via agentic pipeline, awaiting processing |
-| `queued`     | 🤖    | Manual submission, ready for processing              |
-| `processing` | 🤖    | Agent API currently processing                       |
-| `fetched`    | 🤖    | Content retrieved from URL                           |
-| `filtered`   | 🤖    | Passed BFSI relevance check                          |
-| `summarized` | 🤖    | AI summaries generated                               |
-| `tagged`     | 🤖    | Taxonomy tags applied                                |
-| `enriched`   | 🤖    | Ready for human review                               |
-| `approved`   | 👤    | Human approved → moved to kb_publication             |
-| `rejected`   | 🤖/👤 | Not BFSI relevant (filter¹) or human rejected        |
-| `failed`     | 🤖    | Processing error (can retry)                         |
+Finds new content from RSS feeds and sitemaps.
 
-> ¹ **Note:** Filter rejection only applies to nightly RSS discovery. Manual submissions skip filter rejection since a human explicitly submitted the URL.
+| Step              | Agent/Tool                             | Status After | Description                     |
+| ----------------- | -------------------------------------- | ------------ | ------------------------------- |
+| RSS/Sitemap fetch | `discover.js`                          | —            | Parse feeds, extract URLs       |
+| Relevance scoring | `discovery-relevance.js` (GPT-4o-mini) | `pending`    | Score 0-1, filter low-relevance |
 
-#### Publication (`kb_publication.status`)
+#### Process 2: Enrichment (automated)
 
-| Status      | Actor | Description                      |
-| ----------- | ----- | -------------------------------- |
-| `published` | 👤    | Live on website (after approval) |
-| `draft`     | 👤    | Created but not yet live         |
-| `archived`  | 👤    | Removed from public view         |
+Orchestrated by `enrich-item.js`. Runs on `pending` or `queued` items.
 
-#### State Flow Diagram
+| Step             | Agent/Tool                                       | Status After              | Description                          |
+| ---------------- | ------------------------------------------------ | ------------------------- | ------------------------------------ |
+| Start processing | —                                                | `processing`              | Lock item                            |
+| Content fetch    | `content-fetcher.js` (Playwright for some sites) | `fetched`                 | Download page, extract text          |
+| Relevance filter | `filter.js` (GPT-4o-mini)                        | `filtered` or `rejected`¹ | Verify BFSI relevance                |
+| Summarization    | `summarize.js` (Claude Sonnet 4)                 | `summarized`              | Generate short/medium/long summaries |
+| Tagging          | `tag.js` (GPT-4o-mini)                           | `tagged`                  | Classify with taxonomies             |
+| Thumbnail        | `thumbnail.js` (Playwright)                      | `enriched`                | Screenshot article                   |
 
-```
-Manual:   queued → processing → filtered → summarized → tagged → enriched
-                                                                    ↓
-Nightly:  pending → fetched → filtered → summarized → tagged → enriched
-                                                                    ↓
-                                              👤 Review → approved → published
-                                                       ↘ rejected
-```
+> ¹ Filter rejection only applies to nightly discovery. Manual submissions skip rejection.
+
+#### Process 3: Review (human)
+
+Human reviews enriched items in admin UI.
+
+| Action    | Status After | Description                |
+| --------- | ------------ | -------------------------- |
+| Approve   | `approved`   | Item ready for publishing  |
+| Reject    | `rejected`   | Item discarded with reason |
+| Re-enrich | `queued`     | Re-run enrichment pipeline |
+
+#### Process 4: Publishing (human trigger)
+
+| Step          | Actor | Description                          |
+| ------------- | ----- | ------------------------------------ |
+| Approve       | 👤    | Moves item to `kb_publication` table |
+| Trigger Build | 👤    | Deploys to Cloudflare via webhook    |
+
+#### Status Reference
+
+| Status       | Set By               | Description                             |
+| ------------ | -------------------- | --------------------------------------- |
+| `pending`    | discover.js          | Awaiting enrichment (from nightly)      |
+| `queued`     | Admin UI             | Awaiting enrichment (manual submission) |
+| `processing` | enrich-item.js       | Currently being processed               |
+| `fetched`    | content-fetcher.js   | Page content downloaded                 |
+| `filtered`   | filter.js            | Passed BFSI relevance check             |
+| `summarized` | summarize.js         | AI summaries generated                  |
+| `tagged`     | tag.js               | Taxonomy tags applied                   |
+| `enriched`   | enrich-item.js       | Ready for human review                  |
+| `approved`   | Admin UI             | Human approved                          |
+| `rejected`   | filter.js / Admin UI | Not relevant or human rejected          |
+| `failed`     | enrich-item.js       | Processing error (retryable)            |
 
 ### 5.3 Content Ingestion Options
 
