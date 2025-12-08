@@ -114,26 +114,41 @@ export default async function DashboardPage() {
 
       {/* Pipeline Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+        <Link
+          href="/review?status=enriched"
+          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
+        >
           <p className="text-sm text-neutral-400">Pending Review</p>
           <p className="mt-1 text-3xl font-bold text-amber-300">{statusCounts.enriched || 0}</p>
-        </div>
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+        </Link>
+        <Link
+          href="/review?status=processing"
+          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
+        >
           <p className="text-sm text-neutral-400">Processing</p>
           <p className="mt-1 text-3xl font-bold text-sky-300">{statusCounts.processing || 0}</p>
-        </div>
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+        </Link>
+        <Link
+          href="/review?status=queued"
+          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
+        >
           <p className="text-sm text-neutral-400">In Queue</p>
           <p className="mt-1 text-3xl font-bold text-neutral-300">{statusCounts.queued || 0}</p>
-        </div>
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+        </Link>
+        <Link
+          href="/review?status=failed"
+          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
+        >
           <p className="text-sm text-neutral-400">Failed</p>
           <p className="mt-1 text-3xl font-bold text-red-300">{statusCounts.failed || 0}</p>
-        </div>
-        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+        </Link>
+        <Link
+          href="/published"
+          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
+        >
           <p className="text-sm text-neutral-400">Published</p>
           <p className="mt-1 text-3xl font-bold text-emerald-300">{publishedCount}</p>
-        </div>
+        </Link>
       </div>
 
       {/* Performance Metrics */}
