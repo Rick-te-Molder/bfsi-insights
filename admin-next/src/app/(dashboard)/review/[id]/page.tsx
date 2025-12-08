@@ -363,6 +363,14 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
                 <dt className="text-neutral-500">Discovered</dt>
                 <dd className="text-neutral-300">{formatDateTime(item.discovered_at)}</dd>
               </div>
+              <div className="flex justify-between">
+                <dt className="text-neutral-500">Published</dt>
+                <dd className={payload.published_at ? 'text-neutral-300' : 'text-amber-400'}>
+                  {payload.published_at
+                    ? formatDateTime(payload.published_at as string)
+                    : 'Not extracted'}
+                </dd>
+              </div>
               {!!payload.source_slug && (
                 <div className="flex justify-between">
                   <dt className="text-neutral-500">Source</dt>
