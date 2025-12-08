@@ -285,16 +285,16 @@ Optimization:       Periodic analysis → Prompt tuning → A/B testing
 
 LLM picks from these pre-defined lists. **Do not auto-create entries.**
 
-| Table            | Rows | Purpose                                                |
-| ---------------- | ---- | ------------------------------------------------------ |
-| `bfsi_industry`  | 53   | Banking sectors (banking, insurance, payments, etc.)   |
-| `bfsi_topic`     | 5    | Content categories (strategy, technology, regulatory)  |
-| `bfsi_geography` | —    | Countries/regions (global, eu, uk, us, etc.)           |
-| `ag_use_case`    | 16   | AI use cases (customer-service, fraud-detection, etc.) |
-| `ag_capability`  | 24   | AI capabilities (nlp, computer-vision, etc.)           |
-| `regulator`      | 18   | Regulatory bodies (ecb, fca, sec, etc.)                |
-| `regulation`     | 18   | Regulations/laws (gdpr, psd2, mifid, etc.)             |
-| `obligation`     | 18   | Compliance requirements (dora-ict-risk, gdpr-dpo, etc) |
+| Table           | Rows | Purpose                                                |
+| --------------- | ---- | ------------------------------------------------------ |
+| `bfsi_industry` | 53   | Banking sectors (banking, insurance, payments, etc.)   |
+| `bfsi_topic`    | 5    | Content categories (strategy, technology, regulatory)  |
+| `kb_geography`  | 30   | Countries/regions (global, eu, uk, us, gcc, etc.)      |
+| `ag_use_case`   | 16   | AI use cases (customer-service, fraud-detection, etc.) |
+| `ag_capability` | 24   | AI capabilities (nlp, computer-vision, etc.)           |
+| `regulator`     | 18   | Regulatory bodies (ecb, fca, sec, etc.)                |
+| `regulation`    | 18   | Regulations/laws (gdpr, psd2, mifid, etc.)             |
+| `obligation`    | 18   | Compliance requirements (dora-ict-risk, gdpr-dpo, etc) |
 
 #### Regulatory Compliance Feature
 
