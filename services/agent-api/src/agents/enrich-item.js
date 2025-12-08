@@ -94,6 +94,7 @@ async function stepSummarize(queueId, payload) {
 
   const updated = {
     ...payload,
+    title: result.title || payload.title, // Use cleaned title from summarizer
     summary: result.summary,
     published_at: result.published_at || payload.published_at,
     author: result.author || payload.author,
