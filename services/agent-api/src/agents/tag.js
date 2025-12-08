@@ -179,12 +179,12 @@ function validateCodes(taggedItems, validSet, categoryName) {
 function enforceIndustryMutualExclusivity(industryCodes) {
   if (!industryCodes || !Array.isArray(industryCodes)) return [];
 
-  const L1_CATEGORIES = ['banking', 'financial-services', 'insurance'];
+  const L1_CATEGORIES = new Set(['banking', 'financial-services', 'insurance']);
 
   // Find L1 codes and their confidence
   const l1Codes = industryCodes.filter((item) => {
     const code = typeof item === 'string' ? item : item.code;
-    return L1_CATEGORIES.includes(code);
+    return L1_CATEGORIES.has(code);
   });
 
   // If 0 or 1 L1, no conflict
