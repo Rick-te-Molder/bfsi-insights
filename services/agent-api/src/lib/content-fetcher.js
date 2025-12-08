@@ -5,8 +5,18 @@
 
 import { chromium } from 'playwright';
 
-// Domains that require Playwright (bot protection)
-const PLAYWRIGHT_DOMAINS = ['mckinsey.com', 'bcg.com', 'bain.com', 'deloitte.com'];
+// Domains that require Playwright (bot protection or JavaScript-rendered content)
+const PLAYWRIGHT_DOMAINS = [
+  // Consulting firms (bot protection)
+  'mckinsey.com',
+  'bcg.com',
+  'bain.com',
+  'deloitte.com',
+  // Big 4 (JavaScript-rendered SPAs)
+  'pwc.com',
+  'ey.com',
+  'kpmg.com',
+];
 
 const FETCH_HEADERS = {
   'User-Agent':
