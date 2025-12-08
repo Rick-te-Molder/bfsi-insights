@@ -94,7 +94,7 @@ export async function bulkApproveAction(ids: string[]) {
 
     const summary = payload.summary || {};
 
-    await supabase.from('kb_publication').insert({
+    const { error: pubError } = await supabase.from('kb_publication').insert({
       slug: `${slug}-${Date.now()}`,
       title,
       source_url: item.url,
@@ -105,10 +105,16 @@ export async function bulkApproveAction(ids: string[]) {
       summary_long: summary.long || '',
     });
 
+    if (pubError) {
+      console.error('Failed to insert publication:', pubError);
+      return { success: false, error: `Failed to publish: ${pubError.message}` };
+    }
+
     await supabase.from('ingestion_queue').update({ status: 'approved' }).eq('id', item.id);
   }
 
   revalidatePath('/review');
+  revalidatePath('/published');
   return { success: true, count: ids.length };
 }
 
