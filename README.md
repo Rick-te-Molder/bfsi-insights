@@ -136,13 +136,13 @@ For detailed architecture diagrams, see:
 ### 5.1 AI Agents
 
 ```
-Agent           Purpose                              Model/Tool
-────────────────────────────────────────────────────────────────
-discover.js     Find candidates from RSS/sitemaps    GPT-4o-mini
-filter.js       Check BFSI relevance                 GPT-4o-mini
-summarize.js    Generate summaries (short/med/long)  GPT-4o-mini
-tag.js          Classify with taxonomies             GPT-4o-mini
-thumbnail.js    Screenshot article for preview       Playwright
+Agent                    Purpose                              Model/Tool
+─────────────────────────────────────────────────────────────────────────
+discovery-relevance.js   Find candidates from RSS/sitemaps    GPT-4o-mini
+filter.js                Check BFSI relevance                 GPT-4o-mini
+summarize.js             Generate summaries (short/med/long)  Claude Sonnet 4
+tag.js                   Classify with taxonomies             GPT-4o-mini
+thumbnail.js             Screenshot article for preview       Playwright
 ```
 
 **Discovery modes:**
@@ -151,44 +151,64 @@ thumbnail.js    Screenshot article for preview       Playwright
 - `--hybrid` — Embeddings pre-filter + LLM for uncertain cases
 - _(no flag)_ — Rule-based keyword matching (fast but noisy)
 
-### 5.2 Workflow States
+### 5.2 Pipeline Processes
 
-#### Ingestion Queue (`ingestion_queue.status`)
+#### Process 1: Discovery (nightly)
 
-| Status       | Actor | Description                                          |
-| ------------ | ----- | ---------------------------------------------------- |
-| `pending`    | 🤖    | Discovered via agentic pipeline, awaiting processing |
-| `queued`     | 🤖    | Manual submission, ready for processing              |
-| `processing` | 🤖    | Agent API currently processing                       |
-| `fetched`    | 🤖    | Content retrieved from URL                           |
-| `filtered`   | 🤖    | Passed BFSI relevance check                          |
-| `summarized` | 🤖    | AI summaries generated                               |
-| `tagged`     | 🤖    | Taxonomy tags applied                                |
-| `enriched`   | 🤖    | Ready for human review                               |
-| `approved`   | 👤    | Human approved → moved to kb_publication             |
-| `rejected`   | 🤖/👤 | Not BFSI relevant (filter¹) or human rejected        |
-| `failed`     | 🤖    | Processing error (can retry)                         |
+Finds new content from RSS feeds and sitemaps.
 
-> ¹ **Note:** Filter rejection only applies to nightly RSS discovery. Manual submissions skip filter rejection since a human explicitly submitted the URL.
+| Step              | Agent/Tool                             | Status After | Description                     |
+| ----------------- | -------------------------------------- | ------------ | ------------------------------- |
+| RSS/Sitemap fetch | `discover.js`                          | —            | Parse feeds, extract URLs       |
+| Relevance scoring | `discovery-relevance.js` (GPT-4o-mini) | `pending`    | Score 0-1, filter low-relevance |
 
-#### Publication (`kb_publication.status`)
+#### Process 2: Enrichment (automated)
 
-| Status      | Actor | Description                      |
-| ----------- | ----- | -------------------------------- |
-| `published` | 👤    | Live on website (after approval) |
-| `draft`     | 👤    | Created but not yet live         |
-| `archived`  | 👤    | Removed from public view         |
+Orchestrated by `enrich-item.js`. Runs on `pending` or `queued` items.
 
-#### State Flow Diagram
+| Step             | Agent/Tool                                       | Status After              | Description                          |
+| ---------------- | ------------------------------------------------ | ------------------------- | ------------------------------------ |
+| Start processing | —                                                | `processing`              | Lock item                            |
+| Content fetch    | `content-fetcher.js` (Playwright for some sites) | `fetched`                 | Download page, extract text          |
+| Relevance filter | `filter.js` (GPT-4o-mini)                        | `filtered` or `rejected`¹ | Verify BFSI relevance                |
+| Summarization    | `summarize.js` (Claude Sonnet 4)                 | `summarized`              | Generate short/medium/long summaries |
+| Tagging          | `tag.js` (GPT-4o-mini)                           | `tagged`                  | Classify with taxonomies             |
+| Thumbnail        | `thumbnail.js` (Playwright)                      | `enriched`                | Screenshot article                   |
 
-```
-Manual:   queued → processing → filtered → summarized → tagged → enriched
-                                                                    ↓
-Nightly:  pending → fetched → filtered → summarized → tagged → enriched
-                                                                    ↓
-                                              👤 Review → approved → published
-                                                       ↘ rejected
-```
+> ¹ Filter rejection only applies to nightly discovery. Manual submissions skip rejection.
+
+#### Process 3: Review (human)
+
+Human reviews enriched items in admin UI.
+
+| Action    | Status After | Description                |
+| --------- | ------------ | -------------------------- |
+| Approve   | `approved`   | Item ready for publishing  |
+| Reject    | `rejected`   | Item discarded with reason |
+| Re-enrich | `queued`     | Re-run enrichment pipeline |
+
+#### Process 4: Publishing (human trigger)
+
+| Step          | Actor | Description                          |
+| ------------- | ----- | ------------------------------------ |
+| Approve       | 👤    | Moves item to `kb_publication` table |
+| Trigger Build | 👤    | Deploys to Cloudflare via webhook    |
+
+#### Status Reference
+
+| Status       | Set By               | Description                             |
+| ------------ | -------------------- | --------------------------------------- |
+| `pending`    | discover.js          | Awaiting enrichment (from nightly)      |
+| `queued`     | Admin UI             | Awaiting enrichment (manual submission) |
+| `processing` | enrich-item.js       | Currently being processed               |
+| `fetched`    | content-fetcher.js   | Page content downloaded                 |
+| `filtered`   | filter.js            | Passed BFSI relevance check             |
+| `summarized` | summarize.js         | AI summaries generated                  |
+| `tagged`     | tag.js               | Taxonomy tags applied                   |
+| `enriched`   | enrich-item.js       | Ready for human review                  |
+| `approved`   | Admin UI             | Human approved                          |
+| `rejected`   | filter.js / Admin UI | Not relevant or human rejected          |
+| `failed`     | enrich-item.js       | Processing error (retryable)            |
 
 ### 5.3 Content Ingestion Options
 
@@ -281,20 +301,33 @@ Optimization:       Periodic analysis → Prompt tuning → A/B testing
 | `kb_source`             | RSS feed sources            |
 | `prompt_versions`       | Versioned AI prompts        |
 
-### 6.2 Guardrail Taxonomies (curated, fixed lists)
+### 6.2 Tables Used by Agents
 
-LLM picks from these pre-defined lists. **Do not auto-create entries.**
-
-| Table            | Rows | Purpose                                                |
-| ---------------- | ---- | ------------------------------------------------------ |
-| `bfsi_industry`  | 53   | Banking sectors (banking, insurance, payments, etc.)   |
-| `bfsi_topic`     | 5    | Content categories (strategy, technology, regulatory)  |
-| `bfsi_geography` | —    | Countries/regions (global, eu, uk, us, etc.)           |
-| `ag_use_case`    | 16   | AI use cases (customer-service, fraud-detection, etc.) |
-| `ag_capability`  | 24   | AI capabilities (nlp, computer-vision, etc.)           |
-| `regulator`      | 18   | Regulatory bodies (ecb, fca, sec, etc.)                |
-| `regulation`     | 18   | Regulations/laws (gdpr, psd2, mifid, etc.)             |
-| `obligation`     | 18   | Compliance requirements (dora-ict-risk, gdpr-dpo, etc) |
+| Table                    | Type       | Used By        | Purpose                                          |
+| ------------------------ | ---------- | -------------- | ------------------------------------------------ |
+| **Core Pipeline**        |            |                |                                                  |
+| `ingestion_queue`        | Core       | All agents     | Processing pipeline queue                        |
+| `kb_publication`         | Core       | summarize, tag | Final published articles                         |
+| `kb_source`              | Core       | discover       | RSS feed sources configuration                   |
+| `prompt_versions`        | Core       | All agents     | Versioned AI prompts                             |
+| `writing_rules`          | Core       | summarize      | Editorial guidelines for summaries               |
+| **Guardrail Taxonomies** |            |                | _LLM picks from list, cannot create new entries_ |
+| `bfsi_industry`          | Guardrail  | discover, tag  | 53 BFSI sectors (banking, insurance, etc.)       |
+| `bfsi_topic`             | Guardrail  | discover, tag  | 5 content categories (strategy, tech, etc.)      |
+| `kb_geography`           | Guardrail  | tag            | 30 regions/countries (global, eu, uk, gcc, etc.) |
+| `bfsi_process_taxonomy`  | Guardrail  | tag            | Business processes (claims, underwriting, etc.)  |
+| `ag_use_case`            | Guardrail  | tag            | 16 AI use cases (fraud-detection, etc.)          |
+| `ag_capability`          | Guardrail  | tag            | 24 AI capabilities (nlp, vision, etc.)           |
+| **Expandable Entities**  |            |                | _LLM extracts names, may create new entries_     |
+| `ag_vendor`              | Expandable | tag            | AI/tech vendors mentioned in articles            |
+| `bfsi_organization`      | Expandable | tag            | Banks, insurers, asset managers mentioned        |
+| `regulator`              | Expandable | tag            | Regulatory bodies (ecb, fca, sec, etc.)          |
+| `regulation`             | Expandable | tag            | Regulations/laws (gdpr, psd2, dora, etc.)        |
+| `obligation`             | Expandable | tag            | Compliance requirements per regulation           |
+| `standard_setter`        | Expandable | tag            | Standards bodies (iso, nist, etc.)               |
+| `standard`               | Expandable | tag            | Industry standards (iso-27001, nist-csf, etc.)   |
+| **Reference Data**       |            |                |                                                  |
+| `classic_papers`         | Reference  | discover       | Academic papers reference list                   |
 
 #### Regulatory Compliance Feature
 
@@ -312,16 +345,7 @@ Example: ECB (regulator) → DORA (regulation) → "ICT risk assessment" (obliga
 - Track which obligations are covered by AI solutions
 - Filter content by compliance area (risk, reporting, security, etc.)
 
-> **Why guardrails?** Regulatory info requires expert curation — auto-generated compliance data could mislead users and create liability.
-
-### 6.3 Expandable Taxonomies (grow from publications)
-
-LLM extracts names; new entries can be created.
-
-| Table               | Rows | Purpose                               |
-| ------------------- | ---- | ------------------------------------- |
-| `bfsi_organization` | 8    | Banks, insurers mentioned in articles |
-| `ag_vendor`         | 81   | AI/tech vendors mentioned in articles |
+> **Note:** Expandable entities (vendors, organizations, regulators, etc.) grow as articles mention new names. Guardrail taxonomies (industries, topics, geographies) are curated to ensure consistent classification.
 
 ---
 
