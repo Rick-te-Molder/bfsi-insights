@@ -10,7 +10,6 @@ interface Publication {
   slug: string;
   title: string;
   source_url: string;
-  source_slug: string;
   published_at: string;
   created_at: string;
 }
@@ -18,15 +17,9 @@ interface Publication {
 async function getPublications(search?: string) {
   const supabase = createServiceRoleClient();
 
-  // Debug: check count first
-  const { count, error: countError } = await supabase
-    .from('kb_publication')
-    .select('*', { count: 'exact', head: true });
-  console.log('Publication count:', count, 'Error:', countError);
-
   let query = supabase
     .from('kb_publication')
-    .select('id, slug, title, source_url, source_slug, published_at, created_at')
+    .select('id, slug, title, source_url, published_at, created_at')
     .order('created_at', { ascending: false })
     .limit(100);
 
@@ -35,8 +28,6 @@ async function getPublications(search?: string) {
   }
 
   const { data, error } = await query;
-
-  console.log('Publications fetched:', data?.length, 'Error:', error);
 
   if (error) {
     console.error('Error fetching publications:', error);
@@ -93,7 +84,6 @@ export default async function PublishedPage({
                     {pub.source_url}
                   </a>
                   <div className="flex items-center gap-4 mt-2 text-xs text-neutral-500">
-                    <span>Source: {pub.source_slug}</span>
                     <span>Published: {formatDateTime(pub.published_at)}</span>
                     <span>Added: {formatDateTime(pub.created_at)}</span>
                   </div>
