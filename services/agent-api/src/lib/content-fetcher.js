@@ -198,6 +198,35 @@ function requiresPlaywright(url) {
 }
 
 /**
+ * Try fetching from Google Cache
+ */
+async function fetchFromGoogleCache(url) {
+  const cacheUrl = `https://webcache.googleusercontent.com/search?q=cache:${encodeURIComponent(url)}`;
+  console.log('   🔍 Trying Google Cache...');
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30000);
+
+  try {
+    const response = await fetch(cacheUrl, {
+      headers: FETCH_HEADERS,
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) return { success: false };
+
+    const html = await response.text();
+    if (html.includes('not available') || html.length < 1000) return { success: false };
+
+    return { success: true, html };
+  } catch {
+    clearTimeout(timeout);
+    return { success: false };
+  }
+}
+
+/**
  * Fetch content using Playwright (for bot-protected sites)
  */
 async function fetchWithPlaywright(url) {
@@ -223,7 +252,6 @@ async function fetchWithPlaywright(url) {
 
     const page = await context.newPage();
 
-    // Hide automation indicators
     await page.addInitScript(() => {
       Object.defineProperty(navigator, 'webdriver', { get: () => false });
       Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
@@ -231,8 +259,6 @@ async function fetchWithPlaywright(url) {
     });
 
     await page.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
-
-    // Wait for content to load
     await delay(3000);
 
     const html = await page.content();
@@ -255,7 +281,14 @@ export async function fetchContent(url, options = {}) {
       const result = await fetchWithPlaywright(url);
       return parseResult ? parseHtml(result.html, url) : { html: result.html };
     } catch (error) {
-      throw new Error(`Playwright fetch failed: ${error.message}`);
+      console.log(`   ⚠️ Playwright failed: ${error.message}`);
+      // Try Google Cache as fallback
+      const cacheResult = await fetchFromGoogleCache(url);
+      if (cacheResult.success) {
+        console.log('   ✅ Got content from Google Cache');
+        return parseResult ? parseHtml(cacheResult.html, url) : { html: cacheResult.html };
+      }
+      throw new Error(`Protected site fetch failed: ${error.message}`);
     }
   }
 
