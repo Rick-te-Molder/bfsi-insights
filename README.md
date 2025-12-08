@@ -44,29 +44,6 @@ Review:     👤 Approve article + suggested taxonomy entries → Published
 
 ---
 
-## 2. Table of Contents
-
-1. [Overview](#1-overview)
-2. [Table of Contents](#2-table-of-contents)
-3. [Functional Description](#3-functional-description)
-4. [System Architecture](#4-system-architecture)
-5. [Agent Pipeline](#5-agent-pipeline)
-6. [Data Model & Taxonomy](#6-data-model--taxonomy)
-7. [Admin Workflows](#7-admin-workflows)
-8. [Getting Started](#8-getting-started)
-9. [Commands](#9-commands)
-10. [Testing & Code Quality](#10-testing--code-quality)
-11. [Quality & Compliance](#11-quality--compliance)
-12. [Security](#12-security)
-13. [Environment Variables](#13-environment-variables)
-14. [Deployment](#14-deployment)
-15. [Tech Stack](#15-tech-stack)
-16. [Roadmap](#16-roadmap)
-17. [Contributing](#17-contributing)
-18. [License](#18-license)
-
----
-
 ## 3. Functional Description
 
 ### 3.1 What the App Does
@@ -104,13 +81,13 @@ queued → processing → enriched → approved → published
 
 The system has five main components:
 
-| Component      | Role                             | Tech                | Hosting    |
-| -------------- | -------------------------------- | ------------------- | ---------- |
-| **Database**   | Guardrails, SOR, config, storage | Postgres + Storage  | Supabase   |
-| **Agent API**  | Discover, filter, summarize, tag | Node.js/Express     | Render     |
-| **Website**    | Browse, search, read             | Astro + Tailwind    | Cloudflare |
-| **Admin**      | Review, approve, ingest          | Astro SSR + Edge Fn | Cloudflare |
-| **Automation** | Nightly jobs, tests, CI          | GitHub Actions      | GitHub     |
+| Component      | Role                             | Tech               | Hosting    |
+| -------------- | -------------------------------- | ------------------ | ---------- |
+| **Database**   | Guardrails, SOR, config, storage | Postgres + Storage | Supabase   |
+| **Agent API**  | Discover, filter, summarize, tag | Node.js/Express    | Render     |
+| **Website**    | Browse, search, read             | Astro + Tailwind   | Cloudflare |
+| **Admin**      | Review, approve, ingest          | Next.js 15         | Vercel     |
+| **Automation** | Nightly jobs, tests, CI          | GitHub Actions     | GitHub     |
 
 ### 4.2 Architecture Layers
 
@@ -350,17 +327,26 @@ LLM extracts names; new entries can be created.
 
 ## 7. Admin Workflows
 
+The admin UI (`admin-next/`) is a Next.js 15 app with:
+
+- **Dashboard** — Pipeline stats, issues alerts, quick actions
+- **Review Queue** — Master-detail layout with keyboard shortcuts (↑↓ navigate, a/r/e actions)
+- **Sources** — Health indicators (🟢🟡🔴⚪), discovery stats, last run times
+- **Prompts** — Version history, test playground, stage badges (Live/Staged/Draft)
+- **Golden Sets** — Curated test cases for prompt evaluation
+- **A/B Tests** — Compare prompt versions side-by-side
+
 ### 7.1 Submit a URL
 
-Navigate to `/admin/add`. Paste URL → queued → auto-processed.
+`/admin/add` → queued → auto-processed → review
 
 ### 7.2 Review & Approve
 
-`/admin/review` displays enriched items as preview cards. Click to approve.
+`/admin/review` — Split view (list + detail panel) or list view with bulk actions.
 
 ### 7.3 Trigger Deployment
 
-Click "Trigger Build" button or push to `main` branch.
+Sidebar "Trigger Build" button or push to `main`.
 
 ---
 
@@ -458,155 +444,44 @@ Shared utilities for scripts are in `services/agent-api/src/scripts/utils.js`.
 
 ---
 
-## 10. Testing & Code Quality
+## 10. Testing & Quality
 
-### 10.1 Test Strategy
+### 10.1 Test Layers
 
-The project follows a layered testing approach:
-
-| Level           | Tool                        | Status    | Tests | Coverage                    |
-| --------------- | --------------------------- | --------- | ----- | --------------------------- |
-| **Unit**        | Vitest                      | ✅ Active | 68    | Utilities, filters, helpers |
-| **Integration** | Lighthouse CI, Link Checker | ✅ Active | 4     | Performance, a11y, links    |
-| **E2E**         | Playwright                  | ✅ Active | 28    | User journeys               |
-
-### 10.2 Unit Tests (Vitest)
+| Level           | Tool                        | Tests | Target         |
+| --------------- | --------------------------- | ----- | -------------- |
+| **Unit**        | Vitest                      | 68    | ≥80% cov       |
+| **Integration** | Lighthouse CI, Link Checker | 4     | ≥95 score      |
+| **E2E**         | Playwright                  | 28    | Critical paths |
 
 ```bash
-npm run test           # Run all unit tests
-npm run test:watch     # Watch mode for development
-```
-
-**Current coverage:** 68 tests covering:
-
-- `src/lib/filters.ts` — publication filtering logic (26 tests)
-- `src/lib/authors.ts` — author normalization (10 tests)
-- `src/lib/text.ts` — text linkify utilities (7 tests)
-- `src/lib/fmt.ts` — date formatting (8 tests)
-- `tests/utils/filename-helper.spec.ts` — slug, lastName, kbFileName (17 tests)
-
-Focus on pure functions with deterministic output. See [docs/quality/sonar-exclusions.md](docs/quality/sonar-exclusions.md) for coverage policy.
-
-### 10.3 Integration Tests
-
-- **Lighthouse CI**: Enforces ≥95 scores for Performance, Accessibility, Best Practices, SEO
-- **Link Checker**: Nightly validation of all external links in published content
-
-**Current coverage:** 4 Lighthouse audits on `/` and `/publications`. Link checker validates all `source_url` values.
-
-### 10.4 End-to-End Tests (Playwright)
-
-```bash
-npx playwright test              # Run all E2E tests
-npx playwright test --ui         # Run with interactive UI
-npx playwright test modal.spec   # Run specific test file
-```
-
-**Current coverage:** 28 tests covering search, filters, modal interactions, navigation, publication detail pages, and admin authentication flows.
-
-### 10.5 Test Coverage Measurement
-
-To quantify test coverage across all three levels:
-
-| Level           | Measurement Method                             | Target |
-| --------------- | ---------------------------------------------- | ------ |
-| **Unit**        | `vitest --coverage` (c8/istanbul)              | ≥80%   |
-| **Integration** | Lighthouse scores (automated)                  | ≥95    |
-| **E2E**         | User journey coverage matrix (manual tracking) | 100%   |
-
-```bash
-# Generate unit test coverage report
+npm run test              # Unit tests
 npm run test -- --coverage
+npx playwright test       # E2E tests
+npm run check:links       # Link checker
 ```
+
+### 10.2 Code Quality
+
+- **Linting**: ESLint + Prettier (enforced via Husky pre-commit)
+- **SonarCloud**: Runs on every PR — checks bugs, vulnerabilities, coverage
+- **Lighthouse CI**: Enforces ≥95 for Performance, A11y, SEO on `/` and `/publications`
+
+See [docs/quality/sonar-exclusions.md](docs/quality/sonar-exclusions.md) for coverage policy.
 
 ---
 
-## 11. Quality & Compliance
+## 11. Security
 
-### 11.1 Linting & Formatting
+See [SECURITY.md](SECURITY.md) for policies and vulnerability reporting.
 
-- ESLint and Prettier
-- Enforced through CI and Husky pre-commit hook
-
-```bash
-npm run lint
-```
-
-### 11.2 Performance (Lighthouse CI)
-
-Automatically checks `/` and `/publications` pages. Enforces scores ≥95 for:
-
-- Performance
-- Accessibility
-- Best Practices
-- SEO
-
-### 11.3 Reliability (Link Checker)
-
-Nightly CI checks all external links in published publications.
-
-```bash
-npm run check:links
-```
-
-### 11.4 Static Code Analysis (SonarCloud)
-
-SonarCloud runs on every push and PR to enforce code quality.
-
-**Quality Gate Checks:**
-
-- Code smells and bugs
-- Security vulnerabilities
-- Test coverage (target: ≥80% on new code)
-- Code duplication
-
-**Coverage Exclusions:**
-
-Some orchestration/infrastructure code is excluded from coverage requirements.
-For the full list and rationale, see [docs/quality/sonar-exclusions.md](docs/quality/sonar-exclusions.md).
-
-**Setup (one-time):**
-
-1. Go to [sonarcloud.io](https://sonarcloud.io) and import the repository
-2. Add `SONAR_TOKEN` secret in GitHub repository settings
-3. Quality gate runs automatically on push/PR
-
-```bash
-# View results
-https://sonarcloud.io/project/overview?id=Rick-te-Molder_bfsi-insights
-```
-
-### 11.5 Data Integrity & Accuracy
-
-- Guardrail taxonomies prevent incorrect classifications
-- Prompt versioning stored in `prompt_versions` table
-- Deterministic thumbnail generation
+- **Auth**: Supabase Auth for admin users
+- **RLS**: All tables protected; RPCs verify admin status
+- **Secrets**: Supabase Vault; no service keys in frontend
 
 ---
 
-## 12. Security
-
-For detailed security policies and vulnerability reporting, see [SECURITY.md](SECURITY.md).
-
-### 12.1 Authentication & Authorization
-
-- Supabase Auth for admin users
-- Admin UI uses SSR to avoid leaking keys
-
-### 12.2 Row Level Security (RLS)
-
-- All database tables protected with RLS
-- RPCs verify admin status before mutating data
-
-### 12.3 Secrets & Keys
-
-- Supabase Vault stores sensitive data
-- Cloudflare environment variables for deploy hooks
-- No service keys in frontend code
-
----
-
-## 13. Environment Variables
+## 12. Environment Variables
 
 ### Frontend (.env)
 
@@ -627,13 +502,13 @@ CLOUDFLARE_DEPLOY_HOOK=https://api.cloudflare.com/...  # For rebuild button
 
 ---
 
-## 14. Deployment
+## 13. Deployment
 
-### 14.1 Cloudflare Pages (Frontend)
+### 13.1 Cloudflare Pages (Frontend)
 
 Static deployment with global CDN. Auto-deploys on push to `main`.
 
-### 14.2 Render (Agent API)
+### 13.2 Render (Agent API)
 
 The Agent API is hosted on [Render](https://render.com) as a Node.js web service.
 
@@ -646,11 +521,11 @@ The Agent API is hosted on [Render](https://render.com) as a Node.js web service
 
 See [`services/agent-api/DEPLOYMENT.md`](services/agent-api/DEPLOYMENT.md) for full deployment docs.
 
-### 14.3 Deploy Hooks
+### 13.3 Deploy Hooks
 
 Admin UI can trigger rebuilds via Cloudflare Deploy Hooks.
 
-### 14.4 GitHub Actions
+### 13.4 GitHub Actions
 
 - **Nightly ingestion**: Discovers and enriches new content
 - **Link checking**: Validates external links
@@ -658,31 +533,31 @@ Admin UI can trigger rebuilds via Cloudflare Deploy Hooks.
 
 ---
 
-## 15. Tech Stack
+## 14. Tech Stack
 
 See [Section 4.1 Components](#41-components) for the full component table.
 
-**Key technologies:** Astro 5, TailwindCSS, TypeScript, Node.js/Express, Supabase (Postgres + RLS), OpenAI GPT-4o-mini, Playwright, GitHub Actions, Cloudflare Pages, Render.
+**Key technologies:** Astro 5, Next.js 15, TailwindCSS, TypeScript, Node.js/Express, Supabase (Postgres + RLS), OpenAI GPT-4o-mini, Playwright, GitHub Actions, Cloudflare Pages, Vercel, Render.
 
 ---
 
-## 16. Roadmap
+## 15. Roadmap
 
 - [x] SonarCloud quality gate
-- [x] Wider crawling in discovery agent (sitemaps, robots.txt compliance)
 - [x] Agentic discovery with LLM relevance scoring
+- [x] Admin UX improvements (master-detail, source health, prompt testing)
 - [ ] Embedding-based similarity search
-- [ ] Taxonomy expansion agent
-- [ ] Source classification (regulator/media/consultancy)
+- [ ] Golden Set integration in prompt editor
+- [ ] Draft → Staged → Live prompt lifecycle
 
 ---
 
-## 17. Contributing
+## 16. Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
-## 18. License
+## 17. License
 
 MIT License. See [LICENSE](LICENSE).
