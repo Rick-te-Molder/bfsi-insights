@@ -22,6 +22,27 @@ const fmt = (iso?: string) =>
 
 const asArr = (v: any) => (Array.isArray(v) ? v : v ? [v] : []);
 
+// Strip redundant source suffix from title (e.g., "Article Title | FDIC.gov" → "Article Title")
+const stripSourceFromTitle = (title: string, sourceName?: string | null): string => {
+  if (!sourceName) return title;
+  // Match common separators: |, -, —, –, :
+  const separators = ['|', '-', '—', '–', ':'];
+  for (const sep of separators) {
+    const suffix = `${sep} ${sourceName}`;
+    if (title.endsWith(suffix)) {
+      return title.slice(0, -suffix.length).trim();
+    }
+    // Also try without space: "Title|Source"
+    const suffixNoSpace = `${sep}${sourceName}`;
+    if (title.endsWith(suffixNoSpace)) {
+      return title.slice(0, -suffixNoSpace.length).trim();
+    }
+  }
+  return title;
+};
+
+const displayTitle = stripSourceFromTitle(item.title, item.source_name);
+
 const expandItemThumb = (t?: string) => {
   if (!t) return [];
   if (/\.(webp|png|jpe?g)$/i.test(t)) return [t];
@@ -104,9 +125,9 @@ const candidates = [...itemThumbs];
       <h3
         id={`t-${item.slug}`}
         class="text-xl font-semibold text-sky-200 line-clamp-2"
-        title={item.title}
+        title={displayTitle}
       >
-        {item.title}
+        {displayTitle}
       </h3>
       {
         isHome && isNew && (
