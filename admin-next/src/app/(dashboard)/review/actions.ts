@@ -42,6 +42,76 @@ export async function bulkReenrichAction(ids: string[]) {
   return { success: true, processed: ids.length };
 }
 
+export async function bulkRejectAction(ids: string[], reason: string) {
+  const supabase = createServiceRoleClient();
+
+  // Get current items to preserve payload
+  const { data: items } = await supabase
+    .from('ingestion_queue')
+    .select('id, payload')
+    .in('id', ids);
+
+  if (!items) {
+    return { success: false, error: 'Failed to fetch items' };
+  }
+
+  // Update each with rejection reason in payload
+  for (const item of items) {
+    await supabase
+      .from('ingestion_queue')
+      .update({
+        status: 'rejected',
+        payload: { ...item.payload, rejection_reason: reason },
+      })
+      .eq('id', item.id);
+  }
+
+  revalidatePath('/review');
+  return { success: true, count: ids.length };
+}
+
+export async function bulkApproveAction(ids: string[]) {
+  const supabase = createServiceRoleClient();
+
+  // Get items with payload
+  const { data: items } = await supabase
+    .from('ingestion_queue')
+    .select('id, url, payload')
+    .in('id', ids);
+
+  if (!items) {
+    return { success: false, error: 'Failed to fetch items' };
+  }
+
+  for (const item of items) {
+    const payload = item.payload || {};
+    const title = payload.title || 'Untitled';
+    const slug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 80);
+
+    const summary = payload.summary || {};
+
+    await supabase.from('kb_publication').insert({
+      slug: `${slug}-${Date.now()}`,
+      title,
+      source_url: item.url,
+      source_slug: payload.source_slug || 'manual',
+      published_at: new Date().toISOString(),
+      summary_short: summary.short || '',
+      summary_medium: summary.medium || '',
+      summary_long: summary.long || '',
+    });
+
+    await supabase.from('ingestion_queue').update({ status: 'approved' }).eq('id', item.id);
+  }
+
+  revalidatePath('/review');
+  return { success: true, count: ids.length };
+}
+
 export async function deleteItemAction(id: string) {
   const supabase = createServiceRoleClient();
 
