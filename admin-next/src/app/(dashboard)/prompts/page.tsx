@@ -347,7 +347,12 @@ interface PromptEditModalProps {
   onSave: () => void;
 }
 
-function PromptEditModal({ prompt, allVersions, onClose, onSave }: PromptEditModalProps) {
+function PromptEditModal({
+  prompt,
+  allVersions: _allVersions,
+  onClose,
+  onSave,
+}: PromptEditModalProps) {
   const [promptText, setPromptText] = useState(prompt.prompt_text);
   const [notes, setNotes] = useState('');
   const [newVersion, setNewVersion] = useState('');
