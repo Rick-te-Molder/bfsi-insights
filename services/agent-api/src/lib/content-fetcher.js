@@ -269,36 +269,56 @@ async function fetchWithPlaywright(url) {
 }
 
 /**
+ * Format fetch result based on parseResult option
+ */
+function formatFetchResult(html, url, parseResult) {
+  return parseResult ? parseHtml(html, url) : { html };
+}
+
+/**
+ * Fetch from protected domain with Playwright, fallback to Google Cache
+ */
+async function fetchProtectedContent(url, parseResult) {
+  try {
+    const result = await fetchWithPlaywright(url);
+    return formatFetchResult(result.html, url, parseResult);
+  } catch (error) {
+    console.log(`   ⚠️ Playwright failed: ${error.message}`);
+    const cacheResult = await fetchFromGoogleCache(url);
+    if (!cacheResult.success) {
+      throw new Error(`Protected site fetch failed: ${error.message}`);
+    }
+    console.log('   ✅ Got content from Google Cache');
+    return formatFetchResult(cacheResult.html, url, parseResult);
+  }
+}
+
+/**
+ * Fetch with standard HTTP, retrying on failure
+ */
+async function fetchWithRetries(url, retries, parseResult) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const result = await attemptFetch(url, attempt, retries);
+    if (result.success) {
+      return formatFetchResult(result.html, url, parseResult);
+    }
+    if (result.retry) {
+      await delay(3000 * attempt);
+    }
+  }
+  throw new Error('Failed after all retries');
+}
+
+/**
  * Fetch content from URL with retry logic
  * Returns parsed HTML with title, description, date, textContent
  */
 export async function fetchContent(url, options = {}) {
   const { retries = 3, parseResult = true } = options;
 
-  // Use Playwright for protected domains
   if (requiresPlaywright(url)) {
-    try {
-      const result = await fetchWithPlaywright(url);
-      return parseResult ? parseHtml(result.html, url) : { html: result.html };
-    } catch (error) {
-      console.log(`   ⚠️ Playwright failed: ${error.message}`);
-      // Try Google Cache as fallback
-      const cacheResult = await fetchFromGoogleCache(url);
-      if (cacheResult.success) {
-        console.log('   ✅ Got content from Google Cache');
-        return parseResult ? parseHtml(cacheResult.html, url) : { html: cacheResult.html };
-      }
-      throw new Error(`Protected site fetch failed: ${error.message}`);
-    }
+    return fetchProtectedContent(url, parseResult);
   }
 
-  // Standard fetch with retries
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    const result = await attemptFetch(url, attempt, retries);
-    if (result.success) {
-      return parseResult ? parseHtml(result.html, url) : { html: result.html };
-    }
-    if (result.retry) await delay(3000 * attempt);
-  }
-  throw new Error('Failed after all retries');
+  return fetchWithRetries(url, retries, parseResult);
 }
