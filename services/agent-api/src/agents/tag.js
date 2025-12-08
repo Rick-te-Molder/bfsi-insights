@@ -172,6 +172,45 @@ function validateCodes(taggedItems, validSet, categoryName) {
   return validated;
 }
 
+/**
+ * Enforce mutual exclusivity for B/FS/I L1 industry categories
+ * If multiple L1s are tagged, keep only the highest confidence one
+ */
+function enforceIndustryMutualExclusivity(industryCodes) {
+  if (!industryCodes || !Array.isArray(industryCodes)) return [];
+
+  const L1_CATEGORIES = ['banking', 'financial-services', 'insurance'];
+
+  // Find L1 codes and their confidence
+  const l1Codes = industryCodes.filter((item) => {
+    const code = typeof item === 'string' ? item : item.code;
+    return L1_CATEGORIES.includes(code);
+  });
+
+  // If 0 or 1 L1, no conflict
+  if (l1Codes.length <= 1) return industryCodes;
+
+  // Multiple L1s - keep highest confidence, remove others
+  const sorted = [...l1Codes].sort((a, b) => {
+    const confA = typeof a === 'object' ? a.confidence || 0 : 0;
+    const confB = typeof b === 'object' ? b.confidence || 0 : 0;
+    return confB - confA;
+  });
+
+  const keepCode = typeof sorted[0] === 'string' ? sorted[0] : sorted[0].code;
+  const removeCodes = sorted.slice(1).map((item) => (typeof item === 'string' ? item : item.code));
+
+  console.warn(
+    `   ⚠️ Industry mutual exclusivity: keeping "${keepCode}", removing [${removeCodes.join(', ')}]`,
+  );
+
+  // Filter out the lower-confidence L1 codes
+  return industryCodes.filter((item) => {
+    const code = typeof item === 'string' ? item : item.code;
+    return !removeCodes.includes(code);
+  });
+}
+
 export async function runTagger(queueItem) {
   // Load taxonomies
   const taxonomies = await loadTaxonomies();
@@ -189,17 +228,10 @@ export async function runTagger(queueItem) {
 SUMMARY: ${payload.summary?.short || payload.description || ''}
 URL: ${payload.url || ''}
 
-=== GRANULAR TAXONOMY EXTRACTION ===
-For each category, extract ALL applicable codes with individual confidence scores (0-1).
-For hierarchical taxonomies (industries, topics, processes), include BOTH:
-- L1 parent category (broader classification)
-- L2/L3 sub-categories (specific classification)
+=== AVAILABLE TAXONOMY CODES ===
+Use ONLY codes from these lists. Include confidence scores (0-1) for each.
 
-Example: For an article about retail banking AI, include:
-- {"code": "banking", "confidence": 0.95} (L1 parent)
-- {"code": "retail-banking", "confidence": 0.90} (L2 specific)
-
-=== INDUSTRIES (hierarchical - include parent and sub-categories) ===
+=== INDUSTRIES (hierarchical - include L1 parent + L2/L3 specific) ===
 ${taxonomies.industries}
 
 === TOPICS (hierarchical - include parent and sub-topics) ===
@@ -252,9 +284,17 @@ ${taxonomies.processes}
       const { validCodes } = taxonomies;
 
       // Validate all codes against actual taxonomy - reject LLM hallucinations
+      // Then enforce B/FS/I mutual exclusivity for industries
+      const validatedIndustries = validateCodes(
+        result.industry_codes,
+        validCodes.industries,
+        'industry',
+      );
+      const exclusiveIndustries = enforceIndustryMutualExclusivity(validatedIndustries);
+
       const validatedResult = {
         ...result,
-        industry_codes: validateCodes(result.industry_codes, validCodes.industries, 'industry'),
+        industry_codes: exclusiveIndustries,
         topic_codes: validateCodes(result.topic_codes, validCodes.topics, 'topic'),
         geography_codes: validateCodes(result.geography_codes, validCodes.geographies, 'geography'),
         use_case_codes: validateCodes(result.use_case_codes, validCodes.useCases, 'use_case'),
