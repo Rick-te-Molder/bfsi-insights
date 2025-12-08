@@ -10,7 +10,6 @@ interface Publication {
   slug: string;
   title: string;
   source_url: string;
-  source_slug: string;
   published_at: string;
   created_at: string;
 }
@@ -20,7 +19,7 @@ async function getPublications(search?: string) {
 
   let query = supabase
     .from('kb_publication')
-    .select('id, slug, title, source_url, source_slug, published_at, created_at')
+    .select('id, slug, title, source_url, published_at, created_at')
     .order('created_at', { ascending: false })
     .limit(100);
 
@@ -85,7 +84,6 @@ export default async function PublishedPage({
                     {pub.source_url}
                   </a>
                   <div className="flex items-center gap-4 mt-2 text-xs text-neutral-500">
-                    <span>Source: {pub.source_slug}</span>
                     <span>Published: {formatDateTime(pub.published_at)}</span>
                     <span>Added: {formatDateTime(pub.created_at)}</span>
                   </div>
