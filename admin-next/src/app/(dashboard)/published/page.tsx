@@ -18,6 +18,12 @@ interface Publication {
 async function getPublications(search?: string) {
   const supabase = createServiceRoleClient();
 
+  // Debug: check count first
+  const { count, error: countError } = await supabase
+    .from('kb_publication')
+    .select('*', { count: 'exact', head: true });
+  console.log('Publication count:', count, 'Error:', countError);
+
   let query = supabase
     .from('kb_publication')
     .select('id, slug, title, source_url, source_slug, published_at, created_at')
@@ -29,6 +35,8 @@ async function getPublications(search?: string) {
   }
 
   const { data, error } = await query;
+
+  console.log('Publications fetched:', data?.length, 'Error:', error);
 
   if (error) {
     console.error('Error fetching publications:', error);
