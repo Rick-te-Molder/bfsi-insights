@@ -8,41 +8,51 @@ export const revalidate = 0;
 async function getStats() {
   const supabase = createServiceRoleClient();
 
-  // Get queue counts by status
-  const { data: queueItems, error: queueError } = await supabase
-    .from('ingestion_queue')
-    .select('status, updated_at, payload');
+  // Get counts by status using efficient count queries
+  const statuses = [
+    'enriched',
+    'processing',
+    'queued',
+    'failed',
+    'pending',
+    'approved',
+    'rejected',
+  ];
+  const countPromises = statuses.map(async (status) => {
+    const { count, error } = await supabase
+      .from('ingestion_queue')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', status);
+    if (error) console.error(`Count error for ${status}:`, error);
+    return { status, count: count || 0 };
+  });
 
-  if (queueError) {
-    console.error('Dashboard queue query error:', queueError);
-  }
-
-  const statusCounts = (queueItems || []).reduce(
-    (acc, item) => {
-      acc[item.status] = (acc[item.status] || 0) + 1;
+  const counts = await Promise.all(countPromises);
+  const statusCounts = counts.reduce(
+    (acc, { status, count }) => {
+      acc[status] = count;
       return acc;
     },
     {} as Record<string, number>,
   );
 
-  // Calculate success rate (last 7 days)
+  // Calculate success rate (last 7 days) - simplified
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const recentItems = (queueItems || []).filter(
-    (item) => item.updated_at && item.updated_at >= sevenDaysAgo,
-  );
-  const successItems = recentItems.filter((item) => ['enriched', 'approved'].includes(item.status));
-  const failedItems = recentItems.filter((item) => item.status === 'failed');
-  const successRate = recentItems.length > 0 ? (successItems.length / recentItems.length) * 100 : 0;
+  const { count: recentSuccessCount } = await supabase
+    .from('ingestion_queue')
+    .select('*', { count: 'exact', head: true })
+    .in('status', ['enriched', 'approved'])
+    .gte('updated_at', sevenDaysAgo);
 
-  // Calculate average processing time from enrichment logs
-  const itemsWithLogs = (queueItems || []).filter(
-    (item) => item.payload?.enrichment_log && Array.isArray(item.payload.enrichment_log),
-  );
-  const totalDuration = itemsWithLogs.reduce((sum, item) => {
-    const logs = item.payload.enrichment_log as { duration_ms?: number }[];
-    return sum + logs.reduce((s, log) => s + (log.duration_ms || 0), 0);
-  }, 0);
-  const avgProcessingTime = itemsWithLogs.length > 0 ? totalDuration / itemsWithLogs.length : 0;
+  const { count: recentTotalCount } = await supabase
+    .from('ingestion_queue')
+    .select('*', { count: 'exact', head: true })
+    .gte('updated_at', sevenDaysAgo);
+
+  const successRate = recentTotalCount ? ((recentSuccessCount || 0) / recentTotalCount) * 100 : 0;
+
+  // Skip avg processing time for now (requires payload access)
+  const avgProcessingTime = 0;
 
   // Get recent failures
   const { data: recentFailures } = await supabase
@@ -75,8 +85,8 @@ async function getStats() {
     publishedCount: publishedCount || 0,
     successRate,
     avgProcessingTime,
-    recentItemsCount: recentItems.length,
-    failedCount: failedItems.length,
+    recentItemsCount: recentTotalCount || 0,
+    failedCount: statusCounts.failed || 0,
     activeTests: activeTests || 0,
     pendingProposals: pendingProposals || 0,
   };
