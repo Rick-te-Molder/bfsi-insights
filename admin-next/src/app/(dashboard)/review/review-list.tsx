@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { formatDateTime, getStatusColor, truncate } from '@/lib/utils';
-import { bulkReenrichAction } from './actions';
+import { bulkReenrichAction, bulkRejectAction, bulkApproveAction } from './actions';
 
 interface QueueItem {
   id: string;
@@ -64,41 +64,18 @@ export function ReviewList({ items, status }: ReviewListProps) {
 
     const count = selectedIds.size;
     setLoading('approve');
-    setProcessingCount(0);
+    showSuccess(`⏳ Approving ${count} items...`);
 
-    let processed = 0;
-    for (const id of selectedIds) {
-      const item = items.find((i) => i.id === id);
-      if (!item) continue;
+    const result = await bulkApproveAction(Array.from(selectedIds));
 
-      const title = item.payload?.title || 'Untitled';
-      const slug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 80);
-
-      const summary = item.payload?.summary || {};
-
-      await supabase.from('kb_publication').insert({
-        slug: `${slug}-${Date.now()}`,
-        title,
-        source_url: item.url,
-        source_slug: item.payload?.source_slug || 'manual',
-        published_at: new Date().toISOString(),
-        summary_short: summary.short || '',
-        summary_medium: (summary as { medium?: string }).medium || '',
-        summary_long: (summary as { long?: string }).long || '',
-      });
-
-      await supabase.from('ingestion_queue').update({ status: 'approved' }).eq('id', id);
-      processed++;
-      setProcessingCount(processed);
+    if (!result.success) {
+      showSuccess(`❌ Failed: ${result.error}`);
+    } else {
+      showSuccess(`✅ ${result.count} items approved and published`);
     }
 
     setLoading(null);
     setSelectedIds(new Set());
-    showSuccess(`✅ ${count} items approved and published`);
     router.refresh();
   };
 
@@ -109,27 +86,18 @@ export function ReviewList({ items, status }: ReviewListProps) {
 
     const count = selectedIds.size;
     setLoading('reject');
-    setProcessingCount(0);
+    showSuccess(`⏳ Rejecting ${count} items...`);
 
-    let processed = 0;
-    for (const id of selectedIds) {
-      const item = items.find((i) => i.id === id);
-      if (!item) continue;
+    const result = await bulkRejectAction(Array.from(selectedIds), reason);
 
-      await supabase
-        .from('ingestion_queue')
-        .update({
-          status: 'rejected',
-          payload: { ...item.payload, rejection_reason: reason },
-        })
-        .eq('id', id);
-      processed++;
-      setProcessingCount(processed);
+    if (!result.success) {
+      showSuccess(`❌ Failed: ${result.error}`);
+    } else {
+      showSuccess(`✅ ${result.count} items rejected`);
     }
 
     setLoading(null);
     setSelectedIds(new Set());
-    showSuccess(`✅ ${count} items rejected`);
     router.refresh();
   };
 
