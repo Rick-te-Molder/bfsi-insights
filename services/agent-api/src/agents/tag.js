@@ -109,6 +109,7 @@ async function loadTaxonomies() {
   ]);
 
   const format = (data) => data?.data?.map((i) => `${i.code}: ${i.name}`).join('\n') || '';
+  const extractCodes = (data) => new Set(data?.data?.map((i) => i.code) || []);
 
   // Format hierarchical taxonomy with level and parent indication
   const formatHierarchical = (data) =>
@@ -128,6 +129,7 @@ async function loadTaxonomies() {
       .join('\n') || '';
 
   return {
+    // Formatted strings for LLM prompt
     industries: formatHierarchical(industries),
     topics: formatHierarchical(topics),
     geographies: format(geographies),
@@ -137,7 +139,37 @@ async function loadTaxonomies() {
     regulations: format(regulations),
     obligations: formatObligations(obligations),
     processes: formatHierarchical(processes),
+    // Valid code sets for post-validation
+    validCodes: {
+      industries: extractCodes(industries),
+      topics: extractCodes(topics),
+      geographies: extractCodes(geographies),
+      useCases: extractCodes(useCases),
+      capabilities: extractCodes(capabilities),
+      regulators: extractCodes(regulators),
+      regulations: extractCodes(regulations),
+      processes: extractCodes(processes),
+    },
   };
+}
+
+/**
+ * Filter tagged codes to only include valid taxonomy codes
+ * Logs warnings for invalid codes (LLM hallucinations)
+ */
+function validateCodes(taggedItems, validSet, categoryName) {
+  if (!taggedItems || !Array.isArray(taggedItems)) return [];
+
+  const validated = [];
+  for (const item of taggedItems) {
+    const code = typeof item === 'string' ? item : item.code;
+    if (validSet.has(code)) {
+      validated.push(item);
+    } else {
+      console.warn(`   ⚠️ Invalid ${categoryName} code rejected: "${code}"`);
+    }
+  }
+  return validated;
 }
 
 export async function runTagger(queueItem) {
@@ -217,11 +249,31 @@ ${taxonomies.processes}
 
       const result = completion.choices[0].message.parsed;
       const usage = completion.usage;
+      const { validCodes } = taxonomies;
 
-      return {
+      // Validate all codes against actual taxonomy - reject LLM hallucinations
+      const validatedResult = {
         ...result,
+        industry_codes: validateCodes(result.industry_codes, validCodes.industries, 'industry'),
+        topic_codes: validateCodes(result.topic_codes, validCodes.topics, 'topic'),
+        geography_codes: validateCodes(result.geography_codes, validCodes.geographies, 'geography'),
+        use_case_codes: validateCodes(result.use_case_codes, validCodes.useCases, 'use_case'),
+        capability_codes: validateCodes(
+          result.capability_codes,
+          validCodes.capabilities,
+          'capability',
+        ),
+        regulator_codes: validateCodes(result.regulator_codes, validCodes.regulators, 'regulator'),
+        regulation_codes: validateCodes(
+          result.regulation_codes,
+          validCodes.regulations,
+          'regulation',
+        ),
+        process_codes: validateCodes(result.process_codes, validCodes.processes, 'process'),
         usage,
       };
+
+      return validatedResult;
     },
   );
 }

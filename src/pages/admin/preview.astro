@@ -44,7 +44,9 @@ import Base from '../../layouts/Base.astro';
 
     const fmt = (iso) => {
       if (!iso) return '';
-      return new Date(iso).toLocaleDateString('en-GB', {
+      const date = new Date(iso);
+      if (isNaN(date.getTime())) return ''; // Invalid date
+      return date.toLocaleDateString('en-GB', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
