@@ -144,14 +144,32 @@ export function ReviewList({ items, status }: ReviewListProps) {
       .update({ status: 'queued' })
       .in('id', Array.from(selectedIds));
 
+    if (error) {
+      setLoading(null);
+      setSelectedIds(new Set());
+      showSuccess(`❌ Failed to queue items: ${error.message}`);
+      router.refresh();
+      return;
+    }
+
+    // Trigger processing automatically
+    showSuccess(`⏳ ${count} items queued, starting enrichment...`);
+
+    try {
+      const res = await fetch('/api/process-queue', { method: 'POST' });
+      const data = await res.json();
+
+      if (res.ok) {
+        showSuccess(`✅ Processing started: ${data.processed || count} items`);
+      } else {
+        showSuccess(`⚠️ Queued but processing failed: ${data.error}`);
+      }
+    } catch {
+      showSuccess(`⚠️ Queued but couldn't trigger processing`);
+    }
+
     setLoading(null);
     setSelectedIds(new Set());
-
-    if (error) {
-      showSuccess(`❌ Failed to queue items: ${error.message}`);
-    } else {
-      showSuccess(`✅ ${count} items queued for re-enrichment`);
-    }
     router.refresh();
   };
 
