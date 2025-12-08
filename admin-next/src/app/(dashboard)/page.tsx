@@ -5,7 +5,9 @@ async function getStats() {
   const supabase = createServiceRoleClient();
 
   // Get queue counts by status
-  const { data: queueItems } = await supabase.from('ingestion_queue').select('status');
+  const { data: queueItems } = await supabase
+    .from('ingestion_queue')
+    .select('status, updated_at, payload');
 
   const statusCounts = (queueItems || []).reduce(
     (acc, item) => {
@@ -14,6 +16,25 @@ async function getStats() {
     },
     {} as Record<string, number>,
   );
+
+  // Calculate success rate (last 7 days)
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const recentItems = (queueItems || []).filter(
+    (item) => item.updated_at && item.updated_at >= sevenDaysAgo,
+  );
+  const successItems = recentItems.filter((item) => ['enriched', 'approved'].includes(item.status));
+  const failedItems = recentItems.filter((item) => item.status === 'failed');
+  const successRate = recentItems.length > 0 ? (successItems.length / recentItems.length) * 100 : 0;
+
+  // Calculate average processing time from enrichment logs
+  const itemsWithLogs = (queueItems || []).filter(
+    (item) => item.payload?.enrichment_log && Array.isArray(item.payload.enrichment_log),
+  );
+  const totalDuration = itemsWithLogs.reduce((sum, item) => {
+    const logs = item.payload.enrichment_log as { duration_ms?: number }[];
+    return sum + logs.reduce((s, log) => s + (log.duration_ms || 0), 0);
+  }, 0);
+  const avgProcessingTime = itemsWithLogs.length > 0 ? totalDuration / itemsWithLogs.length : 0;
 
   // Get recent failures
   const { data: recentFailures } = await supabase
@@ -28,35 +49,42 @@ async function getStats() {
     .from('kb_publication')
     .select('*', { count: 'exact', head: true });
 
+  // Get active A/B tests
+  const { count: activeTests } = await supabase
+    .from('prompt_ab_test')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'running');
+
+  // Get pending proposals
+  const { count: pendingProposals } = await supabase
+    .from('proposed_entity')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'pending');
+
   return {
     statusCounts,
     recentFailures: recentFailures || [],
     publishedCount: publishedCount || 0,
+    successRate,
+    avgProcessingTime,
+    recentItemsCount: recentItems.length,
+    failedCount: failedItems.length,
+    activeTests: activeTests || 0,
+    pendingProposals: pendingProposals || 0,
   };
 }
 
 export default async function DashboardPage() {
-  const { statusCounts, recentFailures, publishedCount } = await getStats();
-
-  const statCards = [
-    {
-      label: 'Pending Review',
-      value: statusCounts.enriched || 0,
-      color: 'bg-amber-500/20 text-amber-300',
-    },
-    {
-      label: 'Processing',
-      value: statusCounts.processing || 0,
-      color: 'bg-sky-500/20 text-sky-300',
-    },
-    {
-      label: 'In Queue',
-      value: statusCounts.queued || 0,
-      color: 'bg-neutral-500/20 text-neutral-300',
-    },
-    { label: 'Failed', value: statusCounts.failed || 0, color: 'bg-red-500/20 text-red-300' },
-    { label: 'Published', value: publishedCount, color: 'bg-emerald-500/20 text-emerald-300' },
-  ];
+  const {
+    statusCounts,
+    recentFailures,
+    publishedCount,
+    successRate,
+    avgProcessingTime,
+    recentItemsCount,
+    activeTests,
+    pendingProposals,
+  } = await getStats();
 
   return (
     <div className="space-y-8">
@@ -66,21 +94,62 @@ export default async function DashboardPage() {
         <p className="mt-1 text-sm text-neutral-400">Overview of the ingestion pipeline</p>
       </header>
 
-      {/* Stats Grid */}
+      {/* Pipeline Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {statCards.map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4"
-          >
-            <p className="text-sm text-neutral-400">{stat.label}</p>
-            <p className={`mt-1 text-3xl font-bold ${stat.color.split(' ')[1]}`}>{stat.value}</p>
-          </div>
-        ))}
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+          <p className="text-sm text-neutral-400">Pending Review</p>
+          <p className="mt-1 text-3xl font-bold text-amber-300">{statusCounts.enriched || 0}</p>
+        </div>
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+          <p className="text-sm text-neutral-400">Processing</p>
+          <p className="mt-1 text-3xl font-bold text-sky-300">{statusCounts.processing || 0}</p>
+        </div>
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+          <p className="text-sm text-neutral-400">In Queue</p>
+          <p className="mt-1 text-3xl font-bold text-neutral-300">{statusCounts.queued || 0}</p>
+        </div>
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+          <p className="text-sm text-neutral-400">Failed</p>
+          <p className="mt-1 text-3xl font-bold text-red-300">{statusCounts.failed || 0}</p>
+        </div>
+        <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+          <p className="text-sm text-neutral-400">Published</p>
+          <p className="mt-1 text-3xl font-bold text-emerald-300">{publishedCount}</p>
+        </div>
+      </div>
+
+      {/* Performance Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+          <p className="text-sm text-neutral-400">Success Rate (7d)</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-400">{successRate.toFixed(1)}%</p>
+          <p className="text-xs text-neutral-500">{recentItemsCount} items processed</p>
+        </div>
+        <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-4">
+          <p className="text-sm text-neutral-400">Avg Processing Time</p>
+          <p className="mt-1 text-2xl font-bold text-sky-400">
+            {avgProcessingTime > 0 ? (avgProcessingTime / 1000).toFixed(1) + 's' : '-'}
+          </p>
+          <p className="text-xs text-neutral-500">Per item enrichment</p>
+        </div>
+        <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
+          <p className="text-sm text-neutral-400">Active A/B Tests</p>
+          <p className="mt-1 text-2xl font-bold text-purple-400">{activeTests}</p>
+          <Link href="/ab-tests" className="text-xs text-purple-400 hover:text-purple-300">
+            View tests →
+          </Link>
+        </div>
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+          <p className="text-sm text-neutral-400">Pending Proposals</p>
+          <p className="mt-1 text-2xl font-bold text-amber-400">{pendingProposals}</p>
+          <Link href="/proposals" className="text-xs text-amber-400 hover:text-amber-300">
+            Review proposals →
+          </Link>
+        </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Review Queue CTA */}
         <Link
           href="/review"
@@ -99,21 +168,35 @@ export default async function DashboardPage() {
           </div>
         </Link>
 
-        {/* Evaluation CTA */}
+        {/* Prompts CTA */}
         <Link
-          href="/evaluate"
+          href="/prompts"
           className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 hover:border-purple-500/50 transition-colors group"
         >
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold group-hover:text-purple-400 transition-colors">
-                Evaluate Outputs
+                Prompt Engineering
               </h2>
-              <p className="mt-1 text-sm text-neutral-400">
-                Compare and analyze enrichment quality
-              </p>
+              <p className="mt-1 text-sm text-neutral-400">Manage and version LLM prompts</p>
             </div>
-            <span className="text-3xl">🔬</span>
+            <span className="text-3xl">💬</span>
+          </div>
+        </Link>
+
+        {/* Golden Sets CTA */}
+        <Link
+          href="/golden-sets"
+          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 hover:border-amber-500/50 transition-colors group"
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold group-hover:text-amber-400 transition-colors">
+                Golden Sets
+              </h2>
+              <p className="mt-1 text-sm text-neutral-400">Curated test cases for evaluation</p>
+            </div>
+            <span className="text-3xl">⭐</span>
           </div>
         </Link>
       </div>
