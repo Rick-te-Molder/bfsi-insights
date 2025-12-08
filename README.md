@@ -298,12 +298,14 @@ Optimization:       Periodic analysis → Prompt tuning → A/B testing
 | `bfsi_process_taxonomy`  | Guardrail  | tag            | Business processes (claims, underwriting, etc.)  |
 | `ag_use_case`            | Guardrail  | tag            | 16 AI use cases (fraud-detection, etc.)          |
 | `ag_capability`          | Guardrail  | tag            | 24 AI capabilities (nlp, vision, etc.)           |
-| `regulator`              | Guardrail  | tag            | 18 regulatory bodies (ecb, fca, sec, etc.)       |
-| `regulation`             | Guardrail  | tag            | 18 regulations (gdpr, psd2, dora, etc.)          |
-| `obligation`             | Guardrail  | tag            | Compliance requirements per regulation           |
 | **Expandable Entities**  |            |                | _LLM extracts names, may create new entries_     |
 | `ag_vendor`              | Expandable | tag            | AI/tech vendors mentioned in articles            |
 | `bfsi_organization`      | Expandable | tag            | Banks, insurers, asset managers mentioned        |
+| `regulator`              | Expandable | tag            | Regulatory bodies (ecb, fca, sec, etc.)          |
+| `regulation`             | Expandable | tag            | Regulations/laws (gdpr, psd2, dora, etc.)        |
+| `obligation`             | Expandable | tag            | Compliance requirements per regulation           |
+| `standard_setter`        | Expandable | tag            | Standards bodies (iso, nist, etc.)               |
+| `standard`               | Expandable | tag            | Industry standards (iso-27001, nist-csf, etc.)   |
 | **Reference Data**       |            |                |                                                  |
 | `classic_papers`         | Reference  | discover       | Academic papers reference list                   |
 
@@ -323,16 +325,7 @@ Example: ECB (regulator) → DORA (regulation) → "ICT risk assessment" (obliga
 - Track which obligations are covered by AI solutions
 - Filter content by compliance area (risk, reporting, security, etc.)
 
-> **Why guardrails?** Regulatory info requires expert curation — auto-generated compliance data could mislead users and create liability.
-
-### 6.3 Expandable Taxonomies (grow from publications)
-
-LLM extracts names; new entries can be created.
-
-| Table               | Rows | Purpose                               |
-| ------------------- | ---- | ------------------------------------- |
-| `bfsi_organization` | 8    | Banks, insurers mentioned in articles |
-| `ag_vendor`         | 81   | AI/tech vendors mentioned in articles |
+> **Note:** Expandable entities (vendors, organizations, regulators, etc.) grow as articles mention new names. Guardrail taxonomies (industries, topics, geographies) are curated to ensure consistent classification.
 
 ---
 
