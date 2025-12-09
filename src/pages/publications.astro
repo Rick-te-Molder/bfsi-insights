@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import PublicationCard from '../features/publications/PublicationCard.astro';
 import FloatingFilterButton from '../components/FloatingFilterButton.astro';
 import BackToTopButton from '../components/BackToTopButton.astro';
+import HierarchicalFilter from '../components/HierarchicalFilter.astro';
 
 // Fetch all publications
 const publications: Publication[] = await getAllPublications();
@@ -38,10 +39,10 @@ const { data: processTaxonomy } = await supabase
   .select('code, name, level, parent_code, sort_order')
   .order('sort_order');
 
-// Load geography lookup
+// Load geography hierarchy
 const { data: geographyData } = await supabase
   .from('kb_geography')
-  .select('code, name, sort_order')
+  .select('code, name, level, parent_code, sort_order')
   .order('sort_order');
 
 // geographyLookup used when displaying geography names in filter chips
@@ -81,6 +82,7 @@ const buildHierarchy = (items: TaxonomyItem[] | null): TaxonomyItem[] => {
 
 const industryHierarchy = buildHierarchy(industryTaxonomy as TaxonomyItem[] | null);
 const processHierarchy = buildHierarchy(processTaxonomy as TaxonomyItem[] | null);
+const geographyHierarchy = buildHierarchy(geographyData as TaxonomyItem[] | null);
 
 // Count publications per taxonomy code
 const countByIndustry = new Map<string, number>();
@@ -108,17 +110,6 @@ publications.forEach((p) => {
   }
 });
 
-// Build geography filter options with counts, sorted by sort_order
-const geographyFilterOptions = (geographyData || [])
-  .filter((g) => countByGeography.has(g.code))
-  .map((g) => ({
-    code: g.code,
-    name: g.name,
-    count: countByGeography.get(g.code) || 0,
-    sort_order: g.sort_order,
-  }))
-  .sort((a, b) => a.sort_order - b.sort_order);
-
 // Add counts to hierarchy
 const addCounts = (items: TaxonomyItem[], countMap: Map<string, number>): TaxonomyItem[] => {
   return items.map((item) => ({
@@ -127,6 +118,9 @@ const addCounts = (items: TaxonomyItem[], countMap: Map<string, number>): Taxono
     children: item.children ? addCounts(item.children, countMap) : [],
   }));
 };
+
+// Add counts to geography hierarchy
+const geographyWithCounts = addCounts(geographyHierarchy, countByGeography);
 
 const industryWithCounts = addCounts(industryHierarchy, countByIndustry);
 const processWithCounts = addCounts(processHierarchy, countByProcess);
@@ -383,116 +377,14 @@ const expandItemThumb = (t: string | undefined) => {
                   d="M19 9l-7 7-7-7"></path>
               </svg>
             </summary>
-            <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800 space-y-2">
-              {
-                industryWithCounts.map((l1) => (
-                  <details
-                    class="industry-l1 border border-neutral-800/50 rounded-md overflow-hidden"
-                    data-code={l1.code}
-                  >
-                    <summary class="flex items-center justify-between px-3 py-2 cursor-pointer bg-neutral-900/30 hover:bg-neutral-800/30 transition-colors text-xs">
-                      <div class="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          name="filter-industry"
-                          value={l1.code}
-                          class="industry-checkbox h-3.5 w-3.5 rounded border-neutral-600 bg-neutral-800 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0 cursor-pointer"
-                          data-level="1"
-                          data-code={l1.code}
-                          onclick="event.stopPropagation()"
-                        />
-                        <span class="font-medium text-neutral-400 uppercase tracking-wider">
-                          {l1.name}
-                        </span>
-                      </div>
-                      <svg
-                        class="w-3.5 h-3.5 text-neutral-600 transition-transform [details[open]>&]:rotate-180"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </summary>
-                    <div class="px-3 py-2 bg-neutral-950/30 space-y-1.5">
-                      {/* L2 items - collapsible sections */}
-                      {l1.children?.map((l2) => (
-                        <details
-                          class="industry-l2 ml-2 border border-neutral-800/40 rounded overflow-hidden"
-                          data-code={l2.code}
-                          data-parent={l1.code}
-                        >
-                          <summary class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer bg-neutral-900/20 hover:bg-neutral-800/30 transition-colors">
-                            <div class="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                name="filter-industry"
-                                value={l2.code}
-                                class="industry-checkbox h-3 w-3 rounded border-neutral-600 bg-neutral-800 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0 cursor-pointer"
-                                data-level="2"
-                                data-code={l2.code}
-                                data-parent={l1.code}
-                                onclick="event.stopPropagation()"
-                              />
-                              <span class="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">
-                                {l2.name}
-                                {l2.count ? (
-                                  <span class="text-neutral-500 font-normal normal-case ml-1">
-                                    {l2.count}
-                                  </span>
-                                ) : null}
-                              </span>
-                            </div>
-                            {l2.children && l2.children.length > 0 && (
-                              <svg
-                                class="w-3 h-3 text-neutral-600 transition-transform [details[open]>&]:rotate-180"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="2"
-                                  d="M19 9l-7 7-7-7"
-                                />
-                              </svg>
-                            )}
-                          </summary>
-                          {l2.children && l2.children.length > 0 && (
-                            <div class="px-2.5 py-2 bg-neutral-950/20 flex flex-wrap gap-1.5">
-                              {l2.children?.map((l3) => (
-                                <label class="filter-checkbox cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    name="filter-industry"
-                                    value={l3.code}
-                                    class="industry-checkbox sr-only peer"
-                                    data-level="3"
-                                    data-code={l3.code}
-                                    data-parent={l2.code}
-                                  />
-                                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded text-xs border border-neutral-700/70 bg-neutral-900/70 text-neutral-400 transition-all peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 peer-checked:text-cyan-300 hover:border-neutral-600 hover:bg-neutral-800">
-                                    {l3.name}
-                                    {l3.count ? (
-                                      <span class="text-neutral-500">{l3.count}</span>
-                                    ) : null}
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          )}
-                        </details>
-                      ))}
-                    </div>
-                  </details>
-                ))
-              }
+            <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
+              <HierarchicalFilter
+                filterKey="industry"
+                items={industryWithCounts}
+                color="cyan"
+                emptyMessage="No industry tags yet"
+                cascadeClass="industry"
+              />
             </div>
           </details>
 
@@ -518,53 +410,14 @@ const expandItemThumb = (t: string | undefined) => {
                   d="M19 9l-7 7-7-7"></path>
               </svg>
             </summary>
-            <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800 space-y-2">
-              {
-                processWithCounts.length > 0 ? (
-                  processWithCounts.map((l1) => (
-                    <details class="border border-neutral-800/50 rounded-md overflow-hidden">
-                      <summary class="flex items-center justify-between px-3 py-2 cursor-pointer bg-neutral-900/30 hover:bg-neutral-800/30 transition-colors text-xs">
-                        <span class="font-medium text-neutral-400 uppercase tracking-wider">
-                          {l1.name}
-                        </span>
-                        <svg
-                          class="w-3.5 h-3.5 text-neutral-600 transition-transform [details[open]>&]:rotate-180"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M19 9l-7 7-7-7"
-                          />
-                        </svg>
-                      </summary>
-                      <div class="px-3 py-2 bg-neutral-950/30">
-                        <div class="flex flex-wrap gap-1.5">
-                          {l1.children?.map((l2) => (
-                            <label class="filter-checkbox cursor-pointer">
-                              <input
-                                type="checkbox"
-                                name="filter-process"
-                                value={l2.code}
-                                class="sr-only peer"
-                              />
-                              <span class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs border border-neutral-700 bg-neutral-900 text-neutral-300 transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 peer-checked:text-emerald-300 hover:border-neutral-600 hover:bg-neutral-800">
-                                {l2.name}
-                                {l2.count ? <span class="text-neutral-500">{l2.count}</span> : null}
-                              </span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    </details>
-                  ))
-                ) : (
-                  <p class="text-xs text-neutral-500 italic">No process tags yet</p>
-                )
-              }
+            <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
+              <HierarchicalFilter
+                filterKey="process"
+                items={processWithCounts}
+                color="emerald"
+                emptyMessage="No process tags yet"
+                cascadeClass="process"
+              />
             </div>
           </details>
 
@@ -591,28 +444,14 @@ const expandItemThumb = (t: string | undefined) => {
               </svg>
             </summary>
             <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
-              {
-                geographyFilterOptions.length > 0 ? (
-                  <div class="flex flex-wrap gap-2">
-                    {geographyFilterOptions.map((g) => (
-                      <label class="filter-checkbox cursor-pointer">
-                        <input
-                          type="checkbox"
-                          name="filter-geography"
-                          value={g.code}
-                          class="sr-only peer"
-                        />
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border border-neutral-700 bg-neutral-900 text-neutral-300 transition-all peer-checked:border-sky-500 peer-checked:bg-sky-500/10 peer-checked:text-sky-300 hover:border-neutral-600 hover:bg-neutral-800">
-                          {g.name}
-                          <span class="text-xs text-neutral-500">{g.count}</span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                ) : (
-                  <p class="text-xs text-neutral-500 italic">No geography tags yet</p>
-                )
-              }
+              <HierarchicalFilter
+                filterKey="geography"
+                items={geographyWithCounts}
+                color="sky"
+                emptyMessage="No geography tags yet"
+                cascadeClass="geography"
+                flattenRoots={['GLOBAL']}
+              />
             </div>
           </details>
 
@@ -803,9 +642,9 @@ const expandItemThumb = (t: string | undefined) => {
     initMultiSelectFilters();
   </script>
 
-  <!-- Industry cascading selection -->
+  <!-- Hierarchical filter cascading selection (industry, geography, process) -->
   <script>
-    import initIndustryCascade from '../features/publications/industry-cascade.ts';
-    initIndustryCascade();
+    import { initAllHierarchyCascades } from '../features/publications/hierarchy-cascade.ts';
+    initAllHierarchyCascades();
   </script>
 </Base>
