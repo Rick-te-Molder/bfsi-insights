@@ -582,6 +582,11 @@ async function processPremiumCandidates(candidates, source, dryRun, limit, stats
       .single();
 
     if (error) {
+      // Duplicate is expected (race condition with URL normalization)
+      if (error.code === '23505') {
+        stats.duplicate = (stats.duplicate || 0) + 1;
+        continue;
+      }
       console.error(`   ❌ Failed to queue: ${error.message}`);
       continue;
     }
