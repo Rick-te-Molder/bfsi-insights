@@ -5,43 +5,92 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// Status code ranges (see docs/architecture/pipeline-status-codes.md)
+const STATUS = {
+  // Enrichment (200s)
+  PENDING_ENRICHMENT: 200,
+  TO_SUMMARIZE: 210,
+  SUMMARIZING: 211,
+  TO_TAG: 220,
+  TO_THUMBNAIL: 230,
+  ENRICHED: 240,
+  // Review (300s)
+  PENDING_REVIEW: 300,
+  APPROVED: 330,
+  // Published (400s)
+  PUBLISHED: 400,
+  // Terminal (500s)
+  FAILED: 500,
+  REJECTED: 540,
+};
+
 async function getStats() {
   const supabase = createServiceRoleClient();
 
-  // Get counts by status using efficient count queries
-  const statuses = [
-    'enriched',
-    'processing',
-    'queued',
-    'failed',
-    'pending',
-    'approved',
-    'rejected',
-  ];
-  const countPromises = statuses.map(async (status) => {
-    const { count, error } = await supabase
+  // Get counts by status_code ranges for pipeline view
+  const [
+    { count: pendingEnrichment },
+    { count: inEnrichment },
+    { count: pendingReview },
+    { count: approved },
+    { count: failed },
+    { count: rejected },
+  ] = await Promise.all([
+    // Pending enrichment (200)
+    supabase
       .from('ingestion_queue')
       .select('*', { count: 'exact', head: true })
-      .eq('status', status);
-    if (error) console.error(`Count error for ${status}:`, error);
-    return { status, count: count || 0 };
-  });
+      .eq('status_code', STATUS.PENDING_ENRICHMENT),
+    // In enrichment (201-239)
+    supabase
+      .from('ingestion_queue')
+      .select('*', { count: 'exact', head: true })
+      .gt('status_code', STATUS.PENDING_ENRICHMENT)
+      .lt('status_code', STATUS.ENRICHED),
+    // Pending review (300)
+    supabase
+      .from('ingestion_queue')
+      .select('*', { count: 'exact', head: true })
+      .eq('status_code', STATUS.PENDING_REVIEW),
+    // Approved (330)
+    supabase
+      .from('ingestion_queue')
+      .select('*', { count: 'exact', head: true })
+      .eq('status_code', STATUS.APPROVED),
+    // Failed (500)
+    supabase
+      .from('ingestion_queue')
+      .select('*', { count: 'exact', head: true })
+      .eq('status_code', STATUS.FAILED),
+    // Rejected (540)
+    supabase
+      .from('ingestion_queue')
+      .select('*', { count: 'exact', head: true })
+      .eq('status_code', STATUS.REJECTED),
+  ]);
 
-  const counts = await Promise.all(countPromises);
-  const statusCounts = counts.reduce(
-    (acc, { status, count }) => {
-      acc[status] = count;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
+  // Legacy status counts for backward compatibility
+  const statusCounts = {
+    pending: pendingEnrichment || 0,
+    queued: pendingEnrichment || 0, // Alias for pending
+    processing: inEnrichment || 0,
+    enriched: pendingReview || 0,
+    approved: approved || 0,
+    failed: failed || 0,
+    rejected: rejected || 0,
+    // New granular counts
+    pendingEnrichment: pendingEnrichment || 0,
+    inEnrichment: inEnrichment || 0,
+    pendingReview: pendingReview || 0,
+  };
 
-  // Calculate success rate (last 7 days) - simplified
+  // Calculate success rate (last 7 days) using status_code
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { count: recentSuccessCount } = await supabase
     .from('ingestion_queue')
     .select('*', { count: 'exact', head: true })
-    .in('status', ['enriched', 'approved'])
+    .gte('status_code', STATUS.PENDING_REVIEW)
+    .lt('status_code', STATUS.FAILED)
     .gte('updated_at', sevenDaysAgo);
 
   const { count: recentTotalCount } = await supabase
@@ -58,7 +107,7 @@ async function getStats() {
   const { data: recentFailures } = await supabase
     .from('ingestion_queue')
     .select('id, url, payload, updated_at')
-    .eq('status', 'failed')
+    .eq('status_code', STATUS.FAILED)
     .order('updated_at', { ascending: false })
     .limit(5);
 
@@ -67,7 +116,7 @@ async function getStats() {
   const { count: failedLast24h } = await supabase
     .from('ingestion_queue')
     .select('*', { count: 'exact', head: true })
-    .eq('status', 'failed')
+    .eq('status_code', STATUS.FAILED)
     .gte('updated_at', oneDayAgo);
 
   // Get sources with no items in last 72h (potential dead sources)
@@ -87,7 +136,7 @@ async function getStats() {
   const { data: oldestPending } = await supabase
     .from('ingestion_queue')
     .select('discovered_at')
-    .eq('status', 'pending')
+    .eq('status_code', STATUS.PENDING_ENRICHMENT)
     .order('discovered_at', { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -95,7 +144,8 @@ async function getStats() {
   const { data: oldestQueued } = await supabase
     .from('ingestion_queue')
     .select('discovered_at')
-    .eq('status', 'queued')
+    .gt('status_code', STATUS.PENDING_ENRICHMENT)
+    .lt('status_code', STATUS.PENDING_REVIEW)
     .order('discovered_at', { ascending: true })
     .limit(1)
     .maybeSingle();
