@@ -1,0 +1,294 @@
+---
+/**
+ * HierarchicalFilter - Reusable hierarchical filter with collapsible sections
+ *
+ * Renders a multi-level collapsible filter with cascading checkboxes.
+ * Used for Industry, Geography, and Process filters.
+ */
+
+interface TaxonomyItem {
+  code: string;
+  name: string;
+  level: number;
+  parent_code: string | null;
+  children?: TaxonomyItem[];
+  count?: number;
+}
+
+interface Props {
+  /** Filter key used in checkbox name, e.g. "industry" -> name="filter-industry" */
+  filterKey: string;
+  /** Hierarchical data to display */
+  items: TaxonomyItem[];
+  /** Color scheme for selected state */
+  color?: 'cyan' | 'sky' | 'emerald' | 'amber' | 'purple';
+  /** Empty state message */
+  emptyMessage?: string;
+  /** CSS class prefix for cascade behavior (e.g. "industry" for .industry-checkbox) */
+  cascadeClass?: string;
+  /** L1 codes to flatten - item stays at L1 (no children), its children become L1 siblings */
+  flattenRoots?: string[];
+}
+
+const {
+  filterKey,
+  items,
+  color = 'cyan',
+  emptyMessage = 'No items available',
+  cascadeClass,
+  flattenRoots = [],
+} = Astro.props;
+
+// Flatten specified roots: item becomes childless L1, its children become L1 siblings
+const flattenItems = (items: TaxonomyItem[], rootsToFlatten: string[]): TaxonomyItem[] => {
+  if (rootsToFlatten.length === 0) return items;
+  const result: TaxonomyItem[] = [];
+  for (const item of items) {
+    if (rootsToFlatten.includes(item.code)) {
+      // Promote children to L1 level as siblings
+      if (item.children && item.children.length > 0) {
+        result.push(...item.children.map((child) => ({ ...child, level: 1, parent_code: null })));
+      }
+      // Keep the item itself as childless L1
+      result.push({ ...item, children: [], level: 1, parent_code: null });
+    } else {
+      result.push(item);
+    }
+  }
+  return result;
+};
+
+const displayItems = flattenItems(items, flattenRoots);
+
+// Color scheme mappings
+const colorClasses: Record<string, { checkbox: string; pill: string }> = {
+  cyan: {
+    checkbox: 'text-cyan-500 focus:ring-cyan-500',
+    pill: 'peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 peer-checked:text-cyan-300',
+  },
+  sky: {
+    checkbox: 'text-sky-500 focus:ring-sky-500',
+    pill: 'peer-checked:border-sky-500 peer-checked:bg-sky-500/10 peer-checked:text-sky-300',
+  },
+  emerald: {
+    checkbox: 'text-emerald-500 focus:ring-emerald-500',
+    pill: 'peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 peer-checked:text-emerald-300',
+  },
+  amber: {
+    checkbox: 'text-amber-500 focus:ring-amber-500',
+    pill: 'peer-checked:border-amber-500 peer-checked:bg-amber-500/10 peer-checked:text-amber-300',
+  },
+  purple: {
+    checkbox: 'text-purple-500 focus:ring-purple-500',
+    pill: 'peer-checked:border-purple-500 peer-checked:bg-purple-500/10 peer-checked:text-purple-300',
+  },
+};
+
+const colors = colorClasses[color] || colorClasses.cyan;
+const checkboxClass = cascadeClass ? `${cascadeClass}-checkbox` : '';
+---
+
+{
+  displayItems.length > 0 ? (
+    <div class="space-y-2">
+      {displayItems.map((l1) => (
+        <details
+          class={`${cascadeClass}-l1 border border-neutral-800/50 rounded-md overflow-hidden`}
+          data-code={l1.code}
+        >
+          <summary class="flex items-center justify-between px-3 py-2 cursor-pointer bg-neutral-900/30 hover:bg-neutral-800/30 transition-colors text-xs">
+            <div class="flex items-center gap-2">
+              <input
+                type="checkbox"
+                name={`filter-${filterKey}`}
+                value={l1.code}
+                class:list={[
+                  checkboxClass,
+                  'h-3.5 w-3.5 rounded border-neutral-600 bg-neutral-800 focus:ring-offset-0 cursor-pointer',
+                  colors.checkbox,
+                ]}
+                data-level="1"
+                data-code={l1.code}
+                onclick="event.stopPropagation()"
+              />
+              <span class="font-medium text-neutral-400 uppercase tracking-wider">{l1.name}</span>
+            </div>
+            <svg
+              class="w-3.5 h-3.5 text-neutral-600 transition-transform [details[open]>&]:rotate-180"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </summary>
+          <div class="px-3 py-2 bg-neutral-950/30 space-y-1.5">
+            {/* L2 items - always rows with checkboxes, collapsible if they have children */}
+            {l1.children?.map((l2) => (
+              <details
+                class={`${cascadeClass}-l2 ml-2 border border-neutral-800/40 rounded overflow-hidden`}
+                data-code={l2.code}
+                data-parent={l1.code}
+              >
+                <summary class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer bg-neutral-900/20 hover:bg-neutral-800/30 transition-colors">
+                  <div class="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      name={`filter-${filterKey}`}
+                      value={l2.code}
+                      class:list={[
+                        checkboxClass,
+                        'h-3 w-3 rounded border-neutral-600 bg-neutral-800 focus:ring-offset-0 cursor-pointer',
+                        colors.checkbox,
+                      ]}
+                      data-level="2"
+                      data-code={l2.code}
+                      data-parent={l1.code}
+                      onclick="event.stopPropagation()"
+                    />
+                    <span class="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">
+                      {l2.name}
+                      {l2.count ? (
+                        <span class="text-neutral-500 font-normal normal-case ml-1">
+                          {l2.count}
+                        </span>
+                      ) : null}
+                    </span>
+                  </div>
+                  {l2.children && l2.children.length > 0 && (
+                    <svg
+                      class="w-3 h-3 text-neutral-600 transition-transform [details[open]>&]:rotate-180"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  )}
+                </summary>
+                {l2.children && l2.children.length > 0 && (
+                  <div class="px-2.5 py-2 bg-neutral-950/20 flex flex-wrap gap-1.5">
+                    {l2.children?.map((l3) =>
+                      l3.children && l3.children.length > 0 ? (
+                        // L3 with children - collapsible (e.g. European Union → countries)
+                        <details
+                          class={`${cascadeClass}-l3 w-full border border-neutral-800/40 rounded overflow-hidden`}
+                          data-code={l3.code}
+                          data-parent={l2.code}
+                        >
+                          <summary class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer bg-neutral-900/20 hover:bg-neutral-800/30 transition-colors">
+                            <div class="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                name={`filter-${filterKey}`}
+                                value={l3.code}
+                                class:list={[
+                                  checkboxClass,
+                                  'h-3 w-3 rounded border-neutral-600 bg-neutral-800 focus:ring-offset-0 cursor-pointer',
+                                  colors.checkbox,
+                                ]}
+                                data-level="3"
+                                data-code={l3.code}
+                                data-parent={l2.code}
+                                onclick="event.stopPropagation()"
+                              />
+                              <span class="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">
+                                {l3.name}
+                                {l3.count ? (
+                                  <span class="text-neutral-500 font-normal normal-case ml-1">
+                                    {l3.count}
+                                  </span>
+                                ) : null}
+                              </span>
+                            </div>
+                            <svg
+                              class="w-3 h-3 text-neutral-600 transition-transform [details[open]>&]:rotate-180"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M19 9l-7 7-7-7"
+                              />
+                            </svg>
+                          </summary>
+                          <div class="px-2.5 py-2 bg-neutral-950/20 flex flex-wrap gap-1.5">
+                            {l3.children?.map((l4) => (
+                              <label class="filter-checkbox cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  name={`filter-${filterKey}`}
+                                  value={l4.code}
+                                  class:list={[checkboxClass, 'sr-only peer']}
+                                  data-level="4"
+                                  data-code={l4.code}
+                                  data-parent={l3.code}
+                                />
+                                <span
+                                  class:list={[
+                                    'inline-flex items-center gap-1 px-2 py-1 rounded text-xs',
+                                    'border border-neutral-700/70 bg-neutral-900/70 text-neutral-400',
+                                    'transition-all hover:border-neutral-600 hover:bg-neutral-800',
+                                    colors.pill,
+                                  ]}
+                                >
+                                  {l4.name}
+                                  {l4.count ? (
+                                    <span class="text-neutral-500">{l4.count}</span>
+                                  ) : null}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </details>
+                      ) : (
+                        // L3 without children - pill
+                        <label class="filter-checkbox cursor-pointer">
+                          <input
+                            type="checkbox"
+                            name={`filter-${filterKey}`}
+                            value={l3.code}
+                            class:list={[checkboxClass, 'sr-only peer']}
+                            data-level="3"
+                            data-code={l3.code}
+                            data-parent={l2.code}
+                          />
+                          <span
+                            class:list={[
+                              'inline-flex items-center gap-1 px-2 py-1 rounded text-xs',
+                              'border border-neutral-700/70 bg-neutral-900/70 text-neutral-400',
+                              'transition-all hover:border-neutral-600 hover:bg-neutral-800',
+                              colors.pill,
+                            ]}
+                          >
+                            {l3.name}
+                            {l3.count ? <span class="text-neutral-500">{l3.count}</span> : null}
+                          </span>
+                        </label>
+                      ),
+                    )}
+                  </div>
+                )}
+              </details>
+            ))}
+          </div>
+        </details>
+      ))}
+    </div>
+  ) : (
+    <p class="text-xs text-neutral-500 italic">{emptyMessage}</p>
+  )
+}
