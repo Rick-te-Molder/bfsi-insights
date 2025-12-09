@@ -86,10 +86,16 @@ Each processing step has three states:
 ## State Transitions
 
 ```
-Discovery Flow:
+Discovery Flow (auto-discovered):
 100 → 110 → 111 → 112 → 120 → 121 → 122 → 200
                                       ↓
                                      530 (irrelevant)
+
+Manual Entry Flow (skips scoring - human already decided it's relevant):
+  URL only:      manual → 110 → 111 → 112 → 200 (skip 120-122)
+  With content:  manual → 200 (skip fetch + scoring)
+  With summary:  manual → 220 (skip fetch + scoring + summarize)
+  Complete:      manual → 300 (review only)
 
 Enrichment Flow (configurable order):
 200 → 210 → 211 → 212 → 220 → 221 → 222 → 230 → 231 → 232 → 240 → 300
@@ -101,6 +107,47 @@ Review Flow:
 
 Update Flow:
 400 → 320 (editing) → 410 (updated)
+```
+
+## Entry Types
+
+The `entry_type` column tracks how an item entered the pipeline:
+
+| Value        | Description                                |
+| ------------ | ------------------------------------------ |
+| `discovered` | Auto-discovered via RSS/sitemap (default)  |
+| `manual`     | Added manually by a user                   |
+| `import`     | Bulk imported from external source         |
+| `retry`      | Re-queued after previous failure/rejection |
+
+Manual items skip relevance scoring (120-122) since a human already decided they're relevant.
+
+## Edit History Tracking
+
+When a published item (400) is edited, field-level changes are tracked:
+
+```sql
+-- Call this when saving edits to a publication
+SELECT track_publication_edit(
+  'publication-uuid',
+  'queue-uuid',
+  '{"title": "Old Title", "summary": "Old summary"}'::jsonb,  -- old data
+  '{"title": "New Title", "summary": "Old summary"}'::jsonb,  -- new data
+  'user:rick'
+);
+
+-- Query edit history for a publication
+SELECT * FROM publication_edit_history
+WHERE publication_id = 'publication-uuid'
+ORDER BY changed_at DESC;
+```
+
+The `field_changes` column shows exactly what changed:
+
+```json
+{
+  "title": { "old": "Old Title", "new": "New Title" }
+}
 ```
 
 ## Database Schema

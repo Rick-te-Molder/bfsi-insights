@@ -97,13 +97,17 @@ CREATE INDEX idx_status_history_time ON public.status_history(changed_at DESC);
 CREATE INDEX idx_status_history_to_status ON public.status_history(to_status);
 
 -- =============================================================================
--- STEP 3: Add status_code column to ingestion_queue
+-- STEP 3: Add status_code and entry_type columns to ingestion_queue
 -- =============================================================================
 
 ALTER TABLE public.ingestion_queue ADD COLUMN IF NOT EXISTS status_code smallint;
+ALTER TABLE public.ingestion_queue ADD COLUMN IF NOT EXISTS entry_type text DEFAULT 'discovered';
 
--- Create index for new column
+-- Create indexes
 CREATE INDEX IF NOT EXISTS idx_queue_status_code ON public.ingestion_queue(status_code);
+CREATE INDEX IF NOT EXISTS idx_queue_entry_type ON public.ingestion_queue(entry_type);
+
+COMMENT ON COLUMN public.ingestion_queue.entry_type IS 'How item entered pipeline: discovered, manual, import, retry';
 
 -- =============================================================================
 -- STEP 4: Migrate existing status values
@@ -113,7 +117,11 @@ UPDATE public.ingestion_queue
 SET status_code = CASE status
   WHEN 'pending' THEN 200      -- pending_enrichment
   WHEN 'queued' THEN 200       -- pending_enrichment (same as pending)
-  WHEN 'processing' THEN 211   -- summarizing (most common processing state)
+  WHEN 'fetched' THEN 210      -- to_summarize
+  WHEN 'filtered' THEN 210     -- to_summarize
+  WHEN 'processing' THEN 211   -- summarizing
+  WHEN 'summarized' THEN 220   -- to_tag
+  WHEN 'tagged' THEN 230       -- to_thumbnail
   WHEN 'enriched' THEN 300     -- pending_review
   WHEN 'approved' THEN 330     -- approved
   WHEN 'rejected' THEN 540     -- rejected
@@ -192,6 +200,89 @@ SELECT
   jsonb_build_object('note', 'Initial migration from text status', 'old_status', status)
 FROM public.ingestion_queue
 WHERE status_code IS NOT NULL;
+
+-- =============================================================================
+-- STEP 8: Create function to compute and track field changes
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION public.track_publication_edit(
+  p_publication_id uuid,
+  p_queue_id uuid,
+  p_old_data jsonb,
+  p_new_data jsonb,
+  p_changed_by text DEFAULT 'user:unknown'
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_changes jsonb := '{}';
+  v_key text;
+  v_old_val jsonb;
+  v_new_val jsonb;
+  v_history_id uuid;
+BEGIN
+  -- Compare each key in new data with old data
+  FOR v_key IN SELECT jsonb_object_keys(p_new_data)
+  LOOP
+    v_old_val := p_old_data->v_key;
+    v_new_val := p_new_data->v_key;
+    
+    -- Only track if value actually changed
+    IF v_old_val IS DISTINCT FROM v_new_val THEN
+      v_changes := v_changes || jsonb_build_object(
+        v_key, jsonb_build_object('old', v_old_val, 'new', v_new_val)
+      );
+    END IF;
+  END LOOP;
+  
+  -- Only create history record if something changed
+  IF v_changes != '{}' THEN
+    INSERT INTO public.status_history (
+      queue_id,
+      from_status,
+      to_status,
+      changed_by,
+      changes
+    ) VALUES (
+      p_queue_id,
+      400,  -- PUBLISHED
+      410,  -- UPDATED
+      p_changed_by,
+      jsonb_build_object(
+        'publication_id', p_publication_id,
+        'fields', v_changes
+      )
+    )
+    RETURNING id INTO v_history_id;
+    
+    RETURN v_history_id;
+  END IF;
+  
+  RETURN NULL;
+END;
+$$;
+
+COMMENT ON FUNCTION public.track_publication_edit IS 'Track field-level changes when editing a published item';
+
+-- =============================================================================
+-- STEP 9: Create view for publication edit history
+-- =============================================================================
+
+CREATE OR REPLACE VIEW public.publication_edit_history
+WITH (security_invoker = true)
+AS
+SELECT 
+  sh.id as history_id,
+  sh.changes->>'publication_id' as publication_id,
+  sh.changes->'fields' as field_changes,
+  sh.changed_by,
+  sh.changed_at,
+  sh.queue_id
+FROM public.status_history sh
+WHERE sh.from_status = 400 AND sh.to_status = 410;
 
 -- =============================================================================
 -- COMMENTS
