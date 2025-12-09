@@ -83,6 +83,47 @@ async function getStats() {
       .filter(Boolean),
   );
 
+  // Queue age metrics - oldest pending items
+  const { data: oldestPending } = await supabase
+    .from('ingestion_queue')
+    .select('discovered_at')
+    .eq('status', 'pending')
+    .order('discovered_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  const { data: oldestQueued } = await supabase
+    .from('ingestion_queue')
+    .select('discovered_at')
+    .eq('status', 'queued')
+    .order('discovered_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  // Calculate age in hours
+  const getAgeHours = (dateStr: string | null) => {
+    if (!dateStr) return 0;
+    return Math.round((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60));
+  };
+
+  const oldestPendingAge = getAgeHours(oldestPending?.discovered_at);
+  const oldestQueuedAge = getAgeHours(oldestQueued?.discovered_at);
+
+  // Items discovered today
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const { count: discoveredToday } = await supabase
+    .from('ingestion_queue')
+    .select('*', { count: 'exact', head: true })
+    .gte('discovered_at', todayStart.toISOString());
+
+  // Items processed today (status changed from pending/queued)
+  const { count: enrichedToday } = await supabase
+    .from('ingestion_queue')
+    .select('*', { count: 'exact', head: true })
+    .in('status', ['enriched', 'approved', 'rejected', 'failed'])
+    .gte('updated_at', todayStart.toISOString());
+
   // Get publication count
   const { count: publishedCount } = await supabase
     .from('kb_publication')
@@ -112,6 +153,11 @@ async function getStats() {
     pendingProposals: pendingProposals || 0,
     failedLast24h: failedLast24h || 0,
     activeSourceCount: activeSourceSlugs.size,
+    // New queue metrics
+    oldestPendingAge,
+    oldestQueuedAge,
+    discoveredToday: discoveredToday || 0,
+    enrichedToday: enrichedToday || 0,
   };
 }
 
@@ -121,13 +167,24 @@ export default async function DashboardPage() {
     recentFailures,
     publishedCount,
     successRate,
-    avgProcessingTime,
     recentItemsCount,
     activeTests,
     pendingProposals,
     failedLast24h,
-    activeSourceCount,
+    oldestPendingAge,
+    oldestQueuedAge,
+    discoveredToday,
+    enrichedToday,
   } = await getStats();
+
+  // Format age for display
+  const formatAge = (hours: number) => {
+    if (hours === 0) return '-';
+    if (hours < 24) return `${hours}h`;
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+  };
 
   return (
     <div className="space-y-8">
@@ -137,59 +194,100 @@ export default async function DashboardPage() {
         <p className="mt-1 text-sm text-neutral-400">Overview of the ingestion pipeline</p>
       </header>
 
-      {/* Pipeline Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Link
-          href="/review?status=enriched"
-          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
-        >
-          <p className="text-sm text-neutral-400">Pending Review</p>
-          <p className="mt-1 text-3xl font-bold text-amber-300">{statusCounts.enriched || 0}</p>
-        </Link>
-        <Link
-          href="/review?status=processing"
-          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
-        >
-          <p className="text-sm text-neutral-400">Processing</p>
-          <p className="mt-1 text-3xl font-bold text-sky-300">{statusCounts.processing || 0}</p>
-        </Link>
-        <Link
-          href="/review?status=queued"
-          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
-        >
-          <p className="text-sm text-neutral-400">In Queue</p>
-          <p className="mt-1 text-3xl font-bold text-neutral-300">{statusCounts.queued || 0}</p>
-        </Link>
-        <Link
-          href="/review?status=failed"
-          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
-        >
-          <p className="text-sm text-neutral-400">Failed</p>
-          <p className="mt-1 text-3xl font-bold text-red-300">{statusCounts.failed || 0}</p>
-        </Link>
-        <Link
-          href="/published"
-          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
-        >
-          <p className="text-sm text-neutral-400">Published</p>
-          <p className="mt-1 text-3xl font-bold text-emerald-300">{publishedCount}</p>
-        </Link>
+      {/* Pipeline Flow */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-neutral-400 uppercase tracking-wide">
+          Pipeline Flow
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+          <Link
+            href="/review?status=pending"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors relative"
+          >
+            <p className="text-xs text-neutral-500">1. Discovered</p>
+            <p className="text-sm text-neutral-400">Awaiting Enrichment</p>
+            <p className="mt-1 text-2xl font-bold text-violet-300">{statusCounts.pending || 0}</p>
+            {oldestPendingAge > 0 && (
+              <p className="text-xs text-neutral-500">Oldest: {formatAge(oldestPendingAge)}</p>
+            )}
+          </Link>
+          <Link
+            href="/review?status=queued"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
+          >
+            <p className="text-xs text-neutral-500">2. Enriched</p>
+            <p className="text-sm text-neutral-400">In Queue</p>
+            <p className="mt-1 text-2xl font-bold text-sky-300">{statusCounts.queued || 0}</p>
+            {oldestQueuedAge > 0 && (
+              <p className="text-xs text-neutral-500">Oldest: {formatAge(oldestQueuedAge)}</p>
+            )}
+          </Link>
+          <Link
+            href="/review?status=processing"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
+          >
+            <p className="text-xs text-neutral-500">3. Active</p>
+            <p className="text-sm text-neutral-400">Processing</p>
+            <p className="mt-1 text-2xl font-bold text-cyan-300">{statusCounts.processing || 0}</p>
+          </Link>
+          <Link
+            href="/review?status=enriched"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
+          >
+            <p className="text-xs text-neutral-500">4. Ready</p>
+            <p className="text-sm text-neutral-400">Pending Review</p>
+            <p className="mt-1 text-2xl font-bold text-amber-300">{statusCounts.enriched || 0}</p>
+          </Link>
+          <Link
+            href="/review?status=failed"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
+          >
+            <p className="text-xs text-neutral-500">⚠️ Error</p>
+            <p className="text-sm text-neutral-400">Failed</p>
+            <p className="mt-1 text-2xl font-bold text-red-300">{statusCounts.failed || 0}</p>
+          </Link>
+          <Link
+            href="/published"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
+          >
+            <p className="text-xs text-neutral-500">✓ Done</p>
+            <p className="text-sm text-neutral-400">Published</p>
+            <p className="mt-1 text-2xl font-bold text-emerald-300">{publishedCount}</p>
+          </Link>
+        </div>
       </div>
 
-      {/* Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Today's Activity */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
+          <p className="text-sm text-neutral-400">Discovered Today</p>
+          <p className="mt-1 text-2xl font-bold text-violet-400">{discoveredToday}</p>
+          <p className="text-xs text-neutral-500">New items found</p>
+        </div>
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-          <p className="text-sm text-neutral-400">Success Rate (7d)</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-400">{successRate.toFixed(1)}%</p>
-          <p className="text-xs text-neutral-500">{recentItemsCount} items processed</p>
+          <p className="text-sm text-neutral-400">Processed Today</p>
+          <p className="mt-1 text-2xl font-bold text-emerald-400">{enrichedToday}</p>
+          <p className="text-xs text-neutral-500">Enriched + reviewed</p>
         </div>
         <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-4">
-          <p className="text-sm text-neutral-400">Avg Processing Time</p>
+          <p className="text-sm text-neutral-400">Total in Pipeline</p>
           <p className="mt-1 text-2xl font-bold text-sky-400">
-            {avgProcessingTime > 0 ? (avgProcessingTime / 1000).toFixed(1) + 's' : '-'}
+            {(statusCounts.pending || 0) +
+              (statusCounts.queued || 0) +
+              (statusCounts.processing || 0) +
+              (statusCounts.enriched || 0)}
           </p>
-          <p className="text-xs text-neutral-500">Per item enrichment</p>
+          <p className="text-xs text-neutral-500">Awaiting action</p>
         </div>
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+          <p className="text-sm text-neutral-400">Success Rate (7d)</p>
+          <p className="mt-1 text-2xl font-bold text-amber-400">{successRate.toFixed(1)}%</p>
+          <p className="text-xs text-neutral-500">{recentItemsCount} items</p>
+        </div>
+      </div>
+
+      {/* Other Metrics */}
+      <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
         <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
           <p className="text-sm text-neutral-400">Active A/B Tests</p>
           <p className="mt-1 text-2xl font-bold text-purple-400">{activeTests}</p>
