@@ -3,6 +3,10 @@
 -- Root cause 1: PwC and similar sites use JavaScript-rendered content - fixed in content-fetcher.js
 -- Root cause 2: Prompt told model to extract figures but didn't emphasize putting them IN the summary text
 
+-- Add unique constraint for ON CONFLICT to work
+CREATE UNIQUE INDEX IF NOT EXISTS idx_prompt_versions_agent_version 
+ON prompt_versions(agent_name, version);
+
 INSERT INTO prompt_versions (agent_name, version, prompt_text, is_current)
 VALUES (
   'content-summarizer',
