@@ -117,7 +117,11 @@ UPDATE public.ingestion_queue
 SET status_code = CASE status
   WHEN 'pending' THEN 200      -- pending_enrichment
   WHEN 'queued' THEN 200       -- pending_enrichment (same as pending)
-  WHEN 'processing' THEN 211   -- summarizing (most common processing state)
+  WHEN 'fetched' THEN 210      -- to_summarize
+  WHEN 'filtered' THEN 210     -- to_summarize
+  WHEN 'processing' THEN 211   -- summarizing
+  WHEN 'summarized' THEN 220   -- to_tag
+  WHEN 'tagged' THEN 230       -- to_thumbnail
   WHEN 'enriched' THEN 300     -- pending_review
   WHEN 'approved' THEN 330     -- approved
   WHEN 'rejected' THEN 540     -- rejected
