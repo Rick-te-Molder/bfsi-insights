@@ -30,7 +30,7 @@ export async function loadStatusCodes() {
   // e.g., 'pending_enrichment' -> 'PENDING_ENRICHMENT': 200
   statusCache = {};
   for (const row of data) {
-    const key = row.name.toUpperCase().replace(/-/g, '_');
+    const key = row.name.toUpperCase().replaceAll('-', '_');
     statusCache[key] = row.code;
   }
 
@@ -46,7 +46,7 @@ export function getStatusCode(name) {
   if (!statusCache) {
     throw new Error('Status codes not loaded. Call loadStatusCodes() first.');
   }
-  const key = name.toUpperCase().replace(/-/g, '_');
+  const key = name.toUpperCase().replaceAll('-', '_');
   const code = statusCache[key];
   if (code === undefined) {
     throw new Error(`Unknown status: ${name}`);
