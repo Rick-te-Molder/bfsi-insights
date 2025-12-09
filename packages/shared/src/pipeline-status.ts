@@ -175,6 +175,38 @@ export const getStatusName = (code: number): string => {
 };
 
 // =============================================================================
+// Entry Types
+// =============================================================================
+
+export const ENTRY_TYPE = {
+  DISCOVERED: 'discovered',
+  MANUAL: 'manual',
+  IMPORT: 'import',
+  RETRY: 'retry',
+} as const;
+
+export type EntryType = (typeof ENTRY_TYPE)[keyof typeof ENTRY_TYPE];
+
+/** Check if entry type should skip scoring (human already decided relevance) */
+export const shouldSkipScoring = (entryType: EntryType): boolean => {
+  return entryType !== ENTRY_TYPE.DISCOVERED;
+};
+
+/** Get the starting status for a manual entry based on what's provided */
+export const getManualEntryStartStatus = (options: {
+  hasContent?: boolean;
+  hasSummary?: boolean;
+  hasTags?: boolean;
+  isComplete?: boolean;
+}): StatusCode => {
+  if (options.isComplete) return STATUS.PENDING_REVIEW;
+  if (options.hasTags) return STATUS.TO_THUMBNAIL;
+  if (options.hasSummary) return STATUS.TO_TAG;
+  if (options.hasContent) return STATUS.PENDING_ENRICHMENT;
+  return STATUS.TO_FETCH;
+};
+
+// =============================================================================
 // Legacy Status Mapping (for migration)
 // =============================================================================
 

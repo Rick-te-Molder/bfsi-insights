@@ -97,13 +97,17 @@ CREATE INDEX idx_status_history_time ON public.status_history(changed_at DESC);
 CREATE INDEX idx_status_history_to_status ON public.status_history(to_status);
 
 -- =============================================================================
--- STEP 3: Add status_code column to ingestion_queue
+-- STEP 3: Add status_code and entry_type columns to ingestion_queue
 -- =============================================================================
 
 ALTER TABLE public.ingestion_queue ADD COLUMN IF NOT EXISTS status_code smallint;
+ALTER TABLE public.ingestion_queue ADD COLUMN IF NOT EXISTS entry_type text DEFAULT 'discovered';
 
--- Create index for new column
+-- Create indexes
 CREATE INDEX IF NOT EXISTS idx_queue_status_code ON public.ingestion_queue(status_code);
+CREATE INDEX IF NOT EXISTS idx_queue_entry_type ON public.ingestion_queue(entry_type);
+
+COMMENT ON COLUMN public.ingestion_queue.entry_type IS 'How item entered pipeline: discovered, manual, import, retry';
 
 -- =============================================================================
 -- STEP 4: Migrate existing status values
