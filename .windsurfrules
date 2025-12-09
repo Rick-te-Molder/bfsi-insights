@@ -1,0 +1,15 @@
+# BFSI Insights Project Rules
+
+## Task Completion
+When completing tasks, provide a Linear-ready summary per CONTRIBUTING.md section 7:
+- Problem, Root Cause, Solution, Files Changed, PR link
+
+## Workflow
+- Never commit directly to main - always use branches and PRs
+- Branch naming: `feat/kb-XXX-desc`, `fix/kb-XXX-desc`, `docs/desc`
+- Include Linear issue ID in commits: `fix(KB-XXX): description`
+
+## Code Style
+- Keep files under 500 lines (enforced by pre-commit)
+- Use TypeScript/Astro conventions from existing code
+- Run `npm run lint` before committing

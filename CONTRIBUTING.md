@@ -78,6 +78,56 @@ Then create a Pull Request on GitHub:
 - Merge using **Squash and merge** (keeps history clean)
 - Delete the branch after merging
 
+### 7. Update Linear Issue
+
+Add a summary comment to the Linear issue before closing:
+
+```markdown
+## Problem
+
+[What was broken/missing - 1-2 sentences]
+
+## Root Cause
+
+[Why it happened - if applicable]
+
+## Solution
+
+[What was changed to fix it]
+
+## Files Changed
+
+- `path/to/file` - [brief description]
+
+## PR
+
+[GitHub PR link]
+```
+
+**Example:**
+
+```markdown
+## Problem
+
+Premium source discovery showed alarming "Failed to queue" errors for duplicate URLs.
+
+## Root Cause
+
+Race condition between JS and database URL normalization.
+
+## Solution
+
+Handle duplicate key errors (code 23505) silently, matching existing behavior.
+
+## Files Changed
+
+- `services/agent-api/src/agents/discover.js` - Added duplicate error handling
+
+## PR
+
+https://github.com/Rick-te-Molder/bfsi-insights/pull/140
+```
+
 ---
 
 ## Commit Message Format
