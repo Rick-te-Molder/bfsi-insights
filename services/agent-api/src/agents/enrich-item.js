@@ -18,15 +18,16 @@ import { runSummarizer } from './summarize.js';
 import { runTagger } from './tag.js';
 import { runThumbnailer } from './thumbnail.js';
 import { fetchContent } from '../lib/content-fetcher.js';
+import { STATUS, loadStatusCodes } from '../lib/status-codes.js';
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 // --- Pipeline Step Functions ---
 
-async function updateStatus(queueId, status, extra = {}) {
+async function updateStatus(queueId, status, statusCode, extra = {}) {
   await supabase
     .from('ingestion_queue')
-    .update({ status, ...extra })
+    .update({ status, status_code: statusCode, ...extra })
     .eq('id', queueId);
 }
 
@@ -44,7 +45,10 @@ async function stepFetch(queueItem) {
     published_at: content.date || null,
   };
 
-  await updateStatus(queueItem.id, 'fetched', { payload, fetched_at: new Date().toISOString() });
+  await updateStatus(queueItem.id, 'fetched', STATUS.TO_SUMMARIZE, {
+    payload,
+    fetched_at: new Date().toISOString(),
+  });
   return payload;
 }
 
@@ -59,21 +63,22 @@ async function stepFilter(queueId, payload, options = {}) {
       console.log(
         `   ⚠️ Filter says not relevant: ${result.reason} (skipping rejection for manual submission)`,
       );
-      await updateStatus(queueId, 'filtered');
+      await updateStatus(queueId, 'filtered', STATUS.TO_SUMMARIZE);
       return { rejected: false, filterResult: result };
     }
-    // Nightly discovery: reject as normal
+    // Nightly discovery: reject as irrelevant
     console.log(`   ❌ Not relevant: ${result.reason}`);
-    await updateStatus(queueId, 'rejected', { rejection_reason: result.reason });
+    await updateStatus(queueId, 'rejected', STATUS.IRRELEVANT, { rejection_reason: result.reason });
     return { rejected: true, reason: result.reason };
   }
 
   console.log('   ✅ Relevant');
-  await updateStatus(queueId, 'filtered');
+  await updateStatus(queueId, 'filtered', STATUS.TO_SUMMARIZE);
   return { rejected: false, filterResult: result };
 }
 
 async function stepSummarize(queueId, payload) {
+  await updateStatus(queueId, 'summarizing', STATUS.SUMMARIZING);
   console.log('   📝 Generating summary...');
   const result = await runSummarizer({ id: queueId, payload });
 
@@ -111,11 +116,12 @@ async function stepSummarize(queueId, payload) {
   };
 
   delete updated.textContent;
-  await updateStatus(queueId, 'summarized', { payload: updated });
+  await updateStatus(queueId, 'summarized', STATUS.TO_TAG, { payload: updated });
   return updated;
 }
 
 async function stepTag(queueId, payload) {
+  await updateStatus(queueId, 'tagging', STATUS.TAGGING);
   console.log('   🏷️ Applying tags...');
   const result = await runTagger({ id: queueId, payload });
 
@@ -142,11 +148,12 @@ async function stepTag(queueId, payload) {
     },
   };
 
-  await updateStatus(queueId, 'tagged', { payload: updated });
+  await updateStatus(queueId, 'tagged', STATUS.TO_THUMBNAIL, { payload: updated });
   return updated;
 }
 
 async function stepThumbnail(queueId, payload) {
+  await updateStatus(queueId, 'thumbnailing', STATUS.THUMBNAILING);
   console.log('   📸 Generating thumbnail...');
   try {
     const result = await runThumbnailer({ id: queueId, payload });
@@ -173,7 +180,7 @@ export async function enrichItem(queueItem, options = {}) {
   }
 
   try {
-    await updateStatus(queueItem.id, 'processing');
+    await updateStatus(queueItem.id, 'processing', STATUS.SUMMARIZING);
 
     let payload = await stepFetch(queueItem);
 
@@ -191,7 +198,10 @@ export async function enrichItem(queueItem, options = {}) {
       payload = await stepThumbnail(queueItem.id, payload);
     }
 
-    await updateStatus(queueItem.id, 'enriched', { payload, content_type: 'publication' });
+    await updateStatus(queueItem.id, 'enriched', STATUS.PENDING_REVIEW, {
+      payload,
+      content_type: 'publication',
+    });
 
     const duration = Date.now() - startTime;
     console.log(`   ✅ Enriched in ${(duration / 1000).toFixed(1)}s`);
@@ -199,7 +209,7 @@ export async function enrichItem(queueItem, options = {}) {
     return { success: true, title: payload.title, duration };
   } catch (error) {
     console.error(`   ❌ Error: ${error.message}`);
-    await updateStatus(queueItem.id, 'failed', { rejection_reason: error.message });
+    await updateStatus(queueItem.id, 'failed', STATUS.FAILED, { rejection_reason: error.message });
     return { success: false, error: error.message, duration: Date.now() - startTime };
   }
 }
@@ -212,6 +222,9 @@ export async function enrichItem(queueItem, options = {}) {
  */
 export async function processQueue(options = {}) {
   const { limit = 10, includeThumbnail = true } = options;
+
+  // Load status codes from database (cached after first call)
+  await loadStatusCodes();
 
   console.log('🔄 Processing queue...\n');
 

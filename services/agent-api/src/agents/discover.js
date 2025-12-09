@@ -21,6 +21,7 @@ import {
   buildPremiumPayload,
   filterPremiumCandidates,
 } from '../lib/premium-handler.js';
+import { STATUS, loadStatusCodes } from '../lib/status-codes.js';
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -425,6 +426,9 @@ export async function runDiscovery(options = {}) {
   }
   if (limit) console.log(`   Limit: ${limit}`);
 
+  // Load status codes from database (cached after first call)
+  await loadStatusCodes();
+
   const config = await loadDiscoveryConfig();
   const sources = await loadSources(sourceSlug, premium);
 
@@ -573,6 +577,8 @@ async function processPremiumCandidates(candidates, source, dryRun, limit, stats
       .insert({
         url: candidate.url,
         status: 'pending',
+        status_code: STATUS.PENDING_ENRICHMENT,
+        entry_type: 'discovered',
         payload,
         // Premium items skip auto-enrichment
         relevance_score: null,
@@ -860,6 +866,8 @@ async function insertToQueue(candidate, sourceName, relevanceResult = null) {
     url: candidate.url,
     content_type: 'publication',
     status: 'pending',
+    status_code: STATUS.PENDING_ENRICHMENT, // Already scored in discovery
+    entry_type: 'discovered',
     discovered_at: new Date().toISOString(),
     payload,
     payload_schema_version: 1,

@@ -122,6 +122,34 @@ The `entry_type` column tracks how an item entered the pipeline:
 
 Manual items skip relevance scoring (120-122) since a human already decided they're relevant.
 
+## Edit History Tracking
+
+When a published item (400) is edited, field-level changes are tracked:
+
+```sql
+-- Call this when saving edits to a publication
+SELECT track_publication_edit(
+  'publication-uuid',
+  'queue-uuid',
+  '{"title": "Old Title", "summary": "Old summary"}'::jsonb,  -- old data
+  '{"title": "New Title", "summary": "Old summary"}'::jsonb,  -- new data
+  'user:rick'
+);
+
+-- Query edit history for a publication
+SELECT * FROM publication_edit_history
+WHERE publication_id = 'publication-uuid'
+ORDER BY changed_at DESC;
+```
+
+The `field_changes` column shows exactly what changed:
+
+```json
+{
+  "title": { "old": "Old Title", "new": "New Title" }
+}
+```
+
 ## Database Schema
 
 ### status_lookup table

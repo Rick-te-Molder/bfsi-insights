@@ -198,6 +198,89 @@ FROM public.ingestion_queue
 WHERE status_code IS NOT NULL;
 
 -- =============================================================================
+-- STEP 8: Create function to compute and track field changes
+-- =============================================================================
+
+CREATE OR REPLACE FUNCTION public.track_publication_edit(
+  p_publication_id uuid,
+  p_queue_id uuid,
+  p_old_data jsonb,
+  p_new_data jsonb,
+  p_changed_by text DEFAULT 'user:unknown'
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_changes jsonb := '{}';
+  v_key text;
+  v_old_val jsonb;
+  v_new_val jsonb;
+  v_history_id uuid;
+BEGIN
+  -- Compare each key in new data with old data
+  FOR v_key IN SELECT jsonb_object_keys(p_new_data)
+  LOOP
+    v_old_val := p_old_data->v_key;
+    v_new_val := p_new_data->v_key;
+    
+    -- Only track if value actually changed
+    IF v_old_val IS DISTINCT FROM v_new_val THEN
+      v_changes := v_changes || jsonb_build_object(
+        v_key, jsonb_build_object('old', v_old_val, 'new', v_new_val)
+      );
+    END IF;
+  END LOOP;
+  
+  -- Only create history record if something changed
+  IF v_changes != '{}' THEN
+    INSERT INTO public.status_history (
+      queue_id,
+      from_status,
+      to_status,
+      changed_by,
+      changes
+    ) VALUES (
+      p_queue_id,
+      400,  -- PUBLISHED
+      410,  -- UPDATED
+      p_changed_by,
+      jsonb_build_object(
+        'publication_id', p_publication_id,
+        'fields', v_changes
+      )
+    )
+    RETURNING id INTO v_history_id;
+    
+    RETURN v_history_id;
+  END IF;
+  
+  RETURN NULL;
+END;
+$$;
+
+COMMENT ON FUNCTION public.track_publication_edit IS 'Track field-level changes when editing a published item';
+
+-- =============================================================================
+-- STEP 9: Create view for publication edit history
+-- =============================================================================
+
+CREATE OR REPLACE VIEW public.publication_edit_history
+WITH (security_invoker = true)
+AS
+SELECT 
+  sh.id as history_id,
+  sh.changes->>'publication_id' as publication_id,
+  sh.changes->'fields' as field_changes,
+  sh.changed_by,
+  sh.changed_at,
+  sh.queue_id
+FROM public.status_history sh
+WHERE sh.from_status = 400 AND sh.to_status = 410;
+
+-- =============================================================================
 -- COMMENTS
 -- =============================================================================
 
