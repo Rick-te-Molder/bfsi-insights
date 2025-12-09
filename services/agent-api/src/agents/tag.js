@@ -121,7 +121,11 @@ async function loadTaxonomies() {
       .select('code, name, level, parent_code')
       .order('level')
       .order('name'),
-    supabase.from('kb_geography').select('code, name').order('sort_order'),
+    supabase
+      .from('kb_geography')
+      .select('code, name, level, parent_code')
+      .order('level')
+      .order('sort_order'),
     supabase.from('ag_use_case').select('code, name').order('name'),
     supabase.from('ag_capability').select('code, name').order('name'),
     supabase.from('regulator').select('code, name').order('name'),
@@ -149,11 +153,19 @@ async function loadTaxonomies() {
       ?.map((i) => `${i.code}: ${i.name} [${i.regulation_code}/${i.category}]`)
       .join('\n') || '';
 
+  // Build geography parent map for code expansion
+  const geographyParentMap = new Map();
+  for (const geo of geographies?.data || []) {
+    if (geo.parent_code) {
+      geographyParentMap.set(geo.code, geo.parent_code);
+    }
+  }
+
   return {
     // Formatted strings for LLM prompt
     industries: formatHierarchical(industries),
     topics: formatHierarchical(topics),
-    geographies: format(geographies),
+    geographies: formatHierarchical(geographies),
     useCases: format(useCases),
     capabilities: format(capabilities),
     regulators: format(regulators),
@@ -171,7 +183,42 @@ async function loadTaxonomies() {
       regulations: extractCodes(regulations),
       processes: extractCodes(processes),
     },
+    // Parent maps for hierarchy expansion
+    parentMaps: {
+      geographies: geographyParentMap,
+    },
   };
+}
+
+/**
+ * Expand geography codes to include parent codes
+ * e.g., 'de' → ['de', 'eu', 'emea', 'global']
+ */
+function expandGeographyCodes(taggedItems, parentMap) {
+  if (!taggedItems || !Array.isArray(taggedItems)) return [];
+
+  const expanded = new Set();
+  for (const item of taggedItems) {
+    const code = typeof item === 'string' ? item : item.code;
+    expanded.add(code);
+
+    // Walk up the hierarchy
+    let current = code;
+    while (parentMap.has(current)) {
+      current = parentMap.get(current);
+      expanded.add(current);
+    }
+  }
+
+  // Return as array of TaggedCode objects with confidence
+  return Array.from(expanded).map((code) => {
+    // Find original confidence if it was in the input
+    const original = taggedItems.find((i) => (typeof i === 'string' ? i : i.code) === code);
+    return {
+      code,
+      confidence: original?.confidence || 0.5, // Parent codes get lower confidence
+    };
+  });
 }
 
 /**
@@ -307,7 +354,7 @@ ${taxonomies.processes}
 
       const result = completion.choices[0].message.parsed;
       const usage = completion.usage;
-      const { validCodes } = taxonomies;
+      const { validCodes, parentMaps } = taxonomies;
 
       // Validate all codes against actual taxonomy - reject LLM hallucinations
       // Then enforce B/FS/I mutual exclusivity for industries
@@ -318,11 +365,22 @@ ${taxonomies.processes}
       );
       const exclusiveIndustries = enforceIndustryMutualExclusivity(validatedIndustries);
 
+      // Validate geography codes, then expand to include parent hierarchy
+      const validatedGeographies = validateCodes(
+        result.geography_codes,
+        validCodes.geographies,
+        'geography',
+      );
+      const expandedGeographies = expandGeographyCodes(
+        validatedGeographies,
+        parentMaps.geographies,
+      );
+
       const validatedResult = {
         ...result,
         industry_codes: exclusiveIndustries,
         topic_codes: validateCodes(result.topic_codes, validCodes.topics, 'topic'),
-        geography_codes: validateCodes(result.geography_codes, validCodes.geographies, 'geography'),
+        geography_codes: expandedGeographies,
         use_case_codes: validateCodes(result.use_case_codes, validCodes.useCases, 'use_case'),
         capability_codes: validateCodes(
           result.capability_codes,
