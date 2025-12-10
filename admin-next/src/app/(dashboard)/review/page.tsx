@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ReviewList } from './review-list';
 import { SourceFilter } from './source-filter';
 import { MasterDetailView } from './master-detail';
+import type { TaxonomyConfig, TaxonomyData, TaxonomyItem } from '@/components/tags';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -88,6 +89,43 @@ async function getAllSources() {
   return data || [];
 }
 
+async function getTaxonomyData() {
+  const supabase = createServiceRoleClient();
+
+  // Fetch taxonomy configuration
+  const { data: configData } = await supabase
+    .from('taxonomy_config')
+    .select(
+      'slug, display_name, display_order, behavior_type, source_table, payload_field, color, score_parent_slug, score_threshold',
+    )
+    .eq('is_active', true)
+    .order('display_order');
+
+  const taxonomyConfig = (configData || []) as TaxonomyConfig[];
+
+  // Dynamically fetch taxonomy data for categories with source tables
+  const taxonomyData: TaxonomyData = {};
+  const sourceTables = taxonomyConfig
+    .filter((c) => c.source_table && c.behavior_type !== 'scoring')
+    .map((c) => ({ slug: c.slug, table: c.source_table! }));
+
+  const tableResults = await Promise.all(
+    sourceTables.map(({ slug, table }) =>
+      supabase
+        .from(table)
+        .select('code, name')
+        .order('name')
+        .then((res) => ({ slug, data: res.data || [] })),
+    ),
+  );
+
+  for (const { slug, data } of tableResults) {
+    taxonomyData[slug] = data as TaxonomyItem[];
+  }
+
+  return { taxonomyConfig, taxonomyData };
+}
+
 export default async function ReviewPage({
   searchParams,
 }: {
@@ -99,8 +137,11 @@ export default async function ReviewPage({
   const timeWindow = params.time || '';
   const viewMode = params.view || 'split'; // 'list' or 'split'
 
-  const { items, sources } = await getQueueItems(status, source, timeWindow);
-  const allSources = await getAllSources();
+  const [{ items, sources }, allSources, { taxonomyConfig, taxonomyData }] = await Promise.all([
+    getQueueItems(status, source, timeWindow),
+    getAllSources(),
+    getTaxonomyData(),
+  ]);
 
   const statusFilters = [
     { value: 'enriched', label: 'Pending Review' },
@@ -231,15 +272,30 @@ export default async function ReviewPage({
         <>
           {/* Split view for landscape/tablet+ */}
           <div className="hidden landscape:block md:block">
-            <MasterDetailView items={items} status={status} />
+            <MasterDetailView
+              items={items}
+              status={status}
+              taxonomyConfig={taxonomyConfig}
+              taxonomyData={taxonomyData}
+            />
           </div>
           {/* Fallback to list on mobile portrait even if split is selected */}
           <div className="block landscape:hidden md:hidden">
-            <ReviewList items={items} status={status} />
+            <ReviewList
+              items={items}
+              status={status}
+              taxonomyConfig={taxonomyConfig}
+              taxonomyData={taxonomyData}
+            />
           </div>
         </>
       ) : (
-        <ReviewList items={items} status={status} />
+        <ReviewList
+          items={items}
+          status={status}
+          taxonomyConfig={taxonomyConfig}
+          taxonomyData={taxonomyData}
+        />
       )}
     </div>
   );

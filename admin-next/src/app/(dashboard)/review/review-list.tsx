@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { formatDateTime, getStatusColor, truncate } from '@/lib/utils';
 import { bulkReenrichAction, bulkRejectAction, bulkApproveAction } from './actions';
+import type { TaxonomyConfig, TaxonomyData } from '@/components/tags';
 
 interface QueueItem {
   id: string;
@@ -23,9 +24,12 @@ interface QueueItem {
 interface ReviewListProps {
   items: QueueItem[];
   status: string;
+  taxonomyConfig: TaxonomyConfig[];
+  taxonomyData: TaxonomyData;
 }
 
-export function ReviewList({ items, status }: ReviewListProps) {
+// Note: taxonomyConfig/taxonomyData available for future inline tag display
+export function ReviewList({ items, status, taxonomyConfig, taxonomyData }: ReviewListProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState<string | null>(null);
   const [processingCount, setProcessingCount] = useState(0);
