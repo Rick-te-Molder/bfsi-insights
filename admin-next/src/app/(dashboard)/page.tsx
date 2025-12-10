@@ -192,32 +192,8 @@ async function getStats() {
     .select('*', { count: 'exact', head: true })
     .eq('status', 'pending');
 
-  // Get all status codes with counts for the new Pipeline Status Grid
-  const { data: statusLookup } = await supabase
-    .from('status_lookup')
-    .select('code, name, category')
-    .order('sort_order');
-
-  // Get counts per status_code
-  const { data: statusCodeCounts } = await supabase
-    .from('ingestion_queue')
-    .select('status_code')
-    .not('status_code', 'is', null);
-
-  // Count occurrences of each status_code
-  const countMap = new Map<number, number>();
-  (statusCodeCounts || []).forEach((row) => {
-    const code = row.status_code as number;
-    countMap.set(code, (countMap.get(code) || 0) + 1);
-  });
-
-  // Merge status_lookup with counts
-  const allStatusData = (statusLookup || []).map((s) => ({
-    code: s.code,
-    name: s.name,
-    category: s.category,
-    count: countMap.get(s.code) || 0,
-  }));
+  // Get all status codes with counts directly from database (MECE)
+  const { data: allStatusData } = await supabase.rpc('get_status_code_counts');
 
   return {
     statusCounts,
@@ -274,111 +250,39 @@ export default async function DashboardPage() {
         <p className="mt-1 text-sm text-neutral-400">Overview of the ingestion pipeline</p>
       </header>
 
-      {/* Pipeline Flow */}
+      {/* Activity Today */}
       <div className="space-y-3">
         <h2 className="text-xs md:text-sm font-medium text-neutral-400 uppercase tracking-wide">
-          Pipeline Flow
+          Activity Today
         </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3">
-          <Link
-            href="/review?status=pending"
-            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 md:p-4 hover:bg-neutral-800/60 transition-colors relative"
-          >
-            <p className="text-[10px] md:text-xs text-neutral-500">1. Discovered</p>
-            <p className="text-xs md:text-sm text-neutral-400 truncate">Awaiting Enrichment</p>
-            <p className="mt-1 text-xl md:text-2xl font-bold text-violet-300">
-              {statusCounts.pending || 0}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+          <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 md:p-4">
+            <p className="text-xs md:text-sm text-neutral-400">Discovered Today</p>
+            <p className="mt-1 text-xl md:text-2xl font-bold text-violet-400">{discoveredToday}</p>
+            <p className="text-[10px] md:text-xs text-neutral-500">New items found</p>
+          </div>
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 md:p-4">
+            <p className="text-xs md:text-sm text-neutral-400">Processed Today</p>
+            <p className="mt-1 text-xl md:text-2xl font-bold text-emerald-400">{enrichedToday}</p>
+            <p className="text-[10px] md:text-xs text-neutral-500">Enriched + reviewed</p>
+          </div>
+          <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-3 md:p-4">
+            <p className="text-xs md:text-sm text-neutral-400">Total in Pipeline</p>
+            <p className="mt-1 text-xl md:text-2xl font-bold text-sky-400">
+              {(statusCounts.pending || 0) +
+                (statusCounts.queued || 0) +
+                (statusCounts.processing || 0) +
+                (statusCounts.enriched || 0)}
             </p>
-            {oldestPendingAge > 0 && (
-              <p className="text-[10px] md:text-xs text-neutral-500">
-                Oldest: {formatAge(oldestPendingAge)}
-              </p>
-            )}
-          </Link>
-          <Link
-            href="/review?status=queued"
-            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 md:p-4 hover:bg-neutral-800/60 transition-colors"
-          >
-            <p className="text-[10px] md:text-xs text-neutral-500">2. Enriched</p>
-            <p className="text-xs md:text-sm text-neutral-400">In Queue</p>
-            <p className="mt-1 text-xl md:text-2xl font-bold text-sky-300">
-              {statusCounts.queued || 0}
+            <p className="text-[10px] md:text-xs text-neutral-500">Awaiting action</p>
+          </div>
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 md:p-4">
+            <p className="text-xs md:text-sm text-neutral-400">Success Rate (7d)</p>
+            <p className="mt-1 text-xl md:text-2xl font-bold text-amber-400">
+              {successRate.toFixed(1)}%
             </p>
-            {oldestQueuedAge > 0 && (
-              <p className="text-[10px] md:text-xs text-neutral-500">
-                Oldest: {formatAge(oldestQueuedAge)}
-              </p>
-            )}
-          </Link>
-          <Link
-            href="/review?status=processing"
-            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 md:p-4 hover:bg-neutral-800/60 transition-colors"
-          >
-            <p className="text-[10px] md:text-xs text-neutral-500">3. Active</p>
-            <p className="text-xs md:text-sm text-neutral-400">Processing</p>
-            <p className="mt-1 text-xl md:text-2xl font-bold text-cyan-300">
-              {statusCounts.processing || 0}
-            </p>
-          </Link>
-          <Link
-            href="/review?status=enriched"
-            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 md:p-4 hover:bg-neutral-800/60 transition-colors"
-          >
-            <p className="text-[10px] md:text-xs text-neutral-500">4. Ready</p>
-            <p className="text-xs md:text-sm text-neutral-400">Pending Review</p>
-            <p className="mt-1 text-xl md:text-2xl font-bold text-amber-300">
-              {statusCounts.enriched || 0}
-            </p>
-          </Link>
-          <Link
-            href="/review?status=failed"
-            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 md:p-4 hover:bg-neutral-800/60 transition-colors"
-          >
-            <p className="text-[10px] md:text-xs text-neutral-500">⚠️ Error</p>
-            <p className="text-xs md:text-sm text-neutral-400">Failed</p>
-            <p className="mt-1 text-xl md:text-2xl font-bold text-red-300">
-              {statusCounts.failed || 0}
-            </p>
-          </Link>
-          <Link
-            href="/published"
-            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 md:p-4 hover:bg-neutral-800/60 transition-colors"
-          >
-            <p className="text-[10px] md:text-xs text-neutral-500">✓ Done</p>
-            <p className="text-xs md:text-sm text-neutral-400">Published</p>
-            <p className="mt-1 text-xl md:text-2xl font-bold text-emerald-300">{publishedCount}</p>
-          </Link>
-        </div>
-      </div>
-
-      {/* Today's Activity */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 md:p-4">
-          <p className="text-xs md:text-sm text-neutral-400">Discovered Today</p>
-          <p className="mt-1 text-xl md:text-2xl font-bold text-violet-400">{discoveredToday}</p>
-          <p className="text-[10px] md:text-xs text-neutral-500">New items found</p>
-        </div>
-        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 md:p-4">
-          <p className="text-xs md:text-sm text-neutral-400">Processed Today</p>
-          <p className="mt-1 text-xl md:text-2xl font-bold text-emerald-400">{enrichedToday}</p>
-          <p className="text-[10px] md:text-xs text-neutral-500">Enriched + reviewed</p>
-        </div>
-        <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-3 md:p-4">
-          <p className="text-xs md:text-sm text-neutral-400">Total in Pipeline</p>
-          <p className="mt-1 text-xl md:text-2xl font-bold text-sky-400">
-            {(statusCounts.pending || 0) +
-              (statusCounts.queued || 0) +
-              (statusCounts.processing || 0) +
-              (statusCounts.enriched || 0)}
-          </p>
-          <p className="text-[10px] md:text-xs text-neutral-500">Awaiting action</p>
-        </div>
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 md:p-4">
-          <p className="text-xs md:text-sm text-neutral-400">Success Rate (7d)</p>
-          <p className="mt-1 text-xl md:text-2xl font-bold text-amber-400">
-            {successRate.toFixed(1)}%
-          </p>
-          <p className="text-[10px] md:text-xs text-neutral-500">{recentItemsCount} items</p>
+            <p className="text-[10px] md:text-xs text-neutral-500">{recentItemsCount} items</p>
+          </div>
         </div>
       </div>
 
