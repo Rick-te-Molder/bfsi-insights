@@ -73,7 +73,6 @@ async function getStats() {
   // Legacy status counts for backward compatibility
   const statusCounts = {
     pending: pendingEnrichment || 0,
-    queued: pendingEnrichment || 0, // Alias for pending
     processing: inEnrichment || 0,
     enriched: pendingReview || 0,
     approved: approved || 0,
@@ -270,7 +269,6 @@ export default async function DashboardPage() {
             <p className="text-xs md:text-sm text-neutral-400">Total in Pipeline</p>
             <p className="mt-1 text-xl md:text-2xl font-bold text-sky-400">
               {(statusCounts.pending || 0) +
-                (statusCounts.queued || 0) +
                 (statusCounts.processing || 0) +
                 (statusCounts.enriched || 0)}
             </p>

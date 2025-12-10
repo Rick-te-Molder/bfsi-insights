@@ -100,7 +100,7 @@ export function ReviewActions({ item }: { item: QueueItem }) {
     try {
       const { error } = await supabase
         .from('ingestion_queue')
-        .update({ status: 'queued' })
+        .update({ status: 'queued', status_code: 200 }) // 200 = PENDING_ENRICHMENT
         .eq('id', item.id);
 
       if (error) throw error;
