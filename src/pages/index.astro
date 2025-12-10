@@ -11,48 +11,63 @@ import PublicationCard from '../features/publications/PublicationCard.astro';
 // Fetch enough publications to ensure we have 6 per persona
 const allPublications: Publication[] = await getAllPublications();
 
-// Supabase client for role metadata
+// Supabase client for audience metadata
 const supabase = createClient(
   import.meta.env.PUBLIC_SUPABASE_URL,
   import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
 );
 
-// Load roles from kb_role
-const { data: rolesData, error: rolesError } = await supabase
-  .from('kb_role')
+// Load audience types from kb_audience (with fallback for pre-migration builds)
+const { data: audienceData, error: audienceError } = await supabase
+  .from('kb_audience')
   .select('value, label')
   .order('sort_order', { ascending: true });
 
-if (rolesError) {
-  throw new Error(`Failed to load roles from kb_role: ${rolesError.message}`);
+// Fallback values if table doesn't exist yet (pre-migration) or returns empty
+const fallbackAudiences = [
+  { value: 'executive', label: 'Executives' },
+  { value: 'functional_specialist', label: 'Functional Specialists' },
+  { value: 'engineer', label: 'Engineers' },
+  { value: 'researcher', label: 'Researchers' },
+];
+
+// Try kb_role as legacy fallback if kb_audience doesn't exist
+let finalAudienceData = audienceData;
+if (audienceError || !audienceData || audienceData.length === 0) {
+  const { data: legacyData } = await supabase
+    .from('kb_role')
+    .select('value, label')
+    .order('sort_order', { ascending: true });
+  finalAudienceData = legacyData;
 }
 
-if (!rolesData || rolesData.length === 0) {
-  throw new Error('kb_role returned no roles; expected at least executive/professional/researcher');
-}
-
-const roleOptions = rolesData.map((r) => ({
-  value: r.value,
-  label: r.label,
+const audienceOptions = (
+  finalAudienceData && finalAudienceData.length > 0 ? finalAudienceData : fallbackAudiences
+).map((a) => ({
+  value: a.value,
+  label: a.label,
 }));
 
-const validRoles = roleOptions.map((r) => r.value);
+const validAudiences = audienceOptions.map((a) => a.value);
 
-// Get 6 most recent from each persona
-const byRole = validRoles.reduce<Record<string, Publication[]>>((acc, role) => {
-  acc[role] = allPublications.filter((p) => p.role === role).slice(0, 6);
+// Get 6 most recent from each audience
+// Note: uses p.audience (new) with fallback to (p as any).role (legacy)
+const byAudience = validAudiences.reduce<Record<string, Publication[]>>((acc, audience) => {
+  acc[audience] = allPublications
+    .filter((p) => (p.audience || (p as any).role) === audience)
+    .slice(0, 6);
   return acc;
 }, {});
 
-const roleOptionsWithCounts = roleOptions.map((option) => ({
+const audienceOptionsWithCounts = audienceOptions.map((option) => ({
   ...option,
-  count: byRole[option.value]?.length ?? 0,
+  count: byAudience[option.value]?.length ?? 0,
 }));
 
 // Combine all, dedupe
-const allByPersona: Publication[] = Object.values(byRole).flat();
+const allByAudience: Publication[] = Object.values(byAudience).flat();
 const latest: Publication[] = Array.from(
-  new Map(allByPersona.map((item) => [item.id, item])).values(),
+  new Map(allByAudience.map((item) => [item.id, item])).values(),
 );
 
 const expandItemThumb = (t?: string | null) => {
@@ -108,9 +123,9 @@ const expandItemThumb = (t?: string | null) => {
         >
           <option value="all">Everyone ({latest.length})</option>
           {
-            roleOptionsWithCounts.map((r) => (
-              <option value={r.value}>
-                {r.label} ({r.count})
+            audienceOptionsWithCounts.map((a) => (
+              <option value={a.value}>
+                {a.label} ({a.count})
               </option>
             ))
           }
@@ -130,16 +145,20 @@ const expandItemThumb = (t?: string | null) => {
     </ul>
   </section>
 
-  <script id="valid-roles-data" type="application/json" set:html={JSON.stringify(validRoles)} />
+  <script
+    id="valid-audiences-data"
+    type="application/json"
+    set:html={JSON.stringify(validAudiences)}
+  />
 
-  <!-- Persona filter -->
+  <!-- Audience filter -->
   <script type="module">
     // @ts-check
     /**
      * @returns {string[]}
      */
-    function getValidRoles() {
-      const el = document.getElementById('valid-roles-data');
+    function getValidAudiences() {
+      const el = document.getElementById('valid-audiences-data');
       if (!el || !el.textContent) return [];
       try {
         const parsed = JSON.parse(el.textContent);
@@ -149,43 +168,43 @@ const expandItemThumb = (t?: string | null) => {
       }
     }
 
-    function initPersonaFilter() {
+    function initAudienceFilter() {
       const filterEl = document.getElementById('persona-filter');
       if (!(filterEl instanceof HTMLSelectElement)) return;
       const gridEl = document.getElementById('publications-grid');
       if (!(gridEl instanceof HTMLElement)) return;
 
-      const roles = getValidRoles();
-      const saved = localStorage.getItem('bfsi-persona-preference');
-      const defaultPersona = 'executive';
+      const audiences = getValidAudiences();
+      const saved = localStorage.getItem('bfsi-audience-preference');
+      const defaultAudience = 'executive';
 
-      if (saved && saved !== 'all' && roles.includes(saved)) {
+      if (saved && saved !== 'all' && audiences.includes(saved)) {
         filterEl.value = saved;
       } else {
-        filterEl.value = defaultPersona;
-        localStorage.setItem('bfsi-persona-preference', defaultPersona);
+        filterEl.value = defaultAudience;
+        localStorage.setItem('bfsi-audience-preference', defaultAudience);
       }
 
       const filterPublications = () => {
-        const persona = filterEl.value;
+        const audience = filterEl.value;
         /** @type {HTMLElement[]} */
         const cards = Array.from(gridEl.children).filter((child) => child instanceof HTMLElement);
         cards.forEach((card) => {
-          const cardRole = card.getAttribute('data-role');
-          card.style.display = persona === 'all' || cardRole === persona ? '' : 'none';
+          const cardAudience = card.getAttribute('data-audience');
+          card.style.display = audience === 'all' || cardAudience === audience ? '' : 'none';
         });
       };
 
       filterPublications();
 
       filterEl.addEventListener('change', () => {
-        localStorage.setItem('bfsi-persona-preference', filterEl.value);
+        localStorage.setItem('bfsi-audience-preference', filterEl.value);
         filterPublications();
       });
     }
 
-    if (document.readyState !== 'loading') initPersonaFilter();
-    else window.addEventListener('DOMContentLoaded', initPersonaFilter);
+    if (document.readyState !== 'loading') initAudienceFilter();
+    else window.addEventListener('DOMContentLoaded', initAudienceFilter);
   </script>
 
   <!-- Image enhancement -->

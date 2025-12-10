@@ -18,7 +18,7 @@ export const GET: APIRoute = async ({ site }) => {
     })
     .slice(0, 50)
     .map((item) => {
-      const categories = [item.role, item.industry, item.topic].filter(Boolean) as string[];
+      const categories = [item.audience, item.industry, item.topic].filter(Boolean) as string[];
 
       const author =
         Array.isArray(item.authors) && item.authors.length > 0

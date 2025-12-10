@@ -52,7 +52,7 @@ const expandItemThumb = (t?: string) => {
 
 const topic = asArr(item.topic);
 const content_type = asArr(item.content_type);
-const role = item.role || '';
+const audience = item.audience || (item as any).role || '';
 const industry = item.industry || '';
 const geography = item.geography || '';
 const regulators = item.regulators || [];
@@ -94,7 +94,7 @@ const candidates = [...itemThumbs];
 <li
   class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition-all hover:border-neutral-700 hover:ring-neutral-700 hover:bg-neutral-900 relative"
   aria-labelledby={`t-${item.slug}`}
-  data-role={role}
+  data-audience={audience}
   data-industry={industry}
   data-topic={topic[0] || ''}
   data-content_type={content_type[0] || ''}
@@ -212,7 +212,7 @@ const candidates = [...itemThumbs];
       <div class="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
         {/* Core metadata */}
         {
-          role && (
+          audience && (
             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/20">
               <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -222,7 +222,7 @@ const candidates = [...itemThumbs];
                   d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                 />
               </svg>
-              {role}
+              {audience}
             </span>
           )
         }
