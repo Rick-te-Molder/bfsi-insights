@@ -15,10 +15,28 @@ interface TaxonomyItem {
   name: string;
 }
 
+// All taxonomy categories for complete tag display
+interface Taxonomies {
+  industries: TaxonomyItem[];
+  topics: TaxonomyItem[];
+  geographies: TaxonomyItem[];
+  processes: TaxonomyItem[];
+  regulators: TaxonomyItem[];
+  regulations: TaxonomyItem[];
+}
+
 async function getReviewData() {
   const supabase = createServiceRoleClient();
 
-  const [queueResult, industriesResult, topicsResult] = await Promise.all([
+  const [
+    queueResult,
+    industriesResult,
+    topicsResult,
+    geographiesResult,
+    processesResult,
+    regulatorsResult,
+    regulationsResult,
+  ] = await Promise.all([
     supabase
       .from('ingestion_queue')
       .select('*')
@@ -27,11 +45,25 @@ async function getReviewData() {
       .limit(100),
     supabase.from('bfsi_industry').select('code, name').order('sort_order'),
     supabase.from('bfsi_topic').select('code, name').order('sort_order'),
+    supabase.from('kb_geography').select('code, name').order('sort_order'),
+    supabase.from('bfsi_process_taxonomy').select('code, name').order('name'),
+    supabase.from('regulator').select('code, name').order('name'),
+    supabase.from('regulation').select('code, name').order('name'),
   ]);
 
   if (queueResult.error) {
     console.error('Error fetching queue:', queueResult.error);
-    return { items: [], industries: [], topics: [] };
+    return {
+      items: [],
+      taxonomies: {
+        industries: [],
+        topics: [],
+        geographies: [],
+        processes: [],
+        regulators: [],
+        regulations: [],
+      },
+    };
   }
 
   // Filter to items that have been enriched (have summary)
@@ -45,13 +77,19 @@ async function getReviewData() {
 
   return {
     items: items as QueueItem[],
-    industries: (industriesResult.data || []) as TaxonomyItem[],
-    topics: (topicsResult.data || []) as TaxonomyItem[],
+    taxonomies: {
+      industries: (industriesResult.data || []) as TaxonomyItem[],
+      topics: (topicsResult.data || []) as TaxonomyItem[],
+      geographies: (geographiesResult.data || []) as TaxonomyItem[],
+      processes: (processesResult.data || []) as TaxonomyItem[],
+      regulators: (regulatorsResult.data || []) as TaxonomyItem[],
+      regulations: (regulationsResult.data || []) as TaxonomyItem[],
+    },
   };
 }
 
 export default async function CarouselReviewPage() {
-  const { items, industries, topics } = await getReviewData();
+  const { items, taxonomies } = await getReviewData();
 
   return (
     <div className="space-y-6">
@@ -81,7 +119,7 @@ export default async function CarouselReviewPage() {
           <p className="text-neutral-400">All items have been reviewed. Check back later.</p>
         </div>
       ) : (
-        <CarouselReview initialItems={items} industries={industries} topics={topics} />
+        <CarouselReview initialItems={items} taxonomies={taxonomies} />
       )}
     </div>
   );
