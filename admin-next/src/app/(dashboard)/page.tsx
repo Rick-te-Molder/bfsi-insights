@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { PipelineStatusGrid } from '@/components/dashboard/PipelineStatusGrid';
 
 // Force dynamic rendering to always get fresh data
 export const dynamic = 'force-dynamic';
@@ -191,6 +192,33 @@ async function getStats() {
     .select('*', { count: 'exact', head: true })
     .eq('status', 'pending');
 
+  // Get all status codes with counts for the new Pipeline Status Grid
+  const { data: statusLookup } = await supabase
+    .from('status_lookup')
+    .select('code, name, category')
+    .order('sort_order');
+
+  // Get counts per status_code
+  const { data: statusCodeCounts } = await supabase
+    .from('ingestion_queue')
+    .select('status_code')
+    .not('status_code', 'is', null);
+
+  // Count occurrences of each status_code
+  const countMap = new Map<number, number>();
+  (statusCodeCounts || []).forEach((row) => {
+    const code = row.status_code as number;
+    countMap.set(code, (countMap.get(code) || 0) + 1);
+  });
+
+  // Merge status_lookup with counts
+  const allStatusData = (statusLookup || []).map((s) => ({
+    code: s.code,
+    name: s.name,
+    category: s.category,
+    count: countMap.get(s.code) || 0,
+  }));
+
   return {
     statusCounts,
     recentFailures: recentFailures || [],
@@ -208,6 +236,7 @@ async function getStats() {
     oldestQueuedAge,
     discoveredToday: discoveredToday || 0,
     enrichedToday: enrichedToday || 0,
+    allStatusData,
   };
 }
 
@@ -225,6 +254,7 @@ export default async function DashboardPage() {
     oldestQueuedAge,
     discoveredToday,
     enrichedToday,
+    allStatusData,
   } = await getStats();
 
   // Format age for display
@@ -350,6 +380,14 @@ export default async function DashboardPage() {
           </p>
           <p className="text-[10px] md:text-xs text-neutral-500">{recentItemsCount} items</p>
         </div>
+      </div>
+
+      {/* Detailed Pipeline Status */}
+      <div className="space-y-3">
+        <h2 className="text-xs md:text-sm font-medium text-neutral-400 uppercase tracking-wide">
+          Pipeline Status by Code
+        </h2>
+        <PipelineStatusGrid statusData={allStatusData} />
       </div>
 
       {/* Other Metrics */}
