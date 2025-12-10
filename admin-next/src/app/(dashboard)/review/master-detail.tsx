@@ -19,9 +19,31 @@ interface QueueItem {
     source_slug?: string;
     industry_codes?: string[];
     geography_codes?: string[];
+    audience_scores?: {
+      executive?: number;
+      functional_specialist?: number;
+      engineer?: number;
+      researcher?: number;
+    };
   };
   discovered_at: string;
 }
+
+// Get primary audience from scores
+function getPrimaryAudience(scores?: QueueItem['payload']['audience_scores']): string | null {
+  if (!scores) return null;
+  const entries = Object.entries(scores).filter(([, v]) => v && v >= 0.5);
+  if (entries.length === 0) return null;
+  entries.sort((a, b) => (b[1] || 0) - (a[1] || 0));
+  return entries[0][0];
+}
+
+const AUDIENCE_LABELS: Record<string, string> = {
+  executive: 'Exec',
+  functional_specialist: 'Specialist',
+  engineer: 'Engineer',
+  researcher: 'Researcher',
+};
 
 interface MasterDetailViewProps {
   items: QueueItem[];
@@ -164,7 +186,12 @@ export function MasterDetailView({
                     <span className="text-[10px] text-neutral-500 block">
                       {formatDateTime(item.discovered_at).split(',')[0]}
                     </span>
-                    <span className="text-[10px] text-neutral-600">#{index + 1}</span>
+                    {getPrimaryAudience(item.payload?.audience_scores) && (
+                      <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px]">
+                        {AUDIENCE_LABELS[getPrimaryAudience(item.payload?.audience_scores)!] ||
+                          getPrimaryAudience(item.payload?.audience_scores)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </button>
