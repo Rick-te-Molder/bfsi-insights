@@ -237,117 +237,133 @@ export default async function DashboardPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       {/* Header */}
       <header>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <h1 className="text-xl md:text-2xl font-bold">Dashboard</h1>
         <p className="mt-1 text-sm text-neutral-400">Overview of the ingestion pipeline</p>
       </header>
 
       {/* Pipeline Flow */}
       <div className="space-y-3">
-        <h2 className="text-sm font-medium text-neutral-400 uppercase tracking-wide">
+        <h2 className="text-xs md:text-sm font-medium text-neutral-400 uppercase tracking-wide">
           Pipeline Flow
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3">
           <Link
             href="/review?status=pending"
-            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors relative"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 md:p-4 hover:bg-neutral-800/60 transition-colors relative"
           >
-            <p className="text-xs text-neutral-500">1. Discovered</p>
-            <p className="text-sm text-neutral-400">Awaiting Enrichment</p>
-            <p className="mt-1 text-2xl font-bold text-violet-300">{statusCounts.pending || 0}</p>
+            <p className="text-[10px] md:text-xs text-neutral-500">1. Discovered</p>
+            <p className="text-xs md:text-sm text-neutral-400 truncate">Awaiting Enrichment</p>
+            <p className="mt-1 text-xl md:text-2xl font-bold text-violet-300">
+              {statusCounts.pending || 0}
+            </p>
             {oldestPendingAge > 0 && (
-              <p className="text-xs text-neutral-500">Oldest: {formatAge(oldestPendingAge)}</p>
+              <p className="text-[10px] md:text-xs text-neutral-500">
+                Oldest: {formatAge(oldestPendingAge)}
+              </p>
             )}
           </Link>
           <Link
             href="/review?status=queued"
-            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 md:p-4 hover:bg-neutral-800/60 transition-colors"
           >
-            <p className="text-xs text-neutral-500">2. Enriched</p>
-            <p className="text-sm text-neutral-400">In Queue</p>
-            <p className="mt-1 text-2xl font-bold text-sky-300">{statusCounts.queued || 0}</p>
+            <p className="text-[10px] md:text-xs text-neutral-500">2. Enriched</p>
+            <p className="text-xs md:text-sm text-neutral-400">In Queue</p>
+            <p className="mt-1 text-xl md:text-2xl font-bold text-sky-300">
+              {statusCounts.queued || 0}
+            </p>
             {oldestQueuedAge > 0 && (
-              <p className="text-xs text-neutral-500">Oldest: {formatAge(oldestQueuedAge)}</p>
+              <p className="text-[10px] md:text-xs text-neutral-500">
+                Oldest: {formatAge(oldestQueuedAge)}
+              </p>
             )}
           </Link>
           <Link
             href="/review?status=processing"
-            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 md:p-4 hover:bg-neutral-800/60 transition-colors"
           >
-            <p className="text-xs text-neutral-500">3. Active</p>
-            <p className="text-sm text-neutral-400">Processing</p>
-            <p className="mt-1 text-2xl font-bold text-cyan-300">{statusCounts.processing || 0}</p>
+            <p className="text-[10px] md:text-xs text-neutral-500">3. Active</p>
+            <p className="text-xs md:text-sm text-neutral-400">Processing</p>
+            <p className="mt-1 text-xl md:text-2xl font-bold text-cyan-300">
+              {statusCounts.processing || 0}
+            </p>
           </Link>
           <Link
             href="/review?status=enriched"
-            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 md:p-4 hover:bg-neutral-800/60 transition-colors"
           >
-            <p className="text-xs text-neutral-500">4. Ready</p>
-            <p className="text-sm text-neutral-400">Pending Review</p>
-            <p className="mt-1 text-2xl font-bold text-amber-300">{statusCounts.enriched || 0}</p>
+            <p className="text-[10px] md:text-xs text-neutral-500">4. Ready</p>
+            <p className="text-xs md:text-sm text-neutral-400">Pending Review</p>
+            <p className="mt-1 text-xl md:text-2xl font-bold text-amber-300">
+              {statusCounts.enriched || 0}
+            </p>
           </Link>
           <Link
             href="/review?status=failed"
-            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 md:p-4 hover:bg-neutral-800/60 transition-colors"
           >
-            <p className="text-xs text-neutral-500">⚠️ Error</p>
-            <p className="text-sm text-neutral-400">Failed</p>
-            <p className="mt-1 text-2xl font-bold text-red-300">{statusCounts.failed || 0}</p>
+            <p className="text-[10px] md:text-xs text-neutral-500">⚠️ Error</p>
+            <p className="text-xs md:text-sm text-neutral-400">Failed</p>
+            <p className="mt-1 text-xl md:text-2xl font-bold text-red-300">
+              {statusCounts.failed || 0}
+            </p>
           </Link>
           <Link
             href="/published"
-            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:bg-neutral-800/60 transition-colors"
+            className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-3 md:p-4 hover:bg-neutral-800/60 transition-colors"
           >
-            <p className="text-xs text-neutral-500">✓ Done</p>
-            <p className="text-sm text-neutral-400">Published</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-300">{publishedCount}</p>
+            <p className="text-[10px] md:text-xs text-neutral-500">✓ Done</p>
+            <p className="text-xs md:text-sm text-neutral-400">Published</p>
+            <p className="mt-1 text-xl md:text-2xl font-bold text-emerald-300">{publishedCount}</p>
           </Link>
         </div>
       </div>
 
       {/* Today's Activity */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
-          <p className="text-sm text-neutral-400">Discovered Today</p>
-          <p className="mt-1 text-2xl font-bold text-violet-400">{discoveredToday}</p>
-          <p className="text-xs text-neutral-500">New items found</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 md:p-4">
+          <p className="text-xs md:text-sm text-neutral-400">Discovered Today</p>
+          <p className="mt-1 text-xl md:text-2xl font-bold text-violet-400">{discoveredToday}</p>
+          <p className="text-[10px] md:text-xs text-neutral-500">New items found</p>
         </div>
-        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-          <p className="text-sm text-neutral-400">Processed Today</p>
-          <p className="mt-1 text-2xl font-bold text-emerald-400">{enrichedToday}</p>
-          <p className="text-xs text-neutral-500">Enriched + reviewed</p>
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 md:p-4">
+          <p className="text-xs md:text-sm text-neutral-400">Processed Today</p>
+          <p className="mt-1 text-xl md:text-2xl font-bold text-emerald-400">{enrichedToday}</p>
+          <p className="text-[10px] md:text-xs text-neutral-500">Enriched + reviewed</p>
         </div>
-        <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-4">
-          <p className="text-sm text-neutral-400">Total in Pipeline</p>
-          <p className="mt-1 text-2xl font-bold text-sky-400">
+        <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-3 md:p-4">
+          <p className="text-xs md:text-sm text-neutral-400">Total in Pipeline</p>
+          <p className="mt-1 text-xl md:text-2xl font-bold text-sky-400">
             {(statusCounts.pending || 0) +
               (statusCounts.queued || 0) +
               (statusCounts.processing || 0) +
               (statusCounts.enriched || 0)}
           </p>
-          <p className="text-xs text-neutral-500">Awaiting action</p>
+          <p className="text-[10px] md:text-xs text-neutral-500">Awaiting action</p>
         </div>
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
-          <p className="text-sm text-neutral-400">Success Rate (7d)</p>
-          <p className="mt-1 text-2xl font-bold text-amber-400">{successRate.toFixed(1)}%</p>
-          <p className="text-xs text-neutral-500">{recentItemsCount} items</p>
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 md:p-4">
+          <p className="text-xs md:text-sm text-neutral-400">Success Rate (7d)</p>
+          <p className="mt-1 text-xl md:text-2xl font-bold text-amber-400">
+            {successRate.toFixed(1)}%
+          </p>
+          <p className="text-[10px] md:text-xs text-neutral-500">{recentItemsCount} items</p>
         </div>
       </div>
 
       {/* Other Metrics */}
-      <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
-        <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-4">
-          <p className="text-sm text-neutral-400">Active A/B Tests</p>
-          <p className="mt-1 text-2xl font-bold text-purple-400">{activeTests}</p>
+      <div className="grid grid-cols-2 gap-3 md:gap-4">
+        <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-3 md:p-4">
+          <p className="text-xs md:text-sm text-neutral-400">Active A/B Tests</p>
+          <p className="mt-1 text-xl md:text-2xl font-bold text-purple-400">{activeTests}</p>
           <Link href="/ab-tests" className="text-xs text-purple-400 hover:text-purple-300">
             View tests →
           </Link>
         </div>
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
-          <p className="text-sm text-neutral-400">Pending Proposals</p>
-          <p className="mt-1 text-2xl font-bold text-amber-400">{pendingProposals}</p>
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 md:p-4">
+          <p className="text-xs md:text-sm text-neutral-400">Pending Proposals</p>
+          <p className="mt-1 text-xl md:text-2xl font-bold text-amber-400">{pendingProposals}</p>
           <Link href="/proposals" className="text-xs text-amber-400 hover:text-amber-300">
             Review proposals →
           </Link>
@@ -355,7 +371,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {/* Review Queue CTA */}
         <Link
           href="/review"
@@ -428,10 +444,10 @@ export default async function DashboardPage() {
       {/* Issues / Alerts Section */}
       {(failedLast24h > 0 || pendingProposals > 0) && (
         <div className="space-y-3">
-          <h2 className="text-sm font-medium text-neutral-400 uppercase tracking-wide">
+          <h2 className="text-xs md:text-sm font-medium text-neutral-400 uppercase tracking-wide">
             Issues requiring attention
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {failedLast24h > 0 && (
               <Link
                 href="/review?status=failed"

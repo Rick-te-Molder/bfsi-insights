@@ -130,11 +130,11 @@ export default async function ReviewPage({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Header */}
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Review Queue</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Review Queue</h1>
           <p className="mt-1 text-sm text-neutral-400">
             {items.length} items
             {status !== 'all' && ` · ${status}`}
@@ -143,14 +143,14 @@ export default async function ReviewPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* View Toggle */}
+          {/* View Toggle - Split only visible in landscape or md+ */}
           <div className="flex rounded-lg bg-neutral-800 p-1">
             <Link
               href={buildFilterUrl({ view: 'split' })}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              className={`hidden landscape:inline-flex md:inline-flex px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 viewMode === 'split' ? 'bg-sky-600 text-white' : 'text-neutral-400 hover:text-white'
               }`}
-              title="Split view with keyboard shortcuts"
+              title="Split view with keyboard shortcuts (landscape/tablet+)"
             >
               ⬛ Split
             </Link>
@@ -169,18 +169,18 @@ export default async function ReviewPage({
             className="flex items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm font-medium text-neutral-300 hover:bg-neutral-700 transition-colors"
           >
             <span>🎠</span>
-            <span>Carousel</span>
+            <span className="hidden sm:inline">Carousel</span>
           </Link>
         </div>
       </header>
 
-      {/* Status Filters */}
-      <div className="flex flex-wrap gap-2">
+      {/* Status Filters - horizontal scroll on mobile */}
+      <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible md:flex-wrap scrollbar-hide">
         {statusFilters.map((filter) => (
           <Link
             key={filter.value}
             href={buildFilterUrl({ status: filter.value })}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
               status === filter.value
                 ? 'bg-sky-600 text-white'
                 : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
@@ -192,7 +192,7 @@ export default async function ReviewPage({
       </div>
 
       {/* Advanced Filters */}
-      <div className="flex flex-wrap items-center gap-4 rounded-lg bg-neutral-800/30 px-4 py-3">
+      <div className="flex flex-wrap items-center gap-3 md:gap-4 rounded-lg bg-neutral-800/30 px-3 md:px-4 py-2 md:py-3">
         <span className="text-xs font-medium text-neutral-500 uppercase">Filters:</span>
 
         {/* Time Window */}
@@ -226,9 +226,18 @@ export default async function ReviewPage({
         )}
       </div>
 
-      {/* Content View */}
+      {/* Content View - Split view hidden on mobile portrait, shown in landscape/tablet+ */}
       {viewMode === 'split' ? (
-        <MasterDetailView items={items} status={status} />
+        <>
+          {/* Split view for landscape/tablet+ */}
+          <div className="hidden landscape:block md:block">
+            <MasterDetailView items={items} status={status} />
+          </div>
+          {/* Fallback to list on mobile portrait even if split is selected */}
+          <div className="block landscape:hidden md:hidden">
+            <ReviewList items={items} status={status} />
+          </div>
+        </>
       ) : (
         <ReviewList items={items} status={status} />
       )}
