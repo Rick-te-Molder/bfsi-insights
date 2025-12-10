@@ -1,6 +1,6 @@
 'use client';
 
-import { TaxonomyConfig, TaxonomyData, TagPayload } from './types';
+import { TaxonomyConfig, TaxonomyData, TagPayload, ValidationLookups } from './types';
 
 // Color map for Tailwind classes
 const COLOR_MAP: Record<string, { bg: string; text: string }> = {
@@ -29,6 +29,10 @@ interface TagDisplayProps {
   variant?: 'table' | 'inline';
   /** Label width for table variant */
   labelWidth?: string;
+  /** Optional validation lookups for expandable types - keyed by taxonomy slug */
+  validationLookups?: ValidationLookups;
+  /** Show validation warnings for unknown entities */
+  showValidation?: boolean;
 }
 
 /**
@@ -75,11 +79,15 @@ function TagCategoryRow({
   payload,
   taxonomyData,
   labelWidth = 'w-24',
+  validationLookups,
+  showValidation = false,
 }: {
   config: TaxonomyConfig;
   payload: TagPayload;
   taxonomyData: TaxonomyData;
   labelWidth?: string;
+  validationLookups?: ValidationLookups;
+  showValidation?: boolean;
 }) {
   const colors = COLOR_MAP[config.color] || COLOR_MAP.neutral;
   const lookupMap = taxonomyData[config.slug]
@@ -111,16 +119,29 @@ function TagCategoryRow({
   if (config.behavior_type === 'expandable') {
     // Free-text values (vendor_names, organization_names)
     const values = extractStrings(getPayloadValue(payload, config.payload_field));
+    const lookupSet = showValidation && validationLookups ? validationLookups[config.slug] : null;
+
     return (
       <div className="flex items-start justify-between gap-2">
         <span className={`text-neutral-500 shrink-0 ${labelWidth}`}>{config.display_name}</span>
         <div className="flex flex-wrap gap-1 justify-end">
           {values.length > 0 ? (
-            values.map((name, i) => (
-              <span key={i} className={`px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}>
-                {name}
-              </span>
-            ))
+            values.map((name, i) => {
+              const isKnown = !lookupSet || lookupSet.has(name.toLowerCase());
+              const tagClass = isKnown
+                ? `px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`
+                : 'px-1.5 py-0.5 rounded bg-red-500/30 text-red-300 border border-red-500/50';
+              return (
+                <span
+                  key={i}
+                  className={tagClass}
+                  title={isKnown ? undefined : 'Not in reference table'}
+                >
+                  {name}
+                  {!isKnown && showValidation && ' ⚠️'}
+                </span>
+              );
+            })
           ) : (
             <span className="text-neutral-600 italic">—</span>
           )}
@@ -158,6 +179,8 @@ export function TagDisplay({
   taxonomyData,
   variant = 'table',
   labelWidth = 'w-24',
+  validationLookups,
+  showValidation = false,
 }: TagDisplayProps) {
   // Group scoring configs by parent for persona grouping
   const personaConfigs = taxonomyConfig.filter(
@@ -207,6 +230,8 @@ export function TagDisplay({
           payload={payload}
           taxonomyData={taxonomyData}
           labelWidth={labelWidth}
+          validationLookups={validationLookups}
+          showValidation={showValidation}
         />
       ))}
 
