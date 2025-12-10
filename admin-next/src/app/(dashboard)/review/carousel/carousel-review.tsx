@@ -4,6 +4,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
+interface TaggedCode {
+  code: string;
+  confidence: number;
+}
+
 interface QueueItem {
   id: string;
   url: string;
@@ -15,10 +20,24 @@ interface QueueItem {
     thumbnail_path?: string;
     thumbnail_bucket?: string;
     published_at?: string;
-    industry_codes?: string[];
-    topic_codes?: string[];
     source_slug?: string;
     relevance_confidence?: number;
+    // Tag codes (can be string[] or TaggedCode[])
+    industry_codes?: (string | TaggedCode)[];
+    topic_codes?: (string | TaggedCode)[];
+    geography_codes?: (string | TaggedCode)[];
+    process_codes?: (string | TaggedCode)[];
+    regulator_codes?: (string | TaggedCode)[];
+    regulation_codes?: string[];
+    // Free-text entities
+    vendor_names?: string[];
+    organization_names?: string[];
+    // Persona relevance scores
+    persona_scores?: {
+      executive?: number;
+      technical?: number;
+      compliance?: number;
+    };
   };
   discovered_at: string;
 }
@@ -28,10 +47,18 @@ interface TaxonomyItem {
   name: string;
 }
 
-interface CarouselReviewProps {
-  initialItems: QueueItem[];
+interface Taxonomies {
   industries: TaxonomyItem[];
   topics: TaxonomyItem[];
+  geographies: TaxonomyItem[];
+  processes: TaxonomyItem[];
+  regulators: TaxonomyItem[];
+  regulations: TaxonomyItem[];
+}
+
+interface CarouselReviewProps {
+  initialItems: QueueItem[];
+  taxonomies: Taxonomies;
 }
 
 // Summary length specs
@@ -41,7 +68,7 @@ const SUMMARY_SPECS = {
   long: { min: 500, max: 600 },
 };
 
-export function CarouselReview({ initialItems, industries, topics }: CarouselReviewProps) {
+export function CarouselReview({ initialItems, taxonomies }: CarouselReviewProps) {
   const [items, setItems] = useState(initialItems);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [editedTitle, setEditedTitle] = useState('');
@@ -49,8 +76,13 @@ export function CarouselReview({ initialItems, industries, topics }: CarouselRev
   const router = useRouter();
   const supabase = createClient();
 
-  const industryMap = new Map(industries.map((i) => [i.code, i.name]));
-  const topicMap = new Map(topics.map((t) => [t.code, t.name]));
+  // Build lookup maps for all taxonomies
+  const industryMap = new Map(taxonomies.industries.map((i) => [i.code, i.name]));
+  const topicMap = new Map(taxonomies.topics.map((t) => [t.code, t.name]));
+  const geographyMap = new Map(taxonomies.geographies.map((g) => [g.code, g.name]));
+  const processMap = new Map(taxonomies.processes.map((p) => [p.code, p.name]));
+  const regulatorMap = new Map(taxonomies.regulators.map((r) => [r.code, r.name]));
+  const regulationMap = new Map(taxonomies.regulations.map((r) => [r.code, r.name]));
 
   const currentItem = items[currentIndex];
 
@@ -208,8 +240,30 @@ export function CarouselReview({ initialItems, industries, topics }: CarouselRev
 
   const payload = currentItem.payload || {};
   const summary = payload.summary || {};
-  const industryCodes = (payload.industry_codes || []).filter((c) => c && c !== 'null');
-  const topicCodes = (payload.topic_codes || []).filter((c) => c && c !== 'null');
+
+  // Extract codes from tagged items (handle both {code, confidence} objects and strings)
+  const extractCodes = (items: unknown[]): string[] => {
+    if (!items || !Array.isArray(items)) return [];
+    return items
+      .map((item) =>
+        typeof item === 'object' && item !== null ? (item as { code?: string }).code : item,
+      )
+      .filter((c): c is string => typeof c === 'string' && c !== 'null' && c !== '');
+  };
+
+  const industryCodes = extractCodes(payload.industry_codes as unknown[]);
+  const topicCodes = extractCodes(payload.topic_codes as unknown[]);
+  const geographyCodes = extractCodes(payload.geography_codes as unknown[]);
+  const processCodes = extractCodes(payload.process_codes as unknown[]);
+  const regulatorCodes = extractCodes(payload.regulator_codes as unknown[]);
+  const regulationCodes = extractCodes(payload.regulation_codes as unknown[]);
+  const vendorNames = ((payload.vendor_names as string[]) || []).filter((v) => v && v !== 'null');
+  const organizationNames = ((payload.organization_names as string[]) || []).filter(
+    (o) => o && o !== 'null',
+  );
+  const personaScores =
+    (payload.persona_scores as { executive?: number; technical?: number; compliance?: number }) ||
+    {};
 
   // Resolve thumbnail
   let thumbnailUrl = payload.thumbnail || null;
@@ -457,14 +511,15 @@ export function CarouselReview({ initialItems, industries, topics }: CarouselRev
             </div>
           </div>
 
-          {/* Tags */}
+          {/* Tags - All 9 categories always visible */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
             <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">
               Tags
             </h3>
             <div className="space-y-2 text-xs">
+              {/* Industry */}
               <div className="flex items-start justify-between gap-2">
-                <span className="text-neutral-500 shrink-0">Industries</span>
+                <span className="text-neutral-500 shrink-0 w-24">Industry</span>
                 <div className="flex flex-wrap gap-1 justify-end">
                   {industryCodes.length > 0 ? (
                     industryCodes.map((code) => (
@@ -476,12 +531,13 @@ export function CarouselReview({ initialItems, industries, topics }: CarouselRev
                       </span>
                     ))
                   ) : (
-                    <span className="text-neutral-600">—</span>
+                    <span className="text-neutral-600 italic">—</span>
                   )}
                 </div>
               </div>
+              {/* Topic */}
               <div className="flex items-start justify-between gap-2">
-                <span className="text-neutral-500 shrink-0">Topics</span>
+                <span className="text-neutral-500 shrink-0 w-24">Topic</span>
                 <div className="flex flex-wrap gap-1 justify-end">
                   {topicCodes.length > 0 ? (
                     topicCodes.map((code) => (
@@ -493,7 +549,141 @@ export function CarouselReview({ initialItems, industries, topics }: CarouselRev
                       </span>
                     ))
                   ) : (
-                    <span className="text-neutral-600">—</span>
+                    <span className="text-neutral-600 italic">—</span>
+                  )}
+                </div>
+              </div>
+              {/* Geography */}
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-neutral-500 shrink-0 w-24">Geography</span>
+                <div className="flex flex-wrap gap-1 justify-end">
+                  {geographyCodes.length > 0 ? (
+                    geographyCodes.map((code) => (
+                      <span
+                        key={code}
+                        className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-300"
+                      >
+                        {geographyMap.get(code) || code}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-neutral-600 italic">—</span>
+                  )}
+                </div>
+              </div>
+              {/* Process */}
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-neutral-500 shrink-0 w-24">Process</span>
+                <div className="flex flex-wrap gap-1 justify-end">
+                  {processCodes.length > 0 ? (
+                    processCodes.map((code) => (
+                      <span
+                        key={code}
+                        className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300"
+                      >
+                        {processMap.get(code) || code}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-neutral-600 italic">—</span>
+                  )}
+                </div>
+              </div>
+              {/* Regulator */}
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-neutral-500 shrink-0 w-24">Regulator</span>
+                <div className="flex flex-wrap gap-1 justify-end">
+                  {regulatorCodes.length > 0 ? (
+                    regulatorCodes.map((code) => (
+                      <span key={code} className="px-1.5 py-0.5 rounded bg-red-500/10 text-red-300">
+                        {regulatorMap.get(code) || code}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-neutral-600 italic">—</span>
+                  )}
+                </div>
+              </div>
+              {/* Regulation */}
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-neutral-500 shrink-0 w-24">Regulation</span>
+                <div className="flex flex-wrap gap-1 justify-end">
+                  {regulationCodes.length > 0 ? (
+                    regulationCodes.map((code) => (
+                      <span
+                        key={code}
+                        className="px-1.5 py-0.5 rounded bg-orange-500/10 text-orange-300"
+                      >
+                        {regulationMap.get(code) || code}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-neutral-600 italic">—</span>
+                  )}
+                </div>
+              </div>
+              {/* Vendor */}
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-neutral-500 shrink-0 w-24">Vendor</span>
+                <div className="flex flex-wrap gap-1 justify-end">
+                  {vendorNames.length > 0 ? (
+                    vendorNames.map((name, i) => (
+                      <span key={i} className="px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-300">
+                        {name}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-neutral-600 italic">—</span>
+                  )}
+                </div>
+              </div>
+              {/* BFSI Organization */}
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-neutral-500 shrink-0 w-24">Organization</span>
+                <div className="flex flex-wrap gap-1 justify-end">
+                  {organizationNames.length > 0 ? (
+                    organizationNames.map((name, i) => (
+                      <span key={i} className="px-1.5 py-0.5 rounded bg-pink-500/10 text-pink-300">
+                        {name}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-neutral-600 italic">—</span>
+                  )}
+                </div>
+              </div>
+              {/* Persona */}
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-neutral-500 shrink-0 w-24">Persona</span>
+                <div className="flex flex-wrap gap-1 justify-end">
+                  {personaScores.executive ||
+                  personaScores.technical ||
+                  personaScores.compliance ? (
+                    <>
+                      {personaScores.executive && personaScores.executive >= 0.5 && (
+                        <span className="px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-300">
+                          Executive ({(personaScores.executive * 100).toFixed(0)}%)
+                        </span>
+                      )}
+                      {personaScores.technical && personaScores.technical >= 0.5 && (
+                        <span className="px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-300">
+                          Technical ({(personaScores.technical * 100).toFixed(0)}%)
+                        </span>
+                      )}
+                      {personaScores.compliance && personaScores.compliance >= 0.5 && (
+                        <span className="px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-300">
+                          Compliance ({(personaScores.compliance * 100).toFixed(0)}%)
+                        </span>
+                      )}
+                      {!personaScores.executive || personaScores.executive < 0.5 ? null : null}
+                      {(!personaScores.executive || personaScores.executive < 0.5) &&
+                        (!personaScores.technical || personaScores.technical < 0.5) &&
+                        (!personaScores.compliance || personaScores.compliance < 0.5) && (
+                          <span className="text-neutral-600 italic">—</span>
+                        )}
+                    </>
+                  ) : (
+                    <span className="text-neutral-600 italic">—</span>
                   )}
                 </div>
               </div>
