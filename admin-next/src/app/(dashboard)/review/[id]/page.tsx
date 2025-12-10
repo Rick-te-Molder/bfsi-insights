@@ -5,6 +5,13 @@ import { notFound } from 'next/navigation';
 import { ReviewActions } from './actions';
 import { EvaluationPanel } from './evaluation-panel';
 import { UnknownEntitiesPanel } from './unknown-entities';
+import { TagDisplay } from '@/components/tags';
+import type {
+  TaxonomyConfig,
+  TaxonomyData,
+  TaxonomyItem,
+  ValidationLookups,
+} from '@/components/tags';
 
 interface QueueItem {
   id: string;
@@ -51,33 +58,48 @@ async function getLookupTables(): Promise<LookupTables> {
   };
 }
 
-// Helper to check if a value exists in lookup and render with validation styling
-function ValidatedTag({
-  value,
-  knownValues,
-  baseColor,
-  unknownColor = 'bg-red-500/30 text-red-300 border border-red-500/50',
-}: {
-  value: string;
-  knownValues?: Set<string>;
-  baseColor: string;
-  unknownColor?: string;
-}) {
-  const isKnown = !knownValues || knownValues.has(value.toLowerCase());
-  return (
-    <span
-      className={`px-2 py-0.5 rounded text-xs ${isKnown ? baseColor : unknownColor}`}
-      title={isKnown ? undefined : '⚠️ Not in reference table'}
-    >
-      {value}
-      {!isKnown && ' ⚠️'}
-    </span>
+async function getTaxonomyData() {
+  const supabase = createServiceRoleClient();
+
+  const { data: configData } = await supabase
+    .from('taxonomy_config')
+    .select(
+      'slug, display_name, display_order, behavior_type, source_table, payload_field, color, score_parent_slug, score_threshold',
+    )
+    .eq('is_active', true)
+    .order('display_order');
+
+  const taxonomyConfig = (configData || []) as TaxonomyConfig[];
+
+  const taxonomyData: TaxonomyData = {};
+  const sourceTables = taxonomyConfig
+    .filter((c) => c.source_table && c.behavior_type !== 'scoring')
+    .map((c) => ({ slug: c.slug, table: c.source_table! }));
+
+  const tableResults = await Promise.all(
+    sourceTables.map(({ slug, table }) =>
+      supabase
+        .from(table)
+        .select('code, name')
+        .order('name')
+        .then((res) => ({ slug, data: res.data || [] })),
+    ),
   );
+
+  for (const { slug, data } of tableResults) {
+    taxonomyData[slug] = data as TaxonomyItem[];
+  }
+
+  return { taxonomyConfig, taxonomyData };
 }
 
 export default async function ReviewDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [item, lookups] = await Promise.all([getQueueItem(id), getLookupTables()]);
+  const [item, lookups, { taxonomyConfig, taxonomyData }] = await Promise.all([
+    getQueueItem(id),
+    getLookupTables(),
+    getTaxonomyData(),
+  ]);
 
   if (!item) {
     notFound();
@@ -85,6 +107,13 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
 
   const payload = item.payload || {};
   const summary = (payload.summary as { short?: string; medium?: string; long?: string }) || {};
+
+  // Convert lookups to ValidationLookups format for TagDisplay
+  const validationLookups: ValidationLookups = {
+    vendor: lookups.vendors,
+    organization: lookups.organizations,
+    regulator: lookups.regulators,
+  };
 
   // Calculate unknown entities
   const unknownEntities: {
@@ -211,130 +240,18 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
             </div>
           </div>
 
-          {/* Tags */}
+          {/* Tags - Dynamic from taxonomy_config with validation */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6">
             <h2 className="text-lg font-semibold mb-4">Tags & Classification</h2>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <span className="text-xs text-neutral-500">Industries</span>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {((payload.industry_codes as string[]) || []).map((code) => (
-                    <span
-                      key={code}
-                      className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs"
-                    >
-                      {code}
-                    </span>
-                  ))}
-                  {!(payload.industry_codes as string[])?.length && (
-                    <span className="text-neutral-600 text-xs">None</span>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-xs text-neutral-500">Topics</span>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {((payload.topic_codes as string[]) || []).map((code) => (
-                    <span
-                      key={code}
-                      className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-xs"
-                    >
-                      {code}
-                    </span>
-                  ))}
-                  {!(payload.topic_codes as string[])?.length && (
-                    <span className="text-neutral-600 text-xs">None</span>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-xs text-neutral-500">Vendors</span>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {((payload.vendor_names as string[]) || []).map((name) => (
-                    <ValidatedTag
-                      key={name}
-                      value={name}
-                      knownValues={lookups.vendors}
-                      baseColor="bg-teal-500/20 text-teal-300"
-                    />
-                  ))}
-                  {!(payload.vendor_names as string[])?.length && (
-                    <span className="text-neutral-600 text-xs">None</span>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-xs text-neutral-500">Organizations</span>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {((payload.organization_names as string[]) || []).map((name) => (
-                    <ValidatedTag
-                      key={name}
-                      value={name}
-                      knownValues={lookups.organizations}
-                      baseColor="bg-pink-500/20 text-pink-300"
-                    />
-                  ))}
-                  {!(payload.organization_names as string[])?.length && (
-                    <span className="text-neutral-600 text-xs">None</span>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-xs text-neutral-500">Regulators</span>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {((payload.regulator_codes as string[]) || []).map((code) => (
-                    <ValidatedTag
-                      key={code}
-                      value={code}
-                      knownValues={lookups.regulators}
-                      baseColor="bg-amber-500/20 text-amber-300"
-                    />
-                  ))}
-                  {!(payload.regulator_codes as string[])?.length && (
-                    <span className="text-neutral-600 text-xs">None</span>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-xs text-neutral-500">Geographies</span>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {((payload.geography_codes as string[]) || []).map((code) => (
-                    <span
-                      key={code}
-                      className="px-2 py-0.5 rounded bg-green-500/20 text-green-300 text-xs"
-                    >
-                      {code}
-                    </span>
-                  ))}
-                  {!(payload.geography_codes as string[])?.length && (
-                    <span className="text-neutral-600 text-xs">None</span>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <span className="text-xs text-neutral-500">Standard Setters</span>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {((payload.standard_setter_codes as string[]) || []).map((code) => (
-                    <ValidatedTag
-                      key={code}
-                      value={code}
-                      knownValues={lookups.standardSetters}
-                      baseColor="bg-orange-500/20 text-orange-300"
-                    />
-                  ))}
-                  {!(payload.standard_setter_codes as string[])?.length && (
-                    <span className="text-neutral-600 text-xs">None</span>
-                  )}
-                </div>
-              </div>
-            </div>
+            <TagDisplay
+              payload={payload}
+              taxonomyConfig={taxonomyConfig}
+              taxonomyData={taxonomyData}
+              variant="table"
+              labelWidth="w-28"
+              validationLookups={validationLookups}
+              showValidation={true}
+            />
           </div>
 
           {/* Unknown Entities */}

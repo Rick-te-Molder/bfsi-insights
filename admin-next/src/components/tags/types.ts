@@ -24,3 +24,7 @@ export type TaxonomyData = Record<string, TaxonomyItem[]>;
 
 // Payload with dynamic tag fields
 export type TagPayload = Record<string, unknown>;
+
+// Validation lookups for expandable entities (keyed by slug)
+// Values should be lowercase for case-insensitive matching
+export type ValidationLookups = Record<string, Set<string>>;
