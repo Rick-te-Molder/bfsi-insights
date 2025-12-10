@@ -26,14 +26,19 @@ vi.mock('openai', () => ({
   })),
 }));
 
-// Mock Supabase to return fallback prompt
+// Mock Supabase to return a valid prompt (avoids fallback warning in tests)
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({
     from: vi.fn(() => ({
       select: vi.fn(() => ({
         eq: vi.fn(() => ({
           eq: vi.fn(() => ({
-            single: vi.fn(() => Promise.resolve({ data: null, error: { message: 'Not found' } })),
+            single: vi.fn(() =>
+              Promise.resolve({
+                data: { prompt_text: 'You are a relevance scoring assistant.' },
+                error: null,
+              }),
+            ),
           })),
         })),
       })),

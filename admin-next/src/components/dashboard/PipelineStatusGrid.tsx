@@ -97,10 +97,13 @@ export function PipelineStatusGrid({ statusData }: PipelineStatusGridProps) {
     new Set(['discovery', 'enrichment', 'review']),
   );
 
+  // Handle null/undefined statusData (RPC function might not exist yet)
+  const safeStatusData = statusData || [];
+
   // Group status data by category
   const categories: CategoryData[] = CATEGORY_ORDER.map((categoryKey) => {
     const config = CATEGORY_CONFIG[categoryKey];
-    const statuses = statusData
+    const statuses = safeStatusData
       .filter((s) => s.category === categoryKey)
       .sort((a, b) => a.code - b.code);
     const total = statuses.reduce((sum, s) => sum + s.count, 0);
