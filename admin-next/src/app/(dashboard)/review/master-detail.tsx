@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { formatDateTime, getStatusColor, truncate } from '@/lib/utils';
 import { DetailPanel } from './detail-panel';
 import { bulkApproveAction, bulkRejectAction, bulkReenrichAction } from './actions';
+import type { TaxonomyConfig, TaxonomyData } from '@/components/tags';
 
 interface QueueItem {
   id: string;
@@ -25,9 +26,16 @@ interface QueueItem {
 interface MasterDetailViewProps {
   items: QueueItem[];
   status: string;
+  taxonomyConfig: TaxonomyConfig[];
+  taxonomyData: TaxonomyData;
 }
 
-export function MasterDetailView({ items, status }: MasterDetailViewProps) {
+export function MasterDetailView({
+  items,
+  status,
+  taxonomyConfig,
+  taxonomyData,
+}: MasterDetailViewProps) {
   const [selectedId, setSelectedId] = useState<string | null>(items[0]?.id || null);
   const [listItems, setListItems] = useState(items);
   const router = useRouter();
@@ -174,6 +182,8 @@ export function MasterDetailView({ items, status }: MasterDetailViewProps) {
           onNavigate={handleNavigate}
           canNavigatePrev={selectedIndex > 0}
           canNavigateNext={selectedIndex < listItems.length - 1}
+          taxonomyConfig={taxonomyConfig}
+          taxonomyData={taxonomyData}
         />
       </div>
     </div>
