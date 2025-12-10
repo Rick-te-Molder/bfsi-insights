@@ -31,7 +31,7 @@ export interface Publication {
   summary_medium: string | null;
   summary_long: string | null;
 
-  role: string | null;
+  audience: string | null;
   content_type: string | null;
   geography: string | null;
 

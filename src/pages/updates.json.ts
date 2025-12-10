@@ -8,7 +8,7 @@ export async function GET() {
     date_added: item.date_added,
     last_edited: (item as any).last_edited, // keep if present in view, otherwise remove
     source_name: item.source_name,
-    role: item.role,
+    audience: item.audience,
     industry: item.industry,
     topic: item.topic,
     content_type: item.content_type,
