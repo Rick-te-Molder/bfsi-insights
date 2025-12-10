@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -44,6 +44,35 @@ export function Sidebar() {
   const [triggeringBuild, setTriggeringBuild] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Close sidebar when route changes (mobile)
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
+
+  // Close sidebar on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, []);
+
+  // Prevent body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  const toggleSidebar = useCallback(() => setIsOpen((prev) => !prev), []);
 
   // Fetch pipeline status on mount and periodically
   useEffect(() => {
@@ -101,163 +130,218 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-neutral-800 bg-neutral-950">
-      {/* Logo + Pipeline Status */}
-      <div className="flex h-16 items-center justify-between border-b border-neutral-800 px-4">
+    <>
+      {/* Mobile Header with Hamburger */}
+      <div className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between border-b border-neutral-800 bg-neutral-950 px-4 md:hidden">
         <div className="flex items-center gap-2">
           <span className="text-lg font-normal tracking-tight text-white">BFSI</span>
           <span className="text-xs font-bold uppercase text-sky-400">Admin</span>
         </div>
-        {pipelineStatus && (
-          <div className="group relative">
-            <div
-              className={cn(
-                'flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium',
-                pipelineStatus.status === 'processing' && 'bg-sky-500/20 text-sky-400',
-                pipelineStatus.status === 'idle' && 'bg-emerald-500/20 text-emerald-400',
-                pipelineStatus.status === 'degraded' && 'bg-red-500/20 text-red-400',
-                pipelineStatus.status === 'unknown' && 'bg-neutral-500/20 text-neutral-400',
-              )}
-            >
-              <span
-                className={cn(
-                  'h-1.5 w-1.5 rounded-full',
-                  pipelineStatus.status === 'processing' && 'bg-sky-400 animate-pulse',
-                  pipelineStatus.status === 'idle' && 'bg-emerald-400',
-                  pipelineStatus.status === 'degraded' && 'bg-red-400 animate-pulse',
-                  pipelineStatus.status === 'unknown' && 'bg-neutral-400',
-                )}
+        <button
+          onClick={toggleSidebar}
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-800 hover:text-white"
+          aria-label={isOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={isOpen}
+        >
+          {isOpen ? (
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
               />
-              {pipelineStatus.status}
-            </div>
-            {/* Tooltip on hover */}
-            <div className="absolute left-0 top-full mt-2 hidden group-hover:block z-50 w-48 rounded-lg border border-neutral-700 bg-neutral-900 p-3 text-xs shadow-xl">
-              <div className="space-y-1.5">
-                <div className="flex justify-between">
-                  <span className="text-neutral-400">Last run</span>
-                  <span className="text-neutral-200">
-                    {formatTimeAgo(pipelineStatus.lastQueueRun)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-400">Last build</span>
-                  <span className="text-neutral-200">
-                    {formatTimeAgo(pipelineStatus.lastBuildTime)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-400">Processing</span>
-                  <span className="text-sky-400">{pipelineStatus.processingCount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-400">Failed (24h)</span>
-                  <span
-                    className={
-                      pipelineStatus.recentFailedCount > 0 ? 'text-red-400' : 'text-neutral-200'
-                    }
-                  >
-                    {pipelineStatus.recentFailedCount}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Navigation */}
-      <nav className="p-4 space-y-1">
-        {navItems.map((item) => {
-          const isActive =
-            pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-neutral-800 text-white'
-                  : 'text-neutral-400 hover:bg-neutral-800/50 hover:text-white',
-              )}
-            >
-              <span>{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Action Buttons */}
-      <div className="absolute bottom-24 left-0 right-0 border-t border-neutral-800 p-4 space-y-2">
-        {statusMessage && (
-          <div className="text-xs text-center py-1 text-emerald-400 animate-pulse">
-            {statusMessage}
-          </div>
-        )}
-        <button
-          onClick={handleProcessQueue}
-          disabled={processingQueue}
-          className="flex w-full flex-col items-center justify-center gap-0.5 rounded-lg bg-sky-600 px-3 py-2 text-white hover:bg-sky-500 disabled:opacity-50 transition-colors"
-        >
-          {processingQueue ? (
-            <div className="flex items-center gap-2">
-              <span className="animate-spin">⏳</span>
-              <span className="text-sm font-medium">Processing...</span>
-            </div>
+            </svg>
           ) : (
-            <>
-              <div className="flex items-center gap-2">
-                <span>🔄</span>
-                <span className="text-sm font-medium">Process Queue</span>
-              </div>
-              {pipelineStatus?.lastQueueRun && (
-                <span className="text-[10px] text-sky-200/70">
-                  Last: {formatTimeAgo(pipelineStatus.lastQueueRun)}
-                </span>
-              )}
-            </>
-          )}
-        </button>
-        <button
-          onClick={handleTriggerBuild}
-          disabled={triggeringBuild}
-          className="flex w-full flex-col items-center justify-center gap-0.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 transition-colors"
-        >
-          {triggeringBuild ? (
-            <div className="flex items-center gap-2">
-              <span className="animate-spin">⏳</span>
-              <span className="text-sm font-medium">Building...</span>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-2">
-                <span>🚀</span>
-                <span className="text-sm font-medium">Trigger Build</span>
-              </div>
-              {pipelineStatus?.lastBuildTime && (
-                <span className="text-[10px] text-emerald-400/70">
-                  Last: {formatTimeAgo(pipelineStatus.lastBuildTime)}
-                </span>
-              )}
-            </>
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            </svg>
           )}
         </button>
       </div>
 
-      {/* User section */}
-      <div className="absolute bottom-0 left-0 right-0 border-t border-neutral-800 p-4">
-        <form action="/auth/signout" method="post">
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+          onClick={() => setIsOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          'fixed left-0 top-0 z-40 h-screen w-64 border-r border-neutral-800 bg-neutral-950 transition-transform duration-300 ease-in-out',
+          // Mobile: hidden by default, show when open
+          'md:translate-x-0',
+          isOpen ? 'translate-x-0' : '-translate-x-full',
+          // Account for mobile header
+          'pt-14 md:pt-0',
+        )}
+      >
+        {/* Logo + Pipeline Status (hidden on mobile - shown in mobile header) */}
+        <div className="hidden md:flex h-16 items-center justify-between border-b border-neutral-800 px-4">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-normal tracking-tight text-white">BFSI</span>
+            <span className="text-xs font-bold uppercase text-sky-400">Admin</span>
+          </div>
+          {pipelineStatus && (
+            <div className="group relative">
+              <div
+                className={cn(
+                  'flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium',
+                  pipelineStatus.status === 'processing' && 'bg-sky-500/20 text-sky-400',
+                  pipelineStatus.status === 'idle' && 'bg-emerald-500/20 text-emerald-400',
+                  pipelineStatus.status === 'degraded' && 'bg-red-500/20 text-red-400',
+                  pipelineStatus.status === 'unknown' && 'bg-neutral-500/20 text-neutral-400',
+                )}
+              >
+                <span
+                  className={cn(
+                    'h-1.5 w-1.5 rounded-full',
+                    pipelineStatus.status === 'processing' && 'bg-sky-400 animate-pulse',
+                    pipelineStatus.status === 'idle' && 'bg-emerald-400',
+                    pipelineStatus.status === 'degraded' && 'bg-red-400 animate-pulse',
+                    pipelineStatus.status === 'unknown' && 'bg-neutral-400',
+                  )}
+                />
+                {pipelineStatus.status}
+              </div>
+              {/* Tooltip on hover */}
+              <div className="absolute left-0 top-full mt-2 hidden group-hover:block z-50 w-48 rounded-lg border border-neutral-700 bg-neutral-900 p-3 text-xs shadow-xl">
+                <div className="space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Last run</span>
+                    <span className="text-neutral-200">
+                      {formatTimeAgo(pipelineStatus.lastQueueRun)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Last build</span>
+                    <span className="text-neutral-200">
+                      {formatTimeAgo(pipelineStatus.lastBuildTime)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Processing</span>
+                    <span className="text-sky-400">{pipelineStatus.processingCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">Failed (24h)</span>
+                    <span
+                      className={
+                        pipelineStatus.recentFailedCount > 0 ? 'text-red-400' : 'text-neutral-200'
+                      }
+                    >
+                      {pipelineStatus.recentFailedCount}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <nav className="p-4 space-y-1">
+          {navItems.map((item) => {
+            const isActive =
+              pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-neutral-800 text-white'
+                    : 'text-neutral-400 hover:bg-neutral-800/50 hover:text-white',
+                )}
+              >
+                <span>{item.icon}</span>
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Action Buttons */}
+        <div className="absolute bottom-24 left-0 right-0 border-t border-neutral-800 p-4 space-y-2">
+          {statusMessage && (
+            <div className="text-xs text-center py-1 text-emerald-400 animate-pulse">
+              {statusMessage}
+            </div>
+          )}
           <button
-            type="submit"
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800/50 hover:text-white"
+            onClick={handleProcessQueue}
+            disabled={processingQueue}
+            className="flex w-full flex-col items-center justify-center gap-0.5 rounded-lg bg-sky-600 px-3 py-2 text-white hover:bg-sky-500 disabled:opacity-50 transition-colors"
           >
-            <span>🚪</span>
-            <span>Sign Out</span>
+            {processingQueue ? (
+              <div className="flex items-center gap-2">
+                <span className="animate-spin">⏳</span>
+                <span className="text-sm font-medium">Processing...</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <span>🔄</span>
+                  <span className="text-sm font-medium">Process Queue</span>
+                </div>
+                {pipelineStatus?.lastQueueRun && (
+                  <span className="text-[10px] text-sky-200/70">
+                    Last: {formatTimeAgo(pipelineStatus.lastQueueRun)}
+                  </span>
+                )}
+              </>
+            )}
           </button>
-        </form>
-      </div>
-    </aside>
+          <button
+            onClick={handleTriggerBuild}
+            disabled={triggeringBuild}
+            className="flex w-full flex-col items-center justify-center gap-0.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 transition-colors"
+          >
+            {triggeringBuild ? (
+              <div className="flex items-center gap-2">
+                <span className="animate-spin">⏳</span>
+                <span className="text-sm font-medium">Building...</span>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <span>🚀</span>
+                  <span className="text-sm font-medium">Trigger Build</span>
+                </div>
+                {pipelineStatus?.lastBuildTime && (
+                  <span className="text-[10px] text-emerald-400/70">
+                    Last: {formatTimeAgo(pipelineStatus.lastBuildTime)}
+                  </span>
+                )}
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* User section */}
+        <div className="absolute bottom-0 left-0 right-0 border-t border-neutral-800 p-4">
+          <form action="/auth/signout" method="post">
+            <button
+              type="submit"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800/50 hover:text-white"
+            >
+              <span>🚪</span>
+              <span>Sign Out</span>
+            </button>
+          </form>
+        </div>
+      </aside>
+    </>
   );
 }
