@@ -1,6 +1,7 @@
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { CarouselReview } from './carousel-review';
+import type { TaxonomyConfig, TaxonomyData, TaxonomyItem } from '@/components/tags';
 
 interface QueueItem {
   id: string;
@@ -10,60 +11,52 @@ interface QueueItem {
   discovered_at: string;
 }
 
-interface TaxonomyItem {
-  code: string;
-  name: string;
-}
-
-// All taxonomy categories for complete tag display
-interface Taxonomies {
-  industries: TaxonomyItem[];
-  topics: TaxonomyItem[];
-  geographies: TaxonomyItem[];
-  processes: TaxonomyItem[];
-  regulators: TaxonomyItem[];
-  regulations: TaxonomyItem[];
-}
-
 async function getReviewData() {
   const supabase = createServiceRoleClient();
 
-  const [
-    queueResult,
-    industriesResult,
-    topicsResult,
-    geographiesResult,
-    processesResult,
-    regulatorsResult,
-    regulationsResult,
-  ] = await Promise.all([
-    supabase
-      .from('ingestion_queue')
-      .select('*')
-      .eq('status', 'enriched')
-      .order('fetched_at', { ascending: false })
-      .limit(100),
-    supabase.from('bfsi_industry').select('code, name').order('sort_order'),
-    supabase.from('bfsi_topic').select('code, name').order('sort_order'),
-    supabase.from('kb_geography').select('code, name').order('sort_order'),
-    supabase.from('bfsi_process_taxonomy').select('code, name').order('name'),
-    supabase.from('regulator').select('code, name').order('name'),
-    supabase.from('regulation').select('code, name').order('name'),
-  ]);
+  // Fetch taxonomy configuration from database
+  const { data: configData } = await supabase
+    .from('taxonomy_config')
+    .select(
+      'slug, display_name, display_order, behavior_type, source_table, payload_field, color, score_parent_slug, score_threshold',
+    )
+    .eq('is_active', true)
+    .order('display_order');
+
+  const taxonomyConfig = (configData || []) as TaxonomyConfig[];
+
+  // Fetch queue items
+  const queueResult = await supabase
+    .from('ingestion_queue')
+    .select('*')
+    .eq('status', 'enriched')
+    .order('fetched_at', { ascending: false })
+    .limit(100);
+
+  // Dynamically fetch taxonomy data for categories with source tables
+  const taxonomyData: TaxonomyData = {};
+  const sourceTables = taxonomyConfig
+    .filter((c) => c.source_table && c.behavior_type !== 'scoring')
+    .map((c) => ({ slug: c.slug, table: c.source_table! }));
+
+  // Fetch all source tables in parallel
+  const tableResults = await Promise.all(
+    sourceTables.map(({ slug, table }) =>
+      supabase
+        .from(table)
+        .select('code, name')
+        .order('name')
+        .then((res) => ({ slug, data: res.data || [] })),
+    ),
+  );
+
+  for (const { slug, data } of tableResults) {
+    taxonomyData[slug] = data as TaxonomyItem[];
+  }
 
   if (queueResult.error) {
     console.error('Error fetching queue:', queueResult.error);
-    return {
-      items: [],
-      taxonomies: {
-        industries: [],
-        topics: [],
-        geographies: [],
-        processes: [],
-        regulators: [],
-        regulations: [],
-      },
-    };
+    return { items: [], taxonomyConfig, taxonomyData };
   }
 
   // Filter to items that have been enriched (have summary)
@@ -77,19 +70,13 @@ async function getReviewData() {
 
   return {
     items: items as QueueItem[],
-    taxonomies: {
-      industries: (industriesResult.data || []) as TaxonomyItem[],
-      topics: (topicsResult.data || []) as TaxonomyItem[],
-      geographies: (geographiesResult.data || []) as TaxonomyItem[],
-      processes: (processesResult.data || []) as TaxonomyItem[],
-      regulators: (regulatorsResult.data || []) as TaxonomyItem[],
-      regulations: (regulationsResult.data || []) as TaxonomyItem[],
-    },
+    taxonomyConfig,
+    taxonomyData,
   };
 }
 
 export default async function CarouselReviewPage() {
-  const { items, taxonomies } = await getReviewData();
+  const { items, taxonomyConfig, taxonomyData } = await getReviewData();
 
   return (
     <div className="space-y-6">
@@ -119,7 +106,11 @@ export default async function CarouselReviewPage() {
           <p className="text-neutral-400">All items have been reviewed. Check back later.</p>
         </div>
       ) : (
-        <CarouselReview initialItems={items} taxonomies={taxonomies} />
+        <CarouselReview
+          initialItems={items}
+          taxonomyConfig={taxonomyConfig}
+          taxonomyData={taxonomyData}
+        />
       )}
     </div>
   );
