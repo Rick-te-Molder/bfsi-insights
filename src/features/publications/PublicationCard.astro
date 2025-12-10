@@ -52,7 +52,7 @@ const expandItemThumb = (t?: string) => {
 
 const topic = asArr(item.topic);
 const content_type = asArr(item.content_type);
-const audience = item.audience || '';
+const audience = item.audience || (item as any).role || '';
 const industry = item.industry || '';
 const geography = item.geography || '';
 const regulators = item.regulators || [];

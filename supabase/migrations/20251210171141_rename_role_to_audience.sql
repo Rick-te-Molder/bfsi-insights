@@ -85,53 +85,60 @@ WHERE audience IS NOT NULL;
 -- ============================================================================
 -- 6. Update kb_publication_pretty view
 -- ============================================================================
+-- Only change: role → audience. Keep structure matching current view.
 
 DROP VIEW IF EXISTS kb_publication_pretty;
-
-CREATE OR REPLACE VIEW kb_publication_pretty AS
+CREATE VIEW kb_publication_pretty
+WITH (security_invoker = true)
+AS
 SELECT 
   p.id,
   p.slug,
   p.title,
-  p.author AS authors,
-  p.source_url AS url,
-  p.source_name,
+  p.author,
   p.date_published,
   p.date_added,
   p.last_edited,
+  p.source_url,
+  p.source_name,
+  p.source_domain,
   p.thumbnail,
   p.thumbnail_bucket,
   p.thumbnail_path,
   p.summary_short,
   p.summary_medium,
   p.summary_long,
-  p.audience,  -- renamed from role
   p.content_type,
-  p.use_cases,
-  p.agentic_capabilities,
+  p.audience,  -- renamed from role
+  p.geography,
   p.status,
-  -- Aggregated relationships
-  (SELECT string_agg(g.name, ', ') FROM kb_publication_geography pg 
-   JOIN bfsi_geography g ON pg.geography_code = g.code WHERE pg.publication_id = p.id) AS geography,
-  (SELECT string_agg(i.name, ', ') FROM kb_publication_bfsi_industry pi 
-   JOIN bfsi_industry i ON pi.industry_code = i.code WHERE pi.publication_id = p.id) AS industry,
-  (SELECT string_agg(t.name, ', ') FROM kb_publication_bfsi_topic pt 
-   JOIN bfsi_topic t ON pt.topic_code = t.code WHERE pt.publication_id = p.id) AS topic,
-  (SELECT array_agg(i.code) FROM kb_publication_bfsi_industry pi 
-   JOIN bfsi_industry i ON pi.industry_code = i.code WHERE pi.publication_id = p.id) AS industries,
-  (SELECT array_agg(t.code) FROM kb_publication_bfsi_topic pt 
-   JOIN bfsi_topic t ON pt.topic_code = t.code WHERE pt.publication_id = p.id) AS topics,
-  (SELECT array_agg(pr.code) FROM kb_publication_bfsi_process pp 
-   JOIN bfsi_process pr ON pp.process_code = pr.code WHERE pp.publication_id = p.id) AS processes,
-  (SELECT array_agg(r.slug) FROM kb_publication_regulator preg 
-   JOIN regulator r ON preg.regulator_slug = r.slug WHERE preg.publication_id = p.id) AS regulators,
-  (SELECT array_agg(reg.slug) FROM kb_publication_regulation preg 
-   JOIN regulation reg ON preg.regulation_slug = reg.slug WHERE preg.publication_id = p.id) AS regulations,
-  (SELECT array_agg(o.slug) FROM kb_publication_obligation po 
-   JOIN obligation o ON po.obligation_slug = o.slug WHERE po.publication_id = p.id) AS obligations
-FROM kb_publication p;
+  -- Primary industry/topic
+  (SELECT pi.industry_code 
+   FROM kb_publication_bfsi_industry pi 
+   WHERE pi.publication_id = p.id 
+   ORDER BY pi.rank NULLS LAST 
+   LIMIT 1) as industry,
+  (SELECT pt.topic_code 
+   FROM kb_publication_bfsi_topic pt 
+   WHERE pt.publication_id = p.id 
+   ORDER BY pt.rank NULLS LAST 
+   LIMIT 1) as topic,
+  -- Arrays
+  COALESCE((SELECT array_agg(pi.industry_code ORDER BY pi.rank NULLS LAST)
+   FROM kb_publication_bfsi_industry pi WHERE pi.publication_id = p.id), '{}') as industries,
+  COALESCE((SELECT array_agg(pt.topic_code ORDER BY pt.rank NULLS LAST)
+   FROM kb_publication_bfsi_topic pt WHERE pt.publication_id = p.id), '{}') as topics,
+  COALESCE((SELECT array_agg(pr.regulator_code)
+   FROM kb_publication_regulator pr WHERE pr.publication_id = p.id), '{}') as regulators,
+  COALESCE((SELECT array_agg(preg.regulation_code)
+   FROM kb_publication_regulation preg WHERE preg.publication_id = p.id), '{}') as regulations,
+  COALESCE((SELECT array_agg(po.obligation_code)
+   FROM kb_publication_obligation po WHERE po.publication_id = p.id), '{}') as obligations,
+  COALESCE((SELECT array_agg(pp.process_code)
+   FROM kb_publication_bfsi_process pp WHERE pp.publication_id = p.id), '{}') as processes
+FROM kb_publication p
+WHERE p.status = 'published';
 
--- Grant access to the view
 GRANT SELECT ON kb_publication_pretty TO anon, authenticated;
 
 -- ============================================================================
@@ -371,15 +378,15 @@ $$;
 -- This enables audience-first discovery: sources are tagged with their
 -- primary audience, which helps the tagger calibrate relevance scores.
 
-ALTER TABLE source ADD COLUMN primary_audience TEXT 
+ALTER TABLE kb_source ADD COLUMN primary_audience TEXT 
   REFERENCES kb_audience(value);
 
-COMMENT ON COLUMN source.primary_audience IS 
+COMMENT ON COLUMN kb_source.primary_audience IS 
   'Expected primary audience for content from this source. Used as hint during enrichment.';
 
 -- Set primary_audience for known source patterns
 -- Executive sources: strategy, business news, consulting
-UPDATE source SET primary_audience = 'executive' 
+UPDATE kb_source SET primary_audience = 'executive' 
 WHERE slug IN ('ft', 'wsj', 'economist', 'mckinsey', 'bcg', 'hbr', 'bloomberg')
    OR name ILIKE '%financial times%'
    OR name ILIKE '%wall street%'
@@ -388,44 +395,45 @@ WHERE slug IN ('ft', 'wsj', 'economist', 'mckinsey', 'bcg', 'hbr', 'bloomberg')
    OR name ILIKE '%harvard business%';
 
 -- Functional specialist sources: regulators, trade publications, vendors
-UPDATE source SET primary_audience = 'functional_specialist'
+UPDATE kb_source SET primary_audience = 'functional_specialist'
 WHERE slug IN ('dnb', 'afm', 'eba', 'ecb', 'bis', 'fsb', 'iosco', 'fatf')
    OR name ILIKE '%regulator%'
    OR name ILIKE '%compliance%'
    OR name ILIKE '%risk%'
    OR name ILIKE '%vendor%'
-   OR url ILIKE '%regulator%'
-   OR url ILIKE '%.gov%';
+   OR domain ILIKE '%regulator%'
+   OR domain ILIKE '%.gov%';
 
 -- Engineer sources: technical blogs, GitHub, conferences
-UPDATE source SET primary_audience = 'engineer'
+UPDATE kb_source SET primary_audience = 'engineer'
 WHERE slug IN ('github', 'hackernews', 'techcrunch', 'infoq', 'devto')
    OR name ILIKE '%developer%'
    OR name ILIKE '%engineering%'
    OR name ILIKE '%technical%'
-   OR url ILIKE '%github%'
-   OR url ILIKE '%dev.to%';
+   OR domain ILIKE '%github%'
+   OR domain ILIKE '%dev.to%';
 
 -- Researcher sources: academic, papers
-UPDATE source SET primary_audience = 'researcher'
-WHERE slug IN ('arxiv', 'ssrn', 'nber', 'scholar')
+UPDATE kb_source SET primary_audience = 'researcher'
+WHERE slug IN ('arxiv', 'ssrn', 'nber', 'scholar', 'imf')
    OR name ILIKE '%academic%'
    OR name ILIKE '%research%'
    OR name ILIKE '%journal%'
    OR name ILIKE '%university%'
-   OR url ILIKE '%arxiv%'
-   OR url ILIKE '%ssrn%';
+   OR domain ILIKE '%arxiv%'
+   OR domain ILIKE '%ssrn%'
+   OR category = 'research';
 
 -- Default remaining to functional_specialist (most common for BFSI)
-UPDATE source SET primary_audience = 'functional_specialist'
+UPDATE kb_source SET primary_audience = 'functional_specialist'
 WHERE primary_audience IS NULL;
 
 -- ============================================================================
 -- 9. Update filter config (if exists)
 -- ============================================================================
 
--- Update kb_filter_config to use 'audience' instead of 'role'
-UPDATE kb_filter_config SET column_name = 'audience' WHERE column_name = 'role';
+-- Update ref_filter_config to use 'audience' instead of 'role'
+UPDATE ref_filter_config SET column_name = 'audience' WHERE column_name = 'role';
 
 -- ============================================================================
 -- 10. Comments
@@ -433,4 +441,4 @@ UPDATE kb_filter_config SET column_name = 'audience' WHERE column_name = 'role';
 
 COMMENT ON TABLE kb_audience IS 'Target audience types for publications (executive, functional_specialist, engineer, researcher)';
 COMMENT ON COLUMN kb_publication.audience IS 'Primary target audience for this publication';
-COMMENT ON COLUMN source.primary_audience IS 'Expected primary audience for content from this source';
+COMMENT ON COLUMN kb_source.primary_audience IS 'Expected primary audience for content from this source';
