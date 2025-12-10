@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDateTime, getStatusColor } from '@/lib/utils';
+import { TagDisplay } from '@/components/tags';
+import type { TaxonomyConfig, TaxonomyData } from '@/components/tags';
 
 interface QueueItem {
   id: string;
@@ -26,6 +28,8 @@ interface DetailPanelProps {
   onNavigate: (direction: 'prev' | 'next') => void;
   canNavigatePrev: boolean;
   canNavigateNext: boolean;
+  taxonomyConfig: TaxonomyConfig[];
+  taxonomyData: TaxonomyData;
 }
 
 function ValidatedTag({
@@ -58,6 +62,8 @@ export function DetailPanel({
   onNavigate,
   canNavigatePrev,
   canNavigateNext,
+  taxonomyConfig,
+  taxonomyData,
 }: DetailPanelProps) {
   const [item, setItem] = useState<QueueItem | null>(null);
   const [lookups, setLookups] = useState<Lookups | null>(null);
@@ -274,112 +280,15 @@ export function DetailPanel({
           </p>
         </div>
 
-        {/* Tags */}
+        {/* Tags - Dynamic from taxonomy_config */}
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4">
           <h3 className="text-sm font-semibold text-neutral-400 mb-3">Classification</h3>
-          <div className="space-y-3">
-            {/* Industries */}
-            {((payload.industry_codes as string[]) || []).length > 0 && (
-              <div>
-                <span className="text-xs text-neutral-500">Industries</span>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {((payload.industry_codes as string[]) || []).map((code) => (
-                    <span
-                      key={code}
-                      className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs"
-                    >
-                      {code}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Topics */}
-            {((payload.topic_codes as string[]) || []).length > 0 && (
-              <div>
-                <span className="text-xs text-neutral-500">Topics</span>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {((payload.topic_codes as string[]) || []).map((code) => (
-                    <span
-                      key={code}
-                      className="px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 text-xs"
-                    >
-                      {code}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Geographies */}
-            {((payload.geography_codes as string[]) || []).length > 0 && (
-              <div>
-                <span className="text-xs text-neutral-500">Geographies</span>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {((payload.geography_codes as string[]) || []).map((code) => (
-                    <span
-                      key={code}
-                      className="px-2 py-0.5 rounded bg-green-500/20 text-green-300 text-xs"
-                    >
-                      {code}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Regulators */}
-            {((payload.regulator_codes as string[]) || []).length > 0 && lookups && (
-              <div>
-                <span className="text-xs text-neutral-500">Regulators</span>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {((payload.regulator_codes as string[]) || []).map((code) => (
-                    <ValidatedTag
-                      key={code}
-                      value={code}
-                      knownValues={lookups.regulators}
-                      baseColor="bg-amber-500/20 text-amber-300"
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Organizations */}
-            {((payload.organization_names as string[]) || []).length > 0 && lookups && (
-              <div>
-                <span className="text-xs text-neutral-500">Organizations</span>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {((payload.organization_names as string[]) || []).map((name) => (
-                    <ValidatedTag
-                      key={name}
-                      value={name}
-                      knownValues={lookups.organizations}
-                      baseColor="bg-pink-500/20 text-pink-300"
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Vendors */}
-            {((payload.vendor_names as string[]) || []).length > 0 && lookups && (
-              <div>
-                <span className="text-xs text-neutral-500">Vendors</span>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {((payload.vendor_names as string[]) || []).map((name) => (
-                    <ValidatedTag
-                      key={name}
-                      value={name}
-                      knownValues={lookups.vendors}
-                      baseColor="bg-teal-500/20 text-teal-300"
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <TagDisplay
+            payload={payload}
+            taxonomyConfig={taxonomyConfig}
+            taxonomyData={taxonomyData}
+            variant="table"
+          />
         </div>
 
         {/* Metadata */}
