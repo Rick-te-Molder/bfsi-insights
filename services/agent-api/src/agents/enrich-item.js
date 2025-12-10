@@ -140,7 +140,7 @@ async function stepTag(queueId, payload) {
     process_codes: extractCodes(result.process_codes),
     organization_names: result.organization_names || [],
     vendor_names: result.vendor_names || [],
-    persona_scores: result.persona_scores || {},
+    audience_scores: result.audience_scores || {},
     tagging_metadata: {
       overall_confidence: result.overall_confidence,
       reasoning: result.reasoning,

@@ -72,26 +72,37 @@ const TaggingSchema = z.object({
     .describe('BFSI organizations mentioned (banks, insurers, asset managers)'),
   vendor_names: z.array(z.string()).describe('AI/tech vendors mentioned'),
 
-  // Persona relevance scores (0-1 for each audience type)
-  persona_scores: z
+  // Audience relevance scores (0-1 for each audience type)
+  audience_scores: z
     .object({
       executive: z
         .number()
         .min(0)
         .max(1)
-        .describe('Relevance for C-suite/executives (strategy, business impact)'),
-      technical: z
+        .describe('Relevance for C-suite/executives (strategy, business impact, market trends)'),
+      functional_specialist: z
         .number()
         .min(0)
         .max(1)
-        .describe('Relevance for technical roles (implementation, architecture)'),
-      compliance: z
+        .describe(
+          'Relevance for product managers, risk/compliance/legal specialists, auditors, business analysts',
+        ),
+      engineer: z
         .number()
         .min(0)
         .max(1)
-        .describe('Relevance for compliance/risk roles (regulatory, risk)'),
+        .describe(
+          'Relevance for developers, architects, DevOps, security engineers (implementation, APIs, technical details)',
+        ),
+      researcher: z
+        .number()
+        .min(0)
+        .max(1)
+        .describe(
+          'Relevance for academics, PhD researchers, analysts (methodology, data, peer-reviewed findings)',
+        ),
     })
-    .describe('Relevance scores per persona/audience type'),
+    .describe('Relevance scores per audience type'),
 
   // Overall metadata
   overall_confidence: z.number().min(0).max(1).describe('Overall confidence in classification 0-1'),

@@ -36,7 +36,7 @@ interface TagDisplayProps {
 }
 
 /**
- * Extract values from a payload field path (e.g., "industry_codes" or "persona_scores.executive")
+ * Extract values from a payload field path (e.g., "industry_codes" or "audience_scores.executive")
  */
 function getPayloadValue(payload: TagPayload, fieldPath: string): unknown {
   const parts = fieldPath.split('.');

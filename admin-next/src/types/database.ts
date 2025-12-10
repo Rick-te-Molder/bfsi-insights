@@ -29,7 +29,7 @@ export interface QueuePayload {
   geography_codes?: string[];
   regulator_codes?: string[];
   regulation_codes?: string[];
-  persona_scores?: Record<string, number>;
+  audience_scores?: Record<string, number>;
   relevance_confidence?: number;
   rejection_reason?: string;
   thumbnail_url?: string;
