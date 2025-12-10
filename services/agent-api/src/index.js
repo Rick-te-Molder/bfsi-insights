@@ -1,8 +1,11 @@
 import 'dotenv/config';
 import process from 'node:process';
 import express from 'express';
+import { createClient } from '@supabase/supabase-js';
 import agentRoutes from './routes/agents.js';
 import { requireApiKey } from './middleware/auth.js';
+
+const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -15,7 +18,9 @@ app.use((req, res, next) => {
   const allowedOrigins = [
     'https://bfsiinsights.com',
     'https://www.bfsiinsights.com',
+    'https://admin.bfsiinsights.com',
     'http://localhost:4321',
+    'http://localhost:3000',
   ];
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin)) {
@@ -55,8 +60,23 @@ app.post('/api/trigger-build', async (req, res) => {
     if (!response.ok) {
       return res.status(500).json({ ok: false, message: 'Build hook failed' });
     }
+
+    // Update approved items (330) to published (400)
+    const { data: updated, error: updateError } = await supabase
+      .from('ingestion_queue')
+      .update({ status: 'published', status_code: 400 })
+      .eq('status_code', 330)
+      .select('id');
+
+    const publishedCount = updated?.length || 0;
+    if (updateError) {
+      console.warn('⚠️ Failed to update status codes:', updateError.message);
+    } else if (publishedCount > 0) {
+      console.log(`✅ Updated ${publishedCount} items from approved to published`);
+    }
+
     console.log('✅ Cloudflare build triggered');
-    res.json({ ok: true, message: 'Build triggered' });
+    res.json({ ok: true, message: 'Build triggered', publishedCount });
   } catch (err) {
     res.status(500).json({ ok: false, message: err.message });
   }

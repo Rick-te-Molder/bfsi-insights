@@ -182,12 +182,12 @@ export function TagDisplay({
   validationLookups,
   showValidation = false,
 }: TagDisplayProps) {
-  // Group scoring configs by parent for persona grouping
-  const personaConfigs = taxonomyConfig.filter(
-    (c) => c.behavior_type === 'scoring' && c.score_parent_slug === 'persona',
+  // Group scoring configs by parent for audience grouping
+  const audienceConfigs = taxonomyConfig.filter(
+    (c) => c.behavior_type === 'scoring' && c.score_parent_slug === 'audience',
   );
-  const nonPersonaConfigs = taxonomyConfig.filter(
-    (c) => !(c.behavior_type === 'scoring' && c.score_parent_slug === 'persona'),
+  const nonAudienceConfigs = taxonomyConfig.filter(
+    (c) => !(c.behavior_type === 'scoring' && c.score_parent_slug === 'audience'),
   );
 
   if (variant === 'inline') {
@@ -223,7 +223,7 @@ export function TagDisplay({
   return (
     <div className="space-y-2 text-xs">
       {/* Non-persona categories */}
-      {nonPersonaConfigs.map((config) => (
+      {nonAudienceConfigs.map((config) => (
         <TagCategoryRow
           key={config.slug}
           config={config}
@@ -236,13 +236,13 @@ export function TagDisplay({
       ))}
 
       {/* Persona scores grouped together */}
-      {personaConfigs.length > 0 && (
+      {audienceConfigs.length > 0 && (
         <div className="flex items-start justify-between gap-2">
-          <span className={`text-neutral-500 shrink-0 ${labelWidth}`}>Persona</span>
+          <span className={`text-neutral-500 shrink-0 ${labelWidth}`}>Audience</span>
           <div className="flex flex-wrap gap-1 justify-end">
             {(() => {
               const colors = COLOR_MAP.violet;
-              const hasAnyScore = personaConfigs.some((c) => {
+              const hasAnyScore = audienceConfigs.some((c) => {
                 const score = getPayloadValue(payload, c.payload_field) as number | undefined;
                 return score !== undefined && score >= (c.score_threshold ?? 0.5);
               });
@@ -251,7 +251,7 @@ export function TagDisplay({
                 return <span className="text-neutral-600 italic">—</span>;
               }
 
-              return personaConfigs.map((c) => {
+              return audienceConfigs.map((c) => {
                 const score = getPayloadValue(payload, c.payload_field) as number | undefined;
                 if (score === undefined || score < (c.score_threshold ?? 0.5)) return null;
                 return (
