@@ -153,7 +153,10 @@ export function CarouselReview({
     setProcessing(true);
 
     try {
-      await supabase.from('ingestion_queue').update({ status: 'queued' }).eq('id', currentItem.id);
+      await supabase
+        .from('ingestion_queue')
+        .update({ status: 'queued', status_code: 200 }) // 200 = PENDING_ENRICHMENT
+        .eq('id', currentItem.id);
 
       const newItems = items.filter((_, i) => i !== currentIndex);
       setItems(newItems);

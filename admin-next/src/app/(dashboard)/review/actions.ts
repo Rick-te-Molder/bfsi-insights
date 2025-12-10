@@ -8,7 +8,7 @@ export async function bulkReenrichAction(ids: string[]) {
 
   const { error } = await supabase
     .from('ingestion_queue')
-    .update({ status: 'queued' })
+    .update({ status: 'queued', status_code: 200 }) // 200 = PENDING_ENRICHMENT
     .in('id', ids);
 
   if (error) {
