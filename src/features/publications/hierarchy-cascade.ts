@@ -82,8 +82,8 @@ function updateParentState(parentCode: string, parentLevel: string, selector: st
   // Recursively update ancestors
   const grandparentCode = parentCheckbox.dataset.parent;
   if (grandparentCode) {
-    const grandparentLevel = String(parseInt(parentLevel) - 1);
-    if (parseInt(grandparentLevel) >= 1) {
+    const grandparentLevel = String(Number.parseInt(parentLevel) - 1);
+    if (Number.parseInt(grandparentLevel) >= 1) {
       updateParentState(grandparentCode, grandparentLevel, selector);
     }
   }
