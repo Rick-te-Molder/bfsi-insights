@@ -99,6 +99,14 @@ jobs:
         run: npm run test:coverage
         working-directory: services/agent-api
 
+      - name: Smoke test agent-api startup
+        run: timeout 5 npm start || [ $? -eq 124 ]
+        working-directory: services/agent-api
+        env:
+          PORT: 3000
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
       - name: Build
         if: github.actor != 'dependabot[bot]'
         run: npm run build --if-present
