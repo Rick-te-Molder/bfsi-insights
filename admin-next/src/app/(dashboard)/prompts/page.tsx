@@ -4,6 +4,29 @@ import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { PromptVersion } from '@/types/database';
 
+// Manifest types (KB-207)
+interface ManifestAgent {
+  name: string;
+  file: string;
+  type: 'llm' | 'config' | 'orchestrator' | 'scoring';
+  description: string;
+  prompt_versions: string[];
+  tables: string[];
+  model?: string;
+  owner: string;
+}
+
+interface RequiredPrompt {
+  agent_name: string;
+  type: 'llm' | 'config';
+  required: boolean;
+}
+
+interface AgentManifest {
+  agents: ManifestAgent[];
+  required_prompts: RequiredPrompt[];
+}
+
 // Estimate tokens (rough: ~4 chars per token for English)
 function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
@@ -25,6 +48,7 @@ function getStageBadge(stage?: string) {
 
 export default function PromptsPage() {
   const [prompts, setPrompts] = useState<PromptVersion[]>([]);
+  const [manifest, setManifest] = useState<AgentManifest | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [viewingVersion, setViewingVersion] = useState<PromptVersion | null>(null);
@@ -37,6 +61,8 @@ export default function PromptsPage() {
   const loadPrompts = useCallback(
     async function loadPrompts() {
       setLoading(true);
+
+      // Load prompts from DB
       const { data, error } = await supabase
         .from('prompt_versions')
         .select('*')
@@ -48,6 +74,18 @@ export default function PromptsPage() {
       } else {
         setPrompts(data || []);
       }
+
+      // Load manifest (KB-207)
+      try {
+        const manifestRes = await fetch('/api/manifest');
+        if (manifestRes.ok) {
+          const manifestData = await manifestRes.json();
+          setManifest(manifestData);
+        }
+      } catch (err) {
+        console.warn('Failed to load manifest:', err);
+      }
+
       setLoading(false);
     },
     [supabase],
@@ -56,6 +94,32 @@ export default function PromptsPage() {
   useEffect(() => {
     loadPrompts();
   }, [loadPrompts]);
+
+  // Calculate coverage stats (KB-207)
+  const coverageStats = (() => {
+    if (!manifest) return null;
+
+    const currentPromptNames = new Set(
+      prompts.filter((p) => p.is_current).map((p) => p.agent_name),
+    );
+
+    const requiredPrompts = manifest.required_prompts.filter((p) => p.required);
+    const presentRequired = requiredPrompts.filter((p) => currentPromptNames.has(p.agent_name));
+    const missingRequired = requiredPrompts.filter((p) => !currentPromptNames.has(p.agent_name));
+
+    return {
+      totalAgents: manifest.agents.length,
+      totalPrompts: prompts.length,
+      currentPrompts: currentPromptNames.size,
+      requiredPrompts: requiredPrompts.length,
+      presentRequired: presentRequired.length,
+      missingRequired: missingRequired.map((p) => p.agent_name),
+      coverage:
+        requiredPrompts.length > 0
+          ? Math.round((presentRequired.length / requiredPrompts.length) * 100)
+          : 100,
+    };
+  })();
 
   // Group prompts by agent
   const promptsByAgent = prompts.reduce(
@@ -108,16 +172,79 @@ export default function PromptsPage() {
   return (
     <div>
       {/* Header */}
-      <header className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Prompt Engineering</h1>
-          <p className="mt-1 text-sm text-neutral-400">
-            View, edit, and version LLM prompts for each agent
-          </p>
+      <header className="mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Prompt Engineering</h1>
+            <p className="mt-1 text-sm text-neutral-400">
+              View, edit, and version LLM prompts for each agent
+            </p>
+          </div>
+          <div className="text-sm text-neutral-400">
+            {agents.length} agents • {prompts.length} total versions
+          </div>
         </div>
-        <div className="text-sm text-neutral-400">
-          {agents.length} agents • {prompts.length} total versions
-        </div>
+
+        {/* Coverage Stats (KB-207) */}
+        {coverageStats && (
+          <div className="mt-4 grid grid-cols-4 gap-4">
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+              <div className="text-2xl font-bold text-white">{coverageStats.totalAgents}</div>
+              <div className="text-xs text-neutral-400">Agents in Manifest</div>
+            </div>
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+              <div className="text-2xl font-bold text-white">{coverageStats.currentPrompts}</div>
+              <div className="text-xs text-neutral-400">Active Prompts</div>
+            </div>
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+              <div
+                className={`text-2xl font-bold ${coverageStats.coverage === 100 ? 'text-emerald-400' : 'text-amber-400'}`}
+              >
+                {coverageStats.coverage}%
+              </div>
+              <div className="text-xs text-neutral-400">Required Coverage</div>
+            </div>
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+              <div
+                className={`text-2xl font-bold ${coverageStats.missingRequired.length === 0 ? 'text-emerald-400' : 'text-red-400'}`}
+              >
+                {coverageStats.missingRequired.length === 0
+                  ? '✓'
+                  : coverageStats.missingRequired.length}
+              </div>
+              <div className="text-xs text-neutral-400">
+                {coverageStats.missingRequired.length === 0
+                  ? 'All Required Present'
+                  : 'Missing Required'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Missing prompts warning */}
+        {coverageStats && coverageStats.missingRequired.length > 0 && (
+          <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-red-400">⚠️</span>
+              <div>
+                <div className="font-medium text-red-300">Missing Required Prompts</div>
+                <div className="mt-1 text-sm text-red-300/80">
+                  The following prompts are required but not found in the database:
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {coverageStats.missingRequired.map((name) => (
+                    <span
+                      key={name}
+                      className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs text-red-300"
+                    >
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Agent table */}
