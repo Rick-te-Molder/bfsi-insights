@@ -61,6 +61,7 @@ export async function bulkRejectAction(ids: string[], reason: string) {
       .from('ingestion_queue')
       .update({
         status: 'rejected',
+        status_code: 540, // 540 = REJECTED
         payload: { ...item.payload, rejection_reason: reason },
       })
       .eq('id', item.id);
