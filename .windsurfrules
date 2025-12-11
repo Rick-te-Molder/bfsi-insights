@@ -93,3 +93,28 @@ When you encounter a bug or incident:
 - Define business concepts (audiences, statuses, etc.) in ONE table
 - LLM prompts should reference these tables, not hardcode definitions
 - When updating a concept, update the source table - prompts pull dynamically
+
+---
+
+## Prompt Engineering (KB-207)
+
+### Agent Registry
+- Every agent must be declared in `docs/agents/manifest.yaml`
+- Manifest defines required prompts and tables for each agent
+- CI validates prompt coverage on every PR
+
+### Prompt Changes
+- Every prompt change requires a migration file in `supabase/migrations/`
+- Use `INSERT ... ON CONFLICT` pattern for safe updates
+- Set `is_current = true` for new version, `false` for old versions
+- Include `notes` explaining what changed and why
+
+### Fail-Fast Policy
+- Agents must throw errors if required prompts are missing
+- No silent fallbacks to hardcoded prompts
+- Use `throw new Error('CRITICAL: ...')` pattern from KB-206
+
+### Dynamic Prompts
+- Business concept definitions (audiences, taxonomies) should be in DB tables
+- Prompts should load definitions from tables, not hardcode them
+- Example: `kb_audience` table contains scoring guides loaded by discovery-relevance
