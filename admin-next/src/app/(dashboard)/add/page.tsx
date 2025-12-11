@@ -179,14 +179,14 @@ export default function AddArticlePage() {
 
       const { error: queueError } = await supabase.from('ingestion_queue').insert({
         url: url.trim(),
-        url_norm: urlNorm,
-        source: existingSource || 'manual',
         status: 'pending',
         status_code: 200,
+        entry_type: 'manual',
         payload: {
           manual_add: true,
           submitter: submitterName.trim() || null,
           why_valuable: whyValuable.trim(),
+          source: existingSource || null,
         },
       });
 
