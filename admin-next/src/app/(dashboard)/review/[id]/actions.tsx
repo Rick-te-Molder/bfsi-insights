@@ -77,6 +77,7 @@ export function ReviewActions({ item }: { item: QueueItem }) {
         .from('ingestion_queue')
         .update({
           status: 'rejected',
+          status_code: 540, // 540 = REJECTED
           payload: {
             ...item.payload,
             rejection_reason: reason || 'Manually rejected',

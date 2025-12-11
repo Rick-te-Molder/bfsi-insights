@@ -129,6 +129,7 @@ export function CarouselReview({
         .from('ingestion_queue')
         .update({
           status: 'rejected',
+          status_code: 540, // 540 = REJECTED
           payload: { ...currentItem.payload, rejection_reason: reason || null },
         })
         .eq('id', currentItem.id);
