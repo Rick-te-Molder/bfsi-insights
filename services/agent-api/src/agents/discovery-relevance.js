@@ -15,6 +15,7 @@ import process from 'node:process';
 let openai = null;
 let supabase = null;
 let cachedPrompt = null;
+let cachedAudiences = null;
 
 function getOpenAI() {
   if (!openai) {
@@ -30,27 +31,71 @@ function getSupabase() {
   return supabase;
 }
 
-// Load prompt from DB (cached for performance)
-// KB-206: Fail-fast if prompt not in DB - no hidden fallbacks
-async function getSystemPrompt() {
-  if (cachedPrompt) return cachedPrompt;
+// Load audience definitions from DB (cached for performance)
+// KB-208: Single source of truth for audience definitions
+async function getAudiences() {
+  if (cachedAudiences) return cachedAudiences;
 
   const { data, error } = await getSupabase()
-    .from('prompt_versions')
-    .select('prompt_text')
-    .eq('agent_name', 'discovery-relevance')
-    .eq('is_current', true)
-    .single();
+    .from('kb_audience')
+    .select('name, label, description, cares_about, doesnt_care_about, scoring_guide')
+    .order('sort_order');
 
-  if (error || !data) {
+  if (error || !data || data.length === 0) {
     throw new Error(
-      'CRITICAL: No prompt found for discovery-relevance agent. ' +
-        'Run migrations to seed prompt_versions table. ' +
+      'CRITICAL: No audiences found in kb_audience table. ' +
+        'Run migrations to seed audience data. ' +
         `DB error: ${error?.message || 'No data returned'}`,
     );
   }
 
-  cachedPrompt = data.prompt_text;
+  cachedAudiences = data;
+  return cachedAudiences;
+}
+
+// Generate system prompt dynamically from audience definitions
+// KB-208: Prompts pull from kb_audience table, not hardcoded
+async function getSystemPrompt() {
+  if (cachedPrompt) return cachedPrompt;
+
+  const audiences = await getAudiences();
+
+  // Build audience sections dynamically
+  const audienceSections = audiences
+    .map((a) => {
+      return `## ${a.label} (${a.name})
+${a.description}
+
+They care about:
+${a.cares_about}
+
+They don't care about:
+${a.doesnt_care_about}
+
+Scoring guide:
+${a.scoring_guide}`;
+    })
+    .join('\n\n');
+
+  cachedPrompt = `You are an expert content curator for BFSI (Banking, Financial Services, Insurance) professionals.
+
+You must score content relevance for EACH of the following target audiences:
+
+${audienceSections}
+
+Respond with JSON:
+{
+  "relevance_scores": {
+    "executive": <1-10>,
+    "functional_specialist": <1-10>,
+    "engineer": <1-10>,
+    "researcher": <1-10>
+  },
+  "primary_audience": "<audience with highest score>",
+  "executive_summary": "<1 sentence: what this content is about>",
+  "skip_reason": "<null if any score >= 4, otherwise brief reason>"
+}`;
+
   return cachedPrompt;
 }
 
@@ -201,10 +246,18 @@ export async function scoreRelevance(candidate) {
   }
 
   // Fast path: trusted sources auto-pass without LLM call (after staleness checks)
+  // KB-208: Return multi-audience scores (assume high relevance for all audiences from trusted sources)
   if (isTrustedSource(source)) {
     const adjustedScore = Math.max(1, 8 - agePenalty);
     return {
       relevance_score: adjustedScore,
+      relevance_scores: {
+        executive: adjustedScore,
+        functional_specialist: adjustedScore,
+        engineer: Math.max(1, 6 - agePenalty), // Slightly lower for engineers (less technical detail)
+        researcher: Math.max(1, 6 - agePenalty), // Slightly lower for researchers (less academic rigor)
+      },
+      primary_audience: 'executive', // Trusted sources are typically exec-focused
       executive_summary: `Trusted source: ${source}${agePenalty > 0 ? ` (age penalty: -${agePenalty})` : ''}`,
       skip_reason: adjustedScore < MIN_RELEVANCE_SCORE ? `Old content from trusted source` : null,
       should_queue: adjustedScore >= MIN_RELEVANCE_SCORE,
@@ -245,19 +298,29 @@ Description: ${description || '(no description available)'}`;
     const result = JSON.parse(completion.choices[0].message.content);
     const usage = completion.usage;
 
-    // Apply age penalty to LLM score
-    const baseScore = result.relevance_score || 5;
-    const adjustedScore = Math.max(1, baseScore - agePenalty);
+    // KB-208: Handle multi-audience scores
+    const scores = result.relevance_scores || {};
+    const adjustedScores = {
+      executive: Math.max(1, (scores.executive || 5) - agePenalty),
+      functional_specialist: Math.max(1, (scores.functional_specialist || 5) - agePenalty),
+      engineer: Math.max(1, (scores.engineer || 5) - agePenalty),
+      researcher: Math.max(1, (scores.researcher || 5) - agePenalty),
+    };
+
+    // Find highest score to determine if we should queue
+    const maxScore = Math.max(...Object.values(adjustedScores));
+    const primaryAudience =
+      result.primary_audience || Object.entries(adjustedScores).sort((a, b) => b[1] - a[1])[0][0];
 
     return {
-      relevance_score: adjustedScore,
+      relevance_score: maxScore, // For backward compatibility
+      relevance_scores: adjustedScores, // New: per-audience scores
+      primary_audience: primaryAudience,
       executive_summary: result.executive_summary || '',
       skip_reason:
         result.skip_reason ||
-        (adjustedScore < MIN_RELEVANCE_SCORE && agePenalty > 0
-          ? `Score reduced by age penalty`
-          : null),
-      should_queue: adjustedScore >= MIN_RELEVANCE_SCORE,
+        (maxScore < MIN_RELEVANCE_SCORE && agePenalty > 0 ? `Score reduced by age penalty` : null),
+      should_queue: maxScore >= MIN_RELEVANCE_SCORE,
       usage: {
         prompt_tokens: usage.prompt_tokens,
         completion_tokens: usage.completion_tokens,
