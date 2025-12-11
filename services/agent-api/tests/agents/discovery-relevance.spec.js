@@ -26,11 +26,52 @@ vi.mock('openai', () => ({
   })),
 }));
 
-// Mock Supabase to return a valid prompt (avoids fallback warning in tests)
+// Mock Supabase to return valid data for both prompt_versions and kb_audience
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({
     from: vi.fn(() => ({
       select: vi.fn(() => ({
+        // For kb_audience table (uses .order())
+        order: vi.fn(() =>
+          Promise.resolve({
+            data: [
+              {
+                name: 'executive',
+                label: 'Executives',
+                description: 'C-suite',
+                cares_about: 'Strategy',
+                doesnt_care_about: 'Code',
+                scoring_guide: '9-10: Major',
+              },
+              {
+                name: 'functional_specialist',
+                label: 'Specialists',
+                description: 'PMs',
+                cares_about: 'Process',
+                doesnt_care_about: 'Theory',
+                scoring_guide: '9-10: Critical',
+              },
+              {
+                name: 'engineer',
+                label: 'Engineers',
+                description: 'Devs',
+                cares_about: 'Architecture',
+                doesnt_care_about: 'Strategy',
+                scoring_guide: '9-10: Security',
+              },
+              {
+                name: 'researcher',
+                label: 'Researchers',
+                description: 'Academics',
+                cares_about: 'Methodology',
+                doesnt_care_about: 'Marketing',
+                scoring_guide: '9-10: Novel',
+              },
+            ],
+            error: null,
+          }),
+        ),
+        // For prompt_versions table (uses .eq().eq().single())
         eq: vi.fn(() => ({
           eq: vi.fn(() => ({
             single: vi.fn(() =>
@@ -63,12 +104,27 @@ function getCreateMock() {
 }
 
 // Helper to create a valid OpenAI response
+// KB-208: Updated to support multi-audience response format
 function mockOpenAIResponse(
   content,
   usage = { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
 ) {
+  // Convert old format (relevance_score) to new format (relevance_scores) for backward compatibility
+  const normalizedContent = content.relevance_scores
+    ? content
+    : {
+        relevance_scores: {
+          executive: content.relevance_score || 5,
+          functional_specialist: content.relevance_score || 5,
+          engineer: content.relevance_score || 5,
+          researcher: content.relevance_score || 5,
+        },
+        primary_audience: 'executive',
+        executive_summary: content.executive_summary || '',
+        skip_reason: content.skip_reason || null,
+      };
   return {
-    choices: [{ message: { content: JSON.stringify(content) } }],
+    choices: [{ message: { content: JSON.stringify(normalizedContent) } }],
     usage,
   };
 }
