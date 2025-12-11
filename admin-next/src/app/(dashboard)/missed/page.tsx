@@ -165,7 +165,7 @@ export default function MissedDiscoveryPage() {
         return;
       }
 
-      // Insert
+      // Insert into missed_discovery for learning
       const { error } = await supabase.from('missed_discovery').insert({
         url: url.trim(),
         url_norm: urlNorm,
@@ -183,8 +183,27 @@ export default function MissedDiscoveryPage() {
 
       if (error) throw error;
 
+      // Also add to ingestion_queue for immediate processing
+      const { error: queueError } = await supabase.from('ingestion_queue').insert({
+        url: url.trim(),
+        url_norm: urlNorm,
+        source: existingSource || 'manual',
+        status: 'pending',
+        status_code: 200,
+        payload: {
+          manual_add: true,
+          submitter: submitterName.trim() || null,
+          why_valuable: whyValuable.trim(),
+        },
+      });
+
+      if (queueError) {
+        // Don't fail if queue insert fails - the learning record is more important
+        console.error('Failed to add to ingestion queue:', queueError);
+      }
+
       setStatus('success');
-      setMessage('Missed article reported! This will help improve our discovery.');
+      setMessage('Article submitted! It will be processed AND help improve our discovery.');
 
       // Reset form
       setUrl('');
@@ -211,9 +230,9 @@ export default function MissedDiscoveryPage() {
     <div className="space-y-6">
       {/* Header */}
       <header>
-        <h1 className="text-2xl font-bold">Missed Discovery</h1>
+        <h1 className="text-2xl font-bold">Add Article</h1>
         <p className="mt-1 text-sm text-neutral-400">
-          Report articles your network shared that we missed — help us get better
+          Submit articles we missed — they&apos;ll be processed AND help improve our discovery
         </p>
       </header>
 
