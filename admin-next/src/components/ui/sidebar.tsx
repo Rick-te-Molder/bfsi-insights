@@ -15,6 +15,7 @@ const navItems = [
   { href: '/ab-tests', label: 'A/B Tests', icon: '🔀' },
   { href: '/golden-sets', label: 'Golden Sets', icon: '⭐' },
   { href: '/add', label: 'Add URL', icon: '➕' },
+  { href: '/missed', label: 'Missed Discovery', icon: '🎯' },
 ];
 
 const AGENT_API_URL = 'https://bfsi-insights.onrender.com';
