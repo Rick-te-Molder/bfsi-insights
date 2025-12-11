@@ -78,3 +78,18 @@ When you encounter a bug or incident:
 1. Identify the **root cause pattern** (not just the symptom)
 2. Add a rule here that would have prevented it
 3. Include the Linear issue ID for context (e.g., KB-202)
+
+---
+
+## Database Schema
+
+### Primary Keys
+- **Always use UUID** as primary key for new tables (not serial integers or text slugs)
+- Use `gen_random_uuid()` as default value
+- Text slugs (like `name`) should be unique constraints, not primary keys
+- Example: `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+
+### Single Source of Truth
+- Define business concepts (audiences, statuses, etc.) in ONE table
+- LLM prompts should reference these tables, not hardcode definitions
+- When updating a concept, update the source table - prompts pull dynamically
