@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { TagDisplay } from '@/components/tags';
 import type { TaxonomyConfig, TaxonomyData } from '@/components/tags';
@@ -29,11 +30,11 @@ interface CarouselReviewProps {
   taxonomyData: TaxonomyData;
 }
 
-// Summary length specs
+// Summary length specs (KB-204: updated ranges)
 const SUMMARY_SPECS = {
-  short: { min: 120, max: 150 },
-  medium: { min: 250, max: 300 },
-  long: { min: 500, max: 600 },
+  short: { min: 100, max: 150 },
+  medium: { min: 200, max: 300 },
+  long: { min: 400, max: 600 },
 };
 
 export function CarouselReview({
@@ -278,10 +279,12 @@ export function CarouselReview({
 
           {/* Publication Card */}
           <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40">
+            {/* Title */}
             <h3 className="text-xl font-semibold text-sky-200 line-clamp-2">
               {payload.title || 'Untitled'}
             </h3>
 
+            {/* Date */}
             <div className="mt-1 text-sm">
               <span className="text-neutral-400">Published</span>{' '}
               {payload.published_at ? (
@@ -297,17 +300,23 @@ export function CarouselReview({
               )}
             </div>
 
+            {/* URL */}
+            <a
+              href={currentItem.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block mt-1 text-xs text-neutral-500 hover:text-sky-400 truncate"
+            >
+              {currentItem.url}
+            </a>
+
             {/* Thumbnail */}
             <div
               className="relative mt-2 w-full rounded-md border border-neutral-800 bg-neutral-800/40 overflow-hidden"
               style={{ aspectRatio: '16 / 9' }}
             >
               {thumbnailUrl ? (
-                <img
-                  src={thumbnailUrl}
-                  alt="Preview"
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
+                <Image src={thumbnailUrl} alt="Preview" fill className="object-cover" unoptimized />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <svg
@@ -342,14 +351,12 @@ export function CarouselReview({
             </div>
           </div>
 
-          {/* Source URL */}
+          {/* Navigation to detail page */}
           <a
-            href={currentItem.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block text-sm text-neutral-500 hover:text-sky-400 truncate"
+            href={`/review/${currentItem.id}`}
+            className="inline-flex items-center gap-1 text-sm text-sky-400 hover:text-sky-300 mt-2"
           >
-            🔗 {currentItem.url}
+            View full details →
           </a>
         </div>
 
@@ -411,7 +418,7 @@ export function CarouselReview({
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="text-neutral-400">
-                  Short <span className="text-neutral-500">(120-150)</span>
+                  Short <span className="text-neutral-500">(100-150)</span>
                 </span>
                 <span className={shortStatus.color}>
                   {shortStatus.icon} {shortLen}
@@ -419,7 +426,7 @@ export function CarouselReview({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-neutral-400">
-                  Medium <span className="text-neutral-500">(250-300)</span>
+                  Medium <span className="text-neutral-500">(200-300)</span>
                 </span>
                 <span className={mediumStatus.color}>
                   {mediumStatus.icon} {mediumLen}
@@ -427,7 +434,7 @@ export function CarouselReview({
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-neutral-400">
-                  Long <span className="text-neutral-500">(500-600)</span>
+                  Long <span className="text-neutral-500">(400-600)</span>
                 </span>
                 <span className={longStatus.color}>
                   {longStatus.icon} {longLen}

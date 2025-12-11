@@ -25,8 +25,8 @@ interface TagDisplayProps {
   payload: TagPayload;
   taxonomyConfig: TaxonomyConfig[];
   taxonomyData: TaxonomyData;
-  /** Show as compact inline tags or full table */
-  variant?: 'table' | 'inline';
+  /** Show as compact inline tags, full table, or table with audience percentages */
+  variant?: 'table' | 'inline' | 'table-with-percentages';
   /** Label width for table variant */
   labelWidth?: string;
   /** Optional validation lookups for expandable types - keyed by taxonomy slug */
@@ -190,21 +190,58 @@ export function TagDisplay({
     (c) => !(c.behavior_type === 'scoring' && c.score_parent_slug === 'audience'),
   );
 
+  // Sort by display_order from taxonomy_config (stored in Supabase)
+  const sortedNonAudienceConfigs = [...nonAudienceConfigs].sort(
+    (a, b) => a.display_order - b.display_order,
+  );
+
+  // Get top 1-2 audience tags (without percentages) for non-detail views
+  const getTopAudiences = (
+    maxCount: number = 2,
+  ): { slug: string; name: string; score: number }[] => {
+    const scores = audienceConfigs
+      .map((c) => {
+        const score = getPayloadValue(payload, c.payload_field) as number | undefined;
+        return { slug: c.slug, name: c.display_name, score: score ?? 0 };
+      })
+      .filter((s) => s.score >= 0.5)
+      .sort((a, b) => b.score - a.score);
+    return scores.slice(0, maxCount);
+  };
+
   if (variant === 'inline') {
-    // Compact inline view - just show tags without labels
+    // Compact inline view - show tags without labels, in correct order
+    const topAudiences = getTopAudiences(2);
+    const audienceColors = COLOR_MAP.violet;
+
     return (
       <div className="flex flex-wrap gap-1">
-        {taxonomyConfig
+        {/* Audience tags first (1-2, no percentages) */}
+        {topAudiences.map((aud) => (
+          <span
+            key={aud.slug}
+            className={`px-1.5 py-0.5 rounded text-xs ${audienceColors.bg} ${audienceColors.text}`}
+          >
+            {aud.name}
+          </span>
+        ))}
+        {/* Other tags in order */}
+        {sortedNonAudienceConfigs
           .filter((c) => c.behavior_type !== 'scoring')
           .map((config) => {
             const colors = COLOR_MAP[config.color] || COLOR_MAP.neutral;
-            const codes =
+            let codes =
               config.behavior_type === 'expandable'
                 ? extractStrings(getPayloadValue(payload, config.payload_field))
                 : extractCodes(getPayloadValue(payload, config.payload_field));
             const lookupMap = taxonomyData[config.slug]
               ? new Map(taxonomyData[config.slug].map((i) => [i.code, i.name]))
               : null;
+
+            // Geography: default to 'Global' if empty
+            if (config.slug === 'geography' && codes.length === 0) {
+              codes = ['global'];
+            }
 
             return codes.slice(0, 2).map((code, i) => (
               <span
@@ -219,54 +256,103 @@ export function TagDisplay({
     );
   }
 
-  // Table view - full display with labels
+  // Show percentages only in detail view
+  const showPercentages = variant === 'table-with-percentages';
+
+  // Table view - full display with labels, ordered correctly
+  // Order: audience first, then geography, industry, topic, process, regulator, regulation, organization, vendor
   return (
     <div className="space-y-2 text-xs">
-      {/* Non-persona categories */}
-      {nonAudienceConfigs.map((config) => (
-        <TagCategoryRow
-          key={config.slug}
-          config={config}
-          payload={payload}
-          taxonomyData={taxonomyData}
-          labelWidth={labelWidth}
-          validationLookups={validationLookups}
-          showValidation={showValidation}
-        />
-      ))}
-
-      {/* Persona scores grouped together */}
+      {/* Audience first */}
       {audienceConfigs.length > 0 && (
         <div className="flex items-start justify-between gap-2">
           <span className={`text-neutral-500 shrink-0 ${labelWidth}`}>Audience</span>
           <div className="flex flex-wrap gap-1 justify-end">
             {(() => {
               const colors = COLOR_MAP.violet;
-              const hasAnyScore = audienceConfigs.some((c) => {
-                const score = getPayloadValue(payload, c.payload_field) as number | undefined;
-                return score !== undefined && score >= (c.score_threshold ?? 0.5);
-              });
 
-              if (!hasAnyScore) {
-                return <span className="text-neutral-600 italic">—</span>;
-              }
+              if (showPercentages) {
+                // Detail view: show all with percentages
+                const hasAnyScore = audienceConfigs.some((c) => {
+                  const score = getPayloadValue(payload, c.payload_field) as number | undefined;
+                  return score !== undefined && score >= (c.score_threshold ?? 0.5);
+                });
 
-              return audienceConfigs.map((c) => {
-                const score = getPayloadValue(payload, c.payload_field) as number | undefined;
-                if (score === undefined || score < (c.score_threshold ?? 0.5)) return null;
-                return (
+                if (!hasAnyScore) {
+                  return <span className="text-neutral-600 italic">—</span>;
+                }
+
+                return audienceConfigs.map((c) => {
+                  const score = getPayloadValue(payload, c.payload_field) as number | undefined;
+                  if (score === undefined || score < (c.score_threshold ?? 0.5)) return null;
+                  return (
+                    <span
+                      key={c.slug}
+                      className={`px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}
+                    >
+                      {c.display_name} ({(score * 100).toFixed(0)}%)
+                    </span>
+                  );
+                });
+              } else {
+                // Main views: show top 1-2 without percentages
+                const topAudiences = getTopAudiences(2);
+                if (topAudiences.length === 0) {
+                  return <span className="text-neutral-600 italic">—</span>;
+                }
+                return topAudiences.map((aud) => (
                   <span
-                    key={c.slug}
+                    key={aud.slug}
                     className={`px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}
                   >
-                    {c.display_name} ({(score * 100).toFixed(0)}%)
+                    {aud.name}
                   </span>
-                );
-              });
+                ));
+              }
             })()}
           </div>
         </div>
       )}
+
+      {/* Other categories in specified order */}
+      {sortedNonAudienceConfigs.map((config) => {
+        // For geography, ensure we always show something
+        if (config.slug === 'geography') {
+          const codes = extractCodes(getPayloadValue(payload, config.payload_field));
+          const colors = COLOR_MAP[config.color] || COLOR_MAP.neutral;
+          const lookupMap = taxonomyData[config.slug]
+            ? new Map(taxonomyData[config.slug].map((i) => [i.code, i.name]))
+            : null;
+          const displayCodes = codes.length > 0 ? codes : ['global'];
+
+          return (
+            <div key={config.slug} className="flex items-start justify-between gap-2">
+              <span className={`text-neutral-500 shrink-0 ${labelWidth}`}>
+                {config.display_name}
+              </span>
+              <div className="flex flex-wrap gap-1 justify-end">
+                {displayCodes.map((code) => (
+                  <span key={code} className={`px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}>
+                    {lookupMap?.get(code) || code}
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <TagCategoryRow
+            key={config.slug}
+            config={config}
+            payload={payload}
+            taxonomyData={taxonomyData}
+            labelWidth={labelWidth}
+            validationLookups={validationLookups}
+            showValidation={showValidation}
+          />
+        );
+      })}
     </div>
   );
 }

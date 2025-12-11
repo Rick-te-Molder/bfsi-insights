@@ -181,9 +181,22 @@ export function DetailPanel({
                 <span className="text-xs text-neutral-500">{String(payload.source_slug)}</span>
               ) : null}
             </div>
+            {/* Title */}
             <h2 className="text-lg font-semibold text-white line-clamp-2">
               {(payload.title as string) || 'Untitled'}
             </h2>
+            {/* Date */}
+            {payload.published_at ? (
+              <p className="text-xs text-neutral-400 mt-1">
+                Published{' '}
+                {new Date(payload.published_at as string).toLocaleDateString('en-GB', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </p>
+            ) : null}
+            {/* URL */}
             <a
               href={item.url}
               target="_blank"
@@ -270,14 +283,14 @@ export function DetailPanel({
           </p>
         </div>
 
-        {/* Tags - Dynamic from taxonomy_config */}
+        {/* Tags - Dynamic from taxonomy_config (with audience percentages) */}
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4">
           <h3 className="text-sm font-semibold text-neutral-400 mb-3">Classification</h3>
           <TagDisplay
             payload={payload}
             taxonomyConfig={taxonomyConfig}
             taxonomyData={taxonomyData}
-            variant="table"
+            variant="table-with-percentages"
           />
         </div>
 

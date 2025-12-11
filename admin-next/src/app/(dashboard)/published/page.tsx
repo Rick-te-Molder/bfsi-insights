@@ -28,7 +28,7 @@ async function getPublications(search?: string) {
     query = query.ilike('title', `%${search}%`);
   }
 
-  const { data, error, count } = await query;
+  const { data, error, count: _count } = await query;
 
   if (error) {
     console.error('Error fetching publications:', error);

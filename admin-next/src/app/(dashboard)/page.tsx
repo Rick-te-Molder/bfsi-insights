@@ -219,21 +219,21 @@ export default async function DashboardPage() {
   const {
     statusCounts,
     recentFailures,
-    publishedCount,
+    publishedCount: _publishedCount,
     successRate,
     recentItemsCount,
     activeTests,
     pendingProposals,
     failedLast24h,
-    oldestPendingAge,
-    oldestQueuedAge,
+    oldestPendingAge: _oldestPendingAge,
+    oldestQueuedAge: _oldestQueuedAge,
     discoveredToday,
     enrichedToday,
     allStatusData,
   } = await getStats();
 
-  // Format age for display
-  const formatAge = (hours: number) => {
+  // Format age for display (reserved for future use)
+  const _formatAge = (hours: number) => {
     if (hours === 0) return '-';
     if (hours < 24) return `${hours}h`;
     const days = Math.floor(hours / 24);
