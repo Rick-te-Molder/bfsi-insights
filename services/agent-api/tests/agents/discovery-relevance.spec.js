@@ -51,7 +51,10 @@ import {
   scoreRelevance,
   scoreRelevanceBatch,
   isTrustedSource,
+  checkContentAge,
+  checkStaleIndicators,
   MIN_RELEVANCE_SCORE,
+  AGE_PENALTY_THRESHOLD_YEARS,
 } from '../../src/agents/discovery-relevance.js';
 
 // Helper to get the mocked create function
@@ -454,5 +457,162 @@ describe('trusted source scoring', () => {
 
     // Should call OpenAI
     expect(createMock).toHaveBeenCalled();
+  });
+});
+
+// KB-206: Staleness detection tests
+describe('checkContentAge', () => {
+  it('returns no penalty for recent content', () => {
+    const recentDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
+    const result = checkContentAge(recentDate.toISOString());
+    expect(result.penalty).toBe(0);
+    expect(result.ageInYears).toBeLessThan(AGE_PENALTY_THRESHOLD_YEARS);
+  });
+
+  it('returns penalty for old content (3 years = -1)', () => {
+    const oldDate = new Date(Date.now() - 3 * 365 * 24 * 60 * 60 * 1000); // 3 years ago
+    const result = checkContentAge(oldDate.toISOString());
+    expect(result.penalty).toBe(1); // 3 years = 1 year over threshold = -1
+  });
+
+  it('returns max penalty for very old content (10+ years = -3)', () => {
+    const veryOldDate = new Date(Date.now() - 10 * 365 * 24 * 60 * 60 * 1000); // 10 years ago
+    const result = checkContentAge(veryOldDate.toISOString());
+    expect(result.penalty).toBe(3); // Max penalty
+  });
+
+  it('returns no penalty for null date', () => {
+    const result = checkContentAge(null);
+    expect(result.penalty).toBe(0);
+    expect(result.ageInDays).toBeNull();
+  });
+
+  it('returns no penalty for invalid date', () => {
+    const result = checkContentAge('not-a-date');
+    expect(result.penalty).toBe(0);
+    expect(result.ageInDays).toBeNull();
+  });
+});
+
+describe('checkStaleIndicators', () => {
+  it('detects "inactive" in title', () => {
+    const result = checkStaleIndicators('INACTIVE - Old Document', '');
+    expect(result.hasStaleIndicators).toBe(true);
+    expect(result.matchedIndicator).toBe('inactive');
+  });
+
+  it('detects "rescinded" in description', () => {
+    const result = checkStaleIndicators('Document Title', 'This regulation has been rescinded');
+    expect(result.hasStaleIndicators).toBe(true);
+    expect(result.matchedIndicator).toBe('rescinded');
+  });
+
+  it('detects "no longer active" phrase', () => {
+    const result = checkStaleIndicators('Old Policy', 'This page is no longer active');
+    expect(result.hasStaleIndicators).toBe(true);
+    expect(result.matchedIndicator).toBe('no longer active');
+  });
+
+  it('returns false for fresh content', () => {
+    const result = checkStaleIndicators(
+      'New Banking Regulation 2024',
+      'Important update for banks',
+    );
+    expect(result.hasStaleIndicators).toBe(false);
+    expect(result.matchedIndicator).toBeNull();
+  });
+
+  it('is case-insensitive', () => {
+    const result = checkStaleIndicators('EXPIRED Document', '');
+    expect(result.hasStaleIndicators).toBe(true);
+    expect(result.matchedIndicator).toBe('expired');
+  });
+});
+
+describe('scoreRelevance with staleness checks', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('skips content with staleness indicators even from trusted sources', async () => {
+    const createMock = getCreateMock();
+
+    const result = await scoreRelevance({
+      title: 'INACTIVE - Old FDIC Letter',
+      source: 'fdic', // Trusted source
+      url: 'https://fdic.gov/inactive-letters/1996',
+    });
+
+    // Should NOT call OpenAI
+    expect(createMock).not.toHaveBeenCalled();
+
+    // Should be rejected as stale
+    expect(result.relevance_score).toBe(1);
+    expect(result.should_queue).toBe(false);
+    expect(result.stale_content).toBe(true);
+  });
+
+  it('applies age penalty to old content from non-trusted sources (soft signal)', async () => {
+    const createMock = getCreateMock();
+    createMock.mockResolvedValue(
+      mockOpenAIResponse({
+        relevance_score: 8,
+        executive_summary: 'Foundational AI paper',
+        skip_reason: null,
+      }),
+    );
+    const oldDate = new Date('2017-06-01').toISOString(); // ~7 years ago
+
+    const result = await scoreRelevance({
+      title: 'Attention Is All You Need', // Foundational paper
+      source: 'arxiv',
+      publishedDate: oldDate,
+    });
+
+    // Should call OpenAI (arxiv is not trusted)
+    expect(createMock).toHaveBeenCalled();
+    // Score should be reduced by age penalty (8 - 3 = 5 for ~7 years)
+    expect(result.relevance_score).toBeLessThan(8);
+    expect(result.should_queue).toBe(true); // Still passes threshold
+  });
+
+  it('reduces trusted source score with age penalty but still queues if high enough', async () => {
+    const createMock = getCreateMock();
+    const oldDate = new Date(Date.now() - 4 * 365 * 24 * 60 * 60 * 1000).toISOString(); // 4 years ago
+
+    const result = await scoreRelevance({
+      title: 'Banking Regulation Framework',
+      source: 'fdic',
+      publishedDate: oldDate,
+    });
+
+    // Should NOT call OpenAI (trusted source)
+    expect(createMock).not.toHaveBeenCalled();
+
+    // Should still queue but with reduced score (8 - 2 = 6)
+    // Penalty formula: floor((4-2)/2) + 1 = 2
+    expect(result.relevance_score).toBe(6);
+    expect(result.should_queue).toBe(true);
+    expect(result.trusted_source).toBe(true);
+    expect(result.age_penalty).toBe(2);
+  });
+
+  it('allows recent content from trusted sources with full score', async () => {
+    const createMock = getCreateMock();
+    const recentDate = new Date().toISOString();
+
+    const result = await scoreRelevance({
+      title: 'New Banking Regulation 2024',
+      source: 'fdic',
+      publishedDate: recentDate,
+    });
+
+    // Should NOT call OpenAI (trusted source)
+    expect(createMock).not.toHaveBeenCalled();
+
+    // Should pass as trusted source with full score
+    expect(result.relevance_score).toBe(8);
+    expect(result.should_queue).toBe(true);
+    expect(result.trusted_source).toBe(true);
   });
 });

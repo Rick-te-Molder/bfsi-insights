@@ -31,6 +31,7 @@ function getSupabase() {
 }
 
 // Load prompt from DB (cached for performance)
+// KB-206: Fail-fast if prompt not in DB - no hidden fallbacks
 async function getSystemPrompt() {
   if (cachedPrompt) return cachedPrompt;
 
@@ -42,8 +43,11 @@ async function getSystemPrompt() {
     .single();
 
   if (error || !data) {
-    console.warn('⚠️ No DB prompt for discovery-relevance, using fallback');
-    return FALLBACK_PROMPT;
+    throw new Error(
+      'CRITICAL: No prompt found for discovery-relevance agent. ' +
+        'Run migrations to seed prompt_versions table. ' +
+        `DB error: ${error?.message || 'No data returned'}`,
+    );
   }
 
   cachedPrompt = data.prompt_text;
@@ -52,6 +56,26 @@ async function getSystemPrompt() {
 
 // Minimum score to queue (below this = auto-skip)
 const MIN_RELEVANCE_SCORE = 4;
+
+// Content age thresholds for soft scoring penalties
+// KB-206: Use as soft signal, not hard cutoff (don't reject "Attention is All You Need")
+const AGE_PENALTY_THRESHOLD_YEARS = 2; // Start penalizing after 2 years
+
+// Staleness indicators - content with these terms is likely outdated/invalid
+// KB-206: Detect tombstone pages and expired content
+const STALENESS_INDICATORS = [
+  'inactive',
+  'rescinded',
+  'expired',
+  'superseded',
+  'archived',
+  'no longer active',
+  'no longer valid',
+  'no longer current',
+  'this page has been removed',
+  'this document has been withdrawn',
+  'this content is outdated',
+];
 
 // Trusted sources that auto-pass relevance filter (core BFSI institutions)
 // These sources publish content that is always relevant to BFSI executives
@@ -74,6 +98,9 @@ const TRUSTED_SOURCES = new Set([
   'fsb', // Financial Stability Board
   'bcbs', // Basel Committee on Banking Supervision
   'fatf', // Financial Action Task Force
+  'fdic', // Federal Deposit Insurance Corporation
+  'occ', // Office of the Comptroller of the Currency
+  'sec', // Securities and Exchange Commission
   // International Organizations
   'imf', // International Monetary Fund
   // Premium Consultants (their content is curated, always relevant)
@@ -81,44 +108,6 @@ const TRUSTED_SOURCES = new Set([
   'bcg', // Boston Consulting Group
   'bain',
 ]);
-
-// Fallback prompt (used if DB prompt not found)
-const FALLBACK_PROMPT = `You are an expert content curator for BFSI (Banking, Financial Services, Insurance) executives.
-
-TARGET AUDIENCE:
-- C-suite executives (CEO, CTO, CDO, CRO, CFO)
-- Senior consultants and strategy advisors
-- Transformation and innovation leaders
-- Risk and compliance officers
-
-THEY CARE ABOUT:
-- AI/ML applications with clear business impact and ROI
-- Regulatory changes affecting operations or strategy
-- Competitive intelligence and market disruptions
-- Technology trends requiring board-level decisions
-- Risk management innovations
-- Digital transformation case studies with results
-
-THEY DON'T CARE ABOUT:
-- Pure academic theory without business application
-- Highly technical implementation details (code, algorithms)
-- Research only relevant to PhD researchers
-- Content targeting retail consumers or students
-- Generic news without strategic implications
-
-SCORING GUIDE:
-- 9-10: Must-read for executives (major regulatory change, breakthrough technology adoption, significant market shift)
-- 7-8: High value (relevant case study, emerging trend with implications, competitive intelligence)
-- 5-6: Moderate value (interesting but not urgent, narrow application)
-- 3-4: Low value (too technical, limited executive relevance)
-- 1-2: Not relevant (wrong industry, wrong audience, off-topic)
-
-Respond with JSON:
-{
-  "relevance_score": <1-10>,
-  "executive_summary": "<1 sentence: why this matters to executives OR why it doesn't>",
-  "skip_reason": "<null if score >= 4, otherwise brief reason like 'Too academic' or 'Wrong industry'>"
-}`;
 
 /**
  * Check if a source is in the trusted allowlist
@@ -132,22 +121,96 @@ export function isTrustedSource(sourceSlug) {
 }
 
 /**
+ * Check content age and calculate penalty
+ * KB-206: Soft signal approach - penalize old content but don't auto-reject
+ * @param {string|Date} publishedDate - Publication date
+ * @returns {{ageInDays: number|null, ageInYears: number|null, penalty: number}}
+ */
+export function checkContentAge(publishedDate) {
+  if (!publishedDate) {
+    return { ageInDays: null, ageInYears: null, penalty: 0 }; // Unknown date, no penalty
+  }
+
+  const pubDate = new Date(publishedDate);
+  if (isNaN(pubDate.getTime())) {
+    return { ageInDays: null, ageInYears: null, penalty: 0 }; // Invalid date, no penalty
+  }
+
+  const ageMs = Date.now() - pubDate.getTime();
+  const ageInDays = Math.floor(ageMs / (1000 * 60 * 60 * 24));
+  const ageInYears = ageInDays / 365;
+
+  // Calculate penalty: -1 per 2 years over threshold, max -3
+  let penalty = 0;
+  if (ageInYears > AGE_PENALTY_THRESHOLD_YEARS) {
+    penalty = Math.min(3, Math.floor((ageInYears - AGE_PENALTY_THRESHOLD_YEARS) / 2) + 1);
+  }
+
+  return { ageInDays, ageInYears, penalty };
+}
+
+/**
+ * Check if content contains staleness indicators
+ * KB-206: Detect tombstone/expired pages
+ * @param {string} title - Content title
+ * @param {string} description - Content description
+ * @param {string} url - Content URL
+ * @returns {{hasStaleIndicators: boolean, matchedIndicator: string|null}}
+ */
+export function checkStaleIndicators(title, description = '', url = '') {
+  const text = `${title} ${description} ${url}`.toLowerCase();
+
+  for (const indicator of STALENESS_INDICATORS) {
+    if (text.includes(indicator)) {
+      return { hasStaleIndicators: true, matchedIndicator: indicator };
+    }
+  }
+
+  return { hasStaleIndicators: false, matchedIndicator: null };
+}
+
+/**
  * Score a candidate for executive relevance
  * @param {Object} candidate - { title, description, source }
  * @returns {Object} - { relevance_score, executive_summary, skip_reason, usage }
  */
 export async function scoreRelevance(candidate) {
-  const { title, description = '', source = '' } = candidate;
+  const { title, description = '', source = '', publishedDate = null, url = '' } = candidate;
 
-  // Fast path: trusted sources auto-pass without LLM call
-  if (isTrustedSource(source)) {
+  // KB-206: Check for staleness indicators BEFORE trusted source bypass
+  const staleCheck = checkStaleIndicators(title, description, url);
+  if (staleCheck.hasStaleIndicators) {
+    console.log(`   ⏭️  Stale content detected: "${staleCheck.matchedIndicator}"`);
     return {
-      relevance_score: 8,
-      executive_summary: `Trusted source: ${source}`,
-      skip_reason: null,
-      should_queue: true,
+      relevance_score: 1,
+      executive_summary: `Stale content: contains "${staleCheck.matchedIndicator}"`,
+      skip_reason: `Stale indicator: ${staleCheck.matchedIndicator}`,
+      should_queue: false,
+      usage: null,
+      stale_content: true,
+    };
+  }
+
+  // KB-206: Check content age for soft penalty (applied later)
+  const ageCheck = checkContentAge(publishedDate);
+  const agePenalty = ageCheck.penalty;
+  if (agePenalty > 0) {
+    console.log(
+      `   📅 Content is ${Math.floor(ageCheck.ageInYears)} years old (penalty: -${agePenalty})`,
+    );
+  }
+
+  // Fast path: trusted sources auto-pass without LLM call (after staleness checks)
+  if (isTrustedSource(source)) {
+    const adjustedScore = Math.max(1, 8 - agePenalty);
+    return {
+      relevance_score: adjustedScore,
+      executive_summary: `Trusted source: ${source}${agePenalty > 0 ? ` (age penalty: -${agePenalty})` : ''}`,
+      skip_reason: adjustedScore < MIN_RELEVANCE_SCORE ? `Old content from trusted source` : null,
+      should_queue: adjustedScore >= MIN_RELEVANCE_SCORE,
       usage: null,
       trusted_source: true,
+      age_penalty: agePenalty,
     };
   }
 
@@ -182,16 +245,25 @@ Description: ${description || '(no description available)'}`;
     const result = JSON.parse(completion.choices[0].message.content);
     const usage = completion.usage;
 
+    // Apply age penalty to LLM score
+    const baseScore = result.relevance_score || 5;
+    const adjustedScore = Math.max(1, baseScore - agePenalty);
+
     return {
-      relevance_score: result.relevance_score || 5,
+      relevance_score: adjustedScore,
       executive_summary: result.executive_summary || '',
-      skip_reason: result.skip_reason || null,
-      should_queue: result.relevance_score >= MIN_RELEVANCE_SCORE,
+      skip_reason:
+        result.skip_reason ||
+        (adjustedScore < MIN_RELEVANCE_SCORE && agePenalty > 0
+          ? `Score reduced by age penalty`
+          : null),
+      should_queue: adjustedScore >= MIN_RELEVANCE_SCORE,
       usage: {
         prompt_tokens: usage.prompt_tokens,
         completion_tokens: usage.completion_tokens,
         total_tokens: usage.total_tokens,
       },
+      age_penalty: agePenalty > 0 ? agePenalty : undefined,
     };
   } catch (error) {
     console.error(`   ⚠️ Relevance scoring failed: ${error.message}`);
@@ -226,4 +298,4 @@ export async function scoreRelevanceBatch(candidates) {
   return results;
 }
 
-export { MIN_RELEVANCE_SCORE };
+export { MIN_RELEVANCE_SCORE, AGE_PENALTY_THRESHOLD_YEARS, STALENESS_INDICATORS };

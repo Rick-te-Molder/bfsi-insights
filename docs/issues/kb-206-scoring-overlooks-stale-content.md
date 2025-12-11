@@ -55,6 +55,36 @@ if (isTrustedSource(source)) {
 
 ---
 
+## Implemented Solution
+
+### Staleness Keywords (Hard Filter)
+
+Content with these indicators is **auto-rejected**:
+
+- `inactive`, `rescinded`, `expired`, `superseded`, `archived`
+- `no longer active`, `no longer valid`, `no longer current`
+- `this page has been removed`, `this document has been withdrawn`
+
+This catches the 1996 FDIC article with "INACTIVE" banner.
+
+### Age Penalty (Soft Signal)
+
+Instead of hard cutoff, age reduces the relevance score:
+
+- **<2 years**: No penalty
+- **2-4 years**: -1 to score
+- **4-6 years**: -2 to score
+- **6+ years**: -3 to score (max penalty)
+
+This approach:
+
+- Allows "Attention is All You Need" (2017) to pass if LLM scores it high
+- Allows Basel II framework to pass from trusted sources
+- Still penalizes old news/press releases appropriately
+- Very old content from trusted sources can still be rejected if score drops below threshold
+
+---
+
 ## Proposed Improvements
 
 ### Option A: Add Date Filtering (Quick Win)
