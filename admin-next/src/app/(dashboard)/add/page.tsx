@@ -54,8 +54,8 @@ export default function AddArticlePage() {
   const [url, setUrl] = useState('');
   const [submitterName, setSubmitterName] = useState('');
   const [submitterAudience, setSubmitterAudience] = useState('');
-  const [submitterChannel, setSubmitterChannel] = useState('signal');
-  const [submitterUrgency, setSubmitterUrgency] = useState('important');
+  const [submitterChannel, setSubmitterChannel] = useState('');
+  const [submitterUrgency, setSubmitterUrgency] = useState('');
   const [whyValuable, setWhyValuable] = useState('');
   const [verbatimComment, setVerbatimComment] = useState('');
   const [suggestedAudiences, setSuggestedAudiences] = useState<string[]>([]);
@@ -128,6 +128,12 @@ export default function AddArticlePage() {
       return;
     }
 
+    if (!submitterName.trim()) {
+      setStatus('error');
+      setMessage('Please enter the submitter name/company');
+      return;
+    }
+
     if (!whyValuable.trim()) {
       setStatus('error');
       setMessage('Please explain why this article was valuable');
@@ -137,6 +143,18 @@ export default function AddArticlePage() {
     if (!submitterAudience) {
       setStatus('error');
       setMessage("Please select the submitter's audience/role");
+      return;
+    }
+
+    if (!submitterChannel) {
+      setStatus('error');
+      setMessage('Please select the channel');
+      return;
+    }
+
+    if (!submitterUrgency) {
+      setStatus('error');
+      setMessage('Please select the urgency level');
       return;
     }
 
@@ -179,14 +197,14 @@ export default function AddArticlePage() {
 
       const { error: queueError } = await supabase.from('ingestion_queue').insert({
         url: url.trim(),
-        url_norm: urlNorm,
-        source: existingSource || 'manual',
         status: 'pending',
         status_code: 200,
+        entry_type: 'manual',
         payload: {
           manual_add: true,
           submitter: submitterName.trim() || null,
           why_valuable: whyValuable.trim(),
+          source: existingSource || null,
         },
       });
 
@@ -303,23 +321,30 @@ export default function AddArticlePage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Name / Company
+                    Name / Company <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="text"
                     value={submitterName}
                     onChange={(e) => setSubmitterName(e.target.value)}
                     placeholder="John Smith, Acme Corp"
+                    required
                     className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-neutral-300 mb-2">Channel</label>
+                  <label className="block text-sm font-medium text-neutral-300 mb-2">
+                    Channel <span className="text-red-400">*</span>
+                  </label>
                   <select
                     value={submitterChannel}
                     onChange={(e) => setSubmitterChannel(e.target.value)}
-                    className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-white focus:border-sky-500 focus:outline-none"
+                    required
+                    className={`w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 focus:border-sky-500 focus:outline-none ${submitterChannel ? 'text-white' : 'text-neutral-500'}`}
                   >
+                    <option value="" disabled>
+                      Select channel...
+                    </option>
                     {CHANNELS.map((c) => (
                       <option key={c.value} value={c.value}>
                         {c.label}
@@ -351,7 +376,9 @@ export default function AddArticlePage() {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-neutral-300 mb-2">Urgency</label>
+                <label className="block text-sm font-medium text-neutral-300 mb-2">
+                  Urgency <span className="text-red-400">*</span>
+                </label>
                 <div className="flex gap-2">
                   {URGENCY_OPTIONS.map((opt) => (
                     <button
@@ -460,67 +487,30 @@ export default function AddArticlePage() {
           </form>
         </div>
       ) : (
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 overflow-hidden">
+        <div>
           {loadingList ? (
             <div className="p-8 text-center text-neutral-500">Loading...</div>
           ) : missedItems.length === 0 ? (
             <div className="p-8 text-center text-neutral-500">No articles added yet</div>
           ) : (
-            <table className="w-full">
-              <thead className="bg-neutral-800/50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-neutral-400 uppercase">
-                    Domain
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-neutral-400 uppercase">
-                    Submitter
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-neutral-400 uppercase">
-                    Why Valuable
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-neutral-400 uppercase">
-                    Urgency
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-neutral-400 uppercase">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-neutral-400 uppercase">
-                    Date
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-800">
-                {missedItems.map((item) => (
-                  <tr key={item.id} className="hover:bg-neutral-800/30">
-                    <td className="px-4 py-3">
-                      <a
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sky-400 hover:underline text-sm"
-                      >
-                        {item.source_domain}
-                      </a>
-                      {item.existing_source_slug && (
-                        <span className="ml-2 text-xs text-amber-400">(tracked)</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm text-white">{item.submitter_name || '—'}</div>
-                      {item.submitter_audience && (
-                        <div className="text-xs text-neutral-500 capitalize">
-                          {item.submitter_audience.replace('_', ' ')}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm text-neutral-300 line-clamp-2 max-w-xs">
-                        {item.why_valuable || '—'}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3">
+            <div className="space-y-3">
+              {missedItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sky-400 hover:underline text-sm font-medium"
+                    >
+                      {item.source_domain}
+                    </a>
+                    <div className="flex items-center gap-2 shrink-0">
                       <span
-                        className={`text-sm ${
+                        className={`text-xs ${
                           item.submitter_urgency === 'critical'
                             ? 'text-red-400'
                             : item.submitter_urgency === 'important'
@@ -530,10 +520,8 @@ export default function AddArticlePage() {
                       >
                         {item.submitter_urgency || '—'}
                       </span>
-                    </td>
-                    <td className="px-4 py-3">
                       <span
-                        className={`px-2 py-1 rounded text-xs ${
+                        className={`px-2 py-0.5 rounded text-xs ${
                           item.resolution_status === 'pending'
                             ? 'bg-neutral-700 text-neutral-300'
                             : item.resolution_status === 'source_added'
@@ -543,14 +531,25 @@ export default function AddArticlePage() {
                       >
                         {item.resolution_status}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-neutral-500">
-                      {new Date(item.submitted_at).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                  {item.why_valuable && (
+                    <p className="text-sm text-neutral-300 line-clamp-2">{item.why_valuable}</p>
+                  )}
+                  <div className="flex items-center justify-between text-xs text-neutral-500">
+                    <span>
+                      {item.submitter_name || 'Anonymous'}
+                      {item.submitter_audience && (
+                        <span className="ml-1 capitalize">
+                          · {item.submitter_audience.replace('_', ' ')}
+                        </span>
+                      )}
+                    </span>
+                    <span>{new Date(item.submitted_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
