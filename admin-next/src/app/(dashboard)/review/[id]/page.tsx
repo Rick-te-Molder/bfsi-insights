@@ -159,12 +159,14 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
             </span>
           </div>
           {/* Title */}
-          <h1 className="text-2xl font-bold text-white">{String(payload.title || 'Untitled')}</h1>
+          <h1 className="text-2xl font-bold text-white">
+            {(payload.title as string) || 'Untitled'}
+          </h1>
           {/* Date */}
-          {payload.published_at && (
+          {typeof payload.published_at === 'string' && (
             <p className="text-sm text-neutral-400 mt-1">
               Published{' '}
-              {new Date(payload.published_at as string).toLocaleDateString('en-GB', {
+              {new Date(payload.published_at).toLocaleDateString('en-GB', {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',
