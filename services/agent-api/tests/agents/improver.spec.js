@@ -719,6 +719,44 @@ describe('Condition branches', () => {
     callCounts = {};
   });
 
+  it('should handle data length check in isSourceTracked - null data', async () => {
+    mockResponses.missed_discovery = {
+      single: { data: { id: 't', url: 'https://x.com/a', miss_category: null }, error: null },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = { limit: { data: null, error: null } };
+    const r = await analyzeMissedDiscovery('t');
+    expect(r.category).toBe('source_not_tracked');
+  });
+
+  it('should handle data length check in isSourceTracked - empty array', async () => {
+    mockResponses.missed_discovery = {
+      single: { data: { id: 't', url: 'https://x.com/a', miss_category: null }, error: null },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = { limit: { data: [], error: null } };
+    const r = await analyzeMissedDiscovery('t');
+    expect(r.category).toBe('source_not_tracked');
+  });
+
+  it('should handle data length check in checkIngestionHistory - null data', async () => {
+    mockResponses.missed_discovery = {
+      single: { data: { id: 't', url: 'https://x.com/a', miss_category: null }, error: null },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = { limit: { data: [{ slug: 's', rss_feed: 'r' }], error: null } };
+    mockResponses.ingestion_queue = { limit: { data: null, error: null } };
+    const r = await analyzeMissedDiscovery('t');
+    expect(r.category).toBe('pattern_missing');
+  });
+
+  it('should handle error?.message when error is null', async () => {
+    mockResponses.missed_discovery = { single: { data: null, error: null } };
+    const r = await analyzeMissedDiscovery('t');
+    expect(r.success).toBe(false);
+    expect(r.error).toBe('Not found');
+  });
+
   it('should handle statusCode 540 without rejected status', async () => {
     mockResponses.missed_discovery = {
       single: {
