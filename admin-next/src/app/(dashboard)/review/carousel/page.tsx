@@ -3,10 +3,16 @@ import Link from 'next/link';
 import { CarouselReview } from './carousel-review';
 import type { TaxonomyConfig, TaxonomyData, TaxonomyItem } from '@/components/tags';
 
+// Status codes (see docs/architecture/pipeline-status-codes.md)
+const STATUS_CODE = {
+  PENDING_REVIEW: 300,
+};
+
 interface QueueItem {
   id: string;
   url: string;
   status: string;
+  status_code: number;
   payload: Record<string, unknown>;
   discovered_at: string;
 }
@@ -25,11 +31,11 @@ async function getReviewData() {
 
   const taxonomyConfig = (configData || []) as TaxonomyConfig[];
 
-  // Fetch queue items
+  // Fetch queue items using status_code for consistency with dashboard
   const queueResult = await supabase
     .from('ingestion_queue')
     .select('*')
-    .eq('status', 'enriched')
+    .eq('status_code', STATUS_CODE.PENDING_REVIEW)
     .order('fetched_at', { ascending: false })
     .limit(100);
 
@@ -59,14 +65,8 @@ async function getReviewData() {
     return { items: [], taxonomyConfig, taxonomyData };
   }
 
-  // Filter to items that have been enriched (have summary)
-  const items = (queueResult.data || []).filter(
-    (item: QueueItem) =>
-      item.payload &&
-      typeof item.payload === 'object' &&
-      'summary' in item.payload &&
-      (item.payload.summary as Record<string, unknown>)?.short,
-  );
+  // Items at status_code 300 should already have summary (that's what PENDING_REVIEW means)
+  const items = queueResult.data || [];
 
   return {
     items: items as QueueItem[],

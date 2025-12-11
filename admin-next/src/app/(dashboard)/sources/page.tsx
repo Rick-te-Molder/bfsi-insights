@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Source } from '@/types/database';
 
@@ -135,16 +135,21 @@ export default function SourcesPage() {
     }
   }
 
-  function formatTimeAgo(date: string | null): string {
-    if (!date) return 'Never';
-    const diff = Date.now() - new Date(date).getTime();
-    const hours = Math.floor(diff / (60 * 60 * 1000));
-    if (hours < 1) return 'Just now';
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    if (days === 1) return '1 day ago';
-    return `${days} days ago`;
-  }
+  // eslint-disable-next-line react-hooks/purity -- Date.now() is intentionally computed once on mount for relative time display
+  const now = useMemo(() => Date.now(), []);
+  const formatTimeAgo = useCallback(
+    (date: string | null): string => {
+      if (!date) return 'Never';
+      const diff = now - new Date(date).getTime();
+      const hours = Math.floor(diff / (60 * 60 * 1000));
+      if (hours < 1) return 'Just now';
+      if (hours < 24) return `${hours}h ago`;
+      const days = Math.floor(hours / 24);
+      if (days === 1) return '1 day ago';
+      return `${days} days ago`;
+    },
+    [now],
+  );
 
   function getCategoryColor(category: string) {
     const colors: Record<string, string> = {

@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { formatDateTime, getStatusColor, truncate } from '@/lib/utils';
 import { DetailPanel } from './detail-panel';
 import { bulkApproveAction, bulkRejectAction, bulkReenrichAction } from './actions';
@@ -54,7 +53,7 @@ interface MasterDetailViewProps {
 
 export function MasterDetailView({
   items,
-  status,
+  status: _status,
   taxonomyConfig,
   taxonomyData,
 }: MasterDetailViewProps) {
@@ -132,7 +131,7 @@ export function MasterDetailView({
           {listItems.length === 0 ? (
             <div className="p-8 text-center text-neutral-500">No items found</div>
           ) : (
-            listItems.map((item, index) => (
+            listItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setSelectedId(item.id)}

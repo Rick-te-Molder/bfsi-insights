@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
 import { formatDateTime, getStatusColor, truncate } from '@/lib/utils';
 import { bulkReenrichAction, bulkRejectAction, bulkApproveAction } from './actions';
 import type { TaxonomyConfig, TaxonomyData } from '@/components/tags';
@@ -29,13 +28,16 @@ interface ReviewListProps {
 }
 
 // Note: taxonomyConfig/taxonomyData available for future inline tag display
-export function ReviewList({ items, status, taxonomyConfig, taxonomyData }: ReviewListProps) {
+export function ReviewList({
+  items,
+  status,
+  taxonomyConfig: _taxonomyConfig,
+  taxonomyData: _taxonomyData,
+}: ReviewListProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState<string | null>(null);
-  const [processingCount, setProcessingCount] = useState(0);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const router = useRouter();
-  const supabase = createClient();
 
   const showSuccess = (message: string) => {
     setSuccessMessage(message);
@@ -146,8 +148,8 @@ export function ReviewList({ items, status, taxonomyConfig, taxonomyData }: Revi
         <div className="rounded-lg bg-sky-500/10 border border-sky-500/20 px-4 py-3 flex items-center gap-3">
           <div className="animate-spin rounded-full h-4 w-4 border-2 border-sky-500 border-t-transparent"></div>
           <span className="text-sky-400 text-sm font-medium">
-            {loading === 'approve' && `Approving... ${processingCount}/${selectedIds.size}`}
-            {loading === 'reject' && `Rejecting... ${processingCount}/${selectedIds.size}`}
+            {loading === 'approve' && 'Approving...'}
+            {loading === 'reject' && 'Rejecting...'}
             {loading === 'reenrich' && 'Queuing for re-enrichment...'}
           </span>
         </div>
