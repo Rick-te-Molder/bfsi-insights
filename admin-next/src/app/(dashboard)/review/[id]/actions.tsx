@@ -105,13 +105,12 @@ export function ReviewActions({ item }: { item: QueueItem }) {
 
       if (error) throw error;
 
-      alert('Item queued for re-enrichment. The agent will process it shortly.');
+      router.push('/review');
       router.refresh();
     } catch (err) {
       alert(
         `Failed to queue for re-enrichment: ${err instanceof Error ? err.message : 'Unknown error'}`,
       );
-    } finally {
       setLoading(null);
     }
   };
