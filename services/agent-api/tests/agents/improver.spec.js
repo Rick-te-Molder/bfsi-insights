@@ -711,3 +711,205 @@ describe('Update error handling', () => {
     expect(result).toBeDefined();
   });
 });
+
+describe('Condition branches', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockResponses = {};
+    callCounts = {};
+  });
+
+  it('should handle statusCode 540 without rejected status', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: { id: 'test', url: 'https://test.com/a', miss_category: null },
+        error: null,
+      },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = {
+      limit: { data: [{ slug: 's', rss_feed: 'r' }], error: null },
+    };
+    mockResponses.ingestion_queue = {
+      limit: { data: [{ status: 'pending', status_code: 540 }], error: null },
+    };
+    const r = await analyzeMissedDiscovery('test');
+    expect(r.category).toBe('filter_rejected');
+  });
+
+  it('should handle statusCode 500 without failed status', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: { id: 'test', url: 'https://test.com/a', miss_category: null },
+        error: null,
+      },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = {
+      limit: { data: [{ slug: 's', rss_feed: 'r' }], error: null },
+    };
+    mockResponses.ingestion_queue = {
+      limit: { data: [{ status: 'pending', status_code: 500 }], error: null },
+    };
+    const r = await analyzeMissedDiscovery('test');
+    expect(r.category).toBe('crawl_failed');
+  });
+
+  it('should handle daysLate <= 3', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: {
+          id: 'test',
+          url: 'https://test.com/a',
+          miss_category: null,
+          submitted_at: '2024-01-12T00:00:00Z',
+        },
+        error: null,
+      },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = {
+      limit: { data: [{ slug: 's', rss_feed: 'r' }], error: null },
+    };
+    mockResponses.ingestion_queue = {
+      limit: {
+        data: [{ status: 'queued', status_code: 200, discovered_at: '2024-01-10T00:00:00Z' }],
+        error: null,
+      },
+    };
+    const r = await analyzeMissedDiscovery('test');
+    expect(r.category).toBe('pattern_wrong');
+  });
+
+  it('should handle missing discovered_at', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: {
+          id: 'test',
+          url: 'https://test.com/a',
+          miss_category: null,
+          submitted_at: '2024-01-15',
+        },
+        error: null,
+      },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = {
+      limit: { data: [{ slug: 's', rss_feed: 'r' }], error: null },
+    };
+    mockResponses.ingestion_queue = {
+      limit: { data: [{ status: 'queued', status_code: 200 }], error: null },
+    };
+    const r = await analyzeMissedDiscovery('test');
+    expect(r.category).toBe('pattern_wrong');
+  });
+
+  it('should handle missing submitted_at for too_slow check', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: { id: 'test', url: 'https://test.com/a', miss_category: null },
+        error: null,
+      },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = {
+      limit: { data: [{ slug: 's', rss_feed: 'r' }], error: null },
+    };
+    mockResponses.ingestion_queue = {
+      limit: {
+        data: [{ status: 'queued', status_code: 200, discovered_at: '2024-01-01' }],
+        error: null,
+      },
+    };
+    const r = await analyzeMissedDiscovery('test');
+    expect(r.category).toBe('pattern_wrong');
+  });
+
+  it('should handle source with sitemap only', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: { id: 'test', url: 'https://test.com/a', miss_category: null },
+        error: null,
+      },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = {
+      limit: { data: [{ slug: 's', sitemap_url: 'http://sitemap' }], error: null },
+    };
+    mockResponses.ingestion_queue = {
+      limit: { data: [], error: null },
+    };
+    const r = await analyzeMissedDiscovery('test');
+    expect(r.category).toBe('pattern_missing');
+  });
+
+  it('should handle source with scraper only', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: { id: 'test', url: 'https://test.com/a', miss_category: null },
+        error: null,
+      },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = {
+      limit: { data: [{ slug: 's', scraper_config: { sel: '.x' } }], error: null },
+    };
+    mockResponses.ingestion_queue = {
+      limit: { data: [], error: null },
+    };
+    const r = await analyzeMissedDiscovery('test');
+    expect(r.category).toBe('pattern_missing');
+  });
+
+  it('should handle payload without rejection_reason', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: { id: 'test', url: 'https://test.com/a', miss_category: null },
+        error: null,
+      },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = {
+      limit: { data: [{ slug: 's', rss_feed: 'r' }], error: null },
+    };
+    mockResponses.ingestion_queue = {
+      limit: { data: [{ status: 'failed', status_code: 500, payload: null }], error: null },
+    };
+    const r = await analyzeMissedDiscovery('test');
+    expect(r.category).toBe('crawl_failed');
+  });
+
+  it('should handle empty ingestion data array for days_late', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: {
+          id: 'test',
+          url: 'https://test.com/a',
+          miss_category: null,
+          submitted_at: '2024-01-15',
+        },
+        error: null,
+      },
+      limit: { data: [], error: null },
+    };
+    const r = await analyzeMissedDiscovery('test');
+    expect(r).toBeDefined();
+  });
+
+  it('should handle ingestion data without payload', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: {
+          id: 'test',
+          url: 'https://test.com/a',
+          miss_category: null,
+          submitted_at: '2024-01-15',
+        },
+        error: null,
+      },
+      limit: { data: [{}], error: null },
+    };
+    const r = await analyzeMissedDiscovery('test');
+    expect(r).toBeDefined();
+  });
+});
