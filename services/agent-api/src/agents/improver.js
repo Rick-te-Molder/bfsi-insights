@@ -68,7 +68,10 @@ async function isSourceTracked(domain) {
     .ilike('domain', `%${domain}%`)
     .limit(1);
 
-  return data && data.length > 0 ? data[0] : null;
+  if (data && data.length > 0) {
+    return data[0];
+  }
+  return null;
 }
 
 /**
@@ -81,7 +84,10 @@ async function checkIngestionHistory(urlNorm) {
     .eq('url_norm', urlNorm)
     .limit(1);
 
-  return data && data.length > 0 ? data[0] : null;
+  if (data && data.length > 0) {
+    return data[0];
+  }
+  return null;
 }
 
 /**
@@ -215,7 +221,8 @@ export async function analyzeMissedDiscovery(missedId) {
     .single();
 
   if (error || !missed) {
-    return { success: false, error: error?.message || 'Not found' };
+    const errorMsg = error ? error.message : 'Not found';
+    return { success: false, error: errorMsg };
   }
 
   // Skip if already classified
@@ -237,8 +244,11 @@ export async function analyzeMissedDiscovery(missedId) {
       .eq('url_norm', urlNorm)
       .limit(1);
 
-    if (ingestion?.[0]?.payload?.published_at) {
-      daysLate = daysBetween(ingestion[0].payload.published_at, missed.submitted_at);
+    const firstIngestion = ingestion && ingestion[0];
+    const publishedAt =
+      firstIngestion && firstIngestion.payload && firstIngestion.payload.published_at;
+    if (publishedAt) {
+      daysLate = daysBetween(publishedAt, missed.submitted_at);
     }
   }
 
@@ -249,8 +259,8 @@ export async function analyzeMissedDiscovery(missedId) {
       miss_category: classification.category,
       miss_details: classification.details,
       source_domain: extractDomain(missed.url),
-      days_late: daysLate || classification.details?.days_late,
-      existing_source_slug: classification.details?.source_slug || null,
+      days_late: daysLate || (classification.details && classification.details.days_late),
+      existing_source_slug: (classification.details && classification.details.source_slug) || null,
     })
     .eq('id', missedId);
 
