@@ -105,9 +105,9 @@ export default function MissedDiscoveryPage() {
 
       // Check if we already track this source
       supabase
-        .from('source')
+        .from('kb_source')
         .select('slug, name')
-        .ilike('url', `%${domain}%`)
+        .ilike('domain', `%${domain}%`)
         .limit(1)
         .then(({ data }) => {
           if (data && data.length > 0) {

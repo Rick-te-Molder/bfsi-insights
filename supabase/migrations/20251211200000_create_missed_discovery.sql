@@ -53,7 +53,7 @@ CREATE TABLE missed_discovery (
   
   -- Learning extraction (by Improver agent)
   improvement_suggestions JSONB,
-  contributed_to_source UUID, -- References source.id but no FK to avoid migration order issues
+  contributed_to_source UUID REFERENCES kb_source(id),
   contributed_to_pattern TEXT,
   
   -- Impact metrics
