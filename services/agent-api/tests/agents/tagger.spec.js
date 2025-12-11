@@ -81,7 +81,7 @@ describe('Tagger Agent', () => {
   let runTagger;
 
   beforeAll(async () => {
-    const module = await import('../../src/agents/tag.js');
+    const module = await import('../../src/agents/tagger.js');
     runTagger = module.runTagger;
   });
 
