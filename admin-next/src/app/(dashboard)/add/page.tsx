@@ -12,6 +12,7 @@ interface MissedDiscovery {
   source_domain: string;
   submitter_name: string | null;
   submitter_audience: string | null;
+  submitter_channel: string | null;
   why_valuable: string | null;
   submitter_urgency: string | null;
   resolution_status: string;
@@ -64,6 +65,7 @@ export default function AddArticlePage() {
   const [message, setMessage] = useState('');
   const [detectedDomain, setDetectedDomain] = useState<string | null>(null);
   const [existingSource, setExistingSource] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -72,7 +74,7 @@ export default function AddArticlePage() {
     const { data, error } = await supabase
       .from('missed_discovery')
       .select(
-        'id, url, source_domain, submitter_name, submitter_audience, why_valuable, submitter_urgency, resolution_status, submitted_at, existing_source_slug',
+        'id, url, source_domain, submitter_name, submitter_audience, submitter_channel, why_valuable, submitter_urgency, resolution_status, submitted_at, existing_source_slug',
       )
       .order('submitted_at', { ascending: false })
       .limit(100);
@@ -166,54 +168,78 @@ export default function AddArticlePage() {
       const urlNorm = (urlObj.origin + urlObj.pathname).toLowerCase();
       const domain = urlObj.hostname.replace(/^www\./, '');
 
-      const { data: existing } = await supabase
-        .from('missed_discovery')
-        .select('id')
-        .eq('url_norm', urlNorm)
-        .maybeSingle();
+      if (editingId) {
+        // Update existing item
+        const { error } = await supabase
+          .from('missed_discovery')
+          .update({
+            submitter_name: submitterName.trim() || null,
+            submitter_audience: submitterAudience,
+            submitter_channel: submitterChannel,
+            submitter_urgency: submitterUrgency,
+            why_valuable: whyValuable.trim(),
+            verbatim_comment: verbatimComment.trim() || null,
+            suggested_audiences: suggestedAudiences.length > 0 ? suggestedAudiences : null,
+          })
+          .eq('id', editingId);
 
-      if (existing) {
-        setStatus('error');
-        setMessage('This URL has already been reported');
-        return;
-      }
+        if (error) throw error;
 
-      const { error } = await supabase.from('missed_discovery').insert({
-        url: url.trim(),
-        url_norm: urlNorm,
-        submitter_name: submitterName.trim() || null,
-        submitter_type: 'client',
-        submitter_audience: submitterAudience,
-        submitter_channel: submitterChannel,
-        submitter_urgency: submitterUrgency,
-        why_valuable: whyValuable.trim(),
-        verbatim_comment: verbatimComment.trim() || null,
-        suggested_audiences: suggestedAudiences.length > 0 ? suggestedAudiences : null,
-        source_domain: domain,
-        existing_source_slug: existingSource,
-      });
+        setStatus('success');
+        setMessage('Article updated successfully!');
+        setEditingId(null);
+        loadMissedItems();
+      } else {
+        // Check for duplicates only on new submissions
+        const { data: existing } = await supabase
+          .from('missed_discovery')
+          .select('id')
+          .eq('url_norm', urlNorm)
+          .maybeSingle();
 
-      if (error) throw error;
+        if (existing) {
+          setStatus('error');
+          setMessage('This URL has already been reported');
+          return;
+        }
 
-      const { error: queueError } = await supabase.from('ingestion_queue').insert({
-        url: url.trim(),
-        status: 'pending',
-        status_code: 200,
-        entry_type: 'manual',
-        payload: {
-          manual_add: true,
-          submitter: submitterName.trim() || null,
+        const { error } = await supabase.from('missed_discovery').insert({
+          url: url.trim(),
+          url_norm: urlNorm,
+          submitter_name: submitterName.trim() || null,
+          submitter_type: 'client',
+          submitter_audience: submitterAudience,
+          submitter_channel: submitterChannel,
+          submitter_urgency: submitterUrgency,
           why_valuable: whyValuable.trim(),
-          source: existingSource || null,
-        },
-      });
+          verbatim_comment: verbatimComment.trim() || null,
+          suggested_audiences: suggestedAudiences.length > 0 ? suggestedAudiences : null,
+          source_domain: domain,
+          existing_source_slug: existingSource,
+        });
 
-      if (queueError) {
-        console.error('Failed to add to ingestion queue:', queueError);
+        if (error) throw error;
+
+        const { error: queueError } = await supabase.from('ingestion_queue').insert({
+          url: url.trim(),
+          status: 'pending',
+          status_code: 200,
+          entry_type: 'manual',
+          payload: {
+            manual_add: true,
+            submitter: submitterName.trim() || null,
+            why_valuable: whyValuable.trim(),
+            source: existingSource || null,
+          },
+        });
+
+        if (queueError) {
+          console.error('Failed to add to ingestion queue:', queueError);
+        }
+
+        setStatus('success');
+        setMessage('Article submitted! It will be processed AND help improve our discovery.');
       }
-
-      setStatus('success');
-      setMessage('Article submitted! It will be processed AND help improve our discovery.');
 
       setUrl('');
       setSubmitterName('');
@@ -233,6 +259,45 @@ export default function AddArticlePage() {
     setSuggestedAudiences((prev) =>
       prev.includes(audience) ? prev.filter((a) => a !== audience) : [...prev, audience],
     );
+  };
+
+  const editItem = (item: MissedDiscovery) => {
+    setEditingId(item.id);
+    setUrl(item.url);
+    setSubmitterName(item.submitter_name || '');
+    setSubmitterAudience(item.submitter_audience || '');
+    setSubmitterChannel(item.submitter_channel || '');
+    setSubmitterUrgency(item.submitter_urgency || '');
+    setWhyValuable(item.why_valuable || '');
+    setDetectedDomain(item.source_domain);
+    setExistingSource(item.existing_source_slug);
+    setActiveTab('add');
+    setStatus('idle');
+    setMessage('');
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setUrl('');
+    setSubmitterName('');
+    setSubmitterAudience('');
+    setSubmitterChannel('');
+    setSubmitterUrgency('');
+    setWhyValuable('');
+    setVerbatimComment('');
+    setSuggestedAudiences([]);
+    setDetectedDomain(null);
+    setExistingSource(null);
+    setStatus('idle');
+    setMessage('');
+  };
+
+  const deleteItem = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this article?')) return;
+    const { error } = await supabase.from('missed_discovery').delete().eq('id', id);
+    if (!error) {
+      setMissedItems((prev) => prev.filter((item) => item.id !== id));
+    }
   };
 
   return (
@@ -269,6 +334,18 @@ export default function AddArticlePage() {
 
       {activeTab === 'add' ? (
         <div className="max-w-2xl">
+          {editingId && (
+            <div className="mb-4 flex items-center justify-between rounded-lg border border-sky-500/20 bg-sky-500/10 p-3">
+              <span className="text-sky-300">✏️ Editing article</span>
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="text-sm text-neutral-400 hover:text-white"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
           {status === 'success' && (
             <div className="mb-6 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4">
               <p className="text-emerald-300">✅ {message}</p>
@@ -475,7 +552,11 @@ export default function AddArticlePage() {
                 disabled={status === 'submitting'}
                 className="rounded-lg bg-sky-600 px-6 py-3 font-medium text-white hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {status === 'submitting' ? 'Submitting...' : 'Add Article'}
+                {status === 'submitting'
+                  ? 'Submitting...'
+                  : editingId
+                    ? 'Update Article'
+                    : 'Add Article'}
               </button>
               <Link
                 href="/review"
@@ -545,7 +626,21 @@ export default function AddArticlePage() {
                         </span>
                       )}
                     </span>
-                    <span>{new Date(item.submitted_at).toLocaleDateString()}</span>
+                    <div className="flex items-center gap-3">
+                      <span>{new Date(item.submitted_at).toLocaleDateString()}</span>
+                      <button
+                        onClick={() => editItem(item)}
+                        className="text-sky-400 hover:text-sky-300"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deleteItem(item.id)}
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
