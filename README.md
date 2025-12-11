@@ -12,12 +12,12 @@ A static-plus-agentic platform combining Astro, Supabase, Express-based agents, 
 
 BFSI Insights collects, enriches, classifies, and publishes high-quality AI-related insights for the banking, financial-services, and insurance industries. It automates discovery while maintaining editorial review and high data quality.
 
-### 1.2 Audience
+### 1.2 Target Audience
 
-- Executives and professionals in BFSI
-- Researchers following AI developments
-- Contributors and developers of the platform
-- Auditors, security teams, and technical reviewers
+- **Executives** — C-suite, senior consultants, strategy advisors in BFSI
+- **Functional Specialists** — Risk, compliance, operations, product managers
+- **Engineers** — Developers, architects, data scientists building BFSI solutions
+- **Researchers** — Academics, analysts tracking AI/fintech developments
 
 ### 1.3 Key Features
 
@@ -136,13 +136,15 @@ For detailed architecture diagrams, see:
 ### 5.1 AI Agents
 
 ```
-Agent                    Purpose                              Model/Tool
+Agent              Purpose                              Model/Tool
 ─────────────────────────────────────────────────────────────────────────
-discovery-relevance.js   Find candidates from RSS/sitemaps    GPT-4o-mini
-filter.js                Check BFSI relevance                 GPT-4o-mini
-summarize.js             Generate summaries (short/med/long)  Claude Sonnet 4
-tag.js                   Classify with taxonomies             GPT-4o-mini
-thumbnail.js             Screenshot article for preview       Playwright
+discoverer.js      Find candidates from RSS/sitemaps    —
+scorer.js          Score relevance per audience         GPT-4o-mini
+screener.js        Second-pass BFSI relevance filter    GPT-4o-mini
+summarizer.js      Generate summaries (short/med/long)  Claude Sonnet 4
+tagger.js          Classify with taxonomies             GPT-4o
+thumbnailer.js     Screenshot article for preview       Playwright
+enricher.js        Orchestrate enrichment pipeline      —
 ```
 
 **Discovery modes:**
@@ -157,23 +159,23 @@ thumbnail.js             Screenshot article for preview       Playwright
 
 Finds new content from RSS feeds and sitemaps.
 
-| Step              | Agent/Tool                             | Status After | Description                     |
-| ----------------- | -------------------------------------- | ------------ | ------------------------------- |
-| RSS/Sitemap fetch | `discover.js`                          | —            | Parse feeds, extract URLs       |
-| Relevance scoring | `discovery-relevance.js` (GPT-4o-mini) | `pending`    | Score 0-1, filter low-relevance |
+| Step              | Agent/Tool                | Status After | Description               |
+| ----------------- | ------------------------- | ------------ | ------------------------- |
+| RSS/Sitemap fetch | `discoverer.js`           | —            | Parse feeds, extract URLs |
+| Relevance scoring | `scorer.js` (GPT-4o-mini) | `pending`    | Score 1-10 per audience   |
 
 #### Process 2: Enrichment (automated)
 
-Orchestrated by `enrich-item.js`. Runs on `pending` or `queued` items.
+Orchestrated by `enricher.js`. Runs on `pending_enrichment` items.
 
 | Step             | Agent/Tool                                       | Status After              | Description                          |
 | ---------------- | ------------------------------------------------ | ------------------------- | ------------------------------------ |
 | Start processing | —                                                | `processing`              | Lock item                            |
 | Content fetch    | `content-fetcher.js` (Playwright for some sites) | `fetched`                 | Download page, extract text          |
-| Relevance filter | `filter.js` (GPT-4o-mini)                        | `filtered` or `rejected`¹ | Verify BFSI relevance                |
-| Summarization    | `summarize.js` (Claude Sonnet 4)                 | `summarized`              | Generate short/medium/long summaries |
-| Tagging          | `tag.js` (GPT-4o-mini)                           | `tagged`                  | Classify with taxonomies             |
-| Thumbnail        | `thumbnail.js` (Playwright)                      | `enriched`                | Screenshot article                   |
+| Relevance filter | `screener.js` (GPT-4o-mini)                      | `filtered` or `rejected`¹ | Verify BFSI relevance                |
+| Summarization    | `summarizer.js` (Claude Sonnet 4)                | `summarized`              | Generate short/medium/long summaries |
+| Tagging          | `tagger.js` (GPT-4o)                             | `tagged`                  | Classify with taxonomies             |
+| Thumbnail        | `thumbnailer.js` (Playwright)                    | `enriched`                | Screenshot article                   |
 
 > ¹ Filter rejection only applies to nightly discovery. Manual submissions skip rejection.
 
@@ -196,96 +198,24 @@ Human reviews enriched items in admin UI.
 
 #### Status Reference
 
-| Status       | Set By               | Description                             |
-| ------------ | -------------------- | --------------------------------------- |
-| `pending`    | discover.js          | Awaiting enrichment (from nightly)      |
-| `queued`     | Admin UI             | Awaiting enrichment (manual submission) |
-| `processing` | enrich-item.js       | Currently being processed               |
-| `fetched`    | content-fetcher.js   | Page content downloaded                 |
-| `filtered`   | filter.js            | Passed BFSI relevance check             |
-| `summarized` | summarize.js         | AI summaries generated                  |
-| `tagged`     | tag.js               | Taxonomy tags applied                   |
-| `enriched`   | enrich-item.js       | Ready for human review                  |
-| `approved`   | Admin UI             | Human approved                          |
-| `rejected`   | filter.js / Admin UI | Not relevant or human rejected          |
-| `failed`     | enrich-item.js       | Processing error (retryable)            |
+See `docs/architecture/pipeline-status-codes.md` for full status code documentation.
 
-### 5.3 Content Ingestion Options
+### 5.3 Content Ingestion
 
-#### Option 1: Manual URL Submission (Real-time)
+**Manual:** `/admin/add` → auto-enriched → `/admin/review` → Approve → Published
 
-```
-/admin/add → DB Trigger → Render API → enriched → /admin/review → Approve → Published
-```
-
-1. Paste URL at `/admin/add`
-2. DB trigger fires, calls Render-hosted Agent API
-3. UI polls for status updates (`queued` → `processing` → `enriched`)
-4. Review and approve at `/admin/review`
-5. Click "Trigger Build" → Cloudflare deploys
-
-#### Option 2: Nightly Pipeline (🌙 Automated)
-
-```
-pending → fetched → filtered → summarized → tagged → enriched → 👤 Review → Published
-```
-
-Runs automatically at 2 AM UTC via GitHub Actions:
-
-1. **Discovery**: Crawls RSS feeds and sitemaps; LLM scores relevance (`--agentic` mode)
-2. **Enrichment**: Runs filter → summarize → tag → thumbnail (limit 20/night)
-3. **Review**: Human approves at `/admin/review`
-4. **Deploy**: Click "Trigger Build" or push to git
+**Nightly (2 AM UTC):** Discovery → Enrichment (limit 20) → Human Review → Deploy
 
 ### 5.4 Running the Pipeline
-
-**CLI:**
 
 ```bash
 node services/agent-api/src/cli.js discovery --limit=10
 node services/agent-api/src/cli.js enrich --limit=20
-node services/agent-api/src/cli.js process-queue --limit=5
 ```
 
-**HTTP API:**
+### 5.5 Agent Evaluation
 
-```bash
-POST /api/agents/run/discovery
-POST /api/agents/run/filter
-POST /api/agents/run/summarize
-```
-
-### 5.5 Agent Evaluation & Optimization
-
-The core workflow produces **rejection reasons** when humans reject articles. This data feeds into a **periodic optimization cycle** (separate from the content workflow).
-
-```
-Core Workflow:      Entry → Pipeline → Review → Published/Rejected
-                                                      ↓
-                                             rejection_reason stored
-                                                      ↓
-Optimization:       Periodic analysis → Prompt tuning → A/B testing
-(monthly)
-```
-
-#### Evaluation Framework (`evals.js`)
-
-| Method                 | Description                                          | Use Case                                |
-| ---------------------- | ---------------------------------------------------- | --------------------------------------- |
-| **Golden Dataset**     | Compare agent output against human-verified examples | Regression testing after prompt changes |
-| **LLM-as-Judge**       | Second LLM evaluates output quality (0-1 score)      | Continuous quality monitoring           |
-| **A/B Prompt Testing** | Compare two prompt versions side-by-side             | Validating prompt improvements          |
-
-#### Optimization Tables
-
-| Table             | Purpose                                       |
-| ----------------- | --------------------------------------------- |
-| `eval_golden_set` | Human-verified input/output pairs per agent   |
-| `eval_run`        | Evaluation run metadata and results           |
-| `eval_result`     | Individual example results per run            |
-| `prompt_versions` | Prompt version history with `is_current` flag |
-
-> **Note:** Rejection reasons from human review should be periodically analyzed to identify systematic agent failures, then addressed via prompt refinement validated through EVALs.
+See `docs/agents/manifest.yaml` for agent registry and `docs/issues/kb-207-best-in-class-prompt-engineering.md` for eval framework details.
 
 ---
 
@@ -410,61 +340,21 @@ node src/index.js
 | `npm run preview` | Preview build locally before deploying     |
 | `npm run lint`    | Run ESLint on all files                    |
 
-### 9.2 Agent CLI (Command-Line Interface) Commands
+### 9.2 Agent CLI Commands
 
 ```bash
-node services/agent-api/src/cli.js discovery              # Find new publications (rule-based)
-node services/agent-api/src/cli.js discovery --agentic    # LLM relevance scoring (nightly default)
-node services/agent-api/src/cli.js discovery --hybrid     # Embeddings + LLM for uncertain
-node services/agent-api/src/cli.js discovery --limit=10   # Limit to 10 items
-node services/agent-api/src/cli.js discovery --dry-run    # Preview only
-node services/agent-api/src/cli.js discovery --premium    # Include premium sources
-
-node services/agent-api/src/cli.js classics               # Discover classic papers via Semantic Scholar
-node services/agent-api/src/cli.js classics --no-expand   # Skip citation expansion
-node services/agent-api/src/cli.js classics --dry-run     # Preview only
-
-node services/agent-api/src/cli.js enrich --limit=20      # Full pipeline
-node services/agent-api/src/cli.js filter --limit=10      # Filter only
-node services/agent-api/src/cli.js summarize --limit=5    # Summarize only
-node services/agent-api/src/cli.js tag --limit=5          # Tag only
-node services/agent-api/src/cli.js thumbnail --limit=5    # Thumbnails only
-
-node services/agent-api/src/cli.js process-queue          # Process manual submissions
-node services/agent-api/src/cli.js queue-health           # Monitor queue health & backlog
-
-# Evals
-node services/agent-api/src/cli.js eval --agent=relevance-filter --type=golden
-node services/agent-api/src/cli.js eval --agent=content-summarizer --type=judge
-node services/agent-api/src/cli.js eval-history --agent=relevance-filter
+node services/agent-api/src/cli.js discovery --agentic --limit=10
+node services/agent-api/src/cli.js enrich --limit=20
+node services/agent-api/src/cli.js filter|summarize|tag|thumbnail --limit=5
+node services/agent-api/src/cli.js eval --agent=screener --type=golden
 ```
 
-### 9.3 Utility Commands
+### 9.3 Utility & Maintenance
 
 ```bash
-npm run check:links                    # Check for broken links
-npm run build && npm run lhci          # Run Lighthouse CI locally
+npm run check:links                                      # Check broken links
+node services/agent-api/src/scripts/backfill-*.js --dry-run  # Backfill scripts
 ```
-
-### 9.4 Maintenance Scripts
-
-One-time or periodic data maintenance scripts:
-
-```bash
-# Backfill missing publication dates
-node services/agent-api/src/scripts/backfill-dates.js --dry-run
-node services/agent-api/src/scripts/backfill-dates.js --limit=50
-
-# Re-run summarizer on all publications
-node services/agent-api/src/scripts/backfill-summaries.js --dry-run
-node services/agent-api/src/scripts/backfill-summaries.js --limit=100
-
-# Backfill missing taxonomy tags
-node services/agent-api/src/scripts/backfill-tags.js --dry-run
-node services/agent-api/src/scripts/backfill-tags.js --limit=50
-```
-
-Shared utilities for scripts are in `services/agent-api/src/scripts/utils.js`.
 
 ---
 
