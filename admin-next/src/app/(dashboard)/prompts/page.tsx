@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { PromptVersion } from '@/types/database';
 
@@ -55,6 +55,9 @@ export default function PromptsPage() {
   const [editingPrompt, setEditingPrompt] = useState<PromptVersion | null>(null);
   const [diffMode, setDiffMode] = useState<{ a: PromptVersion; b: PromptVersion } | null>(null);
   const [testingPrompt, setTestingPrompt] = useState<PromptVersion | null>(null);
+  const [topPanelHeight, setTopPanelHeight] = useState(400);
+  const isDragging = useRef(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const supabase = createClient();
 
@@ -94,6 +97,36 @@ export default function PromptsPage() {
   useEffect(() => {
     loadPrompts();
   }, [loadPrompts]);
+
+  // Handle resize drag
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current || !containerRef.current) return;
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const newHeight = e.clientY - containerRect.top;
+      setTopPanelHeight(Math.max(150, Math.min(newHeight, window.innerHeight - 300)));
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   // Calculate coverage stats (KB-207)
   const coverageStats = (() => {
@@ -247,123 +280,150 @@ export default function PromptsPage() {
         )}
       </header>
 
-      {/* Agent table */}
-      <div className="rounded-xl border border-neutral-800 overflow-hidden mb-6">
-        <table className="w-full">
-          <thead className="bg-neutral-900">
-            <tr className="text-left text-xs font-medium uppercase tracking-wider text-neutral-400">
-              <th className="px-4 py-3">Agent</th>
-              <th className="px-4 py-3">Current Version</th>
-              <th className="px-4 py-3">Last Updated</th>
-              <th className="px-4 py-3">Chars</th>
-              <th className="px-4 py-3">~Tokens</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-800">
-            {agents.map((agentName) => {
-              const agentPrompts = promptsByAgent[agentName];
-              const currentPrompt = agentPrompts.find((p) => p.is_current);
-              const historyCount = agentPrompts.length - (currentPrompt ? 1 : 0);
-              const isExpanded = selectedAgent === agentName;
+      {/* Resizable panels container */}
+      <div ref={containerRef} className="flex flex-col">
+        {/* Agent table */}
+        <div
+          className="rounded-xl border border-neutral-800 overflow-hidden"
+          style={{ height: selectedAgent ? topPanelHeight : 'auto' }}
+        >
+          <div className="h-full overflow-auto">
+            <table className="w-full">
+              <thead className="bg-neutral-900 sticky top-0">
+                <tr className="text-left text-xs font-medium uppercase tracking-wider text-neutral-400">
+                  <th className="px-4 py-3">Agent</th>
+                  <th className="px-4 py-3">Current Version</th>
+                  <th className="px-4 py-3">Last Updated</th>
+                  <th className="px-4 py-3">Chars</th>
+                  <th className="px-4 py-3">~Tokens</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-800">
+                {agents.map((agentName) => {
+                  const agentPrompts = promptsByAgent[agentName];
+                  const currentPrompt = agentPrompts.find((p) => p.is_current);
+                  const historyCount = agentPrompts.length - (currentPrompt ? 1 : 0);
+                  const isExpanded = selectedAgent === agentName;
 
-              return (
-                <tr
-                  key={agentName}
-                  className={`hover:bg-neutral-800/50 cursor-pointer ${isExpanded ? 'bg-neutral-800/30' : ''}`}
-                  onClick={() => setSelectedAgent(isExpanded ? null : agentName)}
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <span>
-                        {agentName.includes('tagger')
-                          ? '🏷️'
-                          : agentName.includes('summar')
-                            ? '📝'
-                            : agentName.includes('filter')
-                              ? '🔍'
-                              : '🤖'}
-                      </span>
-                      <span className="font-medium text-white">{agentName}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-neutral-300">{currentPrompt?.version || '-'}</td>
-                  <td className="px-4 py-3 text-neutral-400 text-sm">
-                    {currentPrompt ? new Date(currentPrompt.created_at).toLocaleDateString() : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-neutral-400">
-                    {currentPrompt?.prompt_text.length.toLocaleString() || '-'}
-                  </td>
-                  <td className="px-4 py-3 text-neutral-400">
-                    {currentPrompt
-                      ? `~${estimateTokens(currentPrompt.prompt_text).toLocaleString()}`
-                      : '-'}
-                  </td>
-                  <td className="px-4 py-3">
-                    {currentPrompt ? (
-                      <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-xs">
-                          ✅ Active
-                        </span>
-                        {currentPrompt.stage && (
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-xs ${getStageBadge(currentPrompt.stage).className}`}
-                          >
-                            {getStageBadge(currentPrompt.stage).label}
+                  return (
+                    <tr
+                      key={agentName}
+                      className={`hover:bg-neutral-800/50 cursor-pointer ${isExpanded ? 'bg-neutral-800/30' : ''}`}
+                      onClick={() => setSelectedAgent(isExpanded ? null : agentName)}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <span>
+                            {agentName.includes('tagger')
+                              ? '🏷️'
+                              : agentName.includes('summar')
+                                ? '📝'
+                                : agentName.includes('filter')
+                                  ? '🔍'
+                                  : '🤖'}
+                          </span>
+                          <span className="font-medium text-white">{agentName}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-neutral-300">
+                        {currentPrompt?.version || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-neutral-400 text-sm">
+                        {currentPrompt
+                          ? new Date(currentPrompt.created_at).toLocaleDateString()
+                          : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-neutral-400">
+                        {currentPrompt?.prompt_text.length.toLocaleString() || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-neutral-400">
+                        {currentPrompt
+                          ? `~${estimateTokens(currentPrompt.prompt_text).toLocaleString()}`
+                          : '-'}
+                      </td>
+                      <td className="px-4 py-3">
+                        {currentPrompt ? (
+                          <div className="flex items-center gap-2">
+                            <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-xs">
+                              ✅ Active
+                            </span>
+                            {currentPrompt.stage && (
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-xs ${getStageBadge(currentPrompt.stage).className}`}
+                              >
+                                {getStageBadge(currentPrompt.stage).label}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="rounded-full bg-red-500/20 text-red-300 px-2 py-0.5 text-xs">
+                            ⚠️ Missing
                           </span>
                         )}
-                      </div>
-                    ) : (
-                      <span className="rounded-full bg-red-500/20 text-red-300 px-2 py-0.5 text-xs">
-                        ⚠️ Missing
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      {currentPrompt && (
-                        <>
-                          <button
-                            onClick={() => setTestingPrompt(currentPrompt)}
-                            className="text-purple-400 hover:text-purple-300 text-xs"
-                          >
-                            Test
-                          </button>
-                          <span className="text-neutral-600">•</span>
-                          <button
-                            onClick={() => setEditingPrompt(currentPrompt)}
-                            className="text-sky-400 hover:text-sky-300 text-xs"
-                          >
-                            Edit
-                          </button>
-                          <span className="text-neutral-600">•</span>
-                        </>
-                      )}
-                      <span className="text-neutral-500 text-xs">
-                        {historyCount} version{historyCount !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div
+                          className="flex items-center gap-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {currentPrompt && (
+                            <>
+                              <button
+                                onClick={() => setTestingPrompt(currentPrompt)}
+                                className="text-purple-400 hover:text-purple-300 text-xs"
+                              >
+                                Test
+                              </button>
+                              <span className="text-neutral-600">•</span>
+                              <button
+                                onClick={() => setEditingPrompt(currentPrompt)}
+                                className="text-sky-400 hover:text-sky-300 text-xs"
+                              >
+                                Edit
+                              </button>
+                              <span className="text-neutral-600">•</span>
+                            </>
+                          )}
+                          <span className="text-neutral-500 text-xs">
+                            {historyCount} version{historyCount !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
-      {/* Expanded agent detail */}
-      {selectedAgent && promptsByAgent[selectedAgent] && (
-        <AgentDetail
-          agentName={selectedAgent}
-          prompts={promptsByAgent[selectedAgent]}
-          onEdit={setEditingPrompt}
-          onRollback={rollbackToVersion}
-          onDiff={(a, b) => setDiffMode({ a, b })}
-          onView={setViewingVersion}
-          onTest={setTestingPrompt}
-        />
-      )}
+        {/* Resize handle */}
+        {selectedAgent && (
+          <div
+            onMouseDown={handleMouseDown}
+            className="h-2 cursor-row-resize flex items-center justify-center group hover:bg-neutral-800/50 transition-colors my-1"
+          >
+            <div className="w-16 h-1 rounded-full bg-neutral-700 group-hover:bg-neutral-500 transition-colors" />
+          </div>
+        )}
+
+        {/* Expanded agent detail */}
+        {selectedAgent && promptsByAgent[selectedAgent] && (
+          <div className="flex-1 overflow-auto">
+            <AgentDetail
+              agentName={selectedAgent}
+              prompts={promptsByAgent[selectedAgent]}
+              onEdit={setEditingPrompt}
+              onRollback={rollbackToVersion}
+              onDiff={(a, b) => setDiffMode({ a, b })}
+              onView={setViewingVersion}
+              onTest={setTestingPrompt}
+            />
+          </div>
+        )}
+      </div>
 
       {/* Edit modal */}
       {editingPrompt && (
