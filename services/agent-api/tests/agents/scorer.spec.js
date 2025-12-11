@@ -107,7 +107,7 @@ import {
   checkStaleIndicators,
   MIN_RELEVANCE_SCORE,
   AGE_PENALTY_THRESHOLD_YEARS,
-} from '../../src/agents/discovery-relevance.js';
+} from '../../src/agents/scorer.js';
 
 // Helper to get the mocked create function
 function getCreateMock() {

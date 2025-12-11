@@ -15,13 +15,13 @@
 import process from 'node:process';
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
-import { runDiscovery } from './agents/discover.js';
+import { runDiscovery } from './agents/discoverer.js';
 import { runClassicsDiscovery } from './agents/discover-classics.js';
-import { runRelevanceFilter } from './agents/filter.js';
-import { runSummarizer } from './agents/summarize.js';
-import { runTagger } from './agents/tag.js';
-import { runThumbnailer } from './agents/thumbnail.js';
-import { processQueue } from './agents/enrich-item.js';
+import { runRelevanceFilter } from './agents/screener.js';
+import { runSummarizer } from './agents/summarizer.js';
+import { runTagger } from './agents/tagger.js';
+import { runThumbnailer } from './agents/thumbnailer.js';
+import { processQueue } from './agents/enricher.js';
 import { runGoldenEval, runLLMJudgeEval, getEvalHistory } from './lib/evals.js';
 import { fetchContent } from './lib/content-fetcher.js';
 

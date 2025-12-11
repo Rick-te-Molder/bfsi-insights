@@ -11,7 +11,7 @@
 
 import process from 'node:process';
 import 'dotenv/config';
-import { runTagger } from '../agents/tag.js';
+import { runTagger } from '../agents/tagger.js';
 import { createSupabaseClient, parseCliArgs, fetchContent, delay } from './utils.js';
 
 const supabase = createSupabaseClient();

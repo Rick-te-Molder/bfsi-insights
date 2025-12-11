@@ -1,12 +1,12 @@
 import process from 'node:process';
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
-import { runRelevanceFilter } from '../agents/filter.js';
-import { runSummarizer } from '../agents/summarize.js';
-import { runTagger } from '../agents/tag.js';
-import { runThumbnailer } from '../agents/thumbnail.js';
-import { runDiscovery } from '../agents/discover.js';
-import { processQueue, enrichItem } from '../agents/enrich-item.js';
+import { runRelevanceFilter } from '../agents/screener.js';
+import { runSummarizer } from '../agents/summarizer.js';
+import { runTagger } from '../agents/tagger.js';
+import { runThumbnailer } from '../agents/thumbnailer.js';
+import { runDiscovery } from '../agents/discoverer.js';
+import { processQueue, enrichItem } from '../agents/enricher.js';
 
 const router = express.Router();
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);

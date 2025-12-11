@@ -94,12 +94,21 @@ async function evaluateExample(agent, agentName, example, options) {
     let result;
 
     // Call the appropriate agent function
-    if (agentName === 'discovery-relevance') {
+    if (agentName === 'scorer' || agentName === 'discovery-relevance') {
       result = await agent.scoreRelevance({
         title: input.title,
         description: input.description,
         source: input.source,
         publishedDate: input.publishedDate,
+      });
+    } else if (agentName === 'screener' || agentName === 'relevance-filter') {
+      // screener uses AgentRunner pattern, needs queue item format
+      result = await agent.runRelevanceFilter({
+        id: 'eval-' + id,
+        payload: {
+          title: input.title,
+          description: input.description,
+        },
       });
     } else {
       throw new Error(`Eval not implemented for agent: ${agentName}`);
@@ -163,10 +172,41 @@ async function evaluateExample(agent, agentName, example, options) {
       }
     }
 
+    // Check relevant (for relevance-filter agent)
+    if (expected.relevant !== undefined) {
+      const relevantOk = result.relevant === expected.relevant;
+      checks.push({
+        check: 'relevant',
+        expected: expected.relevant,
+        actual: result.relevant,
+        passed: relevantOk,
+      });
+      if (!relevantOk) passed = false;
+    }
+
+    // Check min_confidence (for relevance-filter agent)
+    if (expected.min_confidence !== undefined) {
+      const confidenceOk = (result.confidence || 0) >= expected.min_confidence;
+      checks.push({
+        check: 'min_confidence',
+        expected: `>= ${expected.min_confidence}`,
+        actual: result.confidence,
+        passed: confidenceOk,
+      });
+      if (!confidenceOk) passed = false;
+    }
+
     if (verbose) {
       const icon = passed ? '✓' : '✗';
       const color = passed ? 'green' : 'red';
-      log(`    ${icon} Score: ${result.relevance_score}, Queue: ${result.should_queue}`, color);
+      // Format output based on agent type
+      if (result.relevant !== undefined) {
+        // relevance-filter format
+        log(`    ${icon} Relevant: ${result.relevant}, Confidence: ${result.confidence}`, color);
+      } else {
+        // discovery-relevance format
+        log(`    ${icon} Score: ${result.relevance_score}, Queue: ${result.should_queue}`, color);
+      }
     }
 
     return {
