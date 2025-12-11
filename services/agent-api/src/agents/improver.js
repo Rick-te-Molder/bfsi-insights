@@ -401,19 +401,6 @@ export async function generateImprovementReport() {
     },
   };
 
-  console.log('\n📈 IMPROVEMENT REPORT');
-  console.log('='.repeat(50));
-  console.log(`Total pending: ${report.summary.total_pending}`);
-  console.log('\nBy category:');
-  for (const [cat, count] of Object.entries(counts)) {
-    console.log(`  ${cat}: ${count}`);
-  }
-  console.log('\nTop domains to add:');
-  for (const domain of topMissedDomains.slice(0, 5)) {
-    const priority = domain.has_critical ? '🔴' : domain.has_important ? '🟡' : '⚪';
-    console.log(`  ${priority} ${domain.domain} (${domain.miss_count} misses)`);
-  }
-
   return report;
 }
 
