@@ -124,6 +124,24 @@ agents:
     tables: []
     owner: system
 
+  # =============================================================================
+  # IMPROVEMENT PIPELINE
+  # =============================================================================
+
+  - name: improver
+    file: services/agent-api/src/agents/improver.js
+    type: orchestrator
+    description: >
+      Analyzes missed discoveries to classify why we missed them and generates
+      improvement suggestions for sources, patterns, and scoring. Part of the
+      user feedback reinforcement system (KB-214).
+    prompt_versions: []  # No LLM prompt - uses rule-based classification
+    tables:
+      - missed_discovery
+      - kb_source
+      - ingestion_queue
+    owner: system
+
 # =============================================================================
 # PROMPT COVERAGE REQUIREMENTS
 # =============================================================================
