@@ -158,9 +158,20 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
               {item.status}
             </span>
           </div>
-          <h1 className="text-2xl font-bold text-white">
-            {(payload.title as string) || 'Untitled'}
-          </h1>
+          {/* Title */}
+          <h1 className="text-2xl font-bold text-white">{String(payload.title || 'Untitled')}</h1>
+          {/* Date */}
+          {payload.published_at && (
+            <p className="text-sm text-neutral-400 mt-1">
+              Published{' '}
+              {new Date(payload.published_at as string).toLocaleDateString('en-GB', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              })}
+            </p>
+          )}
+          {/* URL */}
           <a
             href={item.url}
             target="_blank"
@@ -183,11 +194,11 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-neutral-400">
-                    Short (120-150 chars)
+                    Short (100-150 chars)
                   </span>
                   <span
                     className={`text-xs ${
-                      summary.short && summary.short.length >= 120 && summary.short.length <= 150
+                      summary.short && summary.short.length >= 100 && summary.short.length <= 150
                         ? 'text-emerald-400'
                         : 'text-amber-400'
                     }`}
@@ -203,11 +214,11 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-neutral-400">
-                    Medium (250-300 chars)
+                    Medium (200-300 chars)
                   </span>
                   <span
                     className={`text-xs ${
-                      summary.medium && summary.medium.length >= 250 && summary.medium.length <= 300
+                      summary.medium && summary.medium.length >= 200 && summary.medium.length <= 300
                         ? 'text-emerald-400'
                         : 'text-amber-400'
                     }`}
@@ -222,10 +233,10 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-neutral-400">Long (500-600 chars)</span>
+                  <span className="text-sm font-medium text-neutral-400">Long (400-600 chars)</span>
                   <span
                     className={`text-xs ${
-                      summary.long && summary.long.length >= 500 && summary.long.length <= 600
+                      summary.long && summary.long.length >= 400 && summary.long.length <= 600
                         ? 'text-emerald-400'
                         : 'text-amber-400'
                     }`}
@@ -247,7 +258,7 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
               payload={payload}
               taxonomyConfig={taxonomyConfig}
               taxonomyData={taxonomyData}
-              variant="table"
+              variant="table-with-percentages"
               labelWidth="w-28"
               validationLookups={validationLookups}
               showValidation={true}

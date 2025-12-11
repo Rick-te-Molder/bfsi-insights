@@ -16,6 +16,7 @@ interface QueueItem {
     summary?: { short?: string };
     rejection_reason?: string;
     source_slug?: string;
+    published_at?: string;
   };
   discovered_at: string;
 }
@@ -261,9 +262,21 @@ export function ReviewList({
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
+                    {/* Title */}
                     <p className="font-medium text-white truncate">
                       {item.payload?.title || truncate(item.url, 60)}
                     </p>
+                    {/* Date */}
+                    {item.payload?.published_at && (
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        {new Date(item.payload.published_at).toLocaleDateString('en-GB', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </p>
+                    )}
+                    {/* URL */}
                     <p className="mt-1 text-sm text-neutral-500 truncate">{item.url}</p>
                     {item.payload?.summary?.short && (
                       <p className="mt-2 text-sm text-neutral-400 line-clamp-2">

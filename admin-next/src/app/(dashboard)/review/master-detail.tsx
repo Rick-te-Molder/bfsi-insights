@@ -16,6 +16,7 @@ interface QueueItem {
     summary?: { short?: string };
     rejection_reason?: string;
     source_slug?: string;
+    published_at?: string;
     industry_codes?: string[];
     geography_codes?: string[];
     audience_scores?: {
@@ -143,9 +144,21 @@ export function MasterDetailView({
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
+                    {/* Title */}
                     <p className="font-medium text-sm text-white truncate">
                       {item.payload?.title || truncate(item.url, 50)}
                     </p>
+                    {/* Date */}
+                    {item.payload?.published_at && (
+                      <p className="text-[10px] text-neutral-400 mt-0.5">
+                        {new Date(item.payload.published_at).toLocaleDateString('en-GB', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </p>
+                    )}
+                    {/* URL shown on hover via title attr */}
                     <div className="flex items-center gap-2 mt-1">
                       <span
                         className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${getStatusColor(item.status)}`}

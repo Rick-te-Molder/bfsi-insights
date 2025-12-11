@@ -42,11 +42,24 @@ These rules are learned from bugs, incidents, and code reviews.
 
 ---
 
-## Linting
+## Linting (KB-204)
 
-- **Zero lint errors** before committing (warnings acceptable if pre-existing)
+### Strict Policy: Zero Errors AND Zero Warnings
 - Run `npm run lint` in admin-next before every commit
-- If adding eslint-disable, always include a comment explaining why
+- **Must pass with 0 errors AND 0 warnings**
+- Fix all warnings, don't just leave them
+
+### Exception Process
+If a warning cannot be fixed (e.g., third-party library issue, intentional pattern):
+1. **STOP and ask user for approval** before committing
+2. Explain: what the warning is, why it can't be fixed, what the risk is
+3. User must explicitly approve skipping the warning
+4. If approved, add `eslint-disable` with a comment explaining why
+
+### eslint-disable Rules
+- Never add eslint-disable without user approval or clear justification
+- Always include a comment explaining why the disable is needed
+- Prefer fixing the issue over disabling the rule
 
 ---
 
