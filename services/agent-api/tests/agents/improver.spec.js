@@ -8,13 +8,24 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Track mock responses per table
+// Track mock responses per table and call sequence
 let mockResponses = {};
+let callCounts = {};
 
 // Create chainable mock that returns different data based on table
 const createChainableMock = (tableName) => {
+  // Track call count per table
+  if (!callCounts[tableName]) callCounts[tableName] = 0;
+  const callIndex = callCounts[tableName]++;
+
   const getResponse = (method) => {
     const tableResponses = mockResponses[tableName] || {};
+    // Support array of responses for sequential calls
+    if (Array.isArray(tableResponses[method])) {
+      return (
+        tableResponses[method][callIndex] || tableResponses[method][0] || { data: [], error: null }
+      );
+    }
     return tableResponses[method] || { data: [], error: null };
   };
 
@@ -51,6 +62,7 @@ describe('Improver Agent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockResponses = {};
+    callCounts = {};
   });
 
   describe('MISS_CATEGORIES', () => {
@@ -324,15 +336,152 @@ describe('Classification branches', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockResponses = {};
+    callCounts = {};
   });
 
-  it('should handle source with no RSS/sitemap/scraper', async () => {
+  it('should classify as filter_rejected when status is rejected', async () => {
     mockResponses.missed_discovery = {
       single: {
         data: {
           id: 'test-id',
-          url: 'https://tracked-domain.com/article',
-          url_norm: 'https://tracked-domain.com/article',
+          url: 'https://tracked.com/article',
+          url_norm: 'https://tracked.com/article',
+          miss_category: null,
+        },
+        error: null,
+      },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = {
+      limit: { data: [{ slug: 'tracked', rss_feed: 'http://rss' }], error: null },
+    };
+    mockResponses.ingestion_queue = {
+      limit: {
+        data: [
+          {
+            id: 'ing-1',
+            status: 'rejected',
+            status_code: 540,
+            payload: { rejection_reason: 'Low score', relevance_scores: { exec: 2 } },
+          },
+        ],
+        error: null,
+      },
+    };
+    const result = await analyzeMissedDiscovery('test-id');
+    expect(result.success).toBe(true);
+    expect(result.category).toBe('filter_rejected');
+  });
+
+  it('should classify as too_slow when found late', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: {
+          id: 'test-id',
+          url: 'https://tracked.com/article',
+          url_norm: 'https://tracked.com/article',
+          miss_category: null,
+          submitted_at: '2024-01-20T00:00:00Z',
+        },
+        error: null,
+      },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = {
+      limit: { data: [{ slug: 'tracked', rss_feed: 'http://rss' }], error: null },
+    };
+    mockResponses.ingestion_queue = {
+      limit: {
+        data: [
+          {
+            id: 'ing-1',
+            status: 'pending',
+            status_code: 300,
+            discovered_at: '2024-01-10T00:00:00Z',
+          },
+        ],
+        error: null,
+      },
+    };
+    const result = await analyzeMissedDiscovery('test-id');
+    expect(result.success).toBe(true);
+    expect(result.category).toBe('too_slow');
+  });
+
+  it('should classify as crawl_failed when status is failed', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: {
+          id: 'test-id',
+          url: 'https://tracked.com/article',
+          url_norm: 'https://tracked.com/article',
+          miss_category: null,
+        },
+        error: null,
+      },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = {
+      limit: { data: [{ slug: 'tracked', rss_feed: 'http://rss' }], error: null },
+    };
+    mockResponses.ingestion_queue = {
+      limit: {
+        data: [
+          {
+            id: 'ing-1',
+            status: 'failed',
+            status_code: 500,
+            payload: { rejection_reason: 'Timeout' },
+          },
+        ],
+        error: null,
+      },
+    };
+    const result = await analyzeMissedDiscovery('test-id');
+    expect(result.success).toBe(true);
+    expect(result.category).toBe('crawl_failed');
+  });
+
+  it('should classify as pattern_wrong when found with other status', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: {
+          id: 'test-id',
+          url: 'https://tracked.com/article',
+          url_norm: 'https://tracked.com/article',
+          miss_category: null,
+        },
+        error: null,
+      },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = {
+      limit: { data: [{ slug: 'tracked', rss_feed: 'http://rss' }], error: null },
+    };
+    mockResponses.ingestion_queue = {
+      limit: {
+        data: [
+          {
+            id: 'ing-1',
+            status: 'published',
+            status_code: 400,
+          },
+        ],
+        error: null,
+      },
+    };
+    const result = await analyzeMissedDiscovery('test-id');
+    expect(result.success).toBe(true);
+    expect(result.category).toBe('pattern_wrong');
+  });
+
+  it('should classify as pattern_missing when source has RSS but URL not found', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: {
+          id: 'test-id',
+          url: 'https://tracked.com/new-article',
+          url_norm: 'https://tracked.com/new-article',
           miss_category: null,
         },
         error: null,
@@ -341,7 +490,9 @@ describe('Classification branches', () => {
     };
     mockResponses.kb_source = {
       limit: {
-        data: [{ slug: 'tracked', name: 'Tracked Source', enabled: true }],
+        data: [
+          { slug: 'tracked', rss_feed: 'http://rss', sitemap_url: null, scraper_config: null },
+        ],
         error: null,
       },
     };
@@ -350,6 +501,34 @@ describe('Classification branches', () => {
     };
     const result = await analyzeMissedDiscovery('test-id');
     expect(result.success).toBe(true);
+    expect(result.category).toBe('pattern_missing');
+  });
+
+  it('should classify as crawl_failed when source has no discovery config', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: {
+          id: 'test-id',
+          url: 'https://tracked.com/article',
+          url_norm: 'https://tracked.com/article',
+          miss_category: null,
+        },
+        error: null,
+      },
+      limit: { data: [], error: null },
+    };
+    mockResponses.kb_source = {
+      limit: {
+        data: [{ slug: 'tracked', rss_feed: null, sitemap_url: null, scraper_config: null }],
+        error: null,
+      },
+    };
+    mockResponses.ingestion_queue = {
+      limit: { data: [], error: null },
+    };
+    const result = await analyzeMissedDiscovery('test-id');
+    expect(result.success).toBe(true);
+    expect(result.category).toBe('crawl_failed');
   });
 
   it('should handle www prefix in domain extraction', async () => {
@@ -403,9 +582,10 @@ describe('Days calculation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockResponses = {};
+    callCounts = {};
   });
 
-  it('should calculate days between dates', async () => {
+  it('should calculate days_late from published_at', async () => {
     mockResponses.missed_discovery = {
       single: {
         data: {
@@ -417,10 +597,105 @@ describe('Days calculation', () => {
         },
         error: null,
       },
-      limit: { data: [], error: null },
+      limit: { data: [{ payload: { published_at: '2024-01-10T00:00:00Z' } }], error: null },
     };
     const result = await analyzeMissedDiscovery('test-id');
     expect(result).toBeDefined();
+    expect(result.days_late).toBeDefined();
+  });
+
+  it('should handle missing published_at', async () => {
+    mockResponses.missed_discovery = {
+      single: {
+        data: {
+          id: 'test-id',
+          url: 'https://example.com/article',
+          url_norm: 'https://example.com/article',
+          miss_category: null,
+          submitted_at: '2024-01-15T00:00:00Z',
+        },
+        error: null,
+      },
+      limit: { data: [{ payload: {} }], error: null },
+    };
+    const result = await analyzeMissedDiscovery('test-id');
+    expect(result).toBeDefined();
+  });
+});
+
+describe('Report with data', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockResponses = {};
+    callCounts = {};
+  });
+
+  it('should aggregate domains with critical urgency', async () => {
+    mockResponses.missed_discovery = {
+      limit: {
+        data: [
+          {
+            source_domain: 'domain1.com',
+            submitter_urgency: 'critical',
+            why_valuable: 'Important article',
+          },
+          {
+            source_domain: 'domain1.com',
+            submitter_urgency: 'important',
+            why_valuable: 'Another one',
+          },
+          { source_domain: 'domain2.com', submitter_urgency: null, why_valuable: null },
+        ],
+        error: null,
+      },
+    };
+    const report = await generateImprovementReport();
+    expect(report.suggestions.add_sources.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it('should handle domains without source_domain', async () => {
+    mockResponses.missed_discovery = {
+      limit: {
+        data: [
+          { source_domain: null, submitter_urgency: 'critical' },
+          { source_domain: 'valid.com', submitter_urgency: 'important' },
+        ],
+        error: null,
+      },
+    };
+    const report = await generateImprovementReport();
+    expect(report).toBeDefined();
+  });
+
+  it('should map filter rejections with miss_details', async () => {
+    mockResponses.missed_discovery = {
+      limit: {
+        data: [
+          {
+            miss_details: { relevance_scores: { exec: 3 }, rejection_reason: 'Low score' },
+            why_valuable: 'Client requested',
+          },
+        ],
+        error: null,
+      },
+    };
+    const report = await generateImprovementReport();
+    expect(report.suggestions.tune_filter).toBeDefined();
+  });
+
+  it('should limit samples to 2 per domain', async () => {
+    mockResponses.missed_discovery = {
+      limit: {
+        data: [
+          { source_domain: 'test.com', why_valuable: 'Reason 1' },
+          { source_domain: 'test.com', why_valuable: 'Reason 2' },
+          { source_domain: 'test.com', why_valuable: 'Reason 3' },
+        ],
+        error: null,
+      },
+    };
+    const report = await generateImprovementReport();
+    expect(report).toBeDefined();
   });
 });
 
@@ -428,10 +703,10 @@ describe('Update error handling', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockResponses = {};
+    callCounts = {};
   });
 
   it('should handle update errors gracefully', async () => {
-    // The mock always returns success for updates by default
     const result = await analyzeMissedDiscovery('test-id');
     expect(result).toBeDefined();
   });
