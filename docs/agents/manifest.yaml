@@ -1,0 +1,184 @@
+# Agent Manifest - Single Source of Truth for BFSI Insights Agents
+# KB-207: Best-in-class prompt engineering
+#
+# This file declares all agents and their required prompts/tables.
+# CI checks validate that all declared prompts exist in prompt_versions.
+#
+# Agent Types:
+#   - llm: Uses LLM with prompt from prompt_versions
+#   - config: Uses JSON config from prompt_versions (not an LLM prompt)
+#   - orchestrator: Coordinates other agents, no own prompt
+#   - scoring: Uses dynamic prompt built from database tables
+
+agents:
+  # =============================================================================
+  # DISCOVERY PIPELINE
+  # =============================================================================
+  
+  - name: discovery-relevance
+    file: services/agent-api/src/agents/discovery-relevance.js
+    type: scoring
+    description: >
+      Scores content relevance for each audience type (executive, functional_specialist,
+      engineer, researcher). Returns multi-audience scores to determine if content
+      should enter the review queue.
+    prompt_versions: []  # No static prompt - built dynamically from kb_audience
+    tables:
+      - kb_audience  # Loads audience definitions (cares_about, doesnt_care_about, scoring_guide)
+    model: gpt-4o-mini
+    owner: system
+    
+  - name: discover
+    file: services/agent-api/src/agents/discover.js
+    type: orchestrator
+    description: >
+      Orchestrates RSS/sitemap discovery. Fetches sources, filters candidates,
+      scores relevance, and inserts into ingestion queue.
+    prompt_versions:
+      - discovery-filter  # JSON config for exclusion patterns
+    tables:
+      - kb_source
+      - bfsi_industry
+      - bfsi_topic
+    owner: system
+
+  - name: discover-classics
+    file: services/agent-api/src/agents/discover-classics.js
+    type: orchestrator
+    description: >
+      Discovers classic/foundational BFSI content from curated lists.
+      One-time seeding of evergreen publications.
+    prompt_versions: []
+    tables:
+      - kb_source
+    owner: system
+
+  # =============================================================================
+  # ENRICHMENT PIPELINE
+  # =============================================================================
+
+  - name: enrich-item
+    file: services/agent-api/src/agents/enrich-item.js
+    type: orchestrator
+    description: >
+      Full enrichment pipeline for a single queue item.
+      Orchestrates: fetch → filter → summarize → tag → thumbnail
+    prompt_versions: []  # Orchestrator only
+    tables: []
+    owner: system
+
+  - name: relevance-filter
+    file: services/agent-api/src/agents/filter.js
+    type: llm
+    description: >
+      Second-pass relevance filtering after content fetch.
+      Validates content is actually relevant before summarization.
+    prompt_versions:
+      - relevance-filter  # LLM prompt for filtering decisions
+    tables: []
+    model: gpt-4o-mini
+    owner: system
+
+  - name: content-summarizer
+    file: services/agent-api/src/agents/summarize.js
+    type: llm
+    description: >
+      Generates summaries (short, medium, long) and extracts metadata
+      (title, authors, published_at). Uses structured output.
+    prompt_versions:
+      - content-summarizer  # LLM prompt for summarization
+    tables: []
+    model: claude-3-5-sonnet  # Uses Anthropic for quality
+    owner: system
+
+  - name: taxonomy-tagger
+    file: services/agent-api/src/agents/tag.js
+    type: llm
+    description: >
+      Classifies content with taxonomy codes (industry, topic, geography,
+      regulators, regulations, use cases, capabilities, etc.).
+    prompt_versions:
+      - taxonomy-tagger  # LLM prompt for classification
+    tables:
+      - taxonomy_config
+      - bfsi_industry
+      - bfsi_topic
+      - bfsi_geography
+      - bfsi_regulator
+      - bfsi_regulation
+      - bfsi_use_case
+      - bfsi_capability
+      - bfsi_process
+    model: gpt-4o
+    owner: system
+
+  - name: thumbnail-generator
+    file: services/agent-api/src/agents/thumbnail.js
+    type: config
+    description: >
+      Captures webpage screenshots for thumbnails using Playwright.
+      Config specifies viewport size, timeout, wait time.
+    prompt_versions:
+      - thumbnail-generator  # JSON config (not LLM prompt)
+    tables: []
+    owner: system
+
+# =============================================================================
+# PROMPT COVERAGE REQUIREMENTS
+# =============================================================================
+# 
+# The following prompts MUST exist in prompt_versions with is_current=true:
+#
+# LLM Prompts (type: llm):
+#   - relevance-filter
+#   - content-summarizer  
+#   - taxonomy-tagger
+#
+# Config (type: config):
+#   - discovery-filter (JSON exclusion patterns)
+#   - thumbnail-generator (JSON viewport config)
+#
+# Dynamic (type: scoring):
+#   - discovery-relevance loads from kb_audience table, not prompt_versions
+#
+# =============================================================================
+
+# Schema for prompt_versions validation
+required_prompts:
+  - agent_name: relevance-filter
+    type: llm
+    required: true
+    
+  - agent_name: content-summarizer
+    type: llm
+    required: true
+    
+  - agent_name: taxonomy-tagger
+    type: llm
+    required: true
+    
+  - agent_name: discovery-filter
+    type: config
+    required: true
+    
+  - agent_name: thumbnail-generator
+    type: config
+    required: false  # Optional - agent has sensible defaults
+
+# Tables that must have data for agents to function
+required_tables:
+  - table: kb_audience
+    min_rows: 4
+    description: Audience definitions with prompt content
+    
+  - table: kb_source
+    min_rows: 1
+    description: Content sources for discovery
+    
+  - table: bfsi_industry
+    min_rows: 1
+    description: Industry taxonomy codes
+    
+  - table: bfsi_topic
+    min_rows: 1
+    description: Topic taxonomy codes

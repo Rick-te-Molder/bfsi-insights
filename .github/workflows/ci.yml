@@ -23,6 +23,27 @@ jobs:
       - name: Check for large files (>500 lines)
         run: node scripts/check-large-files.cjs
 
+  prompt-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check prompt coverage (KB-207)
+        run: node scripts/check-prompt-coverage.js --ci
+        env:
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
   supabase-lint:
     runs-on: ubuntu-latest
     steps:
