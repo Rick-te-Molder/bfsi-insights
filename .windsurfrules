@@ -1,15 +1,67 @@
-# BFSI Insights Project Rules
+# BFSI Insights Coding Practices
 
-## Task Completion
-When completing tasks, provide a Linear-ready summary per CONTRIBUTING.md section 7:
-- Problem, Root Cause, Solution, Files Changed, PR link
+This file contains project-specific coding rules for AI assistants (Windsurf/Cursor).
+These rules are learned from bugs, incidents, and code reviews.
 
-## Workflow
-- Never commit directly to main - always use branches and PRs
-- Branch naming: `feat/kb-XXX-desc`, `fix/kb-XXX-desc`, `docs/desc`
+---
+
+## Data Consistency
+
+### Pipeline Status Queries (KB-202)
+- **Always use `status_code`** (numeric) for pipeline status queries, never `status` (text)
+- When querying `ingestion_queue`, always select the `status_code` field
+- Status codes are defined in `docs/architecture/pipeline-status-codes.md`:
+  - `200` = PENDING_ENRICHMENT
+  - `300` = PENDING_REVIEW (items ready for human review)
+  - `330` = APPROVED
+  - `400` = PUBLISHED
+  - `500` = FAILED
+  - `540` = REJECTED
+
+### Query Pattern Consistency
+- Dashboard and all UI views must use **identical query logic** for the same data
+- No client-side filtering that duplicates or contradicts DB-level filters
+- When adding a new view of existing data, check how other views query it first
+
+---
+
+## TypeScript / React
+
+### Unused Variables
+- Prefix intentionally unused variables with `_` (e.g., `status: _status`)
+- Remove truly unused imports/variables rather than prefixing
+
+### React Hooks
+- Define `useCallback` handlers **before** `useEffect` hooks that reference them
+- Include all dependencies in useEffect/useCallback dependency arrays
+- Use `useMemo` for expensive computations, with eslint-disable if needed for impure functions
+
+### Component Props
+- Keep prop names consistent across interface and destructuring
+- Use `propName: _propName` syntax when prop is required but unused locally
+
+---
+
+## Linting
+
+- **Zero lint errors** before committing (warnings acceptable if pre-existing)
+- Run `npm run lint` in admin-next before every commit
+- If adding eslint-disable, always include a comment explaining why
+
+---
+
+## Git Workflow
+
+- Never commit directly to main
+- Branch naming: `feat/kb-XXX-desc`, `fix/kb-XXX-desc`, `improve/kb-XXX-desc`
 - Include Linear issue ID in commits: `fix(KB-XXX): description`
+- Create PR immediately after first push to start CI
 
-## Code Style
-- Keep files under 500 lines (enforced by pre-commit)
-- Use TypeScript/Astro conventions from existing code
-- Run `npm run lint` before committing
+---
+
+## Adding New Rules
+
+When you encounter a bug or incident:
+1. Identify the **root cause pattern** (not just the symptom)
+2. Add a rule here that would have prevented it
+3. Include the Linear issue ID for context (e.g., KB-202)
