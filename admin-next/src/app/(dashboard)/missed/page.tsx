@@ -32,9 +32,10 @@ const AUDIENCES = [
 
 const CHANNELS = [
   { value: 'email', label: 'Email' },
-  { value: 'slack', label: 'Slack' },
   { value: 'linkedin', label: 'LinkedIn' },
   { value: 'meeting', label: 'Meeting' },
+  { value: 'signal', label: 'Signal' },
+  { value: 'slack', label: 'Slack' },
   { value: 'whatsapp', label: 'WhatsApp' },
   { value: 'other', label: 'Other' },
 ];
