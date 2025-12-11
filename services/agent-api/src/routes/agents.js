@@ -7,6 +7,11 @@ import { runTagger } from '../agents/tagger.js';
 import { runThumbnailer } from '../agents/thumbnailer.js';
 import { runDiscovery } from '../agents/discoverer.js';
 import { processQueue, enrichItem } from '../agents/enricher.js';
+import {
+  analyzeMissedDiscovery,
+  analyzeAllPendingMisses,
+  generateImprovementReport,
+} from '../agents/improver.js';
 
 const router = express.Router();
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -268,6 +273,43 @@ router.post('/trigger-build', async (req, res) => {
   } catch (err) {
     console.error('Trigger Build Error:', err);
     res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+// POST /api/agents/run/improver - Analyze all pending missed discoveries
+router.post('/run/improver', async (req, res) => {
+  try {
+    const result = await analyzeAllPendingMisses();
+    res.json(result);
+  } catch (err) {
+    console.error('Improver Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/agents/run/improver/analyze - Analyze a single missed discovery
+router.post('/run/improver/analyze', async (req, res) => {
+  try {
+    const { id } = req.body;
+    if (!id) {
+      return res.status(400).json({ error: 'id is required' });
+    }
+    const result = await analyzeMissedDiscovery(id);
+    res.json(result);
+  } catch (err) {
+    console.error('Improver Analyze Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/agents/improvement-report - Get aggregated improvement suggestions
+router.get('/improvement-report', async (req, res) => {
+  try {
+    const report = await generateImprovementReport();
+    res.json(report);
+  } catch (err) {
+    console.error('Improvement Report Error:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
