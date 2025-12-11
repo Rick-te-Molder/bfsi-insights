@@ -13,10 +13,10 @@
 
 import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
-import { runRelevanceFilter } from './filter.js';
-import { runSummarizer } from './summarize.js';
-import { runTagger } from './tag.js';
-import { runThumbnailer } from './thumbnail.js';
+import { runRelevanceFilter } from './screener.js';
+import { runSummarizer } from './summarizer.js';
+import { runTagger } from './tagger.js';
+import { runThumbnailer } from './thumbnailer.js';
 import { fetchContent } from '../lib/content-fetcher.js';
 import { STATUS, loadStatusCodes } from '../lib/status-codes.js';
 

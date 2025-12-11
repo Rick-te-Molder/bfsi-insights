@@ -11,7 +11,7 @@
 
 import process from 'node:process';
 import 'dotenv/config';
-import { runSummarizer } from '../agents/summarize.js';
+import { runSummarizer } from '../agents/summarizer.js';
 import { createSupabaseClient, parseCliArgs, fetchContent, delay } from './utils.js';
 
 const supabase = createSupabaseClient();

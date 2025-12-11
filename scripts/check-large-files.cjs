@@ -17,7 +17,7 @@ const ALLOW_LIST = new Set([
   'src/features/publications/multi-select-filters.ts',
   'src/pages/admin/review.astro',
   'src/pages/admin/sources.astro',
-  'services/agent-api/src/agents/discover.js',
+  'services/agent-api/src/agents/discoverer.js',
 ]);
 
 // Use git ls-files to only scan tracked files
