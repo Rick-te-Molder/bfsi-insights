@@ -136,15 +136,16 @@ For detailed architecture diagrams, see:
 ### 5.1 AI Agents
 
 ```
-Agent              Purpose                              Model/Tool
+Agent                Purpose                              Model/Tool
 ─────────────────────────────────────────────────────────────────────────
-discoverer.js      Find candidates from RSS/sitemaps    —
-scorer.js          Score relevance per audience         GPT-4o-mini
-screener.js        Second-pass BFSI relevance filter    GPT-4o-mini
-summarizer.js      Generate summaries (short/med/long)  Claude Sonnet 4
-tagger.js          Classify with taxonomies             GPT-4o
-thumbnailer.js     Screenshot article for preview       Playwright
-enricher.js        Orchestrate enrichment pipeline      —
+discoverer.js        Find candidates from RSS/sitemaps    —
+scorer.js            Score relevance per audience         GPT-4o-mini
+content-fetcher.js   Fetch page content (HTML/PDF)        Playwright
+screener.js          Second-pass BFSI relevance filter    GPT-4o-mini
+summarizer.js        Generate summaries (short/med/long)  Claude Sonnet 4
+tagger.js            Classify with taxonomies             GPT-4o
+thumbnailer.js       Screenshot article for preview       Playwright
+enricher.js          Orchestrate enrichment pipeline      —
 ```
 
 **Discovery modes:**
