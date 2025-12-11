@@ -215,22 +215,16 @@ export async function analyzeMissedDiscovery(missedId) {
     .single();
 
   if (error || !missed) {
-    console.error(`Failed to fetch missed discovery ${missedId}:`, error?.message);
     return { success: false, error: error?.message || 'Not found' };
   }
 
   // Skip if already classified
   if (missed.miss_category) {
-    console.log(`Missed discovery ${missedId} already classified as: ${missed.miss_category}`);
     return { success: true, skipped: true, category: missed.miss_category };
   }
 
-  console.log(`\n🔍 Analyzing missed discovery: ${missed.url}`);
-
   // Classify the miss
   const classification = await classifyMiss(missed);
-  console.log(`   Category: ${classification.category}`);
-  console.log(`   Details:`, JSON.stringify(classification.details, null, 2));
 
   // Calculate days_late if we have publication date
   let daysLate = null;
@@ -261,11 +255,8 @@ export async function analyzeMissedDiscovery(missedId) {
     .eq('id', missedId);
 
   if (updateError) {
-    console.error(`   ❌ Failed to update:`, updateError.message);
     return { success: false, error: updateError.message };
   }
-
-  console.log(`   ✅ Classified as: ${classification.category}`);
 
   return {
     success: true,
@@ -290,16 +281,12 @@ export async function analyzeAllPendingMisses() {
     .limit(50);
 
   if (error) {
-    console.error('Failed to fetch pending misses:', error.message);
     return { success: false, error: error.message };
   }
 
   if (!pending || pending.length === 0) {
-    console.log('No unclassified missed discoveries found.');
     return { success: true, processed: 0 };
   }
-
-  console.log(`\n📊 Processing ${pending.length} unclassified missed discoveries...\n`);
 
   const results = {
     processed: 0,
@@ -313,9 +300,6 @@ export async function analyzeAllPendingMisses() {
       results.categories[result.category] = (results.categories[result.category] || 0) + 1;
     }
   }
-
-  console.log(`\n✅ Processed ${results.processed} missed discoveries`);
-  console.log('Categories:', results.categories);
 
   return { success: true, ...results };
 }
