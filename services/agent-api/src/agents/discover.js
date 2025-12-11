@@ -291,7 +291,15 @@ async function processCandidate(candidate, sourceName, dryRun, scoringConfig, st
       title: candidate.title,
       description: candidate.description || '',
       source: sourceName,
+      publishedDate: candidate.publishedDate || candidate.published_date || null,
+      url: candidate.url || '',
     });
+
+    // KB-206: Track stale content skips
+    if (relevanceResult.stale_content) {
+      stats.staleSkips = (stats.staleSkips || 0) + 1;
+      return { action: 'skipped-stale', relevanceResult };
+    }
 
     // Track trusted source passes vs LLM calls
     if (relevanceResult.trusted_source) {
@@ -619,7 +627,12 @@ function logSummary(stats) {
   console.log(`   New items: ${stats.new}`);
   console.log(`   Retried: ${stats.retried}`);
   console.log(`   Skipped (low relevance): ${stats.skipped}`);
-  console.log(`   Already exists: ${stats.found - stats.new - stats.skipped}`);
+  if (stats.staleSkips > 0) {
+    console.log(`   Skipped (stale content): ${stats.staleSkips}`);
+  }
+  console.log(
+    `   Already exists: ${stats.found - stats.new - stats.skipped - (stats.staleSkips || 0)}`,
+  );
 
   // Hybrid mode stats
   if (stats.embeddingTokens > 0 || stats.llmTokens > 0 || stats.trustedSourcePasses > 0) {
