@@ -8,7 +8,7 @@ import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 import { scrapeWebsite } from '../lib/scrapers.js';
 import { fetchFromSitemap, fetchPageMetadata } from '../lib/sitemap.js';
-import { scoreRelevance } from './discovery-relevance.js';
+import { scoreRelevance } from './scorer.js';
 import {
   getReferenceEmbedding,
   scoreWithEmbedding,
