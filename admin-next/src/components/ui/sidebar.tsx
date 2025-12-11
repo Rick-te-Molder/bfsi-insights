@@ -133,10 +133,10 @@ export function Sidebar() {
     <>
       {/* Mobile Header with Hamburger */}
       <div className="fixed top-0 left-0 right-0 z-50 flex h-14 items-center justify-between border-b border-neutral-800 bg-neutral-950 px-4 md:hidden">
-        <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <span className="text-lg font-normal tracking-tight text-white">BFSI</span>
           <span className="text-xs font-bold uppercase text-sky-400">Admin</span>
-        </div>
+        </Link>
         <button
           onClick={toggleSidebar}
           className="flex h-10 w-10 items-center justify-center rounded-lg text-neutral-400 hover:bg-neutral-800 hover:text-white"
@@ -187,10 +187,10 @@ export function Sidebar() {
       >
         {/* Logo + Pipeline Status (hidden on mobile - shown in mobile header) */}
         <div className="hidden md:flex h-16 items-center justify-between border-b border-neutral-800 px-4">
-          <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <span className="text-lg font-normal tracking-tight text-white">BFSI</span>
             <span className="text-xs font-bold uppercase text-sky-400">Admin</span>
-          </div>
+          </Link>
           {pipelineStatus && (
             <div className="group relative">
               <div
