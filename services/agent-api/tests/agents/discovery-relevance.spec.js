@@ -26,53 +26,64 @@ vi.mock('openai', () => ({
   })),
 }));
 
-// Mock Supabase to return valid data for both prompt_versions and kb_audience
+// Mock Supabase to return valid data for kb_audience, kb_rejection_pattern, and prompt_versions
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({
-    from: vi.fn(() => ({
+    from: vi.fn((tableName) => ({
       select: vi.fn(() => ({
         // For kb_audience table (uses .order())
         order: vi.fn(() =>
           Promise.resolve({
-            data: [
-              {
-                name: 'executive',
-                label: 'Executives',
-                description: 'C-suite',
-                cares_about: 'Strategy',
-                doesnt_care_about: 'Code',
-                scoring_guide: '9-10: Major',
-              },
-              {
-                name: 'functional_specialist',
-                label: 'Specialists',
-                description: 'PMs',
-                cares_about: 'Process',
-                doesnt_care_about: 'Theory',
-                scoring_guide: '9-10: Critical',
-              },
-              {
-                name: 'engineer',
-                label: 'Engineers',
-                description: 'Devs',
-                cares_about: 'Architecture',
-                doesnt_care_about: 'Strategy',
-                scoring_guide: '9-10: Security',
-              },
-              {
-                name: 'researcher',
-                label: 'Researchers',
-                description: 'Academics',
-                cares_about: 'Methodology',
-                doesnt_care_about: 'Marketing',
-                scoring_guide: '9-10: Novel',
-              },
-            ],
+            data:
+              tableName === 'kb_audience'
+                ? [
+                    {
+                      name: 'executive',
+                      label: 'Executives',
+                      description: 'C-suite',
+                      cares_about: 'Strategy',
+                      doesnt_care_about: 'Code',
+                      scoring_guide: '9-10: Major',
+                    },
+                    {
+                      name: 'functional_specialist',
+                      label: 'Specialists',
+                      description: 'PMs',
+                      cares_about: 'Process',
+                      doesnt_care_about: 'Theory',
+                      scoring_guide: '9-10: Critical',
+                    },
+                    {
+                      name: 'engineer',
+                      label: 'Engineers',
+                      description: 'Devs',
+                      cares_about: 'Architecture',
+                      doesnt_care_about: 'Strategy',
+                      scoring_guide: '9-10: Security',
+                    },
+                    {
+                      name: 'researcher',
+                      label: 'Researchers',
+                      description: 'Academics',
+                      cares_about: 'Methodology',
+                      doesnt_care_about: 'Marketing',
+                      scoring_guide: '9-10: Novel',
+                    },
+                  ]
+                : [], // kb_rejection_pattern returns empty (no pre-filter matches in tests)
             error: null,
           }),
         ),
-        // For prompt_versions table (uses .eq().eq().single())
+        // For kb_rejection_pattern table (uses .eq().order())
         eq: vi.fn(() => ({
+          // For kb_rejection_pattern: .eq('is_active', true).order('sort_order')
+          order: vi.fn(() =>
+            Promise.resolve({
+              data: [], // Empty rejection patterns for tests (let LLM handle scoring)
+              error: null,
+            }),
+          ),
+          // For prompt_versions table (uses .eq().eq().single())
           eq: vi.fn(() => ({
             single: vi.fn(() =>
               Promise.resolve({

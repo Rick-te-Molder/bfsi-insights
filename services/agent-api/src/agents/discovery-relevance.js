@@ -16,6 +16,7 @@ let openai = null;
 let supabase = null;
 let cachedPrompt = null;
 let cachedAudiences = null;
+let cachedRejectionPatterns = null;
 
 function getOpenAI() {
   if (!openai) {
@@ -53,6 +54,26 @@ async function getAudiences() {
   return cachedAudiences;
 }
 
+// Load rejection patterns from DB (cached for performance)
+// KB-210: Single source of truth for rejection criteria
+async function getRejectionPatterns() {
+  if (cachedRejectionPatterns) return cachedRejectionPatterns;
+
+  const { data, error } = await getSupabase()
+    .from('kb_rejection_pattern')
+    .select('name, category, description, patterns, max_score')
+    .eq('is_active', true)
+    .order('sort_order');
+
+  if (error) {
+    console.warn('Warning: Failed to load rejection patterns:', error.message);
+    return []; // Graceful degradation - continue without rejection patterns
+  }
+
+  cachedRejectionPatterns = data || [];
+  return cachedRejectionPatterns;
+}
+
 // Generate system prompt dynamically from audience definitions
 // KB-208: Prompts pull from kb_audience table, not hardcoded
 async function getSystemPrompt() {
@@ -77,11 +98,45 @@ ${a.scoring_guide}`;
     })
     .join('\n\n');
 
+  // KB-210: Load rejection patterns from database
+  const rejectionPatterns = await getRejectionPatterns();
+
+  // Build rejection section dynamically
+  let rejectionSection = '';
+  if (rejectionPatterns.length > 0) {
+    const rejectionItems = rejectionPatterns
+      .map(
+        (p) =>
+          `- **${p.description}** - Keywords: ${p.patterns.slice(0, 5).join(', ')}${p.patterns.length > 5 ? '...' : ''}`,
+      )
+      .join('\n');
+
+    rejectionSection = `## AUTOMATIC REJECTION (score 1-3 for ALL audiences)
+
+The following content types are NOT relevant regardless of BFSI keywords:
+${rejectionItems}
+
+If title/description contains these patterns, score 1-3 for ALL audiences.\n\n`;
+  }
+
   cachedPrompt = `You are an expert content curator for BFSI (Banking, Financial Services, Insurance) professionals.
 
-You must score content relevance for EACH of the following target audiences:
+Your job is to score content relevance. Be STRICT about filtering out irrelevant content.
+
+${rejectionSection}## TARGET AUDIENCES
+
+Score content relevance (1-10) for EACH audience based on their needs:
 
 ${audienceSections}
+
+## SCORING GUIDELINES
+
+- Score 8-10: Directly actionable, high-impact content for that audience
+- Score 5-7: Relevant background knowledge, worth reading
+- Score 3-4: Tangentially related, low priority
+- Score 1-2: Not relevant or should be rejected (see rejection criteria above)
+
+## RESPONSE FORMAT
 
 Respond with JSON:
 {
@@ -93,7 +148,7 @@ Respond with JSON:
   },
   "primary_audience": "<audience with highest score>",
   "executive_summary": "<1 sentence: what this content is about>",
-  "skip_reason": "<null if any score >= 4, otherwise brief reason>"
+  "skip_reason": "<null if any score >= 4, otherwise brief reason why rejected>"
 }`;
 
   return cachedPrompt;
@@ -215,6 +270,39 @@ export function checkStaleIndicators(title, description = '', url = '') {
 }
 
 /**
+ * Check if content matches rejection patterns (pre-filter before LLM)
+ * KB-210: Deterministic rejection for obvious patterns
+ * @param {string} title - Content title
+ * @param {string} description - Content description
+ * @param {string} source - Content source
+ * @returns {Promise<{shouldReject: boolean, pattern: string|null, maxScore: number}>}
+ */
+export async function checkRejectionPatterns(title, description = '', source = '') {
+  const patterns = await getRejectionPatterns();
+  if (patterns.length === 0) {
+    return { shouldReject: false, pattern: null, maxScore: 10 };
+  }
+
+  const text = `${title} ${description} ${source}`.toLowerCase();
+
+  for (const p of patterns) {
+    for (const keyword of p.patterns) {
+      if (text.includes(keyword.toLowerCase())) {
+        return {
+          shouldReject: true,
+          pattern: p.name,
+          reason: p.description,
+          matchedKeyword: keyword,
+          maxScore: p.max_score,
+        };
+      }
+    }
+  }
+
+  return { shouldReject: false, pattern: null, maxScore: 10 };
+}
+
+/**
  * Score a candidate for executive relevance
  * @param {Object} candidate - { title, description, source }
  * @returns {Object} - { relevance_score, executive_summary, skip_reason, usage }
@@ -233,6 +321,29 @@ export async function scoreRelevance(candidate) {
       should_queue: false,
       usage: null,
       stale_content: true,
+    };
+  }
+
+  // KB-210: Check for rejection patterns BEFORE LLM call (deterministic filter)
+  const rejectionCheck = await checkRejectionPatterns(title, description, source);
+  if (rejectionCheck.shouldReject) {
+    console.log(
+      `   🚫 Rejection pattern matched: "${rejectionCheck.matchedKeyword}" (${rejectionCheck.pattern})`,
+    );
+    return {
+      relevance_score: rejectionCheck.maxScore,
+      relevance_scores: {
+        executive: rejectionCheck.maxScore,
+        functional_specialist: rejectionCheck.maxScore,
+        engineer: rejectionCheck.maxScore,
+        researcher: rejectionCheck.maxScore,
+      },
+      primary_audience: null,
+      executive_summary: `Auto-rejected: ${rejectionCheck.reason}`,
+      skip_reason: `Matched rejection pattern: ${rejectionCheck.matchedKeyword}`,
+      should_queue: rejectionCheck.maxScore >= MIN_RELEVANCE_SCORE,
+      usage: null,
+      rejection_pattern: rejectionCheck.pattern,
     };
   }
 
