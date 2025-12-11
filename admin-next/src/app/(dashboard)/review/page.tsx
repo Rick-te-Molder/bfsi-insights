@@ -8,10 +8,19 @@ import type { TaxonomyConfig, TaxonomyData, TaxonomyItem } from '@/components/ta
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// Status codes (see docs/architecture/pipeline-status-codes.md)
+const STATUS_CODE = {
+  PENDING_REVIEW: 300,
+  APPROVED: 330,
+  FAILED: 500,
+  REJECTED: 540,
+};
+
 interface QueueItem {
   id: string;
   url: string;
   status: string;
+  status_code: number;
   payload: {
     title?: string;
     summary?: { short?: string };
@@ -26,12 +35,25 @@ async function getQueueItems(status?: string, source?: string, timeWindow?: stri
 
   let query = supabase
     .from('ingestion_queue')
-    .select('id, url, status, payload, discovered_at')
+    .select('id, url, status, status_code, payload, discovered_at')
     .order('discovered_at', { ascending: false })
     .limit(100);
 
+  // Map status filter to status_code for consistency with dashboard
   if (status && status !== 'all') {
-    query = query.eq('status', status);
+    const statusCodeMap: Record<string, number> = {
+      enriched: STATUS_CODE.PENDING_REVIEW,
+      approved: STATUS_CODE.APPROVED,
+      failed: STATUS_CODE.FAILED,
+      rejected: STATUS_CODE.REJECTED,
+    };
+    const code = statusCodeMap[status];
+    if (code) {
+      query = query.eq('status_code', code);
+    } else {
+      // Fallback to text status for queued/processing (not yet migrated)
+      query = query.eq('status', status);
+    }
   }
 
   // Apply time window filter
@@ -137,11 +159,12 @@ export default async function ReviewPage({
   const timeWindow = params.time || '';
   const viewMode = params.view || 'split'; // 'list' or 'split'
 
-  const [{ items, sources }, allSources, { taxonomyConfig, taxonomyData }] = await Promise.all([
-    getQueueItems(status, source, timeWindow),
-    getAllSources(),
-    getTaxonomyData(),
-  ]);
+  const [{ items, sources: _sources }, allSources, { taxonomyConfig, taxonomyData }] =
+    await Promise.all([
+      getQueueItems(status, source, timeWindow),
+      getAllSources(),
+      getTaxonomyData(),
+    ]);
 
   const statusFilters = [
     { value: 'enriched', label: 'Pending Review' },

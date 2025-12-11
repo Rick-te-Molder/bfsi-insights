@@ -32,29 +32,6 @@ interface DetailPanelProps {
   taxonomyData: TaxonomyData;
 }
 
-function ValidatedTag({
-  value,
-  knownValues,
-  baseColor,
-}: {
-  value: string;
-  knownValues: string[];
-  baseColor: string;
-}) {
-  const isKnown = knownValues.some((v) => v.toLowerCase() === value.toLowerCase());
-  return (
-    <span
-      className={`px-2 py-0.5 rounded text-xs ${
-        isKnown ? baseColor : 'bg-red-500/30 text-red-300 border border-red-500/50'
-      }`}
-      title={isKnown ? undefined : 'Not in reference table'}
-    >
-      {value}
-      {!isKnown && ' !'}
-    </span>
-  );
-}
-
 export function DetailPanel({
   itemId,
   onClose,
@@ -66,10 +43,20 @@ export function DetailPanel({
   taxonomyData,
 }: DetailPanelProps) {
   const [item, setItem] = useState<QueueItem | null>(null);
-  const [lookups, setLookups] = useState<Lookups | null>(null);
+  const [_lookups, setLookups] = useState<Lookups | null>(null);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const router = useRouter();
+
+  const handleAction = useCallback(
+    async (action: 'approve' | 'reject' | 'reenrich') => {
+      if (!itemId) return;
+      setActionLoading(action);
+      await onAction(action, itemId);
+      setActionLoading(null);
+    },
+    [itemId, onAction],
+  );
 
   // Fetch item details
   useEffect(() => {
@@ -138,14 +125,17 @@ export function DetailPanel({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [itemId, item, canNavigatePrev, canNavigateNext, actionLoading, onNavigate, onClose, router]);
-
-  const handleAction = async (action: 'approve' | 'reject' | 'reenrich') => {
-    if (!itemId) return;
-    setActionLoading(action);
-    await onAction(action, itemId);
-    setActionLoading(null);
-  };
+  }, [
+    itemId,
+    item,
+    canNavigatePrev,
+    canNavigateNext,
+    actionLoading,
+    onNavigate,
+    onClose,
+    router,
+    handleAction,
+  ]);
 
   if (!itemId) {
     return (
