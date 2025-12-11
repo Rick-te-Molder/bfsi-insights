@@ -281,7 +281,11 @@ export default function PromptsPage() {
       </header>
 
       {/* Resizable panels container */}
-      <div ref={containerRef} className="flex flex-col">
+      <div
+        ref={containerRef}
+        className="flex flex-col"
+        style={{ height: selectedAgent ? 'calc(100vh - 350px)' : 'auto' }}
+      >
         {/* Agent table */}
         <div
           className="rounded-xl border border-neutral-800 overflow-hidden"
@@ -411,7 +415,7 @@ export default function PromptsPage() {
 
         {/* Expanded agent detail */}
         {selectedAgent && promptsByAgent[selectedAgent] && (
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 min-h-0">
             <AgentDetail
               agentName={selectedAgent}
               prompts={promptsByAgent[selectedAgent]}
@@ -484,8 +488,8 @@ function AgentDetail({
   const currentPrompt = prompts.find((p) => p.is_current);
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div className="h-full flex flex-col rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 overflow-hidden">
+      <div className="flex items-center justify-between mb-4 flex-shrink-0">
         <h2 className="text-lg font-semibold text-white">{agentName}</h2>
         {currentPrompt && (
           <div className="flex items-center gap-2">
@@ -505,10 +509,10 @@ function AgentDetail({
         )}
       </div>
 
-      {/* Current prompt preview */}
+      {/* Current prompt preview - expands to fill available space */}
       {currentPrompt && (
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
+        <div className="flex-1 min-h-0 flex flex-col mb-4">
+          <div className="flex items-center gap-3 mb-2 flex-shrink-0">
             <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-xs">
               Current: {currentPrompt.version}
             </span>
@@ -518,63 +522,71 @@ function AgentDetail({
             </span>
           </div>
           {currentPrompt.notes && (
-            <p className="text-sm text-neutral-400 mb-2">📝 {currentPrompt.notes}</p>
+            <p className="text-sm text-neutral-400 mb-2 flex-shrink-0">📝 {currentPrompt.notes}</p>
           )}
-          <pre className="p-4 rounded-md bg-neutral-950 text-sm text-neutral-300 overflow-x-auto max-h-48 overflow-y-auto whitespace-pre-wrap">
-            {currentPrompt.prompt_text.slice(0, 500)}
-            {currentPrompt.prompt_text.length > 500 && '...'}
+          <pre className="flex-1 p-4 rounded-md bg-neutral-950 text-sm text-neutral-300 overflow-auto whitespace-pre-wrap">
+            {currentPrompt.prompt_text}
           </pre>
         </div>
       )}
 
-      {/* Version Timeline */}
-      <h3 className="text-sm font-medium text-neutral-400 mb-3">Version History</h3>
-      <div className="space-y-2">
-        {prompts.map((p) => (
-          <div
-            key={p.version}
-            className={`flex items-center justify-between p-3 rounded-lg ${
-              p.is_current ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-neutral-800/30'
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-neutral-500" />
-              <div>
-                <span className={`font-medium ${p.is_current ? 'text-emerald-300' : 'text-white'}`}>
-                  {p.version}
-                </span>
-                {p.is_current && <span className="ml-2 text-xs text-emerald-400">(current)</span>}
-                <div className="text-xs text-neutral-500">
-                  {new Date(p.created_at).toLocaleString()}
-                  {p.notes && ` • ${p.notes}`}
+      {/* Version Timeline - fixed at bottom */}
+      <div className="flex-shrink-0">
+        <h3 className="text-sm font-medium text-neutral-400 mb-3">Version History</h3>
+        <div className="space-y-2">
+          {prompts.map((p) => (
+            <div
+              key={p.version}
+              className={`flex items-center justify-between p-3 rounded-lg ${
+                p.is_current
+                  ? 'bg-emerald-500/10 border border-emerald-500/30'
+                  : 'bg-neutral-800/30'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-neutral-500" />
+                <div>
+                  <span
+                    className={`font-medium ${p.is_current ? 'text-emerald-300' : 'text-white'}`}
+                  >
+                    {p.version}
+                  </span>
+                  {p.is_current && <span className="ml-2 text-xs text-emerald-400">(current)</span>}
+                  <div className="text-xs text-neutral-500">
+                    {new Date(p.created_at).toLocaleString()}
+                    {p.notes && ` • ${p.notes}`}
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => onView(p)} className="text-xs text-sky-400 hover:text-sky-300">
-                View
-              </button>
-              {!p.is_current && (
-                <>
-                  <button
-                    onClick={() => onRollback(p)}
-                    className="text-xs text-amber-400 hover:text-amber-300"
-                  >
-                    Rollback
-                  </button>
-                  {currentPrompt && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => onView(p)}
+                  className="text-xs text-sky-400 hover:text-sky-300"
+                >
+                  View
+                </button>
+                {!p.is_current && (
+                  <>
                     <button
-                      onClick={() => onDiff(currentPrompt, p)}
-                      className="text-xs text-purple-400 hover:text-purple-300"
+                      onClick={() => onRollback(p)}
+                      className="text-xs text-amber-400 hover:text-amber-300"
                     >
-                      Diff
+                      Rollback
                     </button>
-                  )}
-                </>
-              )}
+                    {currentPrompt && (
+                      <button
+                        onClick={() => onDiff(currentPrompt, p)}
+                        className="text-xs text-purple-400 hover:text-purple-300"
+                      >
+                        Diff
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
