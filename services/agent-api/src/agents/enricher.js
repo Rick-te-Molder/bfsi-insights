@@ -228,12 +228,13 @@ export async function processQueue(options = {}) {
 
   console.log('🔄 Processing queue...\n');
 
-  // Process items with status_code = PENDING_ENRICHMENT (200)
-  // This includes both discovery items and manual submissions
+  // Process items that need enrichment:
+  // 1. status_code = PENDING_ENRICHMENT (200) - normal queue items
+  // 2. status = 'pending' - stuck items that never got processed (data fix)
   const { data: items, error } = await supabase
     .from('ingestion_queue')
     .select('*')
-    .eq('status_code', STATUS.PENDING_ENRICHMENT)
+    .or(`status_code.eq.${STATUS.PENDING_ENRICHMENT},status.eq.pending`)
     .order('discovered_at', { ascending: true })
     .limit(limit);
 
