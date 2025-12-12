@@ -131,50 +131,25 @@ export async function bulkApproveAction(ids: string[]) {
 
     const publicationId = pubData.id;
 
-    // Insert all taxonomy tags
-    if (payload.industry_codes?.length) {
-      await supabase.from('kb_publication_bfsi_industry').insert(
-        payload.industry_codes.map((code: string) => ({
-          publication_id: publicationId,
-          industry_code: code,
-        })),
-      );
-    }
+    // Insert taxonomy tags dynamically based on taxonomy_config
+    const { data: taxonomyConfigs } = await supabase
+      .from('taxonomy_config')
+      .select('payload_field, junction_table, junction_code_column')
+      .eq('is_active', true)
+      .not('junction_table', 'is', null);
 
-    if (payload.topic_codes?.length) {
-      await supabase.from('kb_publication_bfsi_topic').insert(
-        payload.topic_codes.map((code: string) => ({
-          publication_id: publicationId,
-          topic_code: code,
-        })),
-      );
-    }
-
-    if (payload.regulator_codes?.length) {
-      await supabase.from('kb_publication_regulator').insert(
-        payload.regulator_codes.map((code: string) => ({
-          publication_id: publicationId,
-          regulator_code: code,
-        })),
-      );
-    }
-
-    if (payload.regulation_codes?.length) {
-      await supabase.from('kb_publication_regulation').insert(
-        payload.regulation_codes.map((code: string) => ({
-          publication_id: publicationId,
-          regulation_code: code,
-        })),
-      );
-    }
-
-    if (payload.process_codes?.length) {
-      await supabase.from('kb_publication_bfsi_process').insert(
-        payload.process_codes.map((code: string) => ({
-          publication_id: publicationId,
-          process_code: code,
-        })),
-      );
+    if (taxonomyConfigs) {
+      for (const config of taxonomyConfigs) {
+        const codes = payload[config.payload_field] as string[] | undefined;
+        if (codes?.length && config.junction_table && config.junction_code_column) {
+          await supabase.from(config.junction_table).insert(
+            codes.map((code: string) => ({
+              publication_id: publicationId,
+              [config.junction_code_column]: code,
+            })),
+          );
+        }
+      }
     }
 
     await supabase

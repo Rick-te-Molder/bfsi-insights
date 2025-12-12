@@ -78,47 +78,26 @@ export function ReviewActions({ item }: { item: QueueItem }) {
 
       if (pubError) throw pubError;
 
-      // Insert all taxonomy tags if publication was created
+      // Insert taxonomy tags dynamically based on taxonomy_config
       if (pubData?.id) {
-        if (item.payload.industry_codes?.length) {
-          await supabase.from('kb_publication_bfsi_industry').insert(
-            item.payload.industry_codes.map((code) => ({
-              publication_id: pubData.id,
-              industry_code: code,
-            })),
-          );
-        }
-        if (item.payload.topic_codes?.length) {
-          await supabase.from('kb_publication_bfsi_topic').insert(
-            item.payload.topic_codes.map((code) => ({
-              publication_id: pubData.id,
-              topic_code: code,
-            })),
-          );
-        }
-        if (item.payload.regulator_codes?.length) {
-          await supabase.from('kb_publication_regulator').insert(
-            item.payload.regulator_codes.map((code) => ({
-              publication_id: pubData.id,
-              regulator_code: code,
-            })),
-          );
-        }
-        if (item.payload.regulation_codes?.length) {
-          await supabase.from('kb_publication_regulation').insert(
-            item.payload.regulation_codes.map((code) => ({
-              publication_id: pubData.id,
-              regulation_code: code,
-            })),
-          );
-        }
-        if (item.payload.process_codes?.length) {
-          await supabase.from('kb_publication_bfsi_process').insert(
-            item.payload.process_codes.map((code) => ({
-              publication_id: pubData.id,
-              process_code: code,
-            })),
-          );
+        const { data: taxonomyConfigs } = await supabase
+          .from('taxonomy_config')
+          .select('payload_field, junction_table, junction_code_column')
+          .eq('is_active', true)
+          .not('junction_table', 'is', null);
+
+        if (taxonomyConfigs) {
+          for (const config of taxonomyConfigs) {
+            const codes = item.payload[config.payload_field] as string[] | undefined;
+            if (codes?.length && config.junction_table && config.junction_code_column) {
+              await supabase.from(config.junction_table).insert(
+                codes.map((code) => ({
+                  publication_id: pubData.id,
+                  [config.junction_code_column]: code,
+                })),
+              );
+            }
+          }
         }
       }
 
