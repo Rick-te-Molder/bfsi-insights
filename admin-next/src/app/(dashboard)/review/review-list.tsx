@@ -120,10 +120,8 @@ export function ReviewList({
 
     if (!result.success) {
       showSuccess(`❌ Failed to queue items: ${result.error}`);
-    } else if (result.warning) {
-      showSuccess(`⚠️ ${result.warning}`);
     } else {
-      showSuccess(`✅ Processing started: ${result.processed} items`);
+      showSuccess(`✅ ${result.queued} items queued for re-enrichment`);
     }
 
     setLoading(null);
