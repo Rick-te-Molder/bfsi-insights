@@ -99,11 +99,13 @@ export async function bulkApproveAction(ids: string[]) {
       slug: `${slug}-${Date.now()}`,
       title,
       source_url: item.url,
-      source_slug: payload.source_slug || 'manual',
-      published_at: new Date().toISOString(),
+      source_name: payload.source_slug || 'manual',
+      date_published: payload.published_at || new Date().toISOString(),
       summary_short: summary.short || '',
       summary_medium: summary.medium || '',
       summary_long: summary.long || '',
+      thumbnail: payload.thumbnail_url || null,
+      status: 'published',
     });
 
     if (pubError) {
@@ -111,7 +113,10 @@ export async function bulkApproveAction(ids: string[]) {
       return { success: false, error: `Failed to publish: ${pubError.message}` };
     }
 
-    await supabase.from('ingestion_queue').update({ status: 'approved' }).eq('id', item.id);
+    await supabase
+      .from('ingestion_queue')
+      .update({ status: 'approved', status_code: 330 })
+      .eq('id', item.id);
   }
 
   revalidatePath('/review');
