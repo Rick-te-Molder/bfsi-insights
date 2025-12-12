@@ -19,27 +19,20 @@ export async function bulkReenrichAction(ids: string[]) {
   const agentApiUrl = process.env.AGENT_API_URL || 'https://bfsi-insights.onrender.com';
   const agentApiKey = process.env.AGENT_API_KEY;
 
+  // Trigger processing in background (don't await - let items move to "Queued" immediately)
   if (agentApiKey) {
-    try {
-      const res = await fetch(`${agentApiUrl}/api/agents/process-queue`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': agentApiKey,
-        },
-        body: JSON.stringify({ limit: 20, includeThumbnail: true }),
-      });
-      const data = await res.json();
-      revalidatePath('/review');
-      return { success: true, processed: data.processed || ids.length };
-    } catch {
-      revalidatePath('/review');
-      return { success: true, processed: 0, warning: 'Queued but processing failed' };
-    }
+    fetch(`${agentApiUrl}/api/agents/process-queue`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': agentApiKey,
+      },
+      body: JSON.stringify({ limit: 20, includeThumbnail: true }),
+    }).catch((err) => console.error('Background process-queue failed:', err));
   }
 
   revalidatePath('/review');
-  return { success: true, processed: ids.length };
+  return { success: true, queued: ids.length };
 }
 
 export async function bulkRejectAction(ids: string[], reason: string) {
