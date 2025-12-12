@@ -15,13 +15,26 @@ interface QueueItem {
     title?: string;
     summary?: { short?: string; medium?: string; long?: string };
     thumbnail?: string;
+    thumbnail_url?: string;
     thumbnail_path?: string;
     thumbnail_bucket?: string;
     published_at?: string;
     source_slug?: string;
     relevance_confidence?: number;
+    industry_codes?: string[];
+    topic_codes?: string[];
   };
   discovered_at: string;
+}
+
+// Extract domain from URL for source_name
+function extractDomain(url: string): string {
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname.replace(/^www\./, '');
+  } catch {
+    return 'unknown';
+  }
 }
 
 interface CarouselReviewProps {
@@ -81,18 +94,47 @@ export function CarouselReview({
       }
 
       // Create publication
-      await supabase.from('kb_publication').insert({
-        slug: `${slug}-${Date.now()}`,
-        title,
-        source_url: currentItem.url,
-        source_name: payload.source_slug || 'manual',
-        date_published: payload.published_at || new Date().toISOString(),
-        summary_short: summary.short || '',
-        summary_medium: summary.medium || '',
-        summary_long: summary.long || '',
-        thumbnail: payload.thumbnail_url || null,
-        status: 'published',
-      });
+      const sourceDomain = extractDomain(currentItem.url);
+      const { data: pubData } = await supabase
+        .from('kb_publication')
+        .insert({
+          slug: `${slug}-${Date.now()}`,
+          title,
+          source_url: currentItem.url,
+          source_name:
+            payload.source_slug && payload.source_slug !== 'manual'
+              ? payload.source_slug
+              : sourceDomain,
+          source_domain: sourceDomain,
+          date_published: payload.published_at || new Date().toISOString(),
+          summary_short: summary.short || '',
+          summary_medium: summary.medium || '',
+          summary_long: summary.long || '',
+          thumbnail: payload.thumbnail_url || null,
+          status: 'published',
+        })
+        .select('id')
+        .single();
+
+      // Insert tags if publication was created
+      if (pubData?.id) {
+        if (payload.industry_codes?.length) {
+          await supabase.from('kb_publication_bfsi_industry').insert(
+            payload.industry_codes.map((code) => ({
+              publication_id: pubData.id,
+              industry_code: code,
+            })),
+          );
+        }
+        if (payload.topic_codes?.length) {
+          await supabase.from('kb_publication_bfsi_topic').insert(
+            payload.topic_codes.map((code) => ({
+              publication_id: pubData.id,
+              topic_code: code,
+            })),
+          );
+        }
+      }
 
       // Update queue status
       await supabase
