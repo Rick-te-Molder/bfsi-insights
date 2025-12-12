@@ -131,7 +131,7 @@ export async function bulkApproveAction(ids: string[]) {
 
     const publicationId = pubData.id;
 
-    // Insert industry tags
+    // Insert all taxonomy tags
     if (payload.industry_codes?.length) {
       await supabase.from('kb_publication_bfsi_industry').insert(
         payload.industry_codes.map((code: string) => ({
@@ -141,12 +141,38 @@ export async function bulkApproveAction(ids: string[]) {
       );
     }
 
-    // Insert topic tags
     if (payload.topic_codes?.length) {
       await supabase.from('kb_publication_bfsi_topic').insert(
         payload.topic_codes.map((code: string) => ({
           publication_id: publicationId,
           topic_code: code,
+        })),
+      );
+    }
+
+    if (payload.regulator_codes?.length) {
+      await supabase.from('kb_publication_regulator').insert(
+        payload.regulator_codes.map((code: string) => ({
+          publication_id: publicationId,
+          regulator_code: code,
+        })),
+      );
+    }
+
+    if (payload.regulation_codes?.length) {
+      await supabase.from('kb_publication_regulation').insert(
+        payload.regulation_codes.map((code: string) => ({
+          publication_id: publicationId,
+          regulation_code: code,
+        })),
+      );
+    }
+
+    if (payload.process_codes?.length) {
+      await supabase.from('kb_publication_bfsi_process').insert(
+        payload.process_codes.map((code: string) => ({
+          publication_id: publicationId,
+          process_code: code,
         })),
       );
     }

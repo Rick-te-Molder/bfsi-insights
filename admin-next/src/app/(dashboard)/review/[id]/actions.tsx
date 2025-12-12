@@ -11,6 +11,9 @@ interface QueueItem {
   payload: Record<string, unknown> & {
     industry_codes?: string[];
     topic_codes?: string[];
+    regulator_codes?: string[];
+    regulation_codes?: string[];
+    process_codes?: string[];
   };
 }
 
@@ -75,7 +78,7 @@ export function ReviewActions({ item }: { item: QueueItem }) {
 
       if (pubError) throw pubError;
 
-      // Insert tags if publication was created
+      // Insert all taxonomy tags if publication was created
       if (pubData?.id) {
         if (item.payload.industry_codes?.length) {
           await supabase.from('kb_publication_bfsi_industry').insert(
@@ -90,6 +93,30 @@ export function ReviewActions({ item }: { item: QueueItem }) {
             item.payload.topic_codes.map((code) => ({
               publication_id: pubData.id,
               topic_code: code,
+            })),
+          );
+        }
+        if (item.payload.regulator_codes?.length) {
+          await supabase.from('kb_publication_regulator').insert(
+            item.payload.regulator_codes.map((code) => ({
+              publication_id: pubData.id,
+              regulator_code: code,
+            })),
+          );
+        }
+        if (item.payload.regulation_codes?.length) {
+          await supabase.from('kb_publication_regulation').insert(
+            item.payload.regulation_codes.map((code) => ({
+              publication_id: pubData.id,
+              regulation_code: code,
+            })),
+          );
+        }
+        if (item.payload.process_codes?.length) {
+          await supabase.from('kb_publication_bfsi_process').insert(
+            item.payload.process_codes.map((code) => ({
+              publication_id: pubData.id,
+              process_code: code,
             })),
           );
         }

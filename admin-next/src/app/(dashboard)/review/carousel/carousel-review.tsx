@@ -23,6 +23,9 @@ interface QueueItem {
     relevance_confidence?: number;
     industry_codes?: string[];
     topic_codes?: string[];
+    regulator_codes?: string[];
+    regulation_codes?: string[];
+    process_codes?: string[];
   };
   discovered_at: string;
 }
@@ -118,7 +121,7 @@ export function CarouselReview({
         .select('id')
         .single();
 
-      // Insert tags if publication was created
+      // Insert all taxonomy tags if publication was created
       if (pubData?.id) {
         if (payload.industry_codes?.length) {
           await supabase.from('kb_publication_bfsi_industry').insert(
@@ -133,6 +136,30 @@ export function CarouselReview({
             payload.topic_codes.map((code) => ({
               publication_id: pubData.id,
               topic_code: code,
+            })),
+          );
+        }
+        if (payload.regulator_codes?.length) {
+          await supabase.from('kb_publication_regulator').insert(
+            (payload.regulator_codes as string[]).map((code) => ({
+              publication_id: pubData.id,
+              regulator_code: code,
+            })),
+          );
+        }
+        if (payload.regulation_codes?.length) {
+          await supabase.from('kb_publication_regulation').insert(
+            (payload.regulation_codes as string[]).map((code) => ({
+              publication_id: pubData.id,
+              regulation_code: code,
+            })),
+          );
+        }
+        if (payload.process_codes?.length) {
+          await supabase.from('kb_publication_bfsi_process').insert(
+            (payload.process_codes as string[]).map((code) => ({
+              publication_id: pubData.id,
+              process_code: code,
             })),
           );
         }
