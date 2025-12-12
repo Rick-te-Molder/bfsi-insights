@@ -66,6 +66,8 @@ export function ReviewActions({ item }: { item: QueueItem }) {
           summary_medium: summary?.medium || '',
           summary_long: summary?.long || '',
           thumbnail: item.payload?.thumbnail_url as string,
+          thumbnail_bucket: item.payload?.thumbnail_bucket as string,
+          thumbnail_path: item.payload?.thumbnail_path as string,
           status: 'published',
         })
         .select('id')

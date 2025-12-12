@@ -16,8 +16,8 @@ interface QueueItem {
     summary?: { short?: string; medium?: string; long?: string };
     thumbnail?: string;
     thumbnail_url?: string;
-    thumbnail_path?: string;
-    thumbnail_bucket?: string;
+    thumbnail_path?: string | null;
+    thumbnail_bucket?: string | null;
     published_at?: string;
     source_slug?: string;
     relevance_confidence?: number;
@@ -111,6 +111,8 @@ export function CarouselReview({
           summary_medium: summary.medium || '',
           summary_long: summary.long || '',
           thumbnail: payload.thumbnail_url || null,
+          thumbnail_bucket: payload.thumbnail_bucket || null,
+          thumbnail_path: payload.thumbnail_path || null,
           status: 'published',
         })
         .select('id')
