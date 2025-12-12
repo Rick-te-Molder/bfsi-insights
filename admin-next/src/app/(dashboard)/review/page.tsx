@@ -50,6 +50,10 @@ async function getQueueItems(status?: string, source?: string, timeWindow?: stri
     const code = statusCodeMap[status];
     if (code) {
       query = query.eq('status_code', code);
+      // For "enriched" filter, also exclude items with wrong status text (data inconsistency)
+      if (status === 'enriched') {
+        query = query.eq('status', 'enriched');
+      }
     } else {
       // Fallback to text status for queued/processing (not yet migrated)
       query = query.eq('status', status);
