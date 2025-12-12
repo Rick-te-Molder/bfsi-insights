@@ -11,6 +11,9 @@ interface QueueItem {
   payload: Record<string, unknown> & {
     industry_codes?: string[];
     topic_codes?: string[];
+    regulator_codes?: string[];
+    regulation_codes?: string[];
+    process_codes?: string[];
   };
 }
 
@@ -75,23 +78,26 @@ export function ReviewActions({ item }: { item: QueueItem }) {
 
       if (pubError) throw pubError;
 
-      // Insert tags if publication was created
+      // Insert taxonomy tags dynamically based on taxonomy_config
       if (pubData?.id) {
-        if (item.payload.industry_codes?.length) {
-          await supabase.from('kb_publication_bfsi_industry').insert(
-            item.payload.industry_codes.map((code) => ({
-              publication_id: pubData.id,
-              industry_code: code,
-            })),
-          );
-        }
-        if (item.payload.topic_codes?.length) {
-          await supabase.from('kb_publication_bfsi_topic').insert(
-            item.payload.topic_codes.map((code) => ({
-              publication_id: pubData.id,
-              topic_code: code,
-            })),
-          );
+        const { data: taxonomyConfigs } = await supabase
+          .from('taxonomy_config')
+          .select('payload_field, junction_table, junction_code_column')
+          .eq('is_active', true)
+          .not('junction_table', 'is', null);
+
+        if (taxonomyConfigs) {
+          for (const config of taxonomyConfigs) {
+            const codes = item.payload[config.payload_field] as string[] | undefined;
+            if (codes?.length && config.junction_table && config.junction_code_column) {
+              await supabase.from(config.junction_table).insert(
+                codes.map((code) => ({
+                  publication_id: pubData.id,
+                  [config.junction_code_column]: code,
+                })),
+              );
+            }
+          }
         }
       }
 

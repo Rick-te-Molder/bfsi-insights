@@ -118,3 +118,25 @@ When you encounter a bug or incident:
 - Business concept definitions (audiences, taxonomies) should be in DB tables
 - Prompts should load definitions from tables, not hardcode them
 - Example: `kb_audience` table contains scoring guides loaded by discovery-relevance
+
+---
+
+## Taxonomy & Tags (KB-219)
+
+### Use taxonomy_config for dynamic tag insertion
+- **Never hardcode tag types** in approve handlers
+- Always query `taxonomy_config` table for junction table mappings
+- Pattern:
+  ```typescript
+  const { data: configs } = await supabase
+    .from('taxonomy_config')
+    .select('payload_field, junction_table, junction_code_column')
+    .eq('is_active', true)
+    .not('junction_table', 'is', null);
+  
+  for (const config of configs) {
+    const codes = payload[config.payload_field];
+    if (codes?.length) {
+      await supabase.from(config.junction_table).insert(...);
+    }
+  }
