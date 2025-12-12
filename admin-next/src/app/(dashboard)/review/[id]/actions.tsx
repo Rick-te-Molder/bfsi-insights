@@ -41,12 +41,13 @@ export function ReviewActions({ item }: { item: QueueItem }) {
         slug: `${slug}-${Date.now()}`,
         title,
         source_url: item.url,
-        source_slug: (item.payload?.source_slug as string) || 'manual',
-        published_at: (item.payload?.published_at as string) || new Date().toISOString(),
+        source_name: (item.payload?.source_slug as string) || 'manual',
+        date_published: (item.payload?.published_at as string) || new Date().toISOString(),
         summary_short: summary?.short || '',
         summary_medium: summary?.medium || '',
         summary_long: summary?.long || '',
-        thumbnail_url: item.payload?.thumbnail_url as string,
+        thumbnail: item.payload?.thumbnail_url as string,
+        status: 'published',
       });
 
       if (pubError) throw pubError;
@@ -54,7 +55,7 @@ export function ReviewActions({ item }: { item: QueueItem }) {
       // Update queue status
       const { error: updateError } = await supabase
         .from('ingestion_queue')
-        .update({ status: 'approved' })
+        .update({ status: 'approved', status_code: 330 })
         .eq('id', item.id);
 
       if (updateError) throw updateError;

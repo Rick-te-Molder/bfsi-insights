@@ -85,17 +85,19 @@ export function CarouselReview({
         slug: `${slug}-${Date.now()}`,
         title,
         source_url: currentItem.url,
-        source_slug: payload.source_slug || 'manual',
-        published_at: new Date().toISOString(),
+        source_name: payload.source_slug || 'manual',
+        date_published: payload.published_at || new Date().toISOString(),
         summary_short: summary.short || '',
         summary_medium: summary.medium || '',
         summary_long: summary.long || '',
+        thumbnail: payload.thumbnail_url || null,
+        status: 'published',
       });
 
       // Update queue status
       await supabase
         .from('ingestion_queue')
-        .update({ status: 'approved' })
+        .update({ status: 'approved', status_code: 330 })
         .eq('id', currentItem.id);
 
       // Remove from list
