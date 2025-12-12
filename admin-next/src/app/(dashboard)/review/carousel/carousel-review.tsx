@@ -111,6 +111,8 @@ export function CarouselReview({
           summary_medium: summary.medium || '',
           summary_long: summary.long || '',
           thumbnail: payload.thumbnail_url || null,
+          thumbnail_bucket: payload.thumbnail_bucket || null,
+          thumbnail_path: payload.thumbnail_path || null,
           status: 'published',
         })
         .select('id')
