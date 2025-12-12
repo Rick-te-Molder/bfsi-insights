@@ -157,7 +157,12 @@ async function stepThumbnail(queueId, payload) {
   console.log('   📸 Generating thumbnail...');
   try {
     const result = await runThumbnailer({ id: queueId, payload });
-    return { ...payload, thumbnail_bucket: result.bucket, thumbnail_path: result.path };
+    return {
+      ...payload,
+      thumbnail_bucket: result.bucket,
+      thumbnail_path: result.path,
+      thumbnail_url: result.publicUrl,
+    };
   } catch (error) {
     console.log(`   ⚠️ Thumbnail failed: ${error.message} (continuing without)`);
     return payload;

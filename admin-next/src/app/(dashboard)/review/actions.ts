@@ -64,6 +64,17 @@ export async function bulkRejectAction(ids: string[], reason: string) {
   return { success: true, count: ids.length };
 }
 
+// Extract domain from URL for source_name
+function extractDomain(url: string): string {
+  try {
+    const hostname = new URL(url).hostname;
+    // Remove www. prefix
+    return hostname.replace(/^www\./, '');
+  } catch {
+    return 'unknown';
+  }
+}
+
 export async function bulkApproveAction(ids: string[]) {
   const supabase = createServiceRoleClient();
 
@@ -87,23 +98,55 @@ export async function bulkApproveAction(ids: string[]) {
       .slice(0, 80);
 
     const summary = payload.summary || {};
+    const sourceDomain = extractDomain(item.url);
 
-    const { error: pubError } = await supabase.from('kb_publication').insert({
-      slug: `${slug}-${Date.now()}`,
-      title,
-      source_url: item.url,
-      source_name: payload.source_slug || 'manual',
-      date_published: payload.published_at || new Date().toISOString(),
-      summary_short: summary.short || '',
-      summary_medium: summary.medium || '',
-      summary_long: summary.long || '',
-      thumbnail: payload.thumbnail_url || null,
-      status: 'published',
-    });
+    // Insert publication
+    const { data: pubData, error: pubError } = await supabase
+      .from('kb_publication')
+      .insert({
+        slug: `${slug}-${Date.now()}`,
+        title,
+        source_url: item.url,
+        source_name:
+          payload.source_slug && payload.source_slug !== 'manual'
+            ? payload.source_slug
+            : sourceDomain,
+        source_domain: sourceDomain,
+        date_published: payload.published_at || new Date().toISOString(),
+        summary_short: summary.short || '',
+        summary_medium: summary.medium || '',
+        summary_long: summary.long || '',
+        thumbnail: payload.thumbnail_url || null,
+        status: 'published',
+      })
+      .select('id')
+      .single();
 
-    if (pubError) {
+    if (pubError || !pubData) {
       console.error('Failed to insert publication:', pubError);
-      return { success: false, error: `Failed to publish: ${pubError.message}` };
+      return { success: false, error: `Failed to publish: ${pubError?.message}` };
+    }
+
+    const publicationId = pubData.id;
+
+    // Insert industry tags
+    if (payload.industry_codes?.length) {
+      await supabase.from('kb_publication_bfsi_industry').insert(
+        payload.industry_codes.map((code: string) => ({
+          publication_id: publicationId,
+          industry_code: code,
+        })),
+      );
+    }
+
+    // Insert topic tags
+    if (payload.topic_codes?.length) {
+      await supabase.from('kb_publication_bfsi_topic').insert(
+        payload.topic_codes.map((code: string) => ({
+          publication_id: publicationId,
+          topic_code: code,
+        })),
+      );
     }
 
     await supabase
