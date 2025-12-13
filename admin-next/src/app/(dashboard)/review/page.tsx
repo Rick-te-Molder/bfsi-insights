@@ -8,13 +8,29 @@ import type { TaxonomyConfig, TaxonomyData, TaxonomyItem } from '@/components/ta
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-// Status codes (see docs/architecture/pipeline-status-codes.md)
-const STATUS_CODE = {
-  PENDING_REVIEW: 300,
-  APPROVED: 330,
-  FAILED: 500,
-  REJECTED: 540,
-};
+// Load status codes from database (single source of truth)
+async function loadStatusCodes() {
+  const supabase = createServiceRoleClient();
+  const { data, error } = await supabase.from('status_lookup').select('code, name').order('code');
+
+  if (error) {
+    console.error('Failed to load status codes:', error.message);
+    // Fallback to hardcoded values if DB fails
+    return {
+      pending_review: 300,
+      approved: 330,
+      failed: 500,
+      rejected: 540,
+    };
+  }
+
+  // Convert to object with lowercase names as keys
+  const codes: Record<string, number> = {};
+  for (const row of data) {
+    codes[row.name] = row.code;
+  }
+  return codes;
+}
 
 interface QueueItem {
   id: string;
@@ -30,7 +46,12 @@ interface QueueItem {
   discovered_at: string;
 }
 
-async function getQueueItems(status?: string, source?: string, timeWindow?: string) {
+async function getQueueItems(
+  status?: string,
+  source?: string,
+  timeWindow?: string,
+  statusCodes?: Record<string, number>,
+) {
   const supabase = createServiceRoleClient();
 
   let query = supabase
@@ -39,15 +60,9 @@ async function getQueueItems(status?: string, source?: string, timeWindow?: stri
     .order('discovered_at', { ascending: false })
     .limit(100);
 
-  // Filter exclusively by status_code
-  if (status && status !== 'all') {
-    const statusCodeMap: Record<string, number> = {
-      pending_review: STATUS_CODE.PENDING_REVIEW,
-      approved: STATUS_CODE.APPROVED,
-      failed: STATUS_CODE.FAILED,
-      rejected: STATUS_CODE.REJECTED,
-    };
-    const code = statusCodeMap[status];
+  // Filter exclusively by status_code (loaded from status_lookup table)
+  if (status && status !== 'all' && statusCodes) {
+    const code = statusCodes[status];
     if (code) query = query.eq('status_code', code);
   }
 
@@ -149,20 +164,24 @@ export default async function ReviewPage({
   searchParams: Promise<{ status?: string; source?: string; time?: string; view?: string }>;
 }) {
   const params = await searchParams;
-  const status = params.status || 'enriched';
+  const status = params.status || 'pending_review';
   const source = params.source || '';
   const timeWindow = params.time || '';
   const viewMode = params.view || 'split'; // 'list' or 'split'
 
+  // Load status codes from status_lookup table (single source of truth)
+  const statusCodes = await loadStatusCodes();
+
   const [{ items, sources: _sources }, allSources, { taxonomyConfig, taxonomyData }] =
     await Promise.all([
-      getQueueItems(status, source, timeWindow),
+      getQueueItems(status, source, timeWindow, statusCodes),
       getAllSources(),
       getTaxonomyData(),
     ]);
 
+  // Status filters using names from status_lookup table
   const statusFilters = [
-    { value: 'enriched', label: 'Pending Review' },
+    { value: 'pending_review', label: 'Pending Review' },
     { value: 'queued', label: 'Queued' },
     { value: 'processing', label: 'Processing' },
     { value: 'failed', label: 'Failed' },
