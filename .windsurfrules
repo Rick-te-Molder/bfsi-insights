@@ -9,14 +9,10 @@ These rules are learned from bugs, incidents, and code reviews.
 
 ### Pipeline Status Queries (KB-202)
 - **Always use `status_code`** (numeric) for pipeline status queries, never `status` (text)
-- When querying `ingestion_queue`, always select the `status_code` field
-- Status codes are defined in `docs/architecture/pipeline-status-codes.md`:
-  - `200` = PENDING_ENRICHMENT
-  - `300` = PENDING_REVIEW (items ready for human review)
-  - `330` = APPROVED
-  - `400` = PUBLISHED
-  - `500` = FAILED
-  - `540` = REJECTED
+- **Load status codes from the `status_lookup` table** — this is the single source of truth
+- Never hardcode status code values; query `status_lookup` at runtime
+- See `docs/architecture/pipeline-status-codes.md` for documentation
+- Reference implementation: `services/agent-api/src/lib/status-codes.js`
 
 ### Query Pattern Consistency
 - Dashboard and all UI views must use **identical query logic** for the same data
@@ -140,3 +136,4 @@ When you encounter a bug or incident:
       await supabase.from(config.junction_table).insert(...);
     }
   }
+  ```

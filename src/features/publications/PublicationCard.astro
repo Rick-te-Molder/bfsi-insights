@@ -155,7 +155,7 @@ const candidates = [...itemThumbs];
         <span class="date-value">{fmt(item.date_published ?? undefined)}</span>
       </span>
       {item.source_name && <span> · {item.source_name}</span>}
-      {item.authors?.length && <span> · {item.authors[0]}</span>}
+      {item.authors?.length > 0 && <span> · {item.authors[0]}</span>}
     </div>
 
     <!-- Thumbnail area (fixed height) -->
