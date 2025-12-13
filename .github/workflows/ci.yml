@@ -95,6 +95,13 @@ jobs:
         run: npm ci
         working-directory: services/agent-api
 
+      - name: Validate prompt registry (agent-api)
+        run: npm run validate:prompts
+        working-directory: services/agent-api
+        env:
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+
       - name: Run agent-api tests
         run: npm run test:coverage
         working-directory: services/agent-api

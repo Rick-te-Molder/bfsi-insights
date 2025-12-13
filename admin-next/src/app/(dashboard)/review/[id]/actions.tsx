@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { approveQueueItemAction } from '../actions';
 
 interface QueueItem {
   id: string;
   url: string;
-  status: string;
+  status_code: number;
   payload: Record<string, unknown> & {
     industry_codes?: string[];
     topic_codes?: string[];
@@ -17,15 +18,12 @@ interface QueueItem {
   };
 }
 
-// Extract domain from URL for source_name
-function extractDomain(url: string): string {
-  try {
-    const hostname = new URL(url).hostname;
-    return hostname.replace(/^www\./, '');
-  } catch {
-    return 'unknown';
-  }
-}
+const STATUS_CODE = {
+  PENDING_REVIEW: 300,
+  APPROVED: 330,
+  FAILED: 500,
+  REJECTED: 540,
+};
 
 export function ReviewActions({ item }: { item: QueueItem }) {
   const [loading, setLoading] = useState<string | null>(null);
@@ -42,72 +40,10 @@ export function ReviewActions({ item }: { item: QueueItem }) {
     setLoading('approve');
 
     try {
-      // Create publication
-      const slug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 80);
-
-      const summary = item.payload?.summary as
-        | { short?: string; medium?: string; long?: string }
-        | undefined;
-
-      const sourceDomain = extractDomain(item.url);
-      const sourceSlug = item.payload?.source_slug as string;
-
-      const { data: pubData, error: pubError } = await supabase
-        .from('kb_publication')
-        .insert({
-          slug: `${slug}-${Date.now()}`,
-          title,
-          source_url: item.url,
-          source_name: sourceSlug && sourceSlug !== 'manual' ? sourceSlug : sourceDomain,
-          source_domain: sourceDomain,
-          date_published: (item.payload?.published_at as string) || new Date().toISOString(),
-          summary_short: summary?.short || '',
-          summary_medium: summary?.medium || '',
-          summary_long: summary?.long || '',
-          thumbnail: item.payload?.thumbnail_url as string,
-          thumbnail_bucket: item.payload?.thumbnail_bucket as string,
-          thumbnail_path: item.payload?.thumbnail_path as string,
-          status: 'published',
-        })
-        .select('id')
-        .single();
-
-      if (pubError) throw pubError;
-
-      // Insert taxonomy tags dynamically based on taxonomy_config
-      if (pubData?.id) {
-        const { data: taxonomyConfigs } = await supabase
-          .from('taxonomy_config')
-          .select('payload_field, junction_table, junction_code_column')
-          .eq('is_active', true)
-          .not('junction_table', 'is', null);
-
-        if (taxonomyConfigs) {
-          for (const config of taxonomyConfigs) {
-            const codes = item.payload[config.payload_field] as string[] | undefined;
-            if (codes?.length && config.junction_table && config.junction_code_column) {
-              await supabase.from(config.junction_table).insert(
-                codes.map((code) => ({
-                  publication_id: pubData.id,
-                  [config.junction_code_column]: code,
-                })),
-              );
-            }
-          }
-        }
+      const result = await approveQueueItemAction(item.id, title);
+      if (!result.success) {
+        throw new Error(result.error);
       }
-
-      // Update queue status
-      const { error: updateError } = await supabase
-        .from('ingestion_queue')
-        .update({ status: 'approved', status_code: 330 })
-        .eq('id', item.id);
-
-      if (updateError) throw updateError;
 
       router.push('/review');
       router.refresh();
@@ -126,7 +62,6 @@ export function ReviewActions({ item }: { item: QueueItem }) {
       const { error } = await supabase
         .from('ingestion_queue')
         .update({
-          status: 'rejected',
           status_code: 540, // 540 = REJECTED
           payload: {
             ...item.payload,
@@ -151,7 +86,7 @@ export function ReviewActions({ item }: { item: QueueItem }) {
     try {
       const { error } = await supabase
         .from('ingestion_queue')
-        .update({ status: 'queued', status_code: 200 }) // 200 = PENDING_ENRICHMENT
+        .update({ status_code: 200 }) // 200 = PENDING_ENRICHMENT
         .eq('id', item.id);
 
       if (error) throw error;
@@ -166,7 +101,11 @@ export function ReviewActions({ item }: { item: QueueItem }) {
     }
   };
 
-  const isEditable = ['enriched', 'failed', 'rejected'].includes(item.status);
+  const isEditable = [
+    STATUS_CODE.PENDING_REVIEW,
+    STATUS_CODE.FAILED,
+    STATUS_CODE.REJECTED,
+  ].includes(item.status_code);
 
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
@@ -188,7 +127,7 @@ export function ReviewActions({ item }: { item: QueueItem }) {
       )}
 
       <div className="space-y-2">
-        {item.status === 'enriched' && (
+        {item.status_code === STATUS_CODE.PENDING_REVIEW && (
           <>
             <button
               onClick={handleApprove}
@@ -207,7 +146,9 @@ export function ReviewActions({ item }: { item: QueueItem }) {
           </>
         )}
 
-        {['enriched', 'failed', 'rejected'].includes(item.status) && (
+        {[STATUS_CODE.PENDING_REVIEW, STATUS_CODE.FAILED, STATUS_CODE.REJECTED].includes(
+          item.status_code,
+        ) && (
           <button
             onClick={handleReenrich}
             disabled={loading !== null}
@@ -217,18 +158,10 @@ export function ReviewActions({ item }: { item: QueueItem }) {
           </button>
         )}
 
-        {item.status === 'approved' && (
+        {item.status_code === STATUS_CODE.APPROVED && (
           <p className="text-sm text-emerald-400 text-center py-2">
             ✓ This item has been published
           </p>
-        )}
-
-        {item.status === 'processing' && (
-          <p className="text-sm text-amber-400 text-center py-2">⏳ Processing in progress...</p>
-        )}
-
-        {item.status === 'queued' && (
-          <p className="text-sm text-sky-400 text-center py-2">📋 Queued for processing</p>
         )}
       </div>
     </div>

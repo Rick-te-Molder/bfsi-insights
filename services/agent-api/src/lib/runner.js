@@ -123,7 +123,7 @@ export class AgentRunner {
 
     // 1. Fetch Active Prompt Configuration
     const { data: promptConfig, error: promptError } = await this.supabase
-      .from('prompt_versions')
+      .from('prompt_version')
       .select('*')
       .eq('agent_name', this.agentName)
       .eq('is_current', true)
@@ -142,7 +142,7 @@ export class AgentRunner {
         prompt_version: promptConfig.version,
         status: 'running',
         started_at: new Date().toISOString(),
-        queue_id: context.queueId || null,
+        queue_id: context.queueId ?? null,
         publication_id: context.publicationId || null,
         agent_metadata: { queue_id: context.queueId },
       })

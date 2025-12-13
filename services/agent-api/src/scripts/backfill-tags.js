@@ -38,17 +38,30 @@ async function getTextContent(pub) {
  * Insert tags into junction tables
  */
 async function saveTags(pubId, result) {
-  if (result.industry_code) {
-    const { error } = await supabase
-      .from('kb_publication_bfsi_industry')
-      .upsert({ publication_id: pubId, industry_code: result.industry_code });
+  const normalizeCodes = (items) =>
+    (Array.isArray(items) ? items : [])
+      .map((i) => (typeof i === 'string' ? i : i?.code))
+      .filter((c) => typeof c === 'string' && c.length > 0);
+
+  const industryCodes = normalizeCodes(result.industry_codes);
+  if (industryCodes.length) {
+    const { error } = await supabase.from('kb_publication_bfsi_industry').upsert(
+      industryCodes.map((industry_code) => ({
+        publication_id: pubId,
+        industry_code,
+      })),
+    );
     if (error) console.log(`   ⚠️ Industry insert: ${error.message}`);
   }
 
-  if (result.topic_code) {
-    const { error } = await supabase
-      .from('kb_publication_bfsi_topic')
-      .upsert({ publication_id: pubId, topic_code: result.topic_code });
+  const topicCodes = normalizeCodes(result.topic_codes);
+  if (topicCodes.length) {
+    const { error } = await supabase.from('kb_publication_bfsi_topic').upsert(
+      topicCodes.map((topic_code) => ({
+        publication_id: pubId,
+        topic_code,
+      })),
+    );
     if (error) console.log(`   ⚠️ Topic insert: ${error.message}`);
   }
 }
@@ -61,9 +74,11 @@ async function processPublication(pub) {
 
   const mockQueueItem = {
     id: pub.id,
+    queueId: null,
+    publicationId: pub.id,
     payload: {
       title: pub.title,
-      url: pub.url,
+      url: pub.source_url,
       summary: { short: pub.summary_short, medium: pub.summary_medium },
       textContent,
     },
@@ -73,7 +88,17 @@ async function processPublication(pub) {
   const result = await runTagger(mockQueueItem);
 
   await saveTags(pub.id, result);
-  console.log(`   ✅ Tagged: industry=${result.industry_code}, topic=${result.topic_code}`);
+
+  // Extract first code from industry/topic arrays
+  function getFirstCode(codes) {
+    if (!Array.isArray(codes) || codes.length === 0) return undefined;
+    const first = codes[0];
+    return typeof first === 'string' ? first : first?.code;
+  }
+
+  const ind = getFirstCode(result.industry_codes);
+  const top = getFirstCode(result.topic_codes);
+  console.log(`   ✅ Tagged: industry=${ind || '—'}, topic=${top || '—'}`);
 }
 
 async function main() {
@@ -83,7 +108,7 @@ async function main() {
 
   const { data: pubs, error } = await supabase
     .from('kb_publication_pretty')
-    .select('id, title, url, summary_short, summary_medium, industry')
+    .select('id, title, source_url, summary_short, summary_medium, industry')
     .eq('status', 'published')
     .is('industry', null)
     .limit(limit);

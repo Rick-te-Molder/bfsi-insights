@@ -3,12 +3,131 @@
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
+// Extract domain from URL for source_name
+function extractDomain(url: string): string {
+  try {
+    const hostname = new URL(url).hostname;
+    // Remove www. prefix
+    return hostname.replace(/^www\./, '');
+  } catch {
+    return 'unknown';
+  }
+}
+
+function buildPublicStorageUrl(bucket?: string | null, path?: string | null): string | null {
+  if (!bucket || !path) return null;
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!baseUrl) return null;
+  return `${baseUrl}/storage/v1/object/public/${bucket}/${path}`;
+}
+
+export async function approveQueueItemAction(queueId: string, editedTitle?: string) {
+  const supabase = createServiceRoleClient();
+
+  const { data: item, error: fetchError } = await supabase
+    .from('ingestion_queue')
+    .select('id, url, payload')
+    .eq('id', queueId)
+    .single();
+
+  if (fetchError || !item) {
+    return { success: false as const, error: fetchError?.message || 'Failed to fetch item' };
+  }
+
+  const payload = (item.payload || {}) as Record<string, unknown>;
+  const summary = (payload.summary || {}) as Record<string, unknown>;
+  const title = editedTitle?.trim() || (payload.title as string) || 'Untitled';
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 80);
+
+  const sourceDomain = extractDomain(item.url);
+  const sourceSlug = payload.source_slug as string | undefined;
+
+  const thumbnailBucket = (payload.thumbnail_bucket as string | null | undefined) ?? null;
+  const thumbnailPath = (payload.thumbnail_path as string | null | undefined) ?? null;
+  const thumbnailUrl =
+    (payload.thumbnail_url as string | null | undefined) ??
+    buildPublicStorageUrl(thumbnailBucket, thumbnailPath) ??
+    null;
+
+  // Insert publication
+  const { data: pubData, error: pubError } = await supabase
+    .from('kb_publication')
+    .insert({
+      slug: `${slug}-${Date.now()}`,
+      title,
+      source_url: item.url,
+      source_name: sourceSlug && sourceSlug !== 'manual' ? sourceSlug : sourceDomain,
+      source_domain: sourceDomain,
+      date_published: (payload.published_at as string) || new Date().toISOString(),
+      summary_short: (summary.short as string) || '',
+      summary_medium: (summary.medium as string) || '',
+      summary_long: (summary.long as string) || '',
+      thumbnail: thumbnailUrl,
+      thumbnail_bucket: thumbnailBucket,
+      thumbnail_path: thumbnailPath,
+      status: 'published',
+    })
+    .select('id')
+    .single();
+
+  if (pubError || !pubData) {
+    return { success: false as const, error: pubError?.message || 'Failed to publish' };
+  }
+
+  // Insert taxonomy tags dynamically based on taxonomy_config
+  const { data: taxonomyConfigs, error: taxonomyConfigError } = await supabase
+    .from('taxonomy_config')
+    .select('payload_field, junction_table, junction_code_column')
+    .eq('is_active', true)
+    .not('junction_table', 'is', null);
+
+  if (taxonomyConfigError) {
+    return { success: false as const, error: taxonomyConfigError.message };
+  }
+
+  for (const config of taxonomyConfigs || []) {
+    const key = config.payload_field as string;
+    const codes = payload[key] as string[] | undefined;
+    if (!codes?.length || !config.junction_table || !config.junction_code_column) continue;
+
+    const { error: insertError } = await supabase.from(config.junction_table).insert(
+      codes.map((code: string) => ({
+        publication_id: pubData.id,
+        [config.junction_code_column as string]: code,
+      })),
+    );
+
+    if (insertError) {
+      return { success: false as const, error: insertError.message };
+    }
+  }
+
+  // Update queue item status & persist edited title back into payload
+  const newPayload = editedTitle?.trim() ? { ...payload, title } : payload;
+  const { error: updateError } = await supabase
+    .from('ingestion_queue')
+    .update({ status_code: 330, payload: newPayload })
+    .eq('id', item.id);
+
+  if (updateError) {
+    return { success: false as const, error: updateError.message };
+  }
+
+  revalidatePath('/review');
+  revalidatePath('/published');
+  return { success: true as const, publicationId: pubData.id };
+}
+
 export async function bulkReenrichAction(ids: string[]) {
   const supabase = createServiceRoleClient();
 
   const { error } = await supabase
     .from('ingestion_queue')
-    .update({ status: 'queued', status_code: 200 }) // 200 = PENDING_ENRICHMENT
+    .update({ status_code: 200 }) // 200 = PENDING_ENRICHMENT
     .in('id', ids);
 
   if (error) {
@@ -53,7 +172,6 @@ export async function bulkRejectAction(ids: string[], reason: string) {
     await supabase
       .from('ingestion_queue')
       .update({
-        status: 'rejected',
         status_code: 540, // 540 = REJECTED
         payload: { ...item.payload, rejection_reason: reason },
       })
@@ -62,17 +180,6 @@ export async function bulkRejectAction(ids: string[], reason: string) {
 
   revalidatePath('/review');
   return { success: true, count: ids.length };
-}
-
-// Extract domain from URL for source_name
-function extractDomain(url: string): string {
-  try {
-    const hostname = new URL(url).hostname;
-    // Remove www. prefix
-    return hostname.replace(/^www\./, '');
-  } catch {
-    return 'unknown';
-  }
 }
 
 export async function bulkApproveAction(ids: string[]) {
@@ -100,6 +207,13 @@ export async function bulkApproveAction(ids: string[]) {
     const summary = payload.summary || {};
     const sourceDomain = extractDomain(item.url);
 
+    const thumbnailBucket = (payload.thumbnail_bucket as string | null | undefined) ?? null;
+    const thumbnailPath = (payload.thumbnail_path as string | null | undefined) ?? null;
+    const thumbnailUrl =
+      (payload.thumbnail_url as string | null | undefined) ??
+      buildPublicStorageUrl(thumbnailBucket, thumbnailPath) ??
+      null;
+
     // Insert publication
     const { data: pubData, error: pubError } = await supabase
       .from('kb_publication')
@@ -116,9 +230,9 @@ export async function bulkApproveAction(ids: string[]) {
         summary_short: summary.short || '',
         summary_medium: summary.medium || '',
         summary_long: summary.long || '',
-        thumbnail: payload.thumbnail_url || null,
-        thumbnail_bucket: payload.thumbnail_bucket || null,
-        thumbnail_path: payload.thumbnail_path || null,
+        thumbnail: thumbnailUrl,
+        thumbnail_bucket: thumbnailBucket,
+        thumbnail_path: thumbnailPath,
         status: 'published',
       })
       .select('id')
@@ -152,10 +266,7 @@ export async function bulkApproveAction(ids: string[]) {
       }
     }
 
-    await supabase
-      .from('ingestion_queue')
-      .update({ status: 'approved', status_code: 330 })
-      .eq('id', item.id);
+    await supabase.from('ingestion_queue').update({ status_code: 330 }).eq('id', item.id);
   }
 
   revalidatePath('/review');

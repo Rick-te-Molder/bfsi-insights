@@ -35,29 +35,20 @@ async function getQueueItems(status?: string, source?: string, timeWindow?: stri
 
   let query = supabase
     .from('ingestion_queue')
-    .select('id, url, status, status_code, payload, discovered_at')
+    .select('id, url, status_code, payload, discovered_at')
     .order('discovered_at', { ascending: false })
     .limit(100);
 
-  // Map status filter to status_code for consistency with dashboard
+  // Filter exclusively by status_code
   if (status && status !== 'all') {
     const statusCodeMap: Record<string, number> = {
-      enriched: STATUS_CODE.PENDING_REVIEW,
+      pending_review: STATUS_CODE.PENDING_REVIEW,
       approved: STATUS_CODE.APPROVED,
       failed: STATUS_CODE.FAILED,
       rejected: STATUS_CODE.REJECTED,
     };
     const code = statusCodeMap[status];
-    if (code) {
-      query = query.eq('status_code', code);
-      // For "enriched" filter, also exclude items with wrong status text (data inconsistency)
-      if (status === 'enriched') {
-        query = query.eq('status', 'enriched');
-      }
-    } else {
-      // Fallback to text status for queued/processing (not yet migrated)
-      query = query.eq('status', status);
-    }
+    if (code) query = query.eq('status_code', code);
   }
 
   // Apply time window filter

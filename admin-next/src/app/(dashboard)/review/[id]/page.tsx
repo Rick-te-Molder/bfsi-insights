@@ -13,10 +13,21 @@ import type {
   ValidationLookups,
 } from '@/components/tags';
 
+const STATUS_LABEL: Record<number, string> = {
+  300: 'pending_review',
+  330: 'approved',
+  500: 'failed',
+  540: 'rejected',
+};
+
+function getStatusLabel(code: number): string {
+  return STATUS_LABEL[code] || String(code);
+}
+
 interface QueueItem {
   id: string;
   url: string;
-  status: string;
+  status_code: number;
   payload: Record<string, unknown>;
   discovered_at: string;
 }
@@ -153,9 +164,9 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
               ← Back to queue
             </Link>
             <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(item.status)}`}
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(getStatusLabel(item.status_code))}`}
             >
-              {item.status}
+              {getStatusLabel(item.status_code)}
             </span>
           </div>
           {/* Title */}

@@ -11,6 +11,7 @@
 
 import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
+import { loadStatusCodes, STATUS } from '../lib/status-codes.js';
 import {
   searchPaper,
   getPaper,
@@ -119,6 +120,7 @@ async function urlExists(url) {
  * Add a paper to the ingestion queue
  */
 async function queuePaper(paper, sourceClassic, isClassic = false) {
+  await loadStatusCodes();
   const url = paper.url || `https://www.semanticscholar.org/paper/${paper.paperId}`;
 
   if (await urlExists(url)) {
@@ -144,7 +146,7 @@ async function queuePaper(paper, sourceClassic, isClassic = false) {
     .from('ingestion_queue')
     .insert({
       url,
-      status: 'pending',
+      status_code: STATUS.PENDING_ENRICHMENT,
       payload,
       relevance_score: Math.round(impactScore),
       executive_summary: isClassic

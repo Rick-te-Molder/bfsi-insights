@@ -37,7 +37,7 @@ serve(async (req) => {
     // Fetch queue item to validate it exists
     const { data: queueItem, error: fetchError } = await supabase
       .from('ingestion_queue')
-      .select('id, url, status')
+      .select('id, url, status_code')
       .eq('id', queueId)
       .single();
 
@@ -48,22 +48,22 @@ serve(async (req) => {
       });
     }
 
-    // Only process pending items
-    if (queueItem.status !== 'pending') {
+    // Only process items awaiting enrichment
+    if (queueItem.status_code !== 200) {
       return new Response(
         JSON.stringify({
           success: true,
-          message: `Item already has status: ${queueItem.status}`,
-          status: queueItem.status,
+          message: `Item already has status_code: ${queueItem.status_code}`,
+          status_code: queueItem.status_code,
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
-    // Mark as 'queued' - Agent API will process it
+    // Keep at status_code 200 (PENDING_ENRICHMENT) - Agent API processes these
     const { error: updateError } = await supabase
       .from('ingestion_queue')
-      .update({ status: 'queued' })
+      .update({ status_code: 200 })
       .eq('id', queueId);
 
     if (updateError) {
@@ -77,7 +77,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        status: 'queued',
+        status_code: 200,
         message: 'Item queued for processing by Agent API',
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

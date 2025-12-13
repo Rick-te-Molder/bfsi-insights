@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
 import { TagDisplay } from '@/components/tags';
 import type { TaxonomyConfig, TaxonomyData } from '@/components/tags';
+import { approveQueueItemAction } from '../actions';
 
 interface QueueItem {
   id: string;
@@ -28,16 +29,6 @@ interface QueueItem {
     process_codes?: string[];
   };
   discovered_at: string;
-}
-
-// Extract domain from URL for source_name
-function extractDomain(url: string): string {
-  try {
-    const hostname = new URL(url).hostname;
-    return hostname.replace(/^www\./, '');
-  } catch {
-    return 'unknown';
-  }
 }
 
 interface CarouselReviewProps {
@@ -80,75 +71,13 @@ export function CarouselReview({
 
     try {
       const payload = currentItem.payload || {};
-      const summary = payload.summary || {};
       const title = editedTitle || payload.title || 'Untitled';
-      const slug = title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 80);
 
-      // Update title if changed
-      if (editedTitle !== payload.title) {
-        await supabase
-          .from('ingestion_queue')
-          .update({ payload: { ...payload, title: editedTitle } })
-          .eq('id', currentItem.id);
+      // Use service-role server action to publish + insert tags reliably
+      const result = await approveQueueItemAction(currentItem.id, title);
+      if (!result.success) {
+        throw new Error(result.error);
       }
-
-      // Create publication
-      const sourceDomain = extractDomain(currentItem.url);
-      const { data: pubData } = await supabase
-        .from('kb_publication')
-        .insert({
-          slug: `${slug}-${Date.now()}`,
-          title,
-          source_url: currentItem.url,
-          source_name:
-            payload.source_slug && payload.source_slug !== 'manual'
-              ? payload.source_slug
-              : sourceDomain,
-          source_domain: sourceDomain,
-          date_published: payload.published_at || new Date().toISOString(),
-          summary_short: summary.short || '',
-          summary_medium: summary.medium || '',
-          summary_long: summary.long || '',
-          thumbnail: payload.thumbnail_url || null,
-          thumbnail_bucket: payload.thumbnail_bucket || null,
-          thumbnail_path: payload.thumbnail_path || null,
-          status: 'published',
-        })
-        .select('id')
-        .single();
-
-      // Insert taxonomy tags dynamically based on taxonomy_config
-      if (pubData?.id) {
-        const { data: taxonomyConfigs } = await supabase
-          .from('taxonomy_config')
-          .select('payload_field, junction_table, junction_code_column')
-          .eq('is_active', true)
-          .not('junction_table', 'is', null);
-
-        if (taxonomyConfigs) {
-          for (const config of taxonomyConfigs) {
-            const codes = payload[config.payload_field] as string[] | undefined;
-            if (codes?.length && config.junction_table && config.junction_code_column) {
-              await supabase.from(config.junction_table).insert(
-                codes.map((code) => ({
-                  publication_id: pubData.id,
-                  [config.junction_code_column]: code,
-                })),
-              );
-            }
-          }
-        }
-      }
-
-      // Update queue status
-      await supabase
-        .from('ingestion_queue')
-        .update({ status: 'approved', status_code: 330 })
-        .eq('id', currentItem.id);
 
       // Remove from list
       const newItems = items.filter((_, i) => i !== currentIndex);
@@ -166,7 +95,7 @@ export function CarouselReview({
     } finally {
       setProcessing(false);
     }
-  }, [currentItem, editedTitle, currentIndex, items, processing, supabase, router]);
+  }, [currentItem, editedTitle, currentIndex, items, processing, router]);
 
   const handleReject = useCallback(async () => {
     if (!currentItem || processing) return;

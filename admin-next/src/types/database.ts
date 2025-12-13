@@ -90,7 +90,7 @@ export interface Source {
 }
 
 export interface PromptVersion {
-  id: number;
+  id: string;
   agent_name: string;
   version: string;
   prompt_text: string;

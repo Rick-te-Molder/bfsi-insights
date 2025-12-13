@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
 
     const { error: updateError } = await adminClient
       .from('ingestion_queue')
-      .update({ status: 'pending' })
+      .update({ status_code: 200 })
       .eq('id', queue_id);
 
     if (updateError) {

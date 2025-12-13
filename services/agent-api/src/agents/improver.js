@@ -151,11 +151,10 @@ async function classifyMiss(missedItem) {
   }
 
   // We found the URL in ingestion_queue
-  const status = ingestionRecord.status;
   const statusCode = ingestionRecord.status_code;
 
   // Check if it was rejected by filter
-  if (status === 'rejected' || statusCode === 540) {
+  if (statusCode === 540 || statusCode === 530) {
     return {
       category: 'filter_rejected',
       details: {
@@ -184,7 +183,7 @@ async function classifyMiss(missedItem) {
   }
 
   // Check for failed status
-  if (status === 'failed' || statusCode === 500) {
+  if (statusCode === 500) {
     return {
       category: 'crawl_failed',
       details: {
@@ -201,7 +200,6 @@ async function classifyMiss(missedItem) {
     details: {
       domain,
       source_slug: source.slug,
-      status: status,
       status_code: statusCode,
     },
   };

@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import process from 'node:process';
 
-const runner = new AgentRunner('content-summarizer');
+const runner = new AgentRunner('summarizer');
 
 /**
  * Clean title by removing common source suffixes

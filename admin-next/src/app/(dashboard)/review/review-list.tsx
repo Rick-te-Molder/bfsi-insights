@@ -10,7 +10,7 @@ import type { TaxonomyConfig, TaxonomyData } from '@/components/tags';
 interface QueueItem {
   id: string;
   url: string;
-  status: string;
+  status_code: number;
   payload: {
     title?: string;
     summary?: { short?: string };
@@ -26,6 +26,17 @@ interface ReviewListProps {
   status: string;
   taxonomyConfig: TaxonomyConfig[];
   taxonomyData: TaxonomyData;
+}
+
+const STATUS_LABEL: Record<number, string> = {
+  300: 'pending_review',
+  330: 'approved',
+  500: 'failed',
+  540: 'rejected',
+};
+
+function getStatusLabel(code: number): string {
+  return STATUS_LABEL[code] || String(code);
 }
 
 // Note: taxonomyConfig/taxonomyData available for future inline tag display
@@ -129,9 +140,9 @@ export function ReviewList({
     router.refresh();
   };
 
-  const canBulkApprove = status === 'enriched';
-  const canBulkReject = ['enriched', 'failed'].includes(status);
-  const canBulkReenrich = ['enriched', 'failed', 'rejected'].includes(status);
+  const canBulkApprove = status === 'pending_review';
+  const canBulkReject = ['pending_review', 'failed'].includes(status);
+  const canBulkReenrich = ['pending_review', 'failed', 'rejected'].includes(status);
 
   return (
     <div className="space-y-4">
@@ -281,7 +292,7 @@ export function ReviewList({
                         {item.payload.summary.short}
                       </p>
                     )}
-                    {item.status === 'rejected' && item.payload?.rejection_reason && (
+                    {item.status_code === 540 && item.payload?.rejection_reason && (
                       <p className="mt-2 text-sm text-red-400">
                         Rejected: {item.payload.rejection_reason}
                       </p>
@@ -289,9 +300,9 @@ export function ReviewList({
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(item.status)}`}
+                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(getStatusLabel(item.status_code))}`}
                     >
-                      {item.status}
+                      {getStatusLabel(item.status_code)}
                     </span>
                     <span className="text-xs text-neutral-500">
                       {formatDateTime(item.discovered_at)}

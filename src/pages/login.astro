@@ -133,7 +133,7 @@ import Base from '../layouts/Base.astro';
           document.cookie = `sb-access-token=${data.session.access_token}; ${cookieOptions}`;
           document.cookie = `sb-refresh-token=${data.session.refresh_token}; ${cookieOptions}`;
 
-          window.location.href = '/admin/review';
+          window.location.href = 'https://admin.bfsiinsights.com/review';
         } catch (err) {
           showError('An unexpected error occurred. Please try again.');
           setLoading(false);

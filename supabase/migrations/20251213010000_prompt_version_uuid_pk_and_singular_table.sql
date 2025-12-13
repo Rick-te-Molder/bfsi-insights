@@ -1,0 +1,108 @@
+-- KB-219: Clean prompt table schema
+--
+-- Goals:
+-- 1) Use singular table name: prompt_version
+-- 2) Use UUID primary key (id) instead of version text PK
+-- 3) Preserve existing semantic uniqueness: (agent_name, version)
+-- 4) Update rejection_analytics to reference prompt_version via UUID
+--
+-- IMPORTANT: This is a breaking schema change. All application code must be updated
+-- to use prompt_version and UUID ids before this is deployed.
+
+DO $$
+BEGIN
+  -- 0) Rename table to singular form (if not already renamed)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'prompt_versions'
+  ) AND NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'prompt_version'
+  ) THEN
+    EXECUTE 'ALTER TABLE public.prompt_versions RENAME TO prompt_version';
+  END IF;
+
+  -- 1) Add UUID id column
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'prompt_version' AND column_name = 'id'
+  ) THEN
+    EXECUTE 'ALTER TABLE public.prompt_version ADD COLUMN id uuid DEFAULT gen_random_uuid()';
+  END IF;
+
+  -- 2) Backfill id for existing rows
+  EXECUTE 'UPDATE public.prompt_version SET id = gen_random_uuid() WHERE id IS NULL';
+
+  -- 3) Drop dependent FKs and old PK, then add new PK on id
+  -- First drop the FK from rejection_analytics that depends on the old PK
+  EXECUTE 'ALTER TABLE public.rejection_analytics DROP CONSTRAINT IF EXISTS rejection_analytics_prompt_version_fkey';
+  
+  -- Now drop old PKs
+  EXECUTE 'ALTER TABLE public.prompt_version DROP CONSTRAINT IF EXISTS prompt_versions_pkey CASCADE';
+  EXECUTE 'ALTER TABLE public.prompt_version DROP CONSTRAINT IF EXISTS prompt_version_pkey CASCADE';
+
+  EXECUTE 'ALTER TABLE public.prompt_version ALTER COLUMN id SET NOT NULL';
+  EXECUTE 'ALTER TABLE public.prompt_version ADD CONSTRAINT prompt_version_pkey PRIMARY KEY (id)';
+
+  -- 4) Preserve semantic uniqueness
+  EXECUTE 'ALTER TABLE public.prompt_version DROP CONSTRAINT IF EXISTS prompt_versions_version_key';
+  EXECUTE 'ALTER TABLE public.prompt_version DROP CONSTRAINT IF EXISTS prompt_version_version_key';
+  EXECUTE 'ALTER TABLE public.prompt_version DROP CONSTRAINT IF EXISTS prompt_version_agent_name_version_key';
+  EXECUTE 'ALTER TABLE public.prompt_version ADD CONSTRAINT prompt_version_agent_name_version_key UNIQUE (agent_name, version)';
+
+  -- 5) Ensure only one current prompt per agent
+  -- (partial unique index: one is_current=true per agent_name)
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE schemaname = 'public' AND indexname = 'prompt_version_one_current_per_agent'
+  ) THEN
+    EXECUTE 'CREATE UNIQUE INDEX prompt_version_one_current_per_agent ON public.prompt_version(agent_name) WHERE is_current IS TRUE';
+  END IF;
+
+  -- 6) Update rejection_analytics FK from version(text) -> prompt_version.id(uuid)
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'rejection_analytics' AND column_name = 'prompt_version'
+  ) THEN
+    -- Add new uuid column
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'rejection_analytics' AND column_name = 'prompt_version_id'
+    ) THEN
+      EXECUTE 'ALTER TABLE public.rejection_analytics ADD COLUMN prompt_version_id uuid';
+    END IF;
+
+    -- Backfill from version -> id
+    EXECUTE '
+      UPDATE public.rejection_analytics ra
+      SET prompt_version_id = pv.id
+      FROM public.prompt_version pv
+      WHERE ra.prompt_version_id IS NULL
+        AND ra.prompt_version IS NOT NULL
+        AND pv.version = ra.prompt_version
+    ';
+
+    -- Drop FK on prompt_version (if exists)
+    EXECUTE 'ALTER TABLE public.rejection_analytics DROP CONSTRAINT IF EXISTS rejection_analytics_prompt_version_fkey';
+
+    -- Enforce FK on uuid
+    EXECUTE 'ALTER TABLE public.rejection_analytics ADD CONSTRAINT rejection_analytics_prompt_version_id_fkey FOREIGN KEY (prompt_version_id) REFERENCES public.prompt_version(id) ON DELETE SET NULL';
+
+    -- Drop materialized view that depends on the old column (will recreate after)
+    EXECUTE 'DROP MATERIALIZED VIEW IF EXISTS public.rejection_summary CASCADE';
+
+    -- Drop old column
+    EXECUTE 'ALTER TABLE public.rejection_analytics DROP COLUMN prompt_version';
+
+    -- Recreate the materialized view using new prompt_version_id column
+    EXECUTE '
+      CREATE MATERIALIZED VIEW IF NOT EXISTS public.rejection_summary AS
+      SELECT 
+        rejection_category,
+        COUNT(*) as count,
+        DATE_TRUNC(''day'', created_at) as day
+      FROM public.rejection_analytics
+      GROUP BY rejection_category, DATE_TRUNC(''day'', created_at)
+    ';
+  END IF;
+END $$;

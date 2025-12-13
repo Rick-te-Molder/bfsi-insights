@@ -171,7 +171,7 @@ async function getStats() {
   const { count: enrichedToday } = await supabase
     .from('ingestion_queue')
     .select('*', { count: 'exact', head: true })
-    .in('status', ['enriched', 'approved', 'rejected', 'failed'])
+    .in('status_code', [300, 330, 540, 500])
     .gte('updated_at', todayStart.toISOString());
 
   // Get publication count

@@ -50,7 +50,7 @@ export async function runGoldenEval(agentName, agentFn, options = {}) {
 
   // Get current prompt version
   const { data: promptConfig } = await supabase
-    .from('prompt_versions')
+    .from('prompt_version')
     .select('version')
     .eq('agent_name', agentName)
     .eq('is_current', true)
@@ -143,7 +143,7 @@ export async function runLLMJudgeEval(agentName, agentFn, inputs, options = {}) 
   console.log(`   Criteria: ${criteria}\n`);
 
   const { data: promptConfig } = await supabase
-    .from('prompt_versions')
+    .from('prompt_version')
     .select('version')
     .eq('agent_name', agentName)
     .eq('is_current', true)

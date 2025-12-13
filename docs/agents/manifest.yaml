@@ -36,7 +36,7 @@ agents:
       Orchestrates RSS/sitemap discovery. Fetches sources, filters candidates,
       scores relevance, and inserts into ingestion queue.
     prompt_versions:
-      - discovery-filter  # JSON config for exclusion patterns
+      - discoverer-config  # JSON config for exclusion patterns
     tables:
       - kb_source
       - bfsi_industry
@@ -154,7 +154,7 @@ agents:
 #   - tagger (taxonomy classification)
 #
 # Config (type: config):
-#   - discovery-filter (JSON exclusion patterns)
+#   - discoverer-config (JSON exclusion patterns)
 #   - thumbnailer (JSON viewport config)
 #
 # Dynamic (type: scoring):
@@ -176,7 +176,7 @@ required_prompts:
     type: llm
     required: true
     
-  - agent_name: discovery-filter
+  - agent_name: discoverer-config
     type: config
     required: true
     
