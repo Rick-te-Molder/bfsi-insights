@@ -88,16 +88,16 @@ async function processPublication(pub) {
   const result = await runTagger(mockQueueItem);
 
   await saveTags(pub.id, result);
-  const ind = Array.isArray(result.industry_codes)
-    ? typeof result.industry_codes[0] === 'string'
-      ? result.industry_codes[0]
-      : result.industry_codes[0]?.code
-    : undefined;
-  const top = Array.isArray(result.topic_codes)
-    ? typeof result.topic_codes[0] === 'string'
-      ? result.topic_codes[0]
-      : result.topic_codes[0]?.code
-    : undefined;
+
+  // Extract first code from industry/topic arrays
+  function getFirstCode(codes) {
+    if (!Array.isArray(codes) || codes.length === 0) return undefined;
+    const first = codes[0];
+    return typeof first === 'string' ? first : first?.code;
+  }
+
+  const ind = getFirstCode(result.industry_codes);
+  const top = getFirstCode(result.topic_codes);
   console.log(`   ✅ Tagged: industry=${ind || '—'}, topic=${top || '—'}`);
 }
 

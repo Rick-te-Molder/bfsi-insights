@@ -294,11 +294,9 @@ export async function runTagger(queueItem) {
   // Load taxonomies
   const taxonomies = await loadTaxonomies();
 
-  const hasQueueId = Object.prototype.hasOwnProperty.call(queueItem, 'queueId');
+  const hasQueueId = Object.hasOwn(queueItem, 'queueId');
   const queueId = hasQueueId ? queueItem.queueId : queueItem.id;
-  const publicationId = Object.prototype.hasOwnProperty.call(queueItem, 'publicationId')
-    ? queueItem.publicationId
-    : null;
+  const publicationId = Object.hasOwn(queueItem, 'publicationId') ? queueItem.publicationId : null;
 
   return runner.run(
     {
