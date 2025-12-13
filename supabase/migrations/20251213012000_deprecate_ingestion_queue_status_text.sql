@@ -15,7 +15,10 @@ ALTER TABLE ingestion_queue
   ALTER COLUMN status_code SET DEFAULT 200,
   ALTER COLUMN status_code SET NOT NULL;
 
--- Step 2: Create trigger function to block writes to deprecated status column
+-- Step 2: Clear existing status text values BEFORE creating the blocking trigger
+UPDATE ingestion_queue SET status = NULL WHERE status IS NOT NULL;
+
+-- Step 3: Create trigger function to block writes to deprecated status column
 CREATE OR REPLACE FUNCTION block_status_text_write()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -40,9 +43,5 @@ CREATE TRIGGER block_status_text_write_trigger
   FOR EACH ROW
   EXECUTE FUNCTION block_status_text_write();
 
--- Step 4: Add comment to mark column as deprecated
+-- Step 5: Add comment to mark column as deprecated
 COMMENT ON COLUMN ingestion_queue.status IS 'DEPRECATED: Use status_code instead. This column is blocked from writes.';
-
--- Step 5: Clear existing status text values (optional cleanup)
--- This nullifies the deprecated column data
-UPDATE ingestion_queue SET status = NULL WHERE status IS NOT NULL;
