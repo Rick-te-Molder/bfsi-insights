@@ -17,7 +17,7 @@ interface EnrichmentLogEntry {
 interface QueueItem {
   id: string;
   url: string;
-  status: string;
+  status_code: number;
   payload: Record<string, unknown>;
 }
 
