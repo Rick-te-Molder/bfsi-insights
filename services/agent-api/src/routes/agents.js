@@ -7,6 +7,7 @@ import { runTagger } from '../agents/tagger.js';
 import { runThumbnailer } from '../agents/thumbnailer.js';
 import { runDiscovery } from '../agents/discoverer.js';
 import { processQueue, enrichItem } from '../agents/enricher.js';
+import { STATUS, loadStatusCodes } from '../lib/status-codes.js';
 import {
   analyzeMissedDiscovery,
   analyzeAllPendingMisses,
@@ -20,7 +21,8 @@ const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPAB
 router.post('/run/filter', async (req, res) => {
   try {
     const { limit = 10, id } = req.body;
-    let query = supabase.from('ingestion_queue').select('*').eq('status', 'fetched'); // Only process fetched items
+    await loadStatusCodes();
+    let query = supabase.from('ingestion_queue').select('*').eq('status_code', STATUS.FETCHED); // Only process fetched items
 
     if (id) query = query.eq('id', id);
     else query = query.limit(limit);
@@ -36,17 +38,17 @@ router.post('/run/filter', async (req, res) => {
       const result = await runRelevanceFilter(item);
 
       // Update Queue Status based on result
-      const status = result.relevant ? 'filtered' : 'rejected';
+      const nextStatusCode = result.relevant ? STATUS.TO_SUMMARIZE : STATUS.IRRELEVANT;
 
       await supabase
         .from('ingestion_queue')
         .update({
-          status: status,
+          status_code: nextStatusCode,
           rejection_reason: result.relevant ? null : result.reason,
         })
         .eq('id', item.id);
 
-      results.push({ id: item.id, status, result });
+      results.push({ id: item.id, status_code: nextStatusCode, result });
     }
 
     res.json({ processed: results.length, results });
@@ -60,7 +62,8 @@ router.post('/run/filter', async (req, res) => {
 router.post('/run/summarize', async (req, res) => {
   try {
     const { limit = 5, id } = req.body;
-    let query = supabase.from('ingestion_queue').select('*').eq('status', 'filtered');
+    await loadStatusCodes();
+    let query = supabase.from('ingestion_queue').select('*').eq('status_code', STATUS.TO_SUMMARIZE);
     //.is('payload->summary', null); // removed for testing flexibility, or keep if strict
 
     if (id) query = query.eq('id', id);
@@ -80,7 +83,7 @@ router.post('/run/summarize', async (req, res) => {
       await supabase
         .from('ingestion_queue')
         .update({
-          status: 'summarized', // New status!
+          status_code: STATUS.TO_TAG,
           payload: {
             ...item.payload,
             title: result.title,
@@ -91,7 +94,7 @@ router.post('/run/summarize', async (req, res) => {
         })
         .eq('id', item.id);
 
-      results.push({ id: item.id, status: 'summarized', result });
+      results.push({ id: item.id, status_code: STATUS.TO_TAG, result });
     }
 
     res.json({ processed: results.length, results });
@@ -105,7 +108,8 @@ router.post('/run/summarize', async (req, res) => {
 router.post('/run/tag', async (req, res) => {
   try {
     const { limit = 5, id } = req.body;
-    let query = supabase.from('ingestion_queue').select('*').eq('status', 'summarized'); // Only process items that have been summarized
+    await loadStatusCodes();
+    let query = supabase.from('ingestion_queue').select('*').eq('status_code', STATUS.TO_TAG);
 
     if (id) query = query.eq('id', id);
     else query = query.limit(limit);
@@ -122,7 +126,7 @@ router.post('/run/tag', async (req, res) => {
       await supabase
         .from('ingestion_queue')
         .update({
-          status: 'tagged', // After tagging, ready for thumbnail
+          status_code: STATUS.TO_THUMBNAIL,
           payload: {
             ...item.payload,
             industry_codes: [result.industry_code],
@@ -136,7 +140,7 @@ router.post('/run/tag', async (req, res) => {
         })
         .eq('id', item.id);
 
-      results.push({ id: item.id, status: 'tagged', result });
+      results.push({ id: item.id, status_code: STATUS.TO_THUMBNAIL, result });
     }
 
     res.json({ processed: results.length, results });
@@ -162,7 +166,8 @@ router.post('/run/discovery', async (req, res) => {
 router.post('/run/thumbnail', async (req, res) => {
   try {
     const { limit = 5, id } = req.body;
-    let query = supabase.from('ingestion_queue').select('*').eq('status', 'tagged'); // Process tagged items
+    await loadStatusCodes();
+    let query = supabase.from('ingestion_queue').select('*').eq('status_code', STATUS.TO_THUMBNAIL);
 
     if (id) query = query.eq('id', id);
     else query = query.limit(limit);

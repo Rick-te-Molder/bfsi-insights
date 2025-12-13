@@ -24,6 +24,7 @@ import { runThumbnailer } from './agents/thumbnailer.js';
 import { processQueue } from './agents/enricher.js';
 import { runGoldenEval, runLLMJudgeEval, getEvalHistory } from './lib/evals.js';
 import { fetchContent } from './lib/content-fetcher.js';
+import { STATUS, loadStatusCodes } from './lib/status-codes.js';
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
@@ -108,11 +109,13 @@ async function runClassicsCmd(options) {
 async function runFetchCmd(options) {
   console.log('📥 Running Content Fetch...\n');
 
+  await loadStatusCodes();
+
   // Get items with status 'fetched' that don't have textContent
   const { data: items, error } = await supabase
     .from('ingestion_queue')
     .select('*')
-    .eq('status', 'fetched')
+    .eq('status_code', STATUS.FETCHED)
     .is('payload->textContent', null)
     .order('discovered_at', { ascending: true })
     .limit(options.limit || 10);
@@ -174,10 +177,12 @@ async function runFetchCmd(options) {
 async function runFilterCmd(options) {
   console.log('🔍 Running Relevance Filter Agent...\n');
 
+  await loadStatusCodes();
+
   const { data: items, error } = await supabase
     .from('ingestion_queue')
     .select('*')
-    .eq('status', 'fetched')
+    .eq('status_code', STATUS.FETCHED)
     .order('discovered_at', { ascending: true })
     .limit(options.limit || 10);
 
@@ -195,12 +200,12 @@ async function runFilterCmd(options) {
   for (const item of items) {
     try {
       const result = await runRelevanceFilter(item);
-      const status = result.relevant ? 'filtered' : 'rejected';
+      const nextStatusCode = result.relevant ? STATUS.TO_SUMMARIZE : STATUS.IRRELEVANT;
 
       await supabase
         .from('ingestion_queue')
         .update({
-          status,
+          status_code: nextStatusCode,
           rejection_reason: result.relevant ? null : result.reason,
         })
         .eq('id', item.id);
@@ -225,10 +230,12 @@ async function runFilterCmd(options) {
 async function runSummarizeCmd(options) {
   console.log('📝 Running Summarize Agent...\n');
 
+  await loadStatusCodes();
+
   const { data: items, error } = await supabase
     .from('ingestion_queue')
     .select('*')
-    .eq('status', 'filtered')
+    .eq('status_code', STATUS.TO_SUMMARIZE)
     .order('discovered_at', { ascending: true })
     .limit(options.limit || 5);
 
@@ -249,7 +256,7 @@ async function runSummarizeCmd(options) {
       await supabase
         .from('ingestion_queue')
         .update({
-          status: 'summarized',
+          status_code: STATUS.TO_TAG,
           payload: {
             ...item.payload,
             title: result.title,
@@ -283,10 +290,12 @@ async function runSummarizeCmd(options) {
 async function runTagCmd(options) {
   console.log('🏷️  Running Tag Agent...\n');
 
+  await loadStatusCodes();
+
   const { data: items, error } = await supabase
     .from('ingestion_queue')
     .select('*')
-    .eq('status', 'summarized')
+    .eq('status_code', STATUS.TO_TAG)
     .order('discovered_at', { ascending: true })
     .limit(options.limit || 5);
 
@@ -307,13 +316,22 @@ async function runTagCmd(options) {
       await supabase
         .from('ingestion_queue')
         .update({
-          status: 'tagged',
+          status_code: STATUS.TO_THUMBNAIL,
           payload: {
             ...item.payload,
-            industry_codes: [result.industry_code],
-            topic_codes: [result.topic_code],
+            industry_codes: result.industry_codes || [],
+            topic_codes: result.topic_codes || [],
+            geography_codes: result.geography_codes || [],
+            use_case_codes: result.use_case_codes || [],
+            capability_codes: result.capability_codes || [],
+            regulator_codes: result.regulator_codes || [],
+            regulation_codes: result.regulation_codes || [],
+            process_codes: result.process_codes || [],
+            organization_names: result.organization_names || [],
+            vendor_names: result.vendor_names || [],
+            audience_scores: result.audience_scores || {},
             tagging_metadata: {
-              confidence: result.confidence,
+              overall_confidence: result.overall_confidence,
               reasoning: result.reasoning,
               tagged_at: new Date().toISOString(),
             },
@@ -321,7 +339,9 @@ async function runTagCmd(options) {
         })
         .eq('id', item.id);
 
-      console.log(`   ✅ Tagged: ${result.industry_code} / ${result.topic_code}`);
+      console.log(
+        `   ✅ Tagged: ${(result.industry_codes || []).slice(0, 2).join(', ')} / ${(result.topic_codes || []).slice(0, 2).join(', ')}`,
+      );
       success++;
     } catch (err) {
       console.error(`   ❌ Error: ${err.message}`);
@@ -336,11 +356,13 @@ async function runTagCmd(options) {
 async function runThumbnailCmd(options) {
   console.log('📸 Running Thumbnail Agent...\n');
 
+  await loadStatusCodes();
+
   const { data: items, error } = await supabase
     .from('ingestion_queue')
     .select('*')
-    .eq('status', 'tagged')
-    .is('payload->thumbnail', null)
+    .eq('status_code', STATUS.TO_THUMBNAIL)
+    .is('payload->thumbnail_url', null)
     .order('discovered_at', { ascending: true })
     .limit(options.limit || 5);
 
@@ -368,6 +390,10 @@ async function runThumbnailCmd(options) {
         .update({
           payload: {
             ...item.payload,
+            thumbnail_url: result.publicUrl,
+            thumbnail_bucket: result.bucket,
+            thumbnail_path: result.path,
+            // Backward compatibility for any older UI code paths
             thumbnail: result.publicUrl,
             thumbnail_generated_at: new Date().toISOString(),
           },
@@ -615,7 +641,7 @@ async function runEvalCmd(options) {
 
   if (!agentName) {
     console.log('Usage: node cli.js eval --agent=<name> [--type=golden|judge] [--limit=N]');
-    console.log('Agents: relevance-filter, content-summarizer, taxonomy-tagger');
+    console.log('Agents: screener, summarizer, tagger');
     process.exit(1);
   }
 
@@ -623,17 +649,17 @@ async function runEvalCmd(options) {
 
   // Get the agent function
   const agentFns = {
-    'relevance-filter': async (input) => {
+    screener: async (input) => {
       const result = await runRelevanceFilter({ id: 'eval', payload: input });
       return { relevant: result.relevant, reason: result.reason };
     },
-    'content-summarizer': async (input) => {
+    summarizer: async (input) => {
       const result = await runSummarizer({ id: 'eval', payload: input });
       return { summary: result.summary, published_at: result.published_at };
     },
-    'taxonomy-tagger': async (input) => {
+    tagger: async (input) => {
       const result = await runTagger({ id: 'eval', payload: input });
-      return { industry_code: result.industry_code, topic_code: result.topic_code };
+      return { industry_codes: result.industry_codes || [], topic_codes: result.topic_codes || [] };
     },
   };
 

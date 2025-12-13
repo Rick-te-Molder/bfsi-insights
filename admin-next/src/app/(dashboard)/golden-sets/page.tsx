@@ -192,7 +192,7 @@ interface CreateGoldenSetModalProps {
 }
 
 function CreateGoldenSetModal({ onClose, onCreated }: CreateGoldenSetModalProps) {
-  const [agentName, setAgentName] = useState('taxonomy-tagger');
+  const [agentName, setAgentName] = useState('tagger');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [inputJson, setInputJson] = useState('{\n  "title": "",\n  "content": ""\n}');
@@ -203,7 +203,7 @@ function CreateGoldenSetModal({ onClose, onCreated }: CreateGoldenSetModalProps)
 
   const supabase = createClient();
 
-  const agentOptions = ['taxonomy-tagger', 'content-summarizer', 'relevance-filter'];
+  const agentOptions = ['tagger', 'summarizer', 'screener'];
 
   async function handleCreate() {
     if (!name.trim()) {

@@ -64,7 +64,7 @@ app.post('/api/trigger-build', async (req, res) => {
     // Update approved items (330) to published (400)
     const { data: updated, error: updateError } = await supabase
       .from('ingestion_queue')
-      .update({ status: 'published', status_code: 400 })
+      .update({ status_code: 400 })
       .eq('status_code', 330)
       .select('id');
 

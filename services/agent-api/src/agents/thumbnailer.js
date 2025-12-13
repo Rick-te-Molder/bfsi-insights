@@ -1,7 +1,7 @@
 import { AgentRunner } from '../lib/runner.js';
 import { chromium } from 'playwright';
 
-const runner = new AgentRunner('thumbnail-generator');
+const runner = new AgentRunner('thumbnailer');
 
 export async function runThumbnailer(queueItem) {
   return runner.run(

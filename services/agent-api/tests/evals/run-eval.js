@@ -38,10 +38,12 @@ function log(message, color = 'reset') {
 // Dynamically import the agent based on name
 async function loadAgent(agentName) {
   const agentMap = {
-    'discovery-relevance': '../../src/agents/discovery-relevance.js',
-    'relevance-filter': '../../src/agents/filter.js',
-    'content-summarizer': '../../src/agents/summarize.js',
-    'taxonomy-tagger': '../../src/agents/tag.js',
+    // Canonical worker-noun names
+    scorer: '../../src/agents/scorer.js',
+    screener: '../../src/agents/screener.js',
+    summarizer: '../../src/agents/summarizer.js',
+    tagger: '../../src/agents/tagger.js',
+    thumbnailer: '../../src/agents/thumbnailer.js',
   };
 
   const agentPath = agentMap[agentName];
@@ -94,20 +96,31 @@ async function evaluateExample(agent, agentName, example, options) {
     let result;
 
     // Call the appropriate agent function
-    if (agentName === 'scorer' || agentName === 'discovery-relevance') {
+    if (agentName === 'scorer') {
       result = await agent.scoreRelevance({
         title: input.title,
         description: input.description,
         source: input.source,
         publishedDate: input.publishedDate,
       });
-    } else if (agentName === 'screener' || agentName === 'relevance-filter') {
+    } else if (agentName === 'screener') {
       // screener uses AgentRunner pattern, needs queue item format
       result = await agent.runRelevanceFilter({
         id: 'eval-' + id,
         payload: {
           title: input.title,
           description: input.description,
+        },
+      });
+    } else if (agentName === 'tagger') {
+      // Tagger uses AgentRunner pattern, needs queue item format
+      result = await agent.runTagger({
+        id: 'eval-' + id,
+        payload: {
+          title: input.title,
+          description: input.description,
+          summary: input.summary,
+          url: input.url,
         },
       });
     } else {
@@ -172,7 +185,7 @@ async function evaluateExample(agent, agentName, example, options) {
       }
     }
 
-    // Check relevant (for relevance-filter agent)
+    // Check relevant (for screener agent)
     if (expected.relevant !== undefined) {
       const relevantOk = result.relevant === expected.relevant;
       checks.push({
@@ -184,7 +197,7 @@ async function evaluateExample(agent, agentName, example, options) {
       if (!relevantOk) passed = false;
     }
 
-    // Check min_confidence (for relevance-filter agent)
+    // Check min_confidence (for screener agent)
     if (expected.min_confidence !== undefined) {
       const confidenceOk = (result.confidence || 0) >= expected.min_confidence;
       checks.push({
@@ -201,10 +214,10 @@ async function evaluateExample(agent, agentName, example, options) {
       const color = passed ? 'green' : 'red';
       // Format output based on agent type
       if (result.relevant !== undefined) {
-        // relevance-filter format
+        // screener format
         log(`    ${icon} Relevant: ${result.relevant}, Confidence: ${result.confidence}`, color);
       } else {
-        // discovery-relevance format
+        // scorer format
         log(`    ${icon} Score: ${result.relevance_score}, Queue: ${result.should_queue}`, color);
       }
     }
@@ -326,17 +339,17 @@ async function main() {
   if (args.length === 0 || args.includes('--help')) {
     log('\nUsage: node run-eval.js <agent-name> [options]', 'blue');
     log('\nAgents:');
-    log('  discovery-relevance  - Content relevance scoring');
-    log('  relevance-filter     - Second-pass relevance filter');
-    log('  content-summarizer   - Summary generation');
-    log('  taxonomy-tagger      - Taxonomy classification');
+    log('  scorer        - Content relevance scoring');
+    log('  screener      - Second-pass relevance filter');
+    log('  summarizer    - Summary generation');
+    log('  tagger        - Taxonomy classification');
     log('\nOptions:');
     log('  --verbose    Show detailed output');
     log('  --dry-run    Load dataset but skip LLM calls');
     log('  --help       Show this help');
     log('\nExamples:');
-    log('  node run-eval.js discovery-relevance');
-    log('  node run-eval.js discovery-relevance --verbose');
+    log('  node run-eval.js scorer');
+    log('  node run-eval.js scorer --verbose');
     log('');
     process.exit(0);
   }

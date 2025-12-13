@@ -47,11 +47,11 @@ async function loadDiscoveryConfig() {
   // 2. Load BFSI keywords from topic taxonomy
   const { data: topics } = await supabase.from('bfsi_topic').select('label').order('sort_order');
 
-  // 3. Load exclusion patterns from prompt_versions (discovery-filter agent)
+  // 3. Load exclusion patterns from prompt_version (discoverer-config)
   const { data: filterConfig } = await supabase
-    .from('prompt_versions')
+    .from('prompt_version')
     .select('prompt_text')
-    .eq('agent_name', 'discovery-filter')
+    .eq('agent_name', 'discoverer-config')
     .eq('is_current', true)
     .single();
 
@@ -584,9 +584,10 @@ async function processPremiumCandidates(candidates, source, dryRun, limit, stats
       .from('ingestion_queue')
       .insert({
         url: candidate.url,
-        status: 'pending',
-        status_code: STATUS.PENDING_ENRICHMENT,
+        content_type: 'publication',
+        status_code: STATUS.PENDING_ENRICHMENT, // Already scored in discovery
         entry_type: 'discovered',
+        discovered_at: new Date().toISOString(),
         payload,
         // Premium items skip auto-enrichment
         relevance_score: null,
@@ -851,14 +852,14 @@ async function retryRejected(url) {
   const { error } = await supabase
     .from('ingestion_queue')
     .update({
-      status: 'pending',
+      status_code: 200, // PENDING_ENRICHMENT
       reviewed_at: null,
       reviewer: null,
       rejection_reason: null,
       payload: updatedPayload,
     })
     .eq('url_norm', urlNorm)
-    .eq('status', 'rejected');
+    .eq('status_code', 540); // REJECTED
 
   return !error;
 }
@@ -878,7 +879,6 @@ async function insertToQueue(candidate, sourceName, relevanceResult = null) {
   const insertData = {
     url: candidate.url,
     content_type: 'publication',
-    status: 'pending',
     status_code: STATUS.PENDING_ENRICHMENT, // Already scored in discovery
     entry_type: 'discovered',
     discovered_at: new Date().toISOString(),

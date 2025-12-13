@@ -24,10 +24,10 @@ const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPAB
 
 // --- Pipeline Step Functions ---
 
-async function updateStatus(queueId, status, statusCode, extra = {}) {
+async function updateStatus(queueId, statusCode, extra = {}) {
   await supabase
     .from('ingestion_queue')
-    .update({ status, status_code: statusCode, ...extra })
+    .update({ status_code: statusCode, ...extra })
     .eq('id', queueId);
 }
 
@@ -45,7 +45,7 @@ async function stepFetch(queueItem) {
     published_at: content.date || null,
   };
 
-  await updateStatus(queueItem.id, 'fetched', STATUS.TO_SUMMARIZE, {
+  await updateStatus(queueItem.id, STATUS.TO_SUMMARIZE, {
     payload,
     fetched_at: new Date().toISOString(),
   });
@@ -63,22 +63,22 @@ async function stepFilter(queueId, payload, options = {}) {
       console.log(
         `   ⚠️ Filter says not relevant: ${result.reason} (skipping rejection for manual submission)`,
       );
-      await updateStatus(queueId, 'filtered', STATUS.TO_SUMMARIZE);
+      await updateStatus(queueId, STATUS.TO_SUMMARIZE);
       return { rejected: false, filterResult: result };
     }
     // Nightly discovery: reject as irrelevant
     console.log(`   ❌ Not relevant: ${result.reason}`);
-    await updateStatus(queueId, 'rejected', STATUS.IRRELEVANT, { rejection_reason: result.reason });
+    await updateStatus(queueId, STATUS.IRRELEVANT, { rejection_reason: result.reason });
     return { rejected: true, reason: result.reason };
   }
 
   console.log('   ✅ Relevant');
-  await updateStatus(queueId, 'filtered', STATUS.TO_SUMMARIZE);
+  await updateStatus(queueId, STATUS.TO_SUMMARIZE);
   return { rejected: false, filterResult: result };
 }
 
 async function stepSummarize(queueId, payload) {
-  await updateStatus(queueId, 'summarizing', STATUS.SUMMARIZING);
+  await updateStatus(queueId, STATUS.SUMMARIZING);
   console.log('   📝 Generating summary...');
   const result = await runSummarizer({ id: queueId, payload });
 
@@ -116,13 +116,13 @@ async function stepSummarize(queueId, payload) {
   };
 
   delete updated.textContent;
-  await updateStatus(queueId, 'summarized', STATUS.TO_TAG, { payload: updated });
+  await updateStatus(queueId, STATUS.TO_TAG, { payload: updated });
   return updated;
 }
 
 async function stepTag(queueId, payload) {
-  await updateStatus(queueId, 'tagging', STATUS.TAGGING);
-  console.log('   🏷️ Applying tags...');
+  await updateStatus(queueId, STATUS.TAGGING);
+  console.log('   🏷️  Classifying taxonomy...');
   const result = await runTagger({ id: queueId, payload });
 
   // Extract code strings from TaggedCode objects: {code, confidence} -> code
@@ -148,12 +148,13 @@ async function stepTag(queueId, payload) {
     },
   };
 
-  await updateStatus(queueId, 'tagged', STATUS.TO_THUMBNAIL, { payload: updated });
+  const nextStatus = payload.thumbnail_bucket ? STATUS.THUMBNAILING : STATUS.PENDING_REVIEW;
+  await updateStatus(queueId, nextStatus, { payload: updated });
   return updated;
 }
 
 async function stepThumbnail(queueId, payload) {
-  await updateStatus(queueId, 'thumbnailing', STATUS.THUMBNAILING);
+  await updateStatus(queueId, STATUS.THUMBNAILING);
   console.log('   📸 Generating thumbnail...');
   try {
     const result = await runThumbnailer({ id: queueId, payload });
@@ -173,57 +174,45 @@ async function stepThumbnail(queueId, payload) {
  * Full enrichment pipeline for a single queue item
  */
 export async function enrichItem(queueItem, options = {}) {
-  const { includeThumbnail = true } = options;
-  const startTime = Date.now();
-
-  // Manual submissions should not be rejected by filter
-  const isManualSubmission = queueItem.payload?.manual_submission === true;
-
-  console.log(`\n📦 Processing: ${queueItem.url}`);
-  if (isManualSubmission) {
-    console.log('   👤 Manual submission - filter will not reject');
-  }
+  const { includeThumbnail = true, skipRejection = false } = options;
 
   try {
-    await updateStatus(queueItem.id, 'processing', STATUS.SUMMARIZING);
+    // Step 1: Fetch content
+    const payload = await stepFetch(queueItem);
 
-    let payload = await stepFetch(queueItem);
-
+    // Step 2: Filter
     const filterResult = await stepFilter(queueItem.id, payload, {
-      skipRejection: isManualSubmission,
+      skipRejection,
     });
     if (filterResult.rejected) {
-      return { success: false, reason: filterResult.reason, duration: Date.now() - startTime };
+      return { success: false, reason: filterResult.reason };
     }
 
-    payload = await stepSummarize(queueItem.id, payload);
-    payload = await stepTag(queueItem.id, payload);
+    // Step 3: Summarize
+    const summarized = await stepSummarize(queueItem.id, payload);
 
+    // Step 4: Tag
+    const tagged = await stepTag(queueItem.id, summarized);
+
+    // Step 5: Thumbnail (optional)
     if (includeThumbnail) {
-      payload = await stepThumbnail(queueItem.id, payload);
+      await stepThumbnail(queueItem.id, tagged);
     }
 
-    await updateStatus(queueItem.id, 'enriched', STATUS.PENDING_REVIEW, {
-      payload,
-      content_type: 'publication',
-    });
-
-    const duration = Date.now() - startTime;
-    console.log(`   ✅ Enriched in ${(duration / 1000).toFixed(1)}s`);
-
-    return { success: true, title: payload.title, duration };
+    await updateStatus(queueItem.id, STATUS.PENDING_REVIEW);
+    return { success: true };
   } catch (error) {
-    console.error(`   ❌ Error: ${error.message}`);
-    await updateStatus(queueItem.id, 'failed', STATUS.FAILED, { rejection_reason: error.message });
-    return { success: false, error: error.message, duration: Date.now() - startTime };
+    console.error(`❌ Enrichment failed: ${error.message}`);
+    await updateStatus(queueItem.id, STATUS.FAILED, {
+      rejection_reason: error.message,
+      failed_at: new Date().toISOString(),
+    });
+    return { success: false, error: error.message };
   }
 }
 
 /**
- * Process all pending/queued items through full enrichment pipeline
- * Handles both:
- * - 'pending' items from discovery (nightly batch)
- * - 'queued' items from manual admin submissions
+ * Process all items with status_code = PENDING_ENRICHMENT (200) through full enrichment pipeline
  */
 export async function processQueue(options = {}) {
   const { limit = 10, includeThumbnail = true } = options;
@@ -234,12 +223,11 @@ export async function processQueue(options = {}) {
   console.log('🔄 Processing queue...\n');
 
   // Process items that need enrichment:
-  // 1. status_code = PENDING_ENRICHMENT (200) - normal queue items
-  // 2. status = 'pending' - stuck items that never got processed (data fix)
+  // status_code = PENDING_ENRICHMENT (200)
   const { data: items, error } = await supabase
     .from('ingestion_queue')
     .select('*')
-    .or(`status_code.eq.${STATUS.PENDING_ENRICHMENT},status.eq.pending`)
+    .eq('status_code', STATUS.PENDING_ENRICHMENT)
     .order('discovered_at', { ascending: true })
     .limit(limit);
 

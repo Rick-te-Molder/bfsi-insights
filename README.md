@@ -230,7 +230,7 @@ See `docs/agents/manifest.yaml` for agent registry and `docs/issues/kb-207-best-
 | `kb_publication_pretty` | Flattened view for frontend |
 | `ingestion_queue`       | Processing pipeline queue   |
 | `kb_source`             | RSS feed sources            |
-| `prompt_versions`       | Versioned AI prompts        |
+| `prompt_version`        | Versioned AI prompts        |
 
 ### 6.2 Tables Used by Agents
 
@@ -240,7 +240,7 @@ See `docs/agents/manifest.yaml` for agent registry and `docs/issues/kb-207-best-
 | `ingestion_queue`        | Core       | All agents     | Processing pipeline queue                        |
 | `kb_publication`         | Core       | summarize, tag | Final published articles                         |
 | `kb_source`              | Core       | discover       | RSS feed sources configuration                   |
-| `prompt_versions`        | Core       | All agents     | Versioned AI prompts                             |
+| `prompt_version`         | Core       | All agents     | Versioned AI prompts                             |
 | `writing_rules`          | Core       | summarize      | Editorial guidelines for summaries               |
 | **Guardrail Taxonomies** |            |                | _LLM picks from list, cannot create new entries_ |
 | `bfsi_industry`          | Guardrail  | discover, tag  | 53 BFSI sectors (banking, insurance, etc.)       |

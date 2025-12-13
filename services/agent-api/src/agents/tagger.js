@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { createClient } from '@supabase/supabase-js';
 
-const runner = new AgentRunner('taxonomy-tagger');
+const runner = new AgentRunner('tagger');
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 /**
@@ -294,9 +294,16 @@ export async function runTagger(queueItem) {
   // Load taxonomies
   const taxonomies = await loadTaxonomies();
 
+  const hasQueueId = Object.prototype.hasOwnProperty.call(queueItem, 'queueId');
+  const queueId = hasQueueId ? queueItem.queueId : queueItem.id;
+  const publicationId = Object.prototype.hasOwnProperty.call(queueItem, 'publicationId')
+    ? queueItem.publicationId
+    : null;
+
   return runner.run(
     {
-      queueId: queueItem.id,
+      queueId,
+      publicationId,
       payload: queueItem.payload,
     },
     async (context, promptTemplate, tools) => {

@@ -118,7 +118,7 @@ export async function buildReferenceEmbedding(limit = 50) {
   const { data: publications, error } = await getSupabase()
     .from('ingestion_queue')
     .select('payload')
-    .eq('status', 'approved')
+    .eq('status_code', 330)
     .not('payload->summary->short', 'is', null)
     .order('reviewed_at', { ascending: false })
     .limit(limit);

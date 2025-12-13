@@ -26,7 +26,7 @@ vi.mock('openai', () => ({
   })),
 }));
 
-// Mock Supabase to return valid data for kb_audience, kb_rejection_pattern, and prompt_versions
+// Mock Supabase to return valid data for kb_audience, kb_rejection_pattern, and prompt_version
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({
     from: vi.fn((tableName) => ({
@@ -83,7 +83,7 @@ vi.mock('@supabase/supabase-js', () => ({
               error: null,
             }),
           ),
-          // For prompt_versions table (uses .eq().eq().single())
+          // For prompt_version table (uses .eq().eq().single())
           eq: vi.fn(() => ({
             single: vi.fn(() =>
               Promise.resolve({

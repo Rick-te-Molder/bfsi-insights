@@ -67,7 +67,7 @@ export default function PromptsPage() {
 
       // Load prompts from DB
       const { data, error } = await supabase
-        .from('prompt_versions')
+        .from('prompt_version')
         .select('*')
         .order('agent_name')
         .order('created_at', { ascending: false });
@@ -176,13 +176,13 @@ export default function PromptsPage() {
 
     // First, set all versions to not current
     await supabase
-      .from('prompt_versions')
+      .from('prompt_version')
       .update({ is_current: false })
       .eq('agent_name', prompt.agent_name);
 
     // Then set the selected version as current
     const { error } = await supabase
-      .from('prompt_versions')
+      .from('prompt_version')
       .update({ is_current: true })
       .eq('agent_name', prompt.agent_name)
       .eq('version', prompt.version);
@@ -632,7 +632,7 @@ function PromptEditModal({
     if (saveMode === 'update') {
       // Update existing prompt
       const { error } = await supabase
-        .from('prompt_versions')
+        .from('prompt_version')
         .update({
           prompt_text: promptText,
           notes: notes || prompt.notes,
@@ -655,12 +655,12 @@ function PromptEditModal({
 
       // Set all other versions to not current
       await supabase
-        .from('prompt_versions')
+        .from('prompt_version')
         .update({ is_current: false })
         .eq('agent_name', prompt.agent_name);
 
       // Insert new version
-      const { error } = await supabase.from('prompt_versions').insert({
+      const { error } = await supabase.from('prompt_version').insert({
         agent_name: prompt.agent_name,
         version: newVersion,
         prompt_text: promptText,

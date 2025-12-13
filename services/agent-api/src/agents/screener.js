@@ -1,6 +1,6 @@
 import { AgentRunner } from '../lib/runner.js';
 
-const runner = new AgentRunner('relevance-filter');
+const runner = new AgentRunner('screener');
 
 export async function runRelevanceFilter(queueItem) {
   return runner.run(

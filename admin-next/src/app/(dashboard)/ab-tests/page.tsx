@@ -18,7 +18,7 @@ export default function ABTestsPage() {
 
     const [testsRes, promptsRes] = await Promise.all([
       supabase.from('prompt_ab_test').select('*').order('created_at', { ascending: false }),
-      supabase.from('prompt_versions').select('*').order('agent_name'),
+      supabase.from('prompt_version').select('*').order('agent_name'),
     ]);
 
     if (!testsRes.error) setTests(testsRes.data || []);
@@ -437,13 +437,13 @@ function TestDetailModal({ test, onClose, onUpdate }: TestDetailModalProps) {
 
     // Set all versions to not current
     await supabase
-      .from('prompt_versions')
+      .from('prompt_version')
       .update({ is_current: false })
       .eq('agent_name', test.agent_name);
 
     // Set winner as current
     const { error } = await supabase
-      .from('prompt_versions')
+      .from('prompt_version')
       .update({ is_current: true })
       .eq('agent_name', test.agent_name)
       .eq('version', winnerVersion);

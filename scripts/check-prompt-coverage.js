@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Check Prompt Coverage
- * KB-207: Validates that all required prompts from manifest exist in prompt_versions
+ * KB-207: Validates that all required prompts from manifest exist in prompt_version
  *
  * Usage:
  *   node scripts/check-prompt-coverage.js
@@ -68,7 +68,7 @@ async function main() {
 
   // 3. Fetch current prompts from DB
   const { data: prompts, error: promptError } = await supabase
-    .from('prompt_versions')
+    .from('prompt_version')
     .select('agent_name, version, is_current')
     .eq('is_current', true);
 

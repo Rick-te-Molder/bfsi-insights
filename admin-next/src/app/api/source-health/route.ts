@@ -25,7 +25,7 @@ export async function GET() {
     // Get all items from last 30 days with source info
     const { data: recentItems, error } = await supabase
       .from('ingestion_queue')
-      .select('payload, status, discovered_at')
+      .select('payload, status_code, discovered_at')
       .gte('discovered_at', thirtyDaysAgo);
 
     if (error) {
@@ -74,7 +74,7 @@ export async function GET() {
       if (isLast7Days) {
         stats.items7d++;
         stats.total7d++;
-        if (item.status === 'failed') {
+        if (item.status_code === 500) {
           stats.failed7d++;
         }
       }

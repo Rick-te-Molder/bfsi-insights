@@ -11,27 +11,28 @@ export async function GET() {
     const { count: processingCount } = await supabase
       .from('ingestion_queue')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'processing');
+      .gt('status_code', 200)
+      .lt('status_code', 300);
 
     // Get failed count (last 24h)
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { count: recentFailedCount } = await supabase
       .from('ingestion_queue')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'failed')
+      .eq('status_code', 500)
       .gte('updated_at', oneDayAgo);
 
     // Get pending review count
     const { count: pendingReviewCount } = await supabase
       .from('ingestion_queue')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'enriched');
+      .eq('status_code', 300);
 
     // Get last queue run (most recent processing or enriched item)
     const { data: lastProcessed } = await supabase
       .from('ingestion_queue')
       .select('updated_at')
-      .in('status', ['enriched', 'approved', 'failed'])
+      .in('status_code', [300, 330, 500])
       .order('updated_at', { ascending: false })
       .limit(1)
       .single();
