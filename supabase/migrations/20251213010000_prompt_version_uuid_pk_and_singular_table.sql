@@ -33,17 +33,13 @@ BEGIN
   -- 2) Backfill id for existing rows
   EXECUTE 'UPDATE public.prompt_version SET id = gen_random_uuid() WHERE id IS NULL';
 
-  -- 3) Drop old PK on version (if present) and add PK on id
-  IF EXISTS (
-    SELECT 1
-    FROM pg_constraint c
-    JOIN pg_class t ON c.conrelid = t.oid
-    JOIN pg_namespace n ON t.relnamespace = n.oid
-    WHERE n.nspname = 'public' AND t.relname = 'prompt_version' AND c.contype = 'p'
-  ) THEN
-    EXECUTE 'ALTER TABLE public.prompt_version DROP CONSTRAINT IF EXISTS prompt_versions_pkey';
-    EXECUTE 'ALTER TABLE public.prompt_version DROP CONSTRAINT IF EXISTS prompt_version_pkey';
-  END IF;
+  -- 3) Drop dependent FKs and old PK, then add new PK on id
+  -- First drop the FK from rejection_analytics that depends on the old PK
+  EXECUTE 'ALTER TABLE public.rejection_analytics DROP CONSTRAINT IF EXISTS rejection_analytics_prompt_version_fkey';
+  
+  -- Now drop old PKs
+  EXECUTE 'ALTER TABLE public.prompt_version DROP CONSTRAINT IF EXISTS prompt_versions_pkey CASCADE';
+  EXECUTE 'ALTER TABLE public.prompt_version DROP CONSTRAINT IF EXISTS prompt_version_pkey CASCADE';
 
   EXECUTE 'ALTER TABLE public.prompt_version ALTER COLUMN id SET NOT NULL';
   EXECUTE 'ALTER TABLE public.prompt_version ADD CONSTRAINT prompt_version_pkey PRIMARY KEY (id)';
