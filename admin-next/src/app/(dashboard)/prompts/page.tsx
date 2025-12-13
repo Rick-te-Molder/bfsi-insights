@@ -65,17 +65,27 @@ export default function PromptsPage() {
     async function loadPrompts() {
       setLoading(true);
 
-      // Load prompts from DB
-      const { data, error } = await supabase
+      // Load prompts from DB (try new table name, fall back to old for schema cache)
+      let result = await supabase
         .from('prompt_version')
         .select('*')
         .order('agent_name')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error loading prompts:', error);
+      // Fall back to old table name if new one fails (schema cache issue)
+      if (result.error) {
+        console.warn('prompt_version failed, trying prompt_versions:', result.error.message);
+        result = await supabase
+          .from('prompt_versions')
+          .select('*')
+          .order('agent_name')
+          .order('created_at', { ascending: false });
+      }
+
+      if (result.error) {
+        console.error('Error loading prompts:', result.error);
       } else {
-        setPrompts(data || []);
+        setPrompts(result.data || []);
       }
 
       // Load manifest (KB-207)
