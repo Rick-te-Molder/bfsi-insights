@@ -388,6 +388,7 @@ async function runThumbnailCmd(options) {
       await supabase
         .from('ingestion_queue')
         .update({
+          status_code: STATUS.ENRICHED,
           payload: {
             ...item.payload,
             thumbnail_url: result.publicUrl,
