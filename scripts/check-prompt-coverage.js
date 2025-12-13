@@ -66,11 +66,27 @@ async function main() {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // 3. Fetch current prompts from DB
-  const { data: prompts, error: promptError } = await supabase
+  // 3. Fetch current prompts from DB (try new table name, fall back to old)
+  let prompts;
+  let promptError;
+
+  // Try prompt_version (new canonical name) first
+  const result1 = await supabase
     .from('prompt_version')
     .select('agent_name, version, is_current')
     .eq('is_current', true);
+
+  if (!result1.error) {
+    prompts = result1.data;
+  } else {
+    // Fall back to prompt_versions (old name) for backwards compatibility
+    const result2 = await supabase
+      .from('prompt_versions')
+      .select('agent_name, version, is_current')
+      .eq('is_current', true);
+    prompts = result2.data;
+    promptError = result2.error;
+  }
 
   if (promptError) {
     log(`✗ Failed to fetch prompts: ${promptError.message}`, 'red');
