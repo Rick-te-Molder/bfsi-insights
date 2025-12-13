@@ -39,7 +39,7 @@ BEGIN
     FROM pg_constraint c
     JOIN pg_class t ON c.conrelid = t.oid
     JOIN pg_namespace n ON t.relnamespace = n.oid
-    WHERE n.nspname = ''public'' AND t.relname = ''prompt_version'' AND c.contype = ''p''
+    WHERE n.nspname = 'public' AND t.relname = 'prompt_version' AND c.contype = 'p'
   ) THEN
     EXECUTE 'ALTER TABLE public.prompt_version DROP CONSTRAINT IF EXISTS prompt_versions_pkey';
     EXECUTE 'ALTER TABLE public.prompt_version DROP CONSTRAINT IF EXISTS prompt_version_pkey';
