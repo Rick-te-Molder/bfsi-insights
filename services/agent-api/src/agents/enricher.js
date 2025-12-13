@@ -170,15 +170,23 @@ async function stepThumbnail(queueId, payload) {
   }
 }
 
+const MAX_FETCH_ATTEMPTS = 3;
+
 /**
  * Full enrichment pipeline for a single queue item
  */
 export async function enrichItem(queueItem, options = {}) {
   const { includeThumbnail = true, skipRejection = false } = options;
 
+  // Track fetch attempts to avoid infinite retry loops
+  const currentAttempts = (queueItem.payload?.fetch_attempts || 0) + 1;
+
   try {
     // Step 1: Fetch content
     const payload = await stepFetch(queueItem);
+
+    // Reset attempts on successful fetch
+    payload.fetch_attempts = 0;
 
     // Step 2: Filter
     const filterResult = await stepFilter(queueItem.id, payload, {
@@ -203,11 +211,28 @@ export async function enrichItem(queueItem, options = {}) {
     return { success: true };
   } catch (error) {
     console.error(`❌ Enrichment failed: ${error.message}`);
-    await updateStatus(queueItem.id, STATUS.FAILED, {
-      rejection_reason: error.message,
-      failed_at: new Date().toISOString(),
-    });
-    return { success: false, error: error.message };
+
+    // Check if we've exceeded max attempts
+    if (currentAttempts >= MAX_FETCH_ATTEMPTS) {
+      console.error(`   ⛔ Max attempts (${MAX_FETCH_ATTEMPTS}) reached, marking as FAILED`);
+      await updateStatus(queueItem.id, STATUS.FAILED, {
+        rejection_reason: `Failed after ${currentAttempts} attempts: ${error.message}`,
+        failed_at: new Date().toISOString(),
+        payload: { ...queueItem.payload, fetch_attempts: currentAttempts },
+      });
+      return { success: false, error: error.message, permanent: true };
+    }
+
+    // Increment attempts and keep in queue for retry
+    console.error(`   ⚠️ Attempt ${currentAttempts}/${MAX_FETCH_ATTEMPTS}, will retry later`);
+    await supabase
+      .from('ingestion_queue')
+      .update({
+        payload: { ...queueItem.payload, fetch_attempts: currentAttempts },
+      })
+      .eq('id', queueItem.id);
+
+    return { success: false, error: error.message, willRetry: true };
   }
 }
 
