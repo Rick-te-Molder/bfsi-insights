@@ -5,33 +5,40 @@
 -- - Make it explicit this is config for the discoverer orchestrator
 --
 -- This migration is safe to run multiple times.
--- It also enforces a single is_current=true row for the renamed agent.
+-- It handles both old (prompt_versions) and new (prompt_version) table names.
 
 DO $$
+DECLARE
+  tbl_name text;
 BEGIN
-  -- If both names exist, prefer discoverer-config as canonical.
-  -- Rename legacy rows to the new agent_name.
-  UPDATE prompt_versions
-  SET agent_name = 'discoverer-config'
-  WHERE agent_name = 'discovery-filter';
+  -- Determine which table exists
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'prompt_version') THEN
+    tbl_name := 'prompt_version';
+  ELSIF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'prompt_versions') THEN
+    tbl_name := 'prompt_versions';
+  ELSE
+    RAISE NOTICE 'No prompt table found, skipping migration';
+    RETURN;
+  END IF;
 
-  -- Ensure exactly one current prompt for discoverer-config.
-  -- 1) Clear current flags
-  UPDATE prompt_versions
-  SET is_current = false
-  WHERE agent_name = 'discoverer-config'
-    AND is_current = true;
+  -- Rename legacy discovery-filter to discoverer-config
+  EXECUTE format('UPDATE %I SET agent_name = ''discoverer-config'' WHERE agent_name = ''discovery-filter''', tbl_name);
 
-  -- 2) Set the most recently created version as current (if any rows exist)
-  WITH latest AS (
-    SELECT version
-    FROM prompt_versions
-    WHERE agent_name = 'discoverer-config'
-    ORDER BY created_at DESC
-    LIMIT 1
-  )
-  UPDATE prompt_versions
-  SET is_current = true
-  WHERE agent_name = 'discoverer-config'
-    AND version IN (SELECT version FROM latest);
+  -- If discoverer-config doesn't exist at all, create a default config prompt
+  EXECUTE format('
+    INSERT INTO %I (agent_name, version, prompt_text, is_current, created_at)
+    SELECT ''discoverer-config'', ''v1.0'', ''{"min_relevance_score": 0.6, "max_age_days": 30}'', true, now()
+    WHERE NOT EXISTS (SELECT 1 FROM %I WHERE agent_name = ''discoverer-config'')
+  ', tbl_name, tbl_name);
+
+  -- Ensure exactly one current prompt for discoverer-config
+  EXECUTE format('UPDATE %I SET is_current = false WHERE agent_name = ''discoverer-config''', tbl_name);
+  
+  EXECUTE format('
+    WITH latest AS (
+      SELECT version FROM %I WHERE agent_name = ''discoverer-config'' ORDER BY created_at DESC LIMIT 1
+    )
+    UPDATE %I SET is_current = true
+    WHERE agent_name = ''discoverer-config'' AND version IN (SELECT version FROM latest)
+  ', tbl_name, tbl_name);
 END $$;

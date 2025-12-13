@@ -88,7 +88,21 @@ BEGIN
     -- Enforce FK on uuid
     EXECUTE 'ALTER TABLE public.rejection_analytics ADD CONSTRAINT rejection_analytics_prompt_version_id_fkey FOREIGN KEY (prompt_version_id) REFERENCES public.prompt_version(id) ON DELETE SET NULL';
 
+    -- Drop materialized view that depends on the old column (will recreate after)
+    EXECUTE 'DROP MATERIALIZED VIEW IF EXISTS public.rejection_summary CASCADE';
+
     -- Drop old column
     EXECUTE 'ALTER TABLE public.rejection_analytics DROP COLUMN prompt_version';
+
+    -- Recreate the materialized view using new prompt_version_id column
+    EXECUTE '
+      CREATE MATERIALIZED VIEW IF NOT EXISTS public.rejection_summary AS
+      SELECT 
+        rejection_category,
+        COUNT(*) as count,
+        DATE_TRUNC(''day'', created_at) as day
+      FROM public.rejection_analytics
+      GROUP BY rejection_category, DATE_TRUNC(''day'', created_at)
+    ';
   END IF;
 END $$;
