@@ -149,7 +149,7 @@ export default async function ReviewPage({
   searchParams: Promise<{ status?: string; source?: string; time?: string; view?: string }>;
 }) {
   const params = await searchParams;
-  const status = params.status || 'enriched';
+  const status = params.status || 'pending_review';
   const source = params.source || '';
   const timeWindow = params.time || '';
   const viewMode = params.view || 'split'; // 'list' or 'split'
