@@ -91,11 +91,10 @@ const TaggingSchema = z.object({
  */
 async function loadTaxonomies() {
   // First, load taxonomy_config to discover which tables to load
+  // KB-233: Removed source_code_column/source_name_column - all tables use 'code' and 'name'
   const { data: configs, error: configError } = await supabase
     .from('taxonomy_config')
-    .select(
-      'slug, source_table, source_code_column, source_name_column, is_hierarchical, parent_code_column, behavior_type',
-    )
+    .select('slug, source_table, is_hierarchical, parent_code_column, behavior_type')
     .eq('is_active', true)
     .not('source_table', 'is', null);
 
@@ -113,13 +112,11 @@ async function loadTaxonomies() {
   }
 
   // Build query for each unique source table
+  // KB-233: All taxonomy tables use standardized 'code' and 'name' columns
   const tableQueries = [];
   for (const [table, config] of tableConfigs) {
-    const codeCol = config.source_code_column || 'code';
-    const nameCol = config.source_name_column || 'name';
-
     // Build select columns based on whether it's hierarchical
-    let selectCols = `${codeCol}, ${nameCol}`;
+    let selectCols = 'code, name';
     if (config.is_hierarchical) {
       selectCols += ', level';
       if (config.parent_code_column) {
@@ -130,7 +127,7 @@ async function loadTaxonomies() {
     tableQueries.push({
       table,
       config,
-      promise: supabase.from(table).select(selectCols).order(nameCol),
+      promise: supabase.from(table).select(selectCols).order('name'),
     });
   }
 
@@ -147,25 +144,20 @@ async function loadTaxonomies() {
   }
 
   // Helper functions for formatting
-  const format = (data, codeCol = 'code', nameCol = 'name') =>
-    data?.map((i) => `${i[codeCol]}: ${i[nameCol]}`).join('\n') || '';
+  // KB-233: Simplified - all tables use 'code' and 'name'
+  const format = (data) => data?.map((i) => `${i.code}: ${i.name}`).join('\n') || '';
 
-  const formatHierarchical = (
-    data,
-    codeCol = 'code',
-    nameCol = 'name',
-    parentCol = 'parent_code',
-  ) =>
+  const formatHierarchical = (data, parentCol = 'parent_code') =>
     data
       ?.map((i) => {
         const indent = '  '.repeat((i.level || 1) - 1);
         const levelTag = i.level ? `[L${i.level}]` : '';
         const parentTag = i[parentCol] ? ` (parent: ${i[parentCol]})` : '';
-        return `${indent}${i[codeCol]}: ${i[nameCol]} ${levelTag}${parentTag}`;
+        return `${indent}${i.code}: ${i.name} ${levelTag}${parentTag}`;
       })
       .join('\n') || '';
 
-  const extractCodes = (data, codeCol = 'code') => new Set(data?.map((i) => i[codeCol]) || []);
+  const extractCodes = (data) => new Set(data?.map((i) => i.code) || []);
 
   // Helper to get formatted data for a slug
   const getFormatted = (slug) => {
@@ -173,17 +165,10 @@ async function loadTaxonomies() {
     if (!config || !config.source_table) return '';
     const td = tableData.get(config.source_table);
     if (!td) return '';
-    const codeCol = config.source_code_column || 'code';
-    const nameCol = config.source_name_column || 'name';
     if (config.is_hierarchical) {
-      return formatHierarchical(
-        td.data,
-        codeCol,
-        nameCol,
-        config.parent_code_column || 'parent_code',
-      );
+      return formatHierarchical(td.data, config.parent_code_column || 'parent_code');
     }
-    return format(td.data, codeCol, nameCol);
+    return format(td.data);
   };
 
   const getValidCodes = (slug) => {
@@ -191,7 +176,7 @@ async function loadTaxonomies() {
     if (!config || !config.source_table) return new Set();
     const td = tableData.get(config.source_table);
     if (!td) return new Set();
-    return extractCodes(td.data, config.source_code_column || 'code');
+    return extractCodes(td.data);
   };
 
   // Build geography parent map for code expansion
