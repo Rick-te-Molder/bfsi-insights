@@ -811,15 +811,16 @@ async function checkExists(url) {
   if (seenUrl) return 'skip';
 
   // Check queue - allow retry if rejected
+  // KB-236: Use status_code instead of text status field
   const { data: queueItem } = await supabase
     .from('ingestion_queue')
-    .select('id, status')
+    .select('id, status_code')
     .eq('url_norm', urlNorm)
     .maybeSingle();
 
   if (queueItem) {
-    // If rejected, allow retry
-    if (queueItem.status === 'rejected') {
+    // If rejected (540), allow retry
+    if (queueItem.status_code === STATUS.REJECTED) {
       return 'retry';
     }
     // Any other status means skip
@@ -842,11 +843,12 @@ async function retryRejected(url) {
   const urlNorm = normalizeUrl(url);
 
   // Get current payload
+  // KB-236: Use status_code instead of text status field
   const { data: item } = await supabase
     .from('ingestion_queue')
     .select('payload')
     .eq('url_norm', urlNorm)
-    .eq('status', 'rejected')
+    .eq('status_code', STATUS.REJECTED)
     .single();
 
   if (!item) return false;
