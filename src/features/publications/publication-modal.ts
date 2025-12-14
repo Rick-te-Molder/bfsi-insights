@@ -14,11 +14,24 @@ function extractCardData(li: HTMLElement) {
     link: (li.querySelector('a') as HTMLAnchorElement)?.href || '#',
     slug: li.dataset.slug || '',
     tags: [
-      li.dataset.role || '',
-      li.dataset.industry || '',
-      li.dataset.topic || '',
-      li.dataset.content_type || '',
+      // Audience/role
+      li.dataset.audience || li.dataset.role || '',
+      // Geography
       li.dataset.geography || '',
+      // Industry
+      li.dataset.industry || '',
+      // Topic
+      li.dataset.topic || '',
+      // Content type
+      li.dataset.content_type || '',
+      // Regulators (comma-separated)
+      ...(li.dataset.regulator?.split(',') || []),
+      // Regulations (comma-separated)
+      ...(li.dataset.regulation?.split(',') || []),
+      // Obligations (comma-separated)
+      ...(li.dataset.obligation?.split(',') || []),
+      // Processes (comma-separated)
+      ...(li.dataset.process?.split(',') || []),
     ].filter(Boolean),
   };
 }

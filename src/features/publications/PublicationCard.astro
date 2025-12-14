@@ -60,6 +60,16 @@ const regulations = item.regulations || [];
 const obligations = item.obligations || [];
 const processes = item.processes || [];
 
+// Count extra tags (everything except audience and geography shown on card)
+const extraTagCount =
+  (industry ? 1 : 0) +
+  topic.length +
+  content_type.length +
+  regulators.length +
+  regulations.length +
+  obligations.length +
+  processes.length;
+
 const isNew =
   isHome && item.date_added
     ? (() => {
@@ -210,7 +220,7 @@ const candidates = [...itemThumbs];
     <!-- Tags row with Preview button aligned - pushed to bottom -->
     <div class="mt-auto pt-3 flex items-start justify-between gap-2">
       <div class="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
-        {/* Core metadata */}
+        {/* Card view: audience + geography only */}
         {
           audience && (
             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/20">
@@ -223,21 +233,6 @@ const candidates = [...itemThumbs];
                 />
               </svg>
               {audience}
-            </span>
-          )
-        }
-        {
-          content_type.length > 0 && (
-            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-500/10 text-neutral-300 ring-1 ring-inset ring-neutral-500/20">
-              <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              {content_type[0]}
             </span>
           )
         }
@@ -256,48 +251,15 @@ const candidates = [...itemThumbs];
             </span>
           )
         }
-        {/* Regulatory tags */}
+        {/* +X indicator for extra tags - opens modal */}
         {
-          regulators.length > 0 &&
-            regulators.slice(0, 2).map((reg: string) => (
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-300 ring-1 ring-inset ring-rose-500/20">
-                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"
-                  />
-                </svg>
-                {reg}
-              </span>
-            ))
-        }
-        {
-          regulations.length > 0 &&
-            regulations.slice(0, 2).map((reg: string) => (
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-orange-500/10 text-orange-300 ring-1 ring-inset ring-orange-500/20">
-                <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-                  />
-                </svg>
-                {reg}
-              </span>
-            ))
-        }
-        {/* Overflow indicator - opens modal */}
-        {
-          (regulators.length > 2 || regulations.length > 2) && (
+          extraTagCount > 0 && (
             <button
               type="button"
               data-open-modal="true"
               class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-700/50 text-neutral-400 ring-1 ring-inset ring-neutral-600/30 hover:bg-neutral-600/50 hover:text-neutral-300 transition-colors pointer-events-auto"
             >
-              +{Math.max(0, regulators.length - 2) + Math.max(0, regulations.length - 2)} more
+              +{extraTagCount} more
             </button>
           )
         }
