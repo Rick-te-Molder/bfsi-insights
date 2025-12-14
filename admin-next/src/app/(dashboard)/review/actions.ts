@@ -56,6 +56,22 @@ export async function approveQueueItemAction(queueId: string, editedTitle?: stri
     buildPublicStorageUrl(thumbnailBucket, thumbnailPath) ??
     null;
 
+  // Extract audience (highest scoring from audience_scores object)
+  const audienceScores = payload.audience_scores as Record<string, number> | undefined;
+  let audience: string | null = null;
+  if (audienceScores && typeof audienceScores === 'object') {
+    const entries = Object.entries(audienceScores);
+    if (entries.length > 0) {
+      const [topAudience] = entries.reduce((a, b) => (b[1] > a[1] ? b : a));
+      audience = topAudience;
+    }
+  }
+
+  // Extract geography (first from geography_codes array)
+  const geographyCodes = payload.geography_codes as string[] | undefined;
+  const geography =
+    Array.isArray(geographyCodes) && geographyCodes.length > 0 ? geographyCodes[0] : null;
+
   // Insert publication
   const { data: pubData, error: pubError } = await supabase
     .from('kb_publication')
@@ -73,6 +89,8 @@ export async function approveQueueItemAction(queueId: string, editedTitle?: stri
       thumbnail: thumbnailUrl,
       thumbnail_bucket: thumbnailBucket,
       thumbnail_path: thumbnailPath,
+      audience,
+      geography,
       status: 'published',
     })
     .select('id')
@@ -218,6 +236,22 @@ export async function bulkApproveAction(ids: string[]) {
       buildPublicStorageUrl(thumbnailBucket, thumbnailPath) ??
       null;
 
+    // Extract audience (highest scoring from audience_scores object)
+    const audienceScores = payload.audience_scores as Record<string, number> | undefined;
+    let audience: string | null = null;
+    if (audienceScores && typeof audienceScores === 'object') {
+      const entries = Object.entries(audienceScores);
+      if (entries.length > 0) {
+        const [topAudience] = entries.reduce((a, b) => (b[1] > a[1] ? b : a));
+        audience = topAudience;
+      }
+    }
+
+    // Extract geography (first from geography_codes array)
+    const geographyCodes = payload.geography_codes as string[] | undefined;
+    const geography =
+      Array.isArray(geographyCodes) && geographyCodes.length > 0 ? geographyCodes[0] : null;
+
     // Insert publication
     const { data: pubData, error: pubError } = await supabase
       .from('kb_publication')
@@ -238,6 +272,8 @@ export async function bulkApproveAction(ids: string[]) {
         thumbnail: thumbnailUrl,
         thumbnail_bucket: thumbnailBucket,
         thumbnail_path: thumbnailPath,
+        audience,
+        geography,
         status: 'published',
       })
       .select('id')
