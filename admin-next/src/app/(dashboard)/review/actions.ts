@@ -44,7 +44,10 @@ export async function approveQueueItemAction(queueId: string, editedTitle?: stri
     .slice(0, 80);
 
   const sourceDomain = extractDomain(item.url);
-  const sourceSlug = payload.source_slug as string | undefined;
+  // Check multiple payload fields for source name (discoverer uses 'source', premium uses 'source_name'/'source_slug')
+  const sourceFromPayload = (payload.source_name || payload.source || payload.source_slug) as
+    | string
+    | undefined;
 
   const thumbnailBucket = (payload.thumbnail_bucket as string | null | undefined) ?? null;
   const thumbnailPath = (payload.thumbnail_path as string | null | undefined) ?? null;
@@ -60,7 +63,8 @@ export async function approveQueueItemAction(queueId: string, editedTitle?: stri
       slug: `${slug}-${Date.now()}`,
       title,
       source_url: item.url,
-      source_name: sourceSlug && sourceSlug !== 'manual' ? sourceSlug : sourceDomain,
+      source_name:
+        sourceFromPayload && sourceFromPayload !== 'manual' ? sourceFromPayload : sourceDomain,
       source_domain: sourceDomain,
       date_published: (payload.published_at as string) || new Date().toISOString(),
       summary_short: (summary.short as string) || '',
@@ -222,8 +226,9 @@ export async function bulkApproveAction(ids: string[]) {
         title,
         source_url: item.url,
         source_name:
-          payload.source_slug && payload.source_slug !== 'manual'
-            ? payload.source_slug
+          (payload.source_name || payload.source || payload.source_slug) &&
+          (payload.source_name || payload.source || payload.source_slug) !== 'manual'
+            ? payload.source_name || payload.source || payload.source_slug
             : sourceDomain,
         source_domain: sourceDomain,
         date_published: payload.published_at || new Date().toISOString(),

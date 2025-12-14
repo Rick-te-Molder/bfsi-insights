@@ -203,11 +203,12 @@ export async function enrichItem(queueItem, options = {}) {
     const tagged = await stepTag(queueItem.id, summarized);
 
     // Step 5: Thumbnail (optional)
+    let finalPayload = tagged;
     if (includeThumbnail) {
-      await stepThumbnail(queueItem.id, tagged);
+      finalPayload = await stepThumbnail(queueItem.id, tagged);
     }
 
-    await updateStatus(queueItem.id, STATUS.PENDING_REVIEW);
+    await updateStatus(queueItem.id, STATUS.PENDING_REVIEW, { payload: finalPayload });
     return { success: true };
   } catch (error) {
     console.error(`❌ Enrichment failed: ${error.message}`);
