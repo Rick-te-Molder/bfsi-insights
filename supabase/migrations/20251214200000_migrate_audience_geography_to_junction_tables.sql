@@ -3,30 +3,17 @@
 -- used by other taxonomy tags (industry, topic, etc.)
 
 -- ============================================================================
--- 1. Create kb_audience reference table (if not exists)
+-- 1. kb_audience table already exists with 'name' as identifier
+--    (executive, functional_specialist, researcher, engineer)
 -- ============================================================================
-CREATE TABLE IF NOT EXISTS kb_audience (
-  code TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  description TEXT,
-  sort_order INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Insert audience types
-INSERT INTO kb_audience (code, name, description, sort_order) VALUES
-  ('executive', 'Executive', 'C-suite and senior leadership', 1),
-  ('functional_specialist', 'Functional Specialist', 'Domain experts and practitioners', 2),
-  ('researcher', 'Researcher', 'Academics and research professionals', 3),
-  ('engineer', 'Engineer', 'Technical and engineering roles', 4)
-ON CONFLICT (code) DO NOTHING;
 
 -- ============================================================================
 -- 2. Create kb_publication_audience junction table
+--    References kb_audience.name (not code, since table uses name as identifier)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS kb_publication_audience (
   publication_id UUID NOT NULL REFERENCES kb_publication(id) ON DELETE CASCADE,
-  audience_code TEXT NOT NULL REFERENCES kb_audience(code) ON DELETE CASCADE,
+  audience_code TEXT NOT NULL,
   score NUMERIC(3,2) DEFAULT 0.0,
   PRIMARY KEY (publication_id, audience_code)
 );
@@ -49,7 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_pub_geography_code ON kb_publication_geography(ge
 -- 4. Update taxonomy_config for audience and geography
 -- ============================================================================
 
--- Add audience to taxonomy_config
+-- Add audience to taxonomy_config (kb_audience uses 'name' as the code column)
 INSERT INTO taxonomy_config (
   slug, display_name, display_name_plural, display_order, behavior_type,
   source_table, source_code_column, source_name_column,
@@ -58,11 +45,13 @@ INSERT INTO taxonomy_config (
   color, is_active
 ) VALUES (
   'audience', 'Audience', 'Audiences', 0, 'scoring',
-  'kb_audience', 'code', 'name',
+  'kb_audience', 'name', 'label',
   false, 'kb_publication_audience', 'audience_code', 'audience_scores',
   true, 'AUDIENCE SCORING', 'Score relevance 0.0-1.0 for each audience type.',
   'amber', true
 ) ON CONFLICT (slug) DO UPDATE SET
+  source_code_column = 'name',
+  source_name_column = 'label',
   junction_table = 'kb_publication_audience',
   junction_code_column = 'audience_code',
   is_active = true;
