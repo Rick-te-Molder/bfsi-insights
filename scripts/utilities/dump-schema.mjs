@@ -164,7 +164,7 @@ This file is the single source of truth for AI assistants to understand the data
   }
 
   // Write to file
-  const outDir = path.join(__dirname, '../../docs/database');
+  const outDir = path.join(__dirname, '../../docs/data-model');
   if (!fs.existsSync(outDir)) {
     fs.mkdirSync(outDir, { recursive: true });
   }
@@ -172,7 +172,7 @@ This file is the single source of truth for AI assistants to understand the data
   const outPath = path.join(outDir, 'schema.md');
   fs.writeFileSync(outPath, md);
 
-  console.log(`✅ Schema written to: docs/database/schema.md`);
+  console.log(`✅ Schema written to: docs/data-model/schema.md`);
   console.log(`   ${Object.keys(tables).length} tables, ${schemaInfo.length} columns`);
 }
 
