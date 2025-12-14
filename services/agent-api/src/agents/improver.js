@@ -78,9 +78,10 @@ async function isSourceTracked(domain) {
  * Check if URL was ever in ingestion_queue
  */
 async function checkIngestionHistory(urlNorm) {
+  // KB-237: Removed text status field, use status_code only
   const { data } = await getSupabase()
     .from('ingestion_queue')
-    .select('id, status, status_code, payload, discovered_at, created_at')
+    .select('id, status_code, payload, discovered_at, created_at')
     .eq('url_norm', urlNorm)
     .limit(1);
 
