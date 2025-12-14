@@ -151,7 +151,16 @@ export function parseHtml(html, url) {
 }
 
 function isRetryableStatus(status) {
+  // 5xx = server error (retryable)
+  // 403 = forbidden (might be temporary rate limit)
+  // 410 = gone (permanent, don't retry)
+  // 404 = not found (permanent, don't retry)
   return status >= 500 || status === 403;
+}
+
+function isPermanentFailure(status) {
+  // Content is gone or doesn't exist - no point retrying
+  return status === 410 || status === 404;
 }
 
 async function attemptFetch(url, attempt, retries) {
@@ -167,6 +176,14 @@ async function attemptFetch(url, attempt, retries) {
     clearTimeout(timeout);
 
     if (!response.ok) {
+      // Permanent failures - don't retry, don't fallback
+      if (isPermanentFailure(response.status)) {
+        return { permanentFailure: true, status: response.status };
+      }
+      // 403 might benefit from Playwright fallback
+      if (response.status === 403) {
+        return { forbidden: true, status: response.status };
+      }
       if (attempt < retries && isRetryableStatus(response.status)) {
         console.log(`   ⚠️ HTTP ${response.status}, retrying (${attempt}/${retries})...`);
         return { retry: true };
@@ -311,6 +328,21 @@ async function fetchWithRetries(url, retries, parseResult) {
     const result = await attemptFetch(url, attempt, retries);
     if (result.success) {
       return formatFetchResult(result.html, url, parseResult);
+    }
+    // Permanent failure - content is gone
+    if (result.permanentFailure) {
+      throw new Error(`HTTP ${result.status} - content no longer available`);
+    }
+    // 403 Forbidden - try Playwright as fallback
+    if (result.forbidden) {
+      console.log('   🎭 403 Forbidden - trying Playwright fallback...');
+      try {
+        const pwResult = await fetchWithPlaywright(url);
+        return formatFetchResult(pwResult.html, url, parseResult);
+      } catch (pwError) {
+        console.log(`   ⚠️ Playwright fallback failed: ${pwError.message}`);
+        throw new Error(`HTTP 403 - site blocking requests`);
+      }
     }
     if (result.retry) {
       await delay(3000 * attempt);
