@@ -308,9 +308,39 @@ export async function runTagger(queueItem) {
       const { payload } = context;
       const { openai } = tools;
 
+      // Extract domain TLD for geography hints
+      const url = payload.url || '';
+      const domainMatch = url.match(/\.([a-z]{2,3})(?:\/|$)/i);
+      const tld = domainMatch ? domainMatch[1].toLowerCase() : '';
+      const countryTldHint = [
+        'nl',
+        'de',
+        'fr',
+        'uk',
+        'us',
+        'ca',
+        'au',
+        'sg',
+        'hk',
+        'jp',
+        'ch',
+        'ie',
+        'in',
+        'ae',
+        'sa',
+        'qa',
+        'kw',
+        'bh',
+        'om',
+        'br',
+        'cn',
+      ].includes(tld)
+        ? `\nNOTE: Source domain ends in .${tld} - this strongly suggests ${tld.toUpperCase()} as a primary geography.`
+        : '';
+
       const content = `TITLE: ${payload.title}
 SUMMARY: ${payload.summary?.short || payload.description || ''}
-URL: ${payload.url || ''}
+URL: ${url}
 
 === AVAILABLE TAXONOMY CODES ===
 Use ONLY codes from these lists. Include confidence scores (0-1) for each.
@@ -321,7 +351,13 @@ ${taxonomies.industries}
 === TOPICS (hierarchical - include parent and sub-topics) ===
 ${taxonomies.topics}
 
-=== GEOGRAPHIES (pick all mentioned regions/countries) ===
+=== GEOGRAPHIES (pick the MOST SPECIFIC geography first) ===
+IMPORTANT: Always prefer country codes over regional codes.
+- If content is from a specific country's regulator/authority, tag that COUNTRY first (e.g., 'nl' for Dutch DPA, 'de' for BaFin)
+- If content mentions specific country laws/regulations, tag that country
+- Regional codes (eu, emea, apac) will be auto-added as parents - you don't need to add them manually
+- Only use regional codes directly if the content genuinely applies to the entire region${countryTldHint}
+
 ${taxonomies.geographies}
 
 === AI USE CASES (if AI-related content) ===

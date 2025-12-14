@@ -3,7 +3,18 @@ import { linkify } from '../../lib/text';
 let lastFocus: Element | null = null;
 let focusTrapHandler: ((e: FocusEvent) => void) | null = null;
 
+// Helper to split comma-separated data attribute, filtering empty strings
+function splitAttr(val: string | undefined): string[] {
+  return val ? val.split(',').filter(Boolean) : [];
+}
+
 function extractCardData(li: HTMLElement) {
+  // Get arrays from data attributes, with fallbacks to single-value attributes
+  const audiences = splitAttr(li.dataset.audiences);
+  const geographies = splitAttr(li.dataset.geographies);
+  const industries = splitAttr(li.dataset.industries);
+  const topics = splitAttr(li.dataset.topics);
+
   return {
     title: li.dataset.title || li.querySelector('a')?.textContent?.trim() || '',
     meta: (li.querySelector('.mt-1') as HTMLElement)?.textContent?.trim() || '',
@@ -14,24 +25,24 @@ function extractCardData(li: HTMLElement) {
     link: (li.querySelector('a') as HTMLAnchorElement)?.href || '#',
     slug: li.dataset.slug || '',
     tags: [
-      // All audiences (comma-separated)
-      ...(li.dataset.audiences?.split(',') || [li.dataset.audience || li.dataset.role || '']),
-      // All geographies (comma-separated)
-      ...(li.dataset.geographies?.split(',') || [li.dataset.geography || '']),
-      // All industries (comma-separated)
-      ...(li.dataset.industries?.split(',') || [li.dataset.industry || '']),
-      // All topics (comma-separated)
-      ...(li.dataset.topics?.split(',') || [li.dataset.topic || '']),
+      // Audiences (prefer array, fallback to single)
+      ...(audiences.length ? audiences : [li.dataset.audience || li.dataset.role || '']),
+      // Geographies (prefer array, fallback to single)
+      ...(geographies.length ? geographies : [li.dataset.geography || '']),
+      // Industries (prefer array, fallback to single)
+      ...(industries.length ? industries : [li.dataset.industry || '']),
+      // Topics (prefer array, fallback to single)
+      ...(topics.length ? topics : [li.dataset.topic || '']),
       // Content type
       li.dataset.content_type || '',
-      // Regulators (comma-separated)
-      ...(li.dataset.regulator?.split(',') || []),
-      // Regulations (comma-separated)
-      ...(li.dataset.regulation?.split(',') || []),
-      // Obligations (comma-separated)
-      ...(li.dataset.obligation?.split(',') || []),
-      // Processes (comma-separated)
-      ...(li.dataset.process?.split(',') || []),
+      // Regulators
+      ...splitAttr(li.dataset.regulator),
+      // Regulations
+      ...splitAttr(li.dataset.regulation),
+      // Obligations
+      ...splitAttr(li.dataset.obligation),
+      // Processes
+      ...splitAttr(li.dataset.process),
     ].filter(Boolean),
   };
 }
