@@ -6,6 +6,6 @@
 
 DELETE FROM kb_publication
 WHERE slug IN (
-  'mckinsey-2025-ai-report-key-findings-1765550658203',
+  '5-mckinsey-insights-on-how-agentic-ai-is-reshaping-industries',
   'banken-zetten-in-op-ai-agenten-maar-echte-doorbraak-blijft-uit'
 );
