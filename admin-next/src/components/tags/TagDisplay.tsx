@@ -195,7 +195,7 @@ export function TagDisplay({
     (a, b) => a.display_order - b.display_order,
   );
 
-  // Get top 1-2 audience tags (without percentages) for non-detail views
+  // Get top audience tag (without percentages) for non-detail views
   const getTopAudiences = (
     maxCount: number = 2,
   ): { slug: string; name: string; score: number }[] => {
@@ -211,12 +211,12 @@ export function TagDisplay({
 
   if (variant === 'inline') {
     // Compact inline view - show tags without labels, in correct order
-    const topAudiences = getTopAudiences(2);
+    const topAudiences = getTopAudiences(1);
     const audienceColors = COLOR_MAP.violet;
 
     return (
       <div className="flex flex-wrap gap-1">
-        {/* Audience tags first (1-2, no percentages) */}
+        {/* Primary audience tag first (no percentages) */}
         {topAudiences.map((aud) => (
           <span
             key={aud.slug}
@@ -295,8 +295,8 @@ export function TagDisplay({
                   );
                 });
               } else {
-                // Main views: show top 1-2 without percentages
-                const topAudiences = getTopAudiences(2);
+                // Main views: show top 1 without percentages
+                const topAudiences = getTopAudiences(1);
                 if (topAudiences.length === 0) {
                   return <span className="text-neutral-600 italic">—</span>;
                 }
