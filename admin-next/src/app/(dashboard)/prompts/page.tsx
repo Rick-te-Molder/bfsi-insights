@@ -553,19 +553,25 @@ function AgentDetail({
                   : 'bg-neutral-800/30'
               }`}
             >
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-neutral-500" />
-                <div>
-                  <span
-                    className={`font-medium ${p.is_current ? 'text-emerald-300' : 'text-white'}`}
-                  >
-                    {p.version}
-                  </span>
-                  {p.is_current && <span className="ml-2 text-xs text-emerald-400">(current)</span>}
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="w-2 h-2 rounded-full bg-neutral-500 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`font-medium ${p.is_current ? 'text-emerald-300' : 'text-white'}`}
+                    >
+                      {p.version}
+                    </span>
+                    {p.is_current && <span className="text-xs text-emerald-400">(current)</span>}
+                  </div>
                   <div className="text-xs text-neutral-500">
                     {new Date(p.created_at).toLocaleString()}
-                    {p.notes && ` • ${p.notes}`}
                   </div>
+                  {p.notes && (
+                    <div className="text-xs text-neutral-500 truncate" title={p.notes}>
+                      {p.notes}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
