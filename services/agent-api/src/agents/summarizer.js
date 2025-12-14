@@ -68,19 +68,11 @@ const SummarySchema = z.object({
   summary: z.object({
     short: z.string().describe('1-2 sentences, 120-150 characters total. Used on cards.'),
     medium: z.string().describe('2-3 sentences, 250-300 characters total. Used in modals.'),
-    long: z.string()
-      .describe(`Structured markdown summary for detail pages (600-800 chars). MUST use this format:
-
-## Key Points
-- [Main finding/insight 1]
-- [Main finding/insight 2]
-- [Main finding/insight 3]
-
-## Implications
-[1-2 sentences on business/regulatory impact]
-
-## Action Required
-[1 sentence on what readers should do]`),
+    long: z
+      .string()
+      .describe(
+        'Structured markdown for detail pages (600-800 chars). Follow long_summary_format rule.',
+      ),
   }),
 
   // Long summary broken into sections (for detail page)
@@ -171,7 +163,7 @@ Output a JSON object with this exact structure:
   "summary": {
     "short": "string - 1-2 sentences, 120-150 characters total (for cards)",
     "medium": "string - 2-3 sentences, 250-300 characters total (for modals)", 
-    "long": "string - MUST be structured markdown (600-800 chars) with: ## Key Points (3 bullets), ## Implications (1-2 sentences), ## Action Required (1 sentence)"
+    "long": "string - structured markdown (600-800 chars) following long_summary_format rule from WRITING RULES"
   },
   "long_summary_sections": {
     "overview": "string - 2-3 sentences listing main topics covered",
