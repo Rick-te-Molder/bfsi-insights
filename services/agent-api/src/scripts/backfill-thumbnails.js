@@ -79,4 +79,9 @@ async function main() {
   console.log(`\n📊 Summary: ${success} success, ${failed} failed`);
 }
 
-main().catch(console.error);
+try {
+  await main();
+} catch (err) {
+  console.error(err);
+  process.exit(1);
+}
