@@ -242,9 +242,8 @@ export async function analyzeMissedDiscovery(missedId) {
       .eq('url_norm', urlNorm)
       .limit(1);
 
-    const firstIngestion = ingestion && ingestion[0];
-    const publishedAt =
-      firstIngestion && firstIngestion.payload && firstIngestion.payload.published_at;
+    const firstIngestion = ingestion?.[0];
+    const publishedAt = firstIngestion?.payload?.published_at;
     if (publishedAt) {
       daysLate = daysBetween(publishedAt, missed.submitted_at);
     }
@@ -257,8 +256,8 @@ export async function analyzeMissedDiscovery(missedId) {
       miss_category: classification.category,
       miss_details: classification.details,
       source_domain: extractDomain(missed.url),
-      days_late: daysLate || (classification.details && classification.details.days_late),
-      existing_source_slug: (classification.details && classification.details.source_slug) || null,
+      days_late: daysLate || classification.details?.days_late,
+      existing_source_slug: classification.details?.source_slug || null,
     })
     .eq('id', missedId);
 
