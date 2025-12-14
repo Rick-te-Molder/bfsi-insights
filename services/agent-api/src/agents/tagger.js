@@ -72,37 +72,13 @@ const TaggingSchema = z.object({
     .describe('BFSI organizations mentioned (banks, insurers, asset managers)'),
   vendor_names: z.array(z.string()).describe('AI/tech vendors mentioned'),
 
-  // Audience relevance scores (0-1 for each audience type)
+  // KB-230: Audience relevance scores - dynamic record instead of hardcoded keys
+  // Audience types are loaded from kb_audience table at runtime
   audience_scores: z
-    .object({
-      executive: z
-        .number()
-        .min(0)
-        .max(1)
-        .describe('Relevance for C-suite/executives (strategy, business impact, market trends)'),
-      functional_specialist: z
-        .number()
-        .min(0)
-        .max(1)
-        .describe(
-          'Relevance for product managers, risk/compliance/legal specialists, auditors, business analysts',
-        ),
-      engineer: z
-        .number()
-        .min(0)
-        .max(1)
-        .describe(
-          'Relevance for developers, architects, DevOps, security engineers (implementation, APIs, technical details)',
-        ),
-      researcher: z
-        .number()
-        .min(0)
-        .max(1)
-        .describe(
-          'Relevance for academics, PhD researchers, analysts (methodology, data, peer-reviewed findings)',
-        ),
-    })
-    .describe('Relevance scores per audience type'),
+    .record(z.string(), z.number().min(0).max(1))
+    .describe(
+      'Relevance scores (0-1) per audience type. Keys are audience codes from kb_audience table.',
+    ),
 
   // Overall metadata
   overall_confidence: z.number().min(0).max(1).describe('Overall confidence in classification 0-1'),

@@ -19,12 +19,8 @@ interface QueueItem {
     published_at?: string;
     industry_codes?: string[];
     geography_codes?: string[];
-    audience_scores?: {
-      executive?: number;
-      functional_specialist?: number;
-      engineer?: number;
-      researcher?: number;
-    };
+    // KB-230: Dynamic audience scores - keys come from kb_audience table
+    audience_scores?: Record<string, number>;
   };
   discovered_at: string;
 }

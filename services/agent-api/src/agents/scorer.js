@@ -141,12 +141,9 @@ ${audienceSections}
 Respond with JSON:
 {
   "relevance_scores": {
-    "executive": <1-10>,
-    "functional_specialist": <1-10>,
-    "engineer": <1-10>,
-    "researcher": <1-10>
+${audiences.map((a) => `    "${a.code}": <1-10>`).join(',\n')}
   },
-  "primary_audience": "<audience with highest score>",
+  "primary_audience": "<audience code with highest score>",
   "executive_summary": "<1 sentence: what this content is about>",
   "skip_reason": "<null if any score >= 4, otherwise brief reason why rejected>"
 }`;
