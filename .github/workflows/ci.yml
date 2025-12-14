@@ -118,11 +118,12 @@ jobs:
         if: github.actor != 'dependabot[bot]'
         run: npm run build --if-present
 
-  # Update schema docs after merge to main
+  # Update schema docs after merge to main (non-blocking)
   update-schema-docs:
     runs-on: ubuntu-latest
     needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    continue-on-error: true  # Don't fail the build if schema update fails
     
     steps:
       - name: Checkout repository
