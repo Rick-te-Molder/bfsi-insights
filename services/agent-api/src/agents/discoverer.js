@@ -800,6 +800,16 @@ function normalizeUrl(url) {
 async function checkExists(url) {
   const urlNorm = normalizeUrl(url);
 
+  // KB-235: Check seen_urls first (archived approved/published items)
+  // This prevents re-discovery of content that was already processed and archived
+  const { data: seenUrl } = await supabase
+    .from('seen_urls')
+    .select('url_norm')
+    .eq('url_norm', urlNorm)
+    .maybeSingle();
+
+  if (seenUrl) return 'skip';
+
   // Check queue - allow retry if rejected
   const { data: queueItem } = await supabase
     .from('ingestion_queue')
