@@ -195,6 +195,20 @@ export function TagDisplay({
     (a, b) => a.display_order - b.display_order,
   );
 
+  // KB-229: Helper to get audience label from source table (kb_audience) or fallback to display_name
+  const getAudienceLabel = (config: TaxonomyConfig): string => {
+    // Extract audience code from payload_field (e.g., 'audience_scores.executive' -> 'executive')
+    const audienceCode = config.payload_field.split('.').pop() || '';
+    // Look up in taxonomyData if available (keyed by config slug)
+    const lookupData = taxonomyData[config.slug];
+    if (lookupData) {
+      const match = lookupData.find((item) => item.code === audienceCode);
+      if (match) return match.name;
+    }
+    // Fallback to display_name from taxonomy_config
+    return config.display_name;
+  };
+
   // Get top audience tag (without percentages) for non-detail views
   const getTopAudiences = (
     maxCount: number = 2,
@@ -202,7 +216,7 @@ export function TagDisplay({
     const scores = audienceConfigs
       .map((c) => {
         const score = getPayloadValue(payload, c.payload_field) as number | undefined;
-        return { slug: c.slug, name: c.display_name, score: score ?? 0 };
+        return { slug: c.slug, name: getAudienceLabel(c), score: score ?? 0 };
       })
       .filter((s) => s.score >= 0.5)
       .sort((a, b) => b.score - a.score);
@@ -290,7 +304,7 @@ export function TagDisplay({
                       key={c.slug}
                       className={`px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}
                     >
-                      {c.display_name} ({(score * 100).toFixed(0)}%)
+                      {getAudienceLabel(c)} ({(score * 100).toFixed(0)}%)
                     </span>
                   );
                 });
