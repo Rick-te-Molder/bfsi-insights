@@ -38,13 +38,6 @@ function getPrimaryAudience(scores?: QueueItem['payload']['audience_scores']): s
   return entries[0][0];
 }
 
-const AUDIENCE_LABELS: Record<string, string> = {
-  executive: 'Exec',
-  functional_specialist: 'Specialist',
-  engineer: 'Engineer',
-  researcher: 'Researcher',
-};
-
 interface MasterDetailViewProps {
   items: QueueItem[];
   status: string;
@@ -61,6 +54,23 @@ export function MasterDetailView({
   const [selectedId, setSelectedId] = useState<string | null>(items[0]?.id || null);
   const [listItems, setListItems] = useState(items);
   const router = useRouter();
+
+  // KB-232: Get audience label from taxonomyData (kb_audience) instead of hardcoded map
+  const getAudienceLabel = (audienceCode: string): string => {
+    // Find the audience config that matches this code
+    const config = taxonomyConfig.find(
+      (c) => c.behavior_type === 'scoring' && c.payload_field === `audience_scores.${audienceCode}`,
+    );
+    if (config) {
+      const lookupData = taxonomyData[config.slug];
+      if (lookupData) {
+        const match = lookupData.find((item) => item.code === audienceCode);
+        if (match) return match.name;
+      }
+    }
+    // Fallback to capitalized code
+    return audienceCode.charAt(0).toUpperCase() + audienceCode.slice(1).replace('_', ' ');
+  };
 
   // Sync items from props when they change (e.g., status filter changed)
   useEffect(() => {
@@ -200,8 +210,7 @@ export function MasterDetailView({
                     </span>
                     {getPrimaryAudience(item.payload?.audience_scores) && (
                       <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px]">
-                        {AUDIENCE_LABELS[getPrimaryAudience(item.payload?.audience_scores)!] ||
-                          getPrimaryAudience(item.payload?.audience_scores)}
+                        {getAudienceLabel(getPrimaryAudience(item.payload?.audience_scores)!)}
                       </span>
                     )}
                   </div>
