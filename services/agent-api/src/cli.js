@@ -536,10 +536,11 @@ async function runQueueHealthCmd() {
   }
 
   // Pending items by age
+  // KB-236: Use status_code - items in discovery/enrichment phase (< 300)
   const { data: pending } = await supabase
     .from('ingestion_queue')
     .select('discovered_at, payload')
-    .eq('status', 'pending')
+    .lt('status_code', 300)
     .order('discovered_at', { ascending: true });
 
   if (pending?.length) {
@@ -674,10 +675,11 @@ async function runEvalCmd(options) {
     await runGoldenEval(agentName, agentFn, { limit: options.limit || 100 });
   } else if (evalType === 'judge') {
     // For judge eval, we need sample inputs
+    // KB-236: Use status_code instead of text status field
     const { data: samples } = await supabase
       .from('ingestion_queue')
       .select('payload')
-      .eq('status', 'enriched')
+      .eq('status_code', STATUS.ENRICHED)
       .limit(options.limit || 10);
 
     const inputs = samples?.map((s) => s.payload) || [];

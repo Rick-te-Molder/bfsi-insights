@@ -17,6 +17,9 @@ dotenv.config();
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
+// KB-236: Status codes for ingestion_queue (from status_lookup table)
+const STATUS_APPROVED = 330;
+
 // -------------------------------------------------------------
 // Utility helpers
 // -------------------------------------------------------------
@@ -246,10 +249,11 @@ async function main() {
 
   console.log(`🚀 Publishing approved items (${dryRun ? 'DRY RUN' : 'LIVE'})\n`);
 
+  // KB-236: Use status_code instead of text status field
   const { data: items, error } = await supabase
     .from('ingestion_queue')
     .select('*')
-    .eq('status', 'approved')
+    .eq('status_code', STATUS_APPROVED)
     .order('reviewed_at', { ascending: true })
     .limit(limit);
 
