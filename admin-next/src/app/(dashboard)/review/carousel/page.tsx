@@ -40,9 +40,10 @@ async function getReviewData() {
     .limit(100);
 
   // Dynamically fetch taxonomy data for categories with source tables
+  // KB-229: Include scoring types (audience) to get labels from source table
   const taxonomyData: TaxonomyData = {};
   const sourceTables = taxonomyConfig
-    .filter((c) => c.source_table && c.behavior_type !== 'scoring')
+    .filter((c) => c.source_table)
     .map((c) => ({ slug: c.slug, table: c.source_table! }));
 
   // Fetch all source tables in parallel
