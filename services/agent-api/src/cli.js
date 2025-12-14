@@ -518,21 +518,14 @@ async function runQueueHealthCmd() {
   console.log('📊 Queue Health Report\n');
   console.log('='.repeat(60));
 
-  // Overall status counts
-  const { data: statusCounts } = await supabase
-    .from('ingestion_queue')
-    .select('status')
-    .then(({ data }) => {
-      const counts = {};
-      data?.forEach((item) => {
-        counts[item.status] = (counts[item.status] || 0) + 1;
-      });
-      return { data: counts };
-    });
+  // KB-237: Use status_code instead of text status - get counts via RPC
+  const { data: statusCounts } = await supabase.rpc('get_status_code_counts');
 
   console.log('\n📈 Status Overview:');
-  for (const [status, count] of Object.entries(statusCounts || {})) {
-    console.log(`   ${getStatusIcon(status)} ${status.padEnd(12)}: ${count}`);
+  for (const row of statusCounts || []) {
+    if (row.count > 0) {
+      console.log(`   ${getStatusIcon(row.name)} ${row.name.padEnd(20)}: ${row.count}`);
+    }
   }
 
   // Pending items by age
@@ -551,9 +544,10 @@ async function runQueueHealthCmd() {
   }
 
   // Recent activity
+  // KB-237: Use status_code instead of text status
   const { data: recent } = await supabase
     .from('ingestion_queue')
-    .select('status, reviewed_at')
+    .select('status_code, reviewed_at')
     .not('reviewed_at', 'is', null)
     .gte('reviewed_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
     .order('reviewed_at', { ascending: false });
@@ -562,10 +556,10 @@ async function runQueueHealthCmd() {
     console.log(`\n📅 Last 24h Activity: ${recent.length} items processed`);
     const recentStatus = {};
     recent.forEach((item) => {
-      recentStatus[item.status] = (recentStatus[item.status] || 0) + 1;
+      recentStatus[item.status_code] = (recentStatus[item.status_code] || 0) + 1;
     });
-    for (const [status, count] of Object.entries(recentStatus)) {
-      console.log(`      ${status}: ${count}`);
+    for (const [code, count] of Object.entries(recentStatus)) {
+      console.log(`      status_code ${code}: ${count}`);
     }
   }
 
