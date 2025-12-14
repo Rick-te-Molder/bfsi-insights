@@ -12,13 +12,11 @@ vi.mock('@supabase/supabase-js', () => ({
       select: vi.fn(() => {
         // Return different data based on table
         const mockData = {
-          // KB-231: taxonomy_config for dynamic loading
+          // KB-233: taxonomy_config - simplified without source_code_column/source_name_column
           taxonomy_config: [
             {
               slug: 'industry',
               source_table: 'bfsi_industry',
-              source_code_column: 'code',
-              source_name_column: 'name',
               is_hierarchical: true,
               parent_code_column: 'parent_code',
               behavior_type: 'guardrail',
@@ -26,8 +24,6 @@ vi.mock('@supabase/supabase-js', () => ({
             {
               slug: 'topic',
               source_table: 'bfsi_topic',
-              source_code_column: 'code',
-              source_name_column: 'name',
               is_hierarchical: true,
               parent_code_column: 'parent_code',
               behavior_type: 'guardrail',
@@ -35,8 +31,6 @@ vi.mock('@supabase/supabase-js', () => ({
             {
               slug: 'geography',
               source_table: 'kb_geography',
-              source_code_column: 'code',
-              source_name_column: 'name',
               is_hierarchical: false,
               parent_code_column: 'parent_code',
               behavior_type: 'guardrail',
