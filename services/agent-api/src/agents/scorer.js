@@ -39,7 +39,7 @@ async function getAudiences() {
 
   const { data, error } = await getSupabase()
     .from('kb_audience')
-    .select('name, label, description, cares_about, doesnt_care_about, scoring_guide')
+    .select('code, name, description, cares_about, doesnt_care_about, scoring_guide')
     .order('sort_order');
 
   if (error || !data || data.length === 0) {
@@ -84,7 +84,7 @@ async function getSystemPrompt() {
   // Build audience sections dynamically
   const audienceSections = audiences
     .map((a) => {
-      return `## ${a.label} (${a.name})
+      return `## ${a.name} (${a.code})
 ${a.description}
 
 They care about:

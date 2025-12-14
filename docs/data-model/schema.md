@@ -632,8 +632,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column              | Type    | Nullable | Default           | Constraints |
 | ------------------- | ------- | -------- | ----------------- | ----------- |
-| `name`              | text    | NO       |                   | UNIQUE      |
-| `label`             | text    | NO       |                   |             |
+| `code`              | text    | NO       |                   | UNIQUE      |
+| `name`              | text    | NO       |                   |             |
 | `description`       | text    | YES      |                   |             |
 | `sort_order`        | integer | YES      | 0                 |             |
 | `id`                | uuid    | NO       | gen_random_uuid() | PK          |
@@ -904,7 +904,7 @@ This file is the single source of truth for AI assistants to understand the data
 | `premium_config`        | jsonb                    | YES      |                   |                       |
 | `channel_slug`          | text                     | YES      |                   | FK → kb_channel.slug  |
 | `disabled_reason`       | text                     | YES      |                   |                       |
-| `primary_audience`      | text                     | YES      |                   | FK → kb_audience.name |
+| `primary_audience`      | text                     | YES      |                   | FK → kb_audience.code |
 | `id`                    | uuid                     | NO       | gen_random_uuid() | UNIQUE                |
 
 ### `missed_discovery`
