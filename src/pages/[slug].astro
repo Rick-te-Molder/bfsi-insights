@@ -139,11 +139,22 @@ const ogImage = thumbCandidates[0];
 
     <div class="mt-4 flex flex-wrap gap-2 text-xs">
       {
-        item.audience && (
-          <span class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-neutral-300">
-            {item.audience}
-          </span>
-        )
+        (item.audiences || [item.audience])
+          .filter((c): c is string => Boolean(c))
+          .map((code) => (
+            <span class="rounded-md border border-amber-800/50 bg-amber-900/20 px-2 py-0.5 text-amber-300">
+              {code}
+            </span>
+          ))
+      }
+      {
+        (item.geographies || [item.geography])
+          .filter((c): c is string => Boolean(c))
+          .map((code) => (
+            <span class="rounded-md border border-teal-800/50 bg-teal-900/20 px-2 py-0.5 text-teal-300">
+              {code}
+            </span>
+          ))
       }
       {
         item.content_type && (
@@ -154,24 +165,17 @@ const ogImage = thumbCandidates[0];
       }
       {
         (item.industries || []).map((code: string) => (
-          <span class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-neutral-300">
+          <span class="rounded-md border border-cyan-800/50 bg-cyan-900/20 px-2 py-0.5 text-cyan-300">
             {code}
           </span>
         ))
       }
       {
         (item.topics || []).map((code: string) => (
-          <span class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-neutral-300">
+          <span class="rounded-md border border-purple-800/50 bg-purple-900/20 px-2 py-0.5 text-purple-300">
             {code}
           </span>
         ))
-      }
-      {
-        item.geography && (
-          <span class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-neutral-300">
-            {item.geography}
-          </span>
-        )
       }
       {
         (item.regulators || []).map((code: string) => (
