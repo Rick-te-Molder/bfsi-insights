@@ -56,22 +56,6 @@ export async function approveQueueItemAction(queueId: string, editedTitle?: stri
     buildPublicStorageUrl(thumbnailBucket, thumbnailPath) ??
     null;
 
-  // Extract audience (highest scoring from audience_scores object)
-  const audienceScores = payload.audience_scores as Record<string, number> | undefined;
-  let audience: string | null = null;
-  if (audienceScores && typeof audienceScores === 'object') {
-    const entries = Object.entries(audienceScores);
-    if (entries.length > 0) {
-      const [topAudience] = entries.reduce((a, b) => (b[1] > a[1] ? b : a));
-      audience = topAudience;
-    }
-  }
-
-  // Extract geography (first from geography_codes array)
-  const geographyCodes = payload.geography_codes as string[] | undefined;
-  const geography =
-    Array.isArray(geographyCodes) && geographyCodes.length > 0 ? geographyCodes[0] : null;
-
   // Insert publication
   const { data: pubData, error: pubError } = await supabase
     .from('kb_publication')
@@ -89,8 +73,6 @@ export async function approveQueueItemAction(queueId: string, editedTitle?: stri
       thumbnail: thumbnailUrl,
       thumbnail_bucket: thumbnailBucket,
       thumbnail_path: thumbnailPath,
-      audience,
-      geography,
       status: 'published',
     })
     .select('id')
@@ -113,8 +95,32 @@ export async function approveQueueItemAction(queueId: string, editedTitle?: stri
 
   for (const config of taxonomyConfigs || []) {
     const key = config.payload_field as string;
+    if (!config.junction_table || !config.junction_code_column) continue;
+
+    // Handle audience_scores specially (object with scores, not array)
+    if (key === 'audience_scores') {
+      const scores = payload[key] as Record<string, number> | undefined;
+      if (scores && typeof scores === 'object') {
+        const entries = Object.entries(scores).filter(([, score]) => score > 0);
+        if (entries.length > 0) {
+          const { error: insertError } = await supabase.from(config.junction_table).insert(
+            entries.map(([code, score]) => ({
+              publication_id: pubData.id,
+              [config.junction_code_column as string]: code,
+              score,
+            })),
+          );
+          if (insertError) {
+            return { success: false as const, error: insertError.message };
+          }
+        }
+      }
+      continue;
+    }
+
+    // Standard array handling for other taxonomy tags
     const codes = payload[key] as string[] | undefined;
-    if (!codes?.length || !config.junction_table || !config.junction_code_column) continue;
+    if (!codes?.length) continue;
 
     const { error: insertError } = await supabase.from(config.junction_table).insert(
       codes.map((code: string) => ({
@@ -236,22 +242,6 @@ export async function bulkApproveAction(ids: string[]) {
       buildPublicStorageUrl(thumbnailBucket, thumbnailPath) ??
       null;
 
-    // Extract audience (highest scoring from audience_scores object)
-    const audienceScores = payload.audience_scores as Record<string, number> | undefined;
-    let audience: string | null = null;
-    if (audienceScores && typeof audienceScores === 'object') {
-      const entries = Object.entries(audienceScores);
-      if (entries.length > 0) {
-        const [topAudience] = entries.reduce((a, b) => (b[1] > a[1] ? b : a));
-        audience = topAudience;
-      }
-    }
-
-    // Extract geography (first from geography_codes array)
-    const geographyCodes = payload.geography_codes as string[] | undefined;
-    const geography =
-      Array.isArray(geographyCodes) && geographyCodes.length > 0 ? geographyCodes[0] : null;
-
     // Insert publication
     const { data: pubData, error: pubError } = await supabase
       .from('kb_publication')
@@ -272,8 +262,6 @@ export async function bulkApproveAction(ids: string[]) {
         thumbnail: thumbnailUrl,
         thumbnail_bucket: thumbnailBucket,
         thumbnail_path: thumbnailPath,
-        audience,
-        geography,
         status: 'published',
       })
       .select('id')
@@ -295,8 +283,30 @@ export async function bulkApproveAction(ids: string[]) {
 
     if (taxonomyConfigs) {
       for (const config of taxonomyConfigs) {
-        const codes = payload[config.payload_field] as string[] | undefined;
-        if (codes?.length && config.junction_table && config.junction_code_column) {
+        const key = config.payload_field as string;
+        if (!config.junction_table || !config.junction_code_column) continue;
+
+        // Handle audience_scores specially (object with scores, not array)
+        if (key === 'audience_scores') {
+          const scores = payload[key] as Record<string, number> | undefined;
+          if (scores && typeof scores === 'object') {
+            const entries = Object.entries(scores).filter(([, score]) => score > 0);
+            if (entries.length > 0) {
+              await supabase.from(config.junction_table).insert(
+                entries.map(([code, score]) => ({
+                  publication_id: publicationId,
+                  [config.junction_code_column]: code,
+                  score,
+                })),
+              );
+            }
+          }
+          continue;
+        }
+
+        // Standard array handling
+        const codes = payload[key] as string[] | undefined;
+        if (codes?.length) {
           await supabase.from(config.junction_table).insert(
             codes.map((code: string) => ({
               publication_id: publicationId,

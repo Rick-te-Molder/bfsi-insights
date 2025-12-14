@@ -53,16 +53,22 @@ const expandItemThumb = (t?: string) => {
 const topic = asArr(item.topic);
 const content_type = asArr(item.content_type);
 const audience = item.audience || (item as any).role || '';
+const audiences = item.audiences || [];
 const industry = item.industry || '';
+const industries = item.industries || [];
 const geography = item.geography || '';
+const geographies = item.geographies || [];
 const regulators = item.regulators || [];
 const regulations = item.regulations || [];
 const obligations = item.obligations || [];
 const processes = item.processes || [];
 
-// Count extra tags (everything except audience and geography shown on card)
+// Count extra tags (everything except first audience and first geography shown on card)
+// Extra audiences (beyond first), extra geographies (beyond first), plus all other tags
 const extraTagCount =
-  (industry ? 1 : 0) +
+  Math.max(0, audiences.length - 1) +
+  Math.max(0, geographies.length - 1) +
+  industries.length +
   topic.length +
   content_type.length +
   regulators.length +
@@ -105,10 +111,14 @@ const candidates = [...itemThumbs];
   class="group rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition-all hover:border-neutral-700 hover:ring-neutral-700 hover:bg-neutral-900 relative"
   aria-labelledby={`t-${item.slug}`}
   data-audience={audience}
+  data-audiences={audiences.join(',') || ''}
   data-industry={industry}
+  data-industries={industries.join(',') || ''}
   data-topic={topic[0] || ''}
+  data-topics={(item.topics || []).join(',') || ''}
   data-content_type={content_type[0] || ''}
   data-geography={geography}
+  data-geographies={geographies.join(',') || ''}
   data-regulator={regulators.join(',') || ''}
   data-regulation={regulations.join(',') || ''}
   data-obligation={obligations.join(',') || ''}
