@@ -1,11 +1,8 @@
 -- KB-221: Remove publications with broken links (detected by nightly link checker)
 --
 -- These source URLs are no longer accessible:
--- 1. McKinsey 2025 AI Report - HTTP 403 (Medium blocked)
--- 2. Banken zetten in op ai-agenten - HTTP 500 (server error)
+-- 1. McKinsey insights (Medium) - HTTP 403 (blocked)
+-- Note: "Banken zetten in op ai-agenten" not in kb_publication (likely still in queue or rejected)
 
 DELETE FROM kb_publication
-WHERE slug IN (
-  '5-mckinsey-insights-on-how-agentic-ai-is-reshaping-industries',
-  'banken-zetten-in-op-ai-agenten-maar-echte-doorbraak-blijft-uit'
-);
+WHERE slug = '5-mckinsey-insights-on-how-agentic-ai-is-reshaping-industries';
