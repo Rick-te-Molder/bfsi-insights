@@ -85,95 +85,158 @@ const TaggingSchema = z.object({
   reasoning: z.string().describe('Brief explanation of classification choices'),
 });
 
+/**
+ * KB-231: Load taxonomies dynamically from taxonomy_config
+ * This allows adding new taxonomy types without code changes.
+ */
 async function loadTaxonomies() {
-  // Load all guardrail taxonomies in parallel (include hierarchy info)
-  const [
-    industries,
-    topics,
-    geographies,
-    useCases,
-    capabilities,
-    regulators,
-    regulations,
-    obligations,
-    processes,
-  ] = await Promise.all([
-    supabase
-      .from('bfsi_industry')
-      .select('code, name, level, parent_code')
-      .order('level')
-      .order('name'),
-    supabase
-      .from('bfsi_topic')
-      .select('code, name, level, parent_code')
-      .order('level')
-      .order('name'),
-    supabase
-      .from('kb_geography')
-      .select('code, name, level, parent_code')
-      .order('level')
-      .order('sort_order'),
-    supabase.from('ag_use_case').select('code, name').order('name'),
-    supabase.from('ag_capability').select('code, name').order('name'),
-    supabase.from('regulator').select('code, name').order('name'),
-    supabase.from('regulation').select('code, name').order('name'),
-    supabase.from('bfsi_process_taxonomy').select('code, name, level').order('name'),
-  ]);
+  // First, load taxonomy_config to discover which tables to load
+  const { data: configs, error: configError } = await supabase
+    .from('taxonomy_config')
+    .select(
+      'slug, source_table, source_code_column, source_name_column, is_hierarchical, parent_code_column, behavior_type',
+    )
+    .eq('is_active', true)
+    .not('source_table', 'is', null);
 
-  const format = (data) => data?.data?.map((i) => `${i.code}: ${i.name}`).join('\n') || '';
-  const extractCodes = (data) => new Set(data?.data?.map((i) => i.code) || []);
+  if (configError) {
+    console.error('Failed to load taxonomy_config:', configError);
+    throw new Error('CRITICAL: Cannot load taxonomy configuration');
+  }
 
-  // Format hierarchical taxonomy with level and parent indication
-  const formatHierarchical = (data) =>
-    data?.data
-      ?.map((i) => {
-        const indent = '  '.repeat((i.level || 1) - 1);
-        const levelTag = i.level ? `[L${i.level}]` : '';
-        const parentTag = i.parent_code ? ` (parent: ${i.parent_code})` : '';
-        return `${indent}${i.code}: ${i.name} ${levelTag}${parentTag}`;
-      })
-      .join('\n') || '';
-
-  // Format obligations with regulation and category
-  const formatObligations = (data) =>
-    data?.data
-      ?.map((i) => `${i.code}: ${i.name} [${i.regulation_code}/${i.category}]`)
-      .join('\n') || '';
-
-  // Build geography parent map for code expansion
-  const geographyParentMap = new Map();
-  for (const geo of geographies?.data || []) {
-    if (geo.parent_code) {
-      geographyParentMap.set(geo.code, geo.parent_code);
+  // Group configs by source_table to avoid duplicate queries
+  const tableConfigs = new Map();
+  for (const config of configs || []) {
+    if (!tableConfigs.has(config.source_table)) {
+      tableConfigs.set(config.source_table, config);
     }
   }
 
+  // Build query for each unique source table
+  const tableQueries = [];
+  for (const [table, config] of tableConfigs) {
+    const codeCol = config.source_code_column || 'code';
+    const nameCol = config.source_name_column || 'name';
+
+    // Build select columns based on whether it's hierarchical
+    let selectCols = `${codeCol}, ${nameCol}`;
+    if (config.is_hierarchical) {
+      selectCols += ', level';
+      if (config.parent_code_column) {
+        selectCols += `, ${config.parent_code_column}`;
+      }
+    }
+
+    tableQueries.push({
+      table,
+      config,
+      promise: supabase.from(table).select(selectCols).order(nameCol),
+    });
+  }
+
+  // Execute all queries in parallel
+  const results = await Promise.all(tableQueries.map((q) => q.promise));
+
+  // Build lookup map: table name -> query result
+  const tableData = new Map();
+  for (let i = 0; i < tableQueries.length; i++) {
+    tableData.set(tableQueries[i].table, {
+      data: results[i].data || [],
+      config: tableQueries[i].config,
+    });
+  }
+
+  // Helper functions for formatting
+  const format = (data, codeCol = 'code', nameCol = 'name') =>
+    data?.map((i) => `${i[codeCol]}: ${i[nameCol]}`).join('\n') || '';
+
+  const formatHierarchical = (
+    data,
+    codeCol = 'code',
+    nameCol = 'name',
+    parentCol = 'parent_code',
+  ) =>
+    data
+      ?.map((i) => {
+        const indent = '  '.repeat((i.level || 1) - 1);
+        const levelTag = i.level ? `[L${i.level}]` : '';
+        const parentTag = i[parentCol] ? ` (parent: ${i[parentCol]})` : '';
+        return `${indent}${i[codeCol]}: ${i[nameCol]} ${levelTag}${parentTag}`;
+      })
+      .join('\n') || '';
+
+  const extractCodes = (data, codeCol = 'code') => new Set(data?.map((i) => i[codeCol]) || []);
+
+  // Helper to get formatted data for a slug
+  const getFormatted = (slug) => {
+    const config = configs?.find((c) => c.slug === slug);
+    if (!config || !config.source_table) return '';
+    const td = tableData.get(config.source_table);
+    if (!td) return '';
+    const codeCol = config.source_code_column || 'code';
+    const nameCol = config.source_name_column || 'name';
+    if (config.is_hierarchical) {
+      return formatHierarchical(
+        td.data,
+        codeCol,
+        nameCol,
+        config.parent_code_column || 'parent_code',
+      );
+    }
+    return format(td.data, codeCol, nameCol);
+  };
+
+  const getValidCodes = (slug) => {
+    const config = configs?.find((c) => c.slug === slug);
+    if (!config || !config.source_table) return new Set();
+    const td = tableData.get(config.source_table);
+    if (!td) return new Set();
+    return extractCodes(td.data, config.source_code_column || 'code');
+  };
+
+  // Build geography parent map for code expansion
+  const geographyParentMap = new Map();
+  const geoConfig = configs?.find((c) => c.slug === 'geography');
+  if (geoConfig) {
+    const geoData = tableData.get(geoConfig.source_table);
+    const parentCol = geoConfig.parent_code_column || 'parent_code';
+    for (const geo of geoData?.data || []) {
+      if (geo[parentCol]) {
+        geographyParentMap.set(geo.code, geo[parentCol]);
+      }
+    }
+  }
+
+  // Return structure matching existing API for backward compatibility
   return {
     // Formatted strings for LLM prompt
-    industries: formatHierarchical(industries),
-    topics: formatHierarchical(topics),
-    geographies: formatHierarchical(geographies),
-    useCases: format(useCases),
-    capabilities: format(capabilities),
-    regulators: format(regulators),
-    regulations: format(regulations),
-    obligations: formatObligations(obligations),
-    processes: formatHierarchical(processes),
+    industries: getFormatted('industry'),
+    topics: getFormatted('topic'),
+    geographies: getFormatted('geography'),
+    useCases: getFormatted('use_case'),
+    capabilities: getFormatted('capability'),
+    regulators: getFormatted('regulator'),
+    regulations: getFormatted('regulation'),
+    obligations: '', // Special case - not in taxonomy_config yet
+    processes: getFormatted('process'),
     // Valid code sets for post-validation
     validCodes: {
-      industries: extractCodes(industries),
-      topics: extractCodes(topics),
-      geographies: extractCodes(geographies),
-      useCases: extractCodes(useCases),
-      capabilities: extractCodes(capabilities),
-      regulators: extractCodes(regulators),
-      regulations: extractCodes(regulations),
-      processes: extractCodes(processes),
+      industries: getValidCodes('industry'),
+      topics: getValidCodes('topic'),
+      geographies: getValidCodes('geography'),
+      useCases: getValidCodes('use_case'),
+      capabilities: getValidCodes('capability'),
+      regulators: getValidCodes('regulator'),
+      regulations: getValidCodes('regulation'),
+      processes: getValidCodes('process'),
     },
     // Parent maps for hierarchy expansion
     parentMaps: {
       geographies: geographyParentMap,
     },
+    // KB-231: Also expose the raw configs for future dynamic prompt building
+    _configs: configs,
+    _tableData: tableData,
   };
 }
 

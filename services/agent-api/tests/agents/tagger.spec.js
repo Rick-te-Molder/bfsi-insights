@@ -4,28 +4,65 @@ import { describe, it, expect, vi, beforeAll } from 'vitest';
 vi.stubEnv('PUBLIC_SUPABASE_URL', 'https://test.supabase.co');
 vi.stubEnv('SUPABASE_SERVICE_KEY', 'test-key');
 
-// Mock Supabase before importing - support chained .order() calls
-// Include all codes that tests expect to be validated
+// Mock Supabase before importing - support chained query calls
+// KB-231: Updated to support .eq().not() chain for taxonomy_config queries
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({
     from: vi.fn((tableName) => ({
       select: vi.fn(() => {
         // Return different data based on table
         const mockData = {
+          // KB-231: taxonomy_config for dynamic loading
+          taxonomy_config: [
+            {
+              slug: 'industry',
+              source_table: 'bfsi_industry',
+              source_code_column: 'code',
+              source_name_column: 'name',
+              is_hierarchical: true,
+              parent_code_column: 'parent_code',
+              behavior_type: 'guardrail',
+            },
+            {
+              slug: 'topic',
+              source_table: 'bfsi_topic',
+              source_code_column: 'code',
+              source_name_column: 'name',
+              is_hierarchical: true,
+              parent_code_column: 'parent_code',
+              behavior_type: 'guardrail',
+            },
+            {
+              slug: 'geography',
+              source_table: 'kb_geography',
+              source_code_column: 'code',
+              source_name_column: 'name',
+              is_hierarchical: false,
+              parent_code_column: 'parent_code',
+              behavior_type: 'guardrail',
+            },
+          ],
           bfsi_industry: [
             { code: 'banking', name: 'Banking', level: 1, parent_code: null },
             { code: 'retail-banking', name: 'Retail Banking', level: 2, parent_code: 'banking' },
             { code: 'insurance', name: 'Insurance', level: 1, parent_code: null },
           ],
           bfsi_topic: [{ code: 'ai-strategy', name: 'AI Strategy', level: 1, parent_code: null }],
-          kb_geography: [{ code: 'global', name: 'Global', sort_order: 1 }],
+          kb_geography: [{ code: 'global', name: 'Global', level: 1, parent_code: null }],
         };
         const data = mockData[tableName] || [];
-        const orderFn = vi.fn(() => ({
-          order: orderFn,
-          data,
-        }));
-        return { order: orderFn };
+
+        // Build chainable mock that supports .eq().not().order() patterns
+        const createChainable = (currentData) => ({
+          eq: vi.fn(() => createChainable(currentData)),
+          not: vi.fn(() => createChainable(currentData)),
+          order: vi.fn(() => createChainable(currentData)),
+          data: currentData,
+          error: null,
+          then: (resolve) => resolve({ data: currentData, error: null }),
+        });
+
+        return createChainable(data);
       }),
     })),
   })),
