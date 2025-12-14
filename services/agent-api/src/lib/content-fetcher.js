@@ -163,6 +163,42 @@ function isPermanentFailure(status) {
   return status === 410 || status === 404;
 }
 
+/**
+ * Handle non-OK HTTP response - determine action based on status code
+ */
+function handleHttpError(response, attempt, retries) {
+  const { status } = response;
+  if (isPermanentFailure(status)) {
+    return { permanentFailure: true, status };
+  }
+  if (status === 403) {
+    return { forbidden: true, status };
+  }
+  if (attempt < retries && isRetryableStatus(status)) {
+    console.log(`   ⚠️ HTTP ${status}, retrying (${attempt}/${retries})...`);
+    return { retry: true };
+  }
+  return { shouldThrow: true, status };
+}
+
+/**
+ * Handle fetch errors (network, timeout, etc.)
+ */
+function handleFetchError(error, attempt, retries) {
+  if (error.name === 'AbortError') {
+    if (attempt < retries) {
+      console.log(`   ⚠️ Timeout, retrying (${attempt}/${retries})...`);
+      return { retry: true };
+    }
+    return { shouldThrow: true, message: 'Request timeout' };
+  }
+  if (attempt < retries) {
+    console.log(`   ⚠️ ${error.message}, retrying (${attempt}/${retries})...`);
+    return { retry: true };
+  }
+  return { shouldThrow: true, error };
+}
+
 async function attemptFetch(url, attempt, retries) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 45000);
@@ -176,39 +212,20 @@ async function attemptFetch(url, attempt, retries) {
     clearTimeout(timeout);
 
     if (!response.ok) {
-      // Permanent failures - don't retry, don't fallback
-      if (isPermanentFailure(response.status)) {
-        return { permanentFailure: true, status: response.status };
-      }
-      // 403 might benefit from Playwright fallback
-      if (response.status === 403) {
-        return { forbidden: true, status: response.status };
-      }
-      if (attempt < retries && isRetryableStatus(response.status)) {
-        console.log(`   ⚠️ HTTP ${response.status}, retrying (${attempt}/${retries})...`);
-        return { retry: true };
-      }
-      throw new Error(`HTTP ${response.status}`);
+      const result = handleHttpError(response, attempt, retries);
+      if (result.shouldThrow) throw new Error(`HTTP ${result.status}`);
+      return result;
     }
 
     const html = await response.text();
     return { success: true, html };
   } catch (error) {
     clearTimeout(timeout);
-
-    if (error.name === 'AbortError') {
-      if (attempt < retries) {
-        console.log(`   ⚠️ Timeout, retrying (${attempt}/${retries})...`);
-        return { retry: true };
-      }
-      throw new Error('Request timeout');
+    const result = handleFetchError(error, attempt, retries);
+    if (result.shouldThrow) {
+      throw result.error || new Error(result.message);
     }
-
-    if (attempt < retries) {
-      console.log(`   ⚠️ ${error.message}, retrying (${attempt}/${retries})...`);
-      return { retry: true };
-    }
-    throw error;
+    return result;
   }
 }
 

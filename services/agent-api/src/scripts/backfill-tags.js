@@ -67,6 +67,15 @@ async function saveTags(pubId, result) {
 }
 
 /**
+ * Extract first code from industry/topic arrays
+ */
+function getFirstCode(codes) {
+  if (!Array.isArray(codes) || codes.length === 0) return undefined;
+  const first = codes[0];
+  return typeof first === 'string' ? first : first?.code;
+}
+
+/**
  * Process a single publication
  */
 async function processPublication(pub) {
@@ -88,13 +97,6 @@ async function processPublication(pub) {
   const result = await runTagger(mockQueueItem);
 
   await saveTags(pub.id, result);
-
-  // Extract first code from industry/topic arrays
-  function getFirstCode(codes) {
-    if (!Array.isArray(codes) || codes.length === 0) return undefined;
-    const first = codes[0];
-    return typeof first === 'string' ? first : first?.code;
-  }
 
   const ind = getFirstCode(result.industry_codes);
   const top = getFirstCode(result.topic_codes);
