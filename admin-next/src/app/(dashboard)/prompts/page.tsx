@@ -1,145 +1,31 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { useState, useMemo } from 'react';
 import type { PromptVersion } from '@/types/database';
-
-// Manifest types (KB-207)
-interface ManifestAgent {
-  name: string;
-  file: string;
-  type: 'llm' | 'config' | 'orchestrator' | 'scoring';
-  description: string;
-  prompt_versions: string[];
-  tables: string[];
-  model?: string;
-  owner: string;
-}
-
-interface RequiredPrompt {
-  agent_name: string;
-  type: 'llm' | 'config';
-  required: boolean;
-}
-
-interface AgentManifest {
-  agents: ManifestAgent[];
-  required_prompts: RequiredPrompt[];
-}
-
-// Estimate tokens (rough: ~4 chars per token for English)
-function estimateTokens(text: string): number {
-  return Math.ceil(text.length / 4);
-}
-
-// Stage badge styling
-function getStageBadge(stage?: string) {
-  switch (stage) {
-    case 'production':
-      return { label: 'Live', className: 'bg-emerald-500/20 text-emerald-300' };
-    case 'staging':
-      return { label: 'Staged', className: 'bg-amber-500/20 text-amber-300' };
-    case 'development':
-      return { label: 'Draft', className: 'bg-neutral-500/20 text-neutral-300' };
-    default:
-      return { label: stage || 'Unknown', className: 'bg-neutral-500/20 text-neutral-400' };
-  }
-}
+import { usePrompts, useResizablePanel } from './hooks';
+import type { CoverageStats as CoverageStatsType } from './types';
+import {
+  AgentDetail,
+  AgentTable,
+  CoverageStats,
+  DiffModal,
+  PromptEditModal,
+  PromptPlayground,
+  ViewVersionModal,
+} from './components';
 
 export default function PromptsPage() {
-  const [prompts, setPrompts] = useState<PromptVersion[]>([]);
-  const [manifest, setManifest] = useState<AgentManifest | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { prompts, promptsByAgent, agents, manifest, loading, reload, rollbackToVersion } =
+    usePrompts();
+  const { height: topPanelHeight, containerRef, handleMouseDown } = useResizablePanel();
+
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [viewingVersion, setViewingVersion] = useState<PromptVersion | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<PromptVersion | null>(null);
   const [diffMode, setDiffMode] = useState<{ a: PromptVersion; b: PromptVersion } | null>(null);
   const [testingPrompt, setTestingPrompt] = useState<PromptVersion | null>(null);
-  const [topPanelHeight, setTopPanelHeight] = useState(400);
-  const isDragging = useRef(false);
-  const containerRef = useRef<HTMLDivElement>(null);
 
-  const supabase = createClient();
-
-  const loadPrompts = useCallback(
-    async function loadPrompts() {
-      setLoading(true);
-
-      // Load prompts from DB (try new table name, fall back to old for schema cache)
-      let result = await supabase
-        .from('prompt_version')
-        .select('*')
-        .order('agent_name')
-        .order('created_at', { ascending: false });
-
-      // Fall back to old table name if new one fails (schema cache issue)
-      if (result.error) {
-        console.warn('prompt_version failed, trying prompt_versions:', result.error.message);
-        result = await supabase
-          .from('prompt_versions')
-          .select('*')
-          .order('agent_name')
-          .order('created_at', { ascending: false });
-      }
-
-      if (result.error) {
-        console.error('Error loading prompts:', result.error);
-      } else {
-        setPrompts(result.data || []);
-      }
-
-      // Load manifest (KB-207)
-      try {
-        const manifestRes = await fetch('/api/manifest');
-        if (manifestRes.ok) {
-          const manifestData = await manifestRes.json();
-          setManifest(manifestData);
-        }
-      } catch (err) {
-        console.warn('Failed to load manifest:', err);
-      }
-
-      setLoading(false);
-    },
-    [supabase],
-  );
-
-  useEffect(() => {
-    loadPrompts();
-  }, [loadPrompts]);
-
-  // Handle resize drag
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    isDragging.current = true;
-    document.body.style.cursor = 'row-resize';
-    document.body.style.userSelect = 'none';
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging.current || !containerRef.current) return;
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const newHeight = e.clientY - containerRect.top;
-      setTopPanelHeight(Math.max(150, Math.min(newHeight, window.innerHeight - 300)));
-    };
-
-    const handleMouseUp = () => {
-      isDragging.current = false;
-      document.body.style.cursor = '';
-      document.body.style.userSelect = '';
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, []);
-
-  // Calculate coverage stats (KB-207)
-  const coverageStats = (() => {
+  const coverageStats: CoverageStatsType | null = useMemo(() => {
     if (!manifest) return null;
 
     const currentPromptNames = new Set(
@@ -162,47 +48,7 @@ export default function PromptsPage() {
           ? Math.round((presentRequired.length / requiredPrompts.length) * 100)
           : 100,
     };
-  })();
-
-  // Group prompts by agent
-  const promptsByAgent = prompts.reduce(
-    (acc, prompt) => {
-      if (!acc[prompt.agent_name]) {
-        acc[prompt.agent_name] = [];
-      }
-      acc[prompt.agent_name].push(prompt);
-      return acc;
-    },
-    {} as Record<string, PromptVersion[]>,
-  );
-
-  const agents = Object.keys(promptsByAgent);
-
-  // Rollback function
-  async function rollbackToVersion(prompt: PromptVersion) {
-    if (!confirm(`Make "${prompt.version}" the current version for ${prompt.agent_name}?`)) {
-      return;
-    }
-
-    // First, set all versions to not current
-    await supabase
-      .from('prompt_version')
-      .update({ is_current: false })
-      .eq('agent_name', prompt.agent_name);
-
-    // Then set the selected version as current
-    const { error } = await supabase
-      .from('prompt_version')
-      .update({ is_current: true })
-      .eq('agent_name', prompt.agent_name)
-      .eq('version', prompt.version);
-
-    if (error) {
-      alert('Failed to rollback: ' + error.message);
-    } else {
-      loadPrompts();
-    }
-  }
+  }, [manifest, prompts]);
 
   if (loading) {
     return (
@@ -214,7 +60,6 @@ export default function PromptsPage() {
 
   return (
     <div>
-      {/* Header */}
       <header className="mb-6">
         <div className="flex items-center justify-between">
           <div>
@@ -228,192 +73,30 @@ export default function PromptsPage() {
           </div>
         </div>
 
-        {/* Coverage Stats (KB-207) */}
-        {coverageStats && (
-          <div className="mt-4 grid grid-cols-4 gap-4">
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-              <div className="text-2xl font-bold text-white">{coverageStats.totalAgents}</div>
-              <div className="text-xs text-neutral-400">Agents in Manifest</div>
-            </div>
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-              <div className="text-2xl font-bold text-white">{coverageStats.currentPrompts}</div>
-              <div className="text-xs text-neutral-400">Active Prompts</div>
-            </div>
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-              <div
-                className={`text-2xl font-bold ${coverageStats.coverage === 100 ? 'text-emerald-400' : 'text-amber-400'}`}
-              >
-                {coverageStats.coverage}%
-              </div>
-              <div className="text-xs text-neutral-400">Required Coverage</div>
-            </div>
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-              <div
-                className={`text-2xl font-bold ${coverageStats.missingRequired.length === 0 ? 'text-emerald-400' : 'text-red-400'}`}
-              >
-                {coverageStats.missingRequired.length === 0
-                  ? '✓'
-                  : coverageStats.missingRequired.length}
-              </div>
-              <div className="text-xs text-neutral-400">
-                {coverageStats.missingRequired.length === 0
-                  ? 'All Required Present'
-                  : 'Missing Required'}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Missing prompts warning */}
-        {coverageStats && coverageStats.missingRequired.length > 0 && (
-          <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-4">
-            <div className="flex items-start gap-3">
-              <span className="text-red-400">⚠️</span>
-              <div>
-                <div className="font-medium text-red-300">Missing Required Prompts</div>
-                <div className="mt-1 text-sm text-red-300/80">
-                  The following prompts are required but not found in the database:
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {coverageStats.missingRequired.map((name) => (
-                    <span
-                      key={name}
-                      className="rounded-full bg-red-500/20 px-2 py-0.5 text-xs text-red-300"
-                    >
-                      {name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {coverageStats && <CoverageStats stats={coverageStats} />}
       </header>
 
-      {/* Resizable panels container */}
       <div
         ref={containerRef}
         className="flex flex-col"
         style={{ height: selectedAgent ? 'calc(100vh - 350px)' : 'auto' }}
       >
-        {/* Agent table */}
         <div
           className="rounded-xl border border-neutral-800 overflow-hidden"
           style={{ height: selectedAgent ? topPanelHeight : 'auto' }}
         >
           <div className="h-full overflow-auto">
-            <table className="w-full">
-              <thead className="bg-neutral-900 sticky top-0">
-                <tr className="text-left text-xs font-medium uppercase tracking-wider text-neutral-400">
-                  <th className="px-4 py-3">Agent</th>
-                  <th className="px-4 py-3">Current Version</th>
-                  <th className="px-4 py-3">Last Updated</th>
-                  <th className="px-4 py-3">Chars</th>
-                  <th className="px-4 py-3">~Tokens</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-800">
-                {agents.map((agentName) => {
-                  const agentPrompts = promptsByAgent[agentName];
-                  const currentPrompt = agentPrompts.find((p) => p.is_current);
-                  const historyCount = agentPrompts.length - (currentPrompt ? 1 : 0);
-                  const isExpanded = selectedAgent === agentName;
-
-                  return (
-                    <tr
-                      key={agentName}
-                      className={`hover:bg-neutral-800/50 cursor-pointer ${isExpanded ? 'bg-neutral-800/30' : ''}`}
-                      onClick={() => setSelectedAgent(isExpanded ? null : agentName)}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <span>
-                            {agentName.includes('tagger')
-                              ? '🏷️'
-                              : agentName.includes('summar')
-                                ? '📝'
-                                : agentName.includes('filter')
-                                  ? '🔍'
-                                  : '🤖'}
-                          </span>
-                          <span className="font-medium text-white">{agentName}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-neutral-300">
-                        {currentPrompt?.version || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-neutral-400 text-sm">
-                        {currentPrompt
-                          ? new Date(currentPrompt.created_at).toLocaleDateString()
-                          : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-neutral-400">
-                        {currentPrompt?.prompt_text.length.toLocaleString() || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-neutral-400">
-                        {currentPrompt
-                          ? `~${estimateTokens(currentPrompt.prompt_text).toLocaleString()}`
-                          : '-'}
-                      </td>
-                      <td className="px-4 py-3">
-                        {currentPrompt ? (
-                          <div className="flex items-center gap-2">
-                            <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-xs">
-                              ✅ Active
-                            </span>
-                            {currentPrompt.stage && (
-                              <span
-                                className={`rounded-full px-2 py-0.5 text-xs ${getStageBadge(currentPrompt.stage).className}`}
-                              >
-                                {getStageBadge(currentPrompt.stage).label}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="rounded-full bg-red-500/20 text-red-300 px-2 py-0.5 text-xs">
-                            ⚠️ Missing
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div
-                          className="flex items-center gap-2"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {currentPrompt && (
-                            <>
-                              <button
-                                onClick={() => setTestingPrompt(currentPrompt)}
-                                className="text-purple-400 hover:text-purple-300 text-xs"
-                              >
-                                Test
-                              </button>
-                              <span className="text-neutral-600">•</span>
-                              <button
-                                onClick={() => setEditingPrompt(currentPrompt)}
-                                className="text-sky-400 hover:text-sky-300 text-xs"
-                              >
-                                Edit
-                              </button>
-                              <span className="text-neutral-600">•</span>
-                            </>
-                          )}
-                          <span className="text-neutral-500 text-xs">
-                            {historyCount} version{historyCount !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <AgentTable
+              agents={agents}
+              promptsByAgent={promptsByAgent}
+              selectedAgent={selectedAgent}
+              onSelectAgent={setSelectedAgent}
+              onEdit={setEditingPrompt}
+              onTest={setTestingPrompt}
+            />
           </div>
         </div>
 
-        {/* Resize handle */}
         {selectedAgent && (
           <div
             onMouseDown={handleMouseDown}
@@ -423,7 +106,6 @@ export default function PromptsPage() {
           </div>
         )}
 
-        {/* Expanded agent detail */}
         {selectedAgent && promptsByAgent[selectedAgent] && (
           <div className="flex-1 min-h-0">
             <AgentDetail
@@ -439,23 +121,19 @@ export default function PromptsPage() {
         )}
       </div>
 
-      {/* Edit modal */}
       {editingPrompt && (
         <PromptEditModal
           prompt={editingPrompt}
-          allVersions={promptsByAgent[editingPrompt.agent_name] || []}
           onClose={() => setEditingPrompt(null)}
           onSave={() => {
             setEditingPrompt(null);
-            loadPrompts();
+            reload();
           }}
         />
       )}
 
-      {/* Diff modal */}
       {diffMode && <DiffModal a={diffMode.a} b={diffMode.b} onClose={() => setDiffMode(null)} />}
 
-      {/* View version modal */}
       {viewingVersion && (
         <ViewVersionModal
           prompt={viewingVersion}
@@ -467,600 +145,9 @@ export default function PromptsPage() {
         />
       )}
 
-      {/* Test Playground modal */}
       {testingPrompt && (
         <PromptPlayground prompt={testingPrompt} onClose={() => setTestingPrompt(null)} />
       )}
-    </div>
-  );
-}
-
-// Agent Detail Panel (version history timeline)
-interface AgentDetailProps {
-  agentName: string;
-  prompts: PromptVersion[];
-  onEdit: (p: PromptVersion) => void;
-  onRollback: (p: PromptVersion) => void;
-  onDiff: (a: PromptVersion, b: PromptVersion) => void;
-  onView: (p: PromptVersion) => void;
-  onTest: (p: PromptVersion) => void;
-}
-
-function AgentDetail({
-  agentName,
-  prompts,
-  onEdit,
-  onRollback,
-  onDiff,
-  onView,
-  onTest,
-}: AgentDetailProps) {
-  const currentPrompt = prompts.find((p) => p.is_current);
-
-  return (
-    <div className="h-full flex flex-col rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 overflow-hidden">
-      <div className="flex items-center justify-between mb-4 flex-shrink-0">
-        <h2 className="text-lg font-semibold text-white">{agentName}</h2>
-        {currentPrompt && (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onTest(currentPrompt)}
-              className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-500"
-            >
-              🧪 Test
-            </button>
-            <button
-              onClick={() => onEdit(currentPrompt)}
-              className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
-            >
-              Edit Current
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Current prompt preview - expands to fill available space */}
-      {currentPrompt && (
-        <div className="flex-1 min-h-0 flex flex-col mb-4">
-          <div className="flex items-center gap-3 mb-2 flex-shrink-0">
-            <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-xs">
-              Current: {currentPrompt.version}
-            </span>
-            <span className="text-sm text-neutral-400">
-              {currentPrompt.prompt_text.length.toLocaleString()} chars • ~
-              {estimateTokens(currentPrompt.prompt_text).toLocaleString()} tokens
-            </span>
-          </div>
-          {currentPrompt.notes && (
-            <p className="text-sm text-neutral-400 mb-2 flex-shrink-0">📝 {currentPrompt.notes}</p>
-          )}
-          <pre className="flex-1 p-4 rounded-md bg-neutral-950 text-sm text-neutral-300 overflow-auto whitespace-pre-wrap">
-            {currentPrompt.prompt_text}
-          </pre>
-        </div>
-      )}
-
-      {/* Version Timeline - fixed at bottom */}
-      <div className="flex-shrink-0">
-        <h3 className="text-sm font-medium text-neutral-400 mb-3">Version History</h3>
-        <div className="space-y-2">
-          {prompts.map((p) => (
-            <div
-              key={p.version}
-              className={`flex items-center justify-between p-3 rounded-lg ${
-                p.is_current
-                  ? 'bg-emerald-500/10 border border-emerald-500/30'
-                  : 'bg-neutral-800/30'
-              }`}
-            >
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-2 h-2 rounded-full bg-neutral-500 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`font-medium ${p.is_current ? 'text-emerald-300' : 'text-white'}`}
-                    >
-                      {p.version}
-                    </span>
-                    {p.is_current && <span className="text-xs text-emerald-400">(current)</span>}
-                  </div>
-                  <div className="text-xs text-neutral-500">
-                    {new Date(p.created_at).toLocaleString()}
-                  </div>
-                  {p.notes && (
-                    <div className="text-xs text-neutral-500 truncate" title={p.notes}>
-                      {p.notes}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onView(p)}
-                  className="text-xs text-sky-400 hover:text-sky-300"
-                >
-                  View
-                </button>
-                {!p.is_current && (
-                  <>
-                    <button
-                      onClick={() => onRollback(p)}
-                      className="text-xs text-amber-400 hover:text-amber-300"
-                    >
-                      Rollback
-                    </button>
-                    {currentPrompt && (
-                      <button
-                        onClick={() => onDiff(currentPrompt, p)}
-                        className="text-xs text-purple-400 hover:text-purple-300"
-                      >
-                        Diff
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Edit Modal with "Save as New Version" option
-interface PromptEditModalProps {
-  prompt: PromptVersion;
-  allVersions: PromptVersion[];
-  onClose: () => void;
-  onSave: () => void;
-}
-
-function PromptEditModal({
-  prompt,
-  allVersions: _allVersions,
-  onClose,
-  onSave,
-}: PromptEditModalProps) {
-  const [promptText, setPromptText] = useState(prompt.prompt_text);
-  const [notes, setNotes] = useState('');
-  const [newVersion, setNewVersion] = useState('');
-  const [saveMode, setSaveMode] = useState<'update' | 'new'>('update');
-  const [saving, setSaving] = useState(false);
-
-  const supabase = createClient();
-
-  // Generate next version suggestion
-  const suggestNextVersion = () => {
-    // Version suggestion based on current
-    const match = prompt.version.match(/v?(\d+)\.?(\d*)/);
-    if (match) {
-      const major = parseInt(match[1]);
-      const minor = match[2] ? parseInt(match[2]) + 1 : 1;
-      return `v${major}.${minor}`;
-    }
-    return `${prompt.version}-2`;
-  };
-
-  async function handleSave() {
-    setSaving(true);
-
-    if (saveMode === 'update') {
-      // Update existing prompt
-      const { error } = await supabase
-        .from('prompt_version')
-        .update({
-          prompt_text: promptText,
-          notes: notes || prompt.notes,
-        })
-        .eq('agent_name', prompt.agent_name)
-        .eq('version', prompt.version);
-
-      if (error) {
-        alert('Failed to save: ' + error.message);
-        setSaving(false);
-        return;
-      }
-    } else {
-      // Create new version
-      if (!newVersion) {
-        alert('Please enter a version name');
-        setSaving(false);
-        return;
-      }
-
-      // Set all other versions to not current
-      await supabase
-        .from('prompt_version')
-        .update({ is_current: false })
-        .eq('agent_name', prompt.agent_name);
-
-      // Insert new version
-      const { error } = await supabase.from('prompt_version').insert({
-        agent_name: prompt.agent_name,
-        version: newVersion,
-        prompt_text: promptText,
-        notes: notes || null,
-        model_id: prompt.model_id,
-        stage: prompt.stage,
-        is_current: true,
-      });
-
-      if (error) {
-        alert('Failed to create version: ' + error.message);
-        setSaving(false);
-        return;
-      }
-    }
-
-    setSaving(false);
-    onSave();
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-4xl max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-white">Edit Prompt</h2>
-            <p className="text-sm text-neutral-400">{prompt.agent_name}</p>
-          </div>
-          <div className="text-sm text-neutral-400">
-            {promptText.length.toLocaleString()} chars • ~
-            {estimateTokens(promptText).toLocaleString()} tokens
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-auto p-4 space-y-4">
-          {/* Save mode toggle */}
-          <div className="flex items-center gap-4 p-3 rounded-lg bg-neutral-800/50">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                checked={saveMode === 'update'}
-                onChange={() => setSaveMode('update')}
-                className="text-sky-500"
-              />
-              <span className="text-sm text-neutral-300">Update {prompt.version}</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                checked={saveMode === 'new'}
-                onChange={() => {
-                  setSaveMode('new');
-                  if (!newVersion) setNewVersion(suggestNextVersion());
-                }}
-                className="text-sky-500"
-              />
-              <span className="text-sm text-neutral-300">Save as new version</span>
-            </label>
-          </div>
-
-          {saveMode === 'new' && (
-            <div>
-              <label className="block text-sm text-neutral-400 mb-1">New Version Name</label>
-              <input
-                type="text"
-                value={newVersion}
-                onChange={(e) => setNewVersion(e.target.value)}
-                placeholder="e.g., v2.1"
-                className="w-full rounded-md border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
-              />
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm text-neutral-400 mb-1">Notes</label>
-            <input
-              type="text"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Describe changes..."
-              className="w-full rounded-md border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
-            />
-          </div>
-
-          <div className="flex-1">
-            <label className="block text-sm text-neutral-400 mb-1">Prompt Text</label>
-            <textarea
-              value={promptText}
-              onChange={(e) => setPromptText(e.target.value)}
-              className="w-full h-96 rounded-md border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-neutral-300 font-mono resize-none"
-            />
-          </div>
-        </div>
-
-        <div className="p-4 border-t border-neutral-800 flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="rounded-md px-4 py-2 text-sm text-neutral-400 hover:text-white"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : saveMode === 'new' ? 'Create Version' : 'Save Changes'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Diff Modal
-interface DiffModalProps {
-  a: PromptVersion;
-  b: PromptVersion;
-  onClose: () => void;
-}
-
-function DiffModal({ a, b, onClose }: DiffModalProps) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-6xl max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-4 border-b border-neutral-800">
-          <h2 className="text-lg font-bold text-white">Compare Versions</h2>
-          <p className="text-sm text-neutral-400">
-            {a.version} (current) vs {b.version}
-          </p>
-        </div>
-
-        <div className="flex-1 overflow-auto grid grid-cols-2 divide-x divide-neutral-800">
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-emerald-400">{a.version} (current)</span>
-              <span className="text-xs text-neutral-500">{a.prompt_text.length} chars</span>
-            </div>
-            <pre className="p-3 rounded-md bg-neutral-950 text-xs text-neutral-300 overflow-auto max-h-[60vh] whitespace-pre-wrap">
-              {a.prompt_text}
-            </pre>
-          </div>
-          <div className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-amber-400">{b.version}</span>
-              <span className="text-xs text-neutral-500">{b.prompt_text.length} chars</span>
-            </div>
-            <pre className="p-3 rounded-md bg-neutral-950 text-xs text-neutral-300 overflow-auto max-h-[60vh] whitespace-pre-wrap">
-              {b.prompt_text}
-            </pre>
-          </div>
-        </div>
-
-        <div className="p-4 border-t border-neutral-800 flex justify-between">
-          <div className="text-sm text-neutral-400">
-            Diff: {a.prompt_text.length - b.prompt_text.length > 0 ? '+' : ''}
-            {a.prompt_text.length - b.prompt_text.length} chars
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-md px-4 py-2 text-sm text-neutral-400 hover:text-white"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// View Version Modal
-interface ViewVersionModalProps {
-  prompt: PromptVersion;
-  onClose: () => void;
-  onRollback: () => void;
-}
-
-function ViewVersionModal({ prompt, onClose, onRollback }: ViewVersionModalProps) {
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-4xl max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-white">{prompt.version}</h2>
-            <p className="text-sm text-neutral-400">
-              {prompt.agent_name} • {new Date(prompt.created_at).toLocaleString()}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {prompt.is_current ? (
-              <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-xs">
-                Current
-              </span>
-            ) : (
-              <button
-                onClick={onRollback}
-                className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-500"
-              >
-                Make Current
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-auto p-4">
-          {prompt.notes && (
-            <div className="mb-4 p-3 rounded-md bg-neutral-800/50 text-sm">
-              <span className="text-neutral-400">Notes: </span>
-              <span className="text-neutral-300">{prompt.notes}</span>
-            </div>
-          )}
-          <div className="flex gap-4 mb-4 text-sm text-neutral-400">
-            <span>{prompt.prompt_text.length.toLocaleString()} chars</span>
-            <span>~{estimateTokens(prompt.prompt_text).toLocaleString()} tokens</span>
-            {prompt.model_id && <span>Model: {prompt.model_id}</span>}
-          </div>
-          <pre className="p-4 rounded-md bg-neutral-950 text-sm text-neutral-300 overflow-auto whitespace-pre-wrap">
-            {prompt.prompt_text}
-          </pre>
-        </div>
-
-        <div className="p-4 border-t border-neutral-800 flex justify-end">
-          <button
-            onClick={onClose}
-            className="rounded-md px-4 py-2 text-sm text-neutral-400 hover:text-white"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Prompt Playground for testing
-interface PromptPlaygroundProps {
-  prompt: PromptVersion;
-  onClose: () => void;
-}
-
-function PromptPlayground({ prompt, onClose }: PromptPlaygroundProps) {
-  const [testInput, setTestInput] = useState('');
-  const [testOutput, setTestOutput] = useState<string | null>(null);
-  const [testing, setTesting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function runTest() {
-    if (!testInput.trim()) {
-      setError('Please enter some test content');
-      return;
-    }
-
-    setTesting(true);
-    setError(null);
-    setTestOutput(null);
-
-    try {
-      const response = await fetch('/api/test-prompt', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agentName: prompt.agent_name,
-          promptText: prompt.prompt_text,
-          testInput: testInput,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || 'Test failed');
-      } else {
-        setTestOutput(JSON.stringify(data.result, null, 2));
-      }
-    } catch (err) {
-      setError('Failed to run test: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    } finally {
-      setTesting(false);
-    }
-  }
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-4xl max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <span>🧪</span> Test Playground
-            </h2>
-            <p className="text-sm text-neutral-400">
-              {prompt.agent_name} • {prompt.version}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-neutral-500">
-              ~{estimateTokens(prompt.prompt_text).toLocaleString()} tokens
-            </span>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-auto p-4 space-y-4">
-          {/* Prompt preview */}
-          <div>
-            <label className="block text-sm text-neutral-400 mb-1">
-              Prompt ({prompt.prompt_text.length.toLocaleString()} chars)
-            </label>
-            <pre className="p-3 rounded-md bg-neutral-950 text-xs text-neutral-400 max-h-32 overflow-y-auto whitespace-pre-wrap">
-              {prompt.prompt_text.slice(0, 500)}
-              {prompt.prompt_text.length > 500 && '...'}
-            </pre>
-          </div>
-
-          {/* Test input */}
-          <div>
-            <label className="block text-sm text-neutral-400 mb-1">
-              Test Input (sample content to classify/process)
-            </label>
-            <textarea
-              value={testInput}
-              onChange={(e) => setTestInput(e.target.value)}
-              placeholder="Paste article text, title, or any content you want to test the prompt against..."
-              className="w-full h-40 rounded-md border border-neutral-700 bg-neutral-950 px-4 py-3 text-sm text-neutral-300 resize-none"
-            />
-          </div>
-
-          {/* Run button */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={runTest}
-              disabled={testing || !testInput.trim()}
-              className="rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-500 disabled:opacity-50"
-            >
-              {testing ? 'Running...' : '▶ Run Test'}
-            </button>
-            {error && <span className="text-sm text-red-400">{error}</span>}
-          </div>
-
-          {/* Output */}
-          {testOutput && (
-            <div>
-              <label className="block text-sm text-neutral-400 mb-1">Output</label>
-              <pre className="p-4 rounded-md bg-emerald-950/50 border border-emerald-500/20 text-sm text-emerald-300 overflow-auto max-h-64 whitespace-pre-wrap">
-                {testOutput}
-              </pre>
-            </div>
-          )}
-        </div>
-
-        <div className="p-4 border-t border-neutral-800 flex justify-between items-center">
-          <p className="text-xs text-neutral-500">
-            Note: This runs the prompt against the test input using the configured model
-          </p>
-          <button
-            onClick={onClose}
-            className="rounded-md px-4 py-2 text-sm text-neutral-400 hover:text-white"
-          >
-            Close
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
