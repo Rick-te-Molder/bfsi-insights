@@ -5,8 +5,7 @@
   "type": "module",
   "workspaces": [
     "packages/*",
-    "admin-next",
-    "services/agent-api"
+    "admin-next"
   ],
   "scripts": {
     "dev": "astro dev",
