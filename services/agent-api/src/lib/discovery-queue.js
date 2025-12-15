@@ -43,17 +43,22 @@ export async function checkExists(url) {
 
   if (seenUrl) return 'skip';
 
-  // Check queue - allow retry if rejected
+  // Check queue - allow retry only if auto-rejected (no human reviewer)
   // KB-236: Use status_code instead of text status field
   const { data: queueItem } = await supabase
     .from('ingestion_queue')
-    .select('id, status_code')
+    .select('id, status_code, reviewer')
     .eq('url_norm', urlNorm)
     .maybeSingle();
 
   if (queueItem) {
-    // If rejected (540), allow retry
+    // If rejected (540) by automation (no reviewer), allow retry
+    // If human rejected (reviewer set), skip permanently
     if (queueItem.status_code === STATUS.REJECTED) {
+      if (queueItem.reviewer) {
+        // Human rejected - don't retry
+        return 'skip';
+      }
       return 'retry';
     }
     return 'skip';

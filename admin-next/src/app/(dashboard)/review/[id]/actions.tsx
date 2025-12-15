@@ -63,6 +63,8 @@ export function ReviewActions({ item }: { item: QueueItem }) {
         .from('ingestion_queue')
         .update({
           status_code: 540, // 540 = REJECTED
+          reviewer: '00000000-0000-0000-0000-000000000001', // Mark as human-rejected so discovery won't retry
+          reviewed_at: new Date().toISOString(),
           payload: {
             ...item.payload,
             rejection_reason: reason || 'Manually rejected',
