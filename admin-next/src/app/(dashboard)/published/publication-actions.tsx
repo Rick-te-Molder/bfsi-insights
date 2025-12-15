@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 interface PublicationActionsProps {
   publicationId: string;
   title: string;
+  queueItemId: string | null;
 }
 
-export function PublicationActions({ publicationId, title }: PublicationActionsProps) {
+export function PublicationActions({ publicationId, title, queueItemId }: PublicationActionsProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -39,12 +40,18 @@ export function PublicationActions({ publicationId, title }: PublicationActionsP
 
   return (
     <div className="flex items-center gap-2">
-      <a
-        href={`/review?search=${encodeURIComponent(title)}`}
-        className="px-3 py-1.5 rounded-lg border border-neutral-700 text-neutral-300 text-sm hover:bg-neutral-800"
-      >
-        View Source
-      </a>
+      {queueItemId ? (
+        <a
+          href={`/review?id=${queueItemId}`}
+          className="px-3 py-1.5 rounded-lg border border-neutral-700 text-neutral-300 text-sm hover:bg-neutral-800"
+        >
+          View Source
+        </a>
+      ) : (
+        <span className="px-3 py-1.5 rounded-lg border border-neutral-700 text-neutral-500 text-sm cursor-not-allowed">
+          No Source
+        </span>
+      )}
       <button
         onClick={handleDelete}
         disabled={loading}
