@@ -3,6 +3,19 @@
  * Replaces the old single-select dropdown filters with checkbox-based multi-select
  */
 
+import {
+  type FilterState,
+  type IndexedItem,
+  matchesFilters,
+  matchesSearch,
+  sortIndices,
+  createChip,
+  countActiveFilters,
+  serializeFilterState,
+  deserializeFilterState,
+  createDebouncer,
+} from './filter-utils';
+
 export default function initMultiSelectFilters() {
   const list = document.getElementById('list');
   const empty = document.getElementById('empty');
@@ -35,16 +48,6 @@ export default function initMultiSelectFilters() {
 
   if (!list) return;
 
-  // Index all items
-  interface IndexedItem {
-    el: HTMLElement;
-    title: string;
-    source_name: string;
-    authors: string;
-    summary: string;
-    [key: string]: string | HTMLElement;
-  }
-
   let currentPage = 1;
 
   const data: IndexedItem[] = Array.from(list.children).map((node) => {
@@ -72,7 +75,6 @@ export default function initMultiSelectFilters() {
   });
 
   // Multi-select filter state
-  type FilterState = Record<string, Set<string>>;
   let filterState: FilterState = {};
   let searchQuery = '';
   let sortOrder = 'date_added_desc'; // default sort
@@ -115,63 +117,6 @@ export default function initMultiSelectFilters() {
     });
   }
 
-  // Check if item matches multi-select filters
-  function matchesFilters(item: IndexedItem, state: FilterState): boolean {
-    for (const [key, values] of Object.entries(state)) {
-      if (values.size === 0) continue; // No filter for this key
-
-      const itemValue = item[key];
-      if (typeof itemValue !== 'string') continue;
-
-      // For comma-separated values (like regulator, regulation)
-      const itemValues = itemValue
-        .split(',')
-        .map((v) => v.trim())
-        .filter(Boolean);
-
-      // Check if any of the item's values match any selected filter value
-      const hasMatch = itemValues.some((v) => values.has(v)) || values.has(itemValue);
-      if (!hasMatch) return false;
-    }
-    return true;
-  }
-
-  // Check if item matches search query
-  function matchesSearch(item: IndexedItem, query: string): boolean {
-    if (!query) return true;
-    const q = query.toLowerCase();
-    return (
-      item.title.toLowerCase().includes(q) ||
-      item.source_name.toLowerCase().includes(q) ||
-      item.authors.toLowerCase().includes(q) ||
-      item.summary.toLowerCase().includes(q)
-    );
-  }
-
-  // Sort items based on current sort order
-  function sortIndices(indices: number[]): number[] {
-    return indices.sort((a, b) => {
-      const itemA = data[a];
-      const itemB = data[b];
-
-      let dateA: number, dateB: number;
-
-      if (sortOrder.startsWith('date_published')) {
-        dateA = itemA.date_published ? new Date(itemA.date_published as string).getTime() : 0;
-        dateB = itemB.date_published ? new Date(itemB.date_published as string).getTime() : 0;
-      } else {
-        dateA = itemA.date_added ? new Date(itemA.date_added as string).getTime() : 0;
-        dateB = itemB.date_added ? new Date(itemB.date_added as string).getTime() : 0;
-      }
-
-      if (sortOrder.endsWith('_asc')) {
-        return dateA - dateB;
-      } else {
-        return dateB - dateA;
-      }
-    });
-  }
-
   // Apply filters and return count
   function applyFilters(state: FilterState, query: string, resetPage = false): number {
     if (resetPage) currentPage = 1;
@@ -185,7 +130,7 @@ export default function initMultiSelectFilters() {
     });
 
     // Sort matching indices
-    matchingIndices = sortIndices(matchingIndices);
+    matchingIndices = sortIndices(matchingIndices, data, sortOrder);
 
     const totalMatching = matchingIndices.length;
     const visibleCount = Math.min(currentPage * PAGE_SIZE, totalMatching);
@@ -198,7 +143,7 @@ export default function initMultiSelectFilters() {
     visibleIndices.forEach((index) => {
       const item = data[index];
       item.el.classList.remove('hidden');
-      list.appendChild(item.el); // Move to end = sorted order
+      list!.appendChild(item.el); // Move to end = sorted order
       visible++;
     });
 
