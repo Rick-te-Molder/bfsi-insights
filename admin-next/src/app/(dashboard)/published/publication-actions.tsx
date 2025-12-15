@@ -6,9 +6,16 @@ import { useRouter } from 'next/navigation';
 interface PublicationActionsProps {
   publicationId: string;
   title: string;
+  queueItemId: string | null;
+  sourceUrl: string;
 }
 
-export function PublicationActions({ publicationId, title }: PublicationActionsProps) {
+export function PublicationActions({
+  publicationId,
+  title,
+  queueItemId,
+  sourceUrl,
+}: PublicationActionsProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -40,7 +47,11 @@ export function PublicationActions({ publicationId, title }: PublicationActionsP
   return (
     <div className="flex items-center gap-2">
       <a
-        href={`/review?search=${encodeURIComponent(title)}`}
+        href={
+          queueItemId
+            ? `/review?id=${queueItemId}`
+            : `/review?url=${encodeURIComponent(sourceUrl)}&status=all`
+        }
         className="px-3 py-1.5 rounded-lg border border-neutral-700 text-neutral-300 text-sm hover:bg-neutral-800"
       >
         View Source

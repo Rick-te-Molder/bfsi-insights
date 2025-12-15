@@ -12,6 +12,7 @@ interface Publication {
   source_url: string;
   date_published: string;
   date_added: string;
+  origin_queue_id: string | null;
 }
 
 async function getPublications(search?: string) {
@@ -19,7 +20,7 @@ async function getPublications(search?: string) {
 
   let query = supabase
     .from('kb_publication')
-    .select('id, slug, title, source_url, date_published, date_added')
+    .select('id, slug, title, source_url, date_published, date_added, origin_queue_id')
     .eq('status', 'published')
     .order('date_added', { ascending: false })
     .limit(200);
@@ -92,7 +93,12 @@ export default async function PublishedPage({
                     <span>Added: {formatDateTime(pub.date_added)}</span>
                   </div>
                 </div>
-                <PublicationActions publicationId={pub.id} title={pub.title} />
+                <PublicationActions
+                  publicationId={pub.id}
+                  title={pub.title}
+                  queueItemId={pub.origin_queue_id}
+                  sourceUrl={pub.source_url}
+                />
               </div>
             </div>
           ))

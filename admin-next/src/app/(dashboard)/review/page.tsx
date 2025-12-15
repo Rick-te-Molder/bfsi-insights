@@ -51,8 +51,38 @@ async function getQueueItems(
   source?: string,
   timeWindow?: string,
   statusCodes?: Record<string, number>,
+  itemId?: string,
+  urlSearch?: string,
 ) {
   const supabase = createServiceRoleClient();
+
+  // If specific item ID provided, fetch just that item (for View Source from Published)
+  if (itemId) {
+    const { data, error } = await supabase
+      .from('ingestion_queue')
+      .select('id, url, status_code, payload, discovered_at')
+      .eq('id', itemId);
+
+    if (error || !data?.length) {
+      console.error('Error fetching queue item by ID:', error?.message);
+      return { items: [], sources: [] };
+    }
+    return { items: data as QueueItem[], sources: [] };
+  }
+
+  // If URL search provided, find item by URL (fallback when origin_queue_id is missing)
+  if (urlSearch) {
+    const { data, error } = await supabase
+      .from('ingestion_queue')
+      .select('id, url, status_code, payload, discovered_at')
+      .eq('url', urlSearch);
+
+    if (error || !data?.length) {
+      console.error('Error fetching queue item by URL:', error?.message);
+      return { items: [], sources: [] };
+    }
+    return { items: data as QueueItem[], sources: [] };
+  }
 
   let query = supabase
     .from('ingestion_queue')
@@ -161,10 +191,22 @@ async function getTaxonomyData() {
 export default async function ReviewPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; source?: string; time?: string; view?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    source?: string;
+    time?: string;
+    view?: string;
+    id?: string;
+    search?: string;
+    url?: string;
+  }>;
 }) {
   const params = await searchParams;
-  const status = params.status || 'pending_review';
+  const itemId = params.id || '';
+  const urlSearch = params.url || '';
+  const _searchQuery = params.search || ''; // Reserved for future search functionality
+  // When viewing specific item or URL search, show all statuses
+  const status = itemId || urlSearch ? 'all' : params.status || 'pending_review';
   const source = params.source || '';
   const timeWindow = params.time || '';
   const viewMode = params.view || 'split'; // 'list' or 'split'
@@ -174,7 +216,7 @@ export default async function ReviewPage({
 
   const [{ items, sources: _sources }, allSources, { taxonomyConfig, taxonomyData }] =
     await Promise.all([
-      getQueueItems(status, source, timeWindow, statusCodes),
+      getQueueItems(status, source, timeWindow, statusCodes, itemId, urlSearch),
       getAllSources(),
       getTaxonomyData(),
     ]);
