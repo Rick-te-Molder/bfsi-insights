@@ -80,6 +80,18 @@ router.post('/start', async (req, res) => {
   }
 });
 
+// Timeout wrapper for thumbnail generation
+const THUMBNAIL_TIMEOUT_MS = 90000; // 90 seconds per item
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Thumbnail timeout after ${ms / 1000}s`)), ms),
+    ),
+  ]);
+}
+
 // Background processor for thumbnail batch
 async function processThumbnailBatch(jobId, items) {
   await loadStatusCodes();
@@ -106,8 +118,8 @@ async function processThumbnailBatch(jobId, items) {
         item.payload.url = item.url;
       }
 
-      // Generate thumbnail
-      const result = await runThumbnailer(item);
+      // Generate thumbnail with timeout
+      const result = await withTimeout(runThumbnailer(item), THUMBNAIL_TIMEOUT_MS);
 
       // Update queue item
       await supabase
