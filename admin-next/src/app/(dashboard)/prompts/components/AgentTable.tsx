@@ -4,6 +4,26 @@ import type { PromptVersion } from '@/types/database';
 import type { PromptsByAgent } from '../types';
 import { estimateTokens, getStageBadge, getAgentIcon } from '../utils';
 
+// Eval status badge component
+function EvalStatusBadge({ status, score }: { status: string; score?: number }) {
+  const configs: Record<string, { icon: string; className: string; label: string }> = {
+    passed: { icon: '🟢', className: 'bg-emerald-500/20 text-emerald-300', label: 'Passed' },
+    warning: { icon: '🟡', className: 'bg-yellow-500/20 text-yellow-300', label: 'Warning' },
+    failed: { icon: '🔴', className: 'bg-red-500/20 text-red-300', label: 'Failed' },
+    running: { icon: '⏳', className: 'bg-blue-500/20 text-blue-300', label: 'Running' },
+    pending: { icon: '⏸️', className: 'bg-neutral-500/20 text-neutral-300', label: 'Pending' },
+  };
+  const config = configs[status] || configs.pending;
+  const scoreText = score !== undefined ? ` ${(score * 100).toFixed(0)}%` : '';
+
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-xs ${config.className}`}>
+      {config.icon} {config.label}
+      {scoreText}
+    </span>
+  );
+}
+
 interface AgentTableProps {
   agents: string[];
   promptsByAgent: PromptsByAgent;
@@ -31,6 +51,7 @@ export function AgentTable({
           <th className="px-4 py-3">Chars</th>
           <th className="px-4 py-3">~Tokens</th>
           <th className="px-4 py-3">Status</th>
+          <th className="px-4 py-3">Eval</th>
           <th className="px-4 py-3">Actions</th>
         </tr>
       </thead>
@@ -83,6 +104,19 @@ export function AgentTable({
                   <span className="rounded-full bg-red-500/20 text-red-300 px-2 py-0.5 text-xs">
                     ⚠️ Missing
                   </span>
+                )}
+              </td>
+              <td className="px-4 py-3">
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- KB-248: fields added in migration, types will sync after build */}
+                {(currentPrompt as any)?.last_eval_status ? (
+                  <EvalStatusBadge
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    status={(currentPrompt as any).last_eval_status}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    score={(currentPrompt as any).last_eval_score}
+                  />
+                ) : (
+                  <span className="text-neutral-500 text-xs">—</span>
                 )}
               </td>
               <td className="px-4 py-3">

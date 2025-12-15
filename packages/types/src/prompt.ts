@@ -13,7 +13,14 @@ export interface PromptVersion {
   is_current: boolean;
   created_at: string;
   notes?: string;
+  // Eval status (KB-248)
+  last_eval_run_id?: string;
+  last_eval_score?: number;
+  last_eval_status?: PromptEvalStatus;
+  last_eval_at?: string;
 }
+
+export type PromptEvalStatus = 'pending' | 'running' | 'passed' | 'warning' | 'failed';
 
 export type PromptStage = 'development' | 'staging' | 'production';
 
