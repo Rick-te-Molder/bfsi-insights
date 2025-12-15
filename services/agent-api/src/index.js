@@ -84,6 +84,8 @@ app.post('/api/trigger-build', async (req, res) => {
 });
 
 // Apply API key auth to all agent routes
+// Note: More specific routes must come first
+app.use('/api/agents/thumbnail', requireApiKey, thumbnailRoutes);
 app.use('/api/agents', requireApiKey, agentRoutes);
 app.use('/api/agents/thumbnail', requireApiKey, thumbnailRoutes);
 
