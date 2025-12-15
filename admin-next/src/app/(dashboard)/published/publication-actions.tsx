@@ -7,9 +7,15 @@ interface PublicationActionsProps {
   publicationId: string;
   title: string;
   queueItemId: string | null;
+  sourceUrl: string;
 }
 
-export function PublicationActions({ publicationId, title, queueItemId }: PublicationActionsProps) {
+export function PublicationActions({
+  publicationId,
+  title,
+  queueItemId,
+  sourceUrl,
+}: PublicationActionsProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -40,18 +46,16 @@ export function PublicationActions({ publicationId, title, queueItemId }: Public
 
   return (
     <div className="flex items-center gap-2">
-      {queueItemId ? (
-        <a
-          href={`/review?id=${queueItemId}`}
-          className="px-3 py-1.5 rounded-lg border border-neutral-700 text-neutral-300 text-sm hover:bg-neutral-800"
-        >
-          View Source
-        </a>
-      ) : (
-        <span className="px-3 py-1.5 rounded-lg border border-neutral-700 text-neutral-500 text-sm cursor-not-allowed">
-          No Source
-        </span>
-      )}
+      <a
+        href={
+          queueItemId
+            ? `/review?id=${queueItemId}`
+            : `/review?url=${encodeURIComponent(sourceUrl)}&status=all`
+        }
+        className="px-3 py-1.5 rounded-lg border border-neutral-700 text-neutral-300 text-sm hover:bg-neutral-800"
+      >
+        View Source
+      </a>
       <button
         onClick={handleDelete}
         disabled={loading}
