@@ -97,6 +97,7 @@ export default async function PublishedPage({
                   publicationId={pub.id}
                   title={pub.title}
                   queueItemId={pub.origin_queue_id}
+                  sourceUrl={pub.source_url}
                 />
               </div>
             </div>
