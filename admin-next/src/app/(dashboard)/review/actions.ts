@@ -1,7 +1,20 @@
 'use server';
 
-import { createServiceRoleClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+
+// Get current user ID from session
+async function getCurrentUserId(): Promise<string | null> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
 
 // Extract domain from URL for source_name
 function extractDomain(url: string): string {
@@ -136,9 +149,15 @@ export async function approveQueueItemAction(queueId: string, editedTitle?: stri
 
   // Update queue item status & persist edited title back into payload
   const newPayload = editedTitle?.trim() ? { ...payload, title } : payload;
+  const reviewedBy = await getCurrentUserId();
   const { error: updateError } = await supabase
     .from('ingestion_queue')
-    .update({ status_code: 330, payload: newPayload })
+    .update({
+      status_code: 330,
+      payload: newPayload,
+      reviewed_by: reviewedBy,
+      reviewed_at: new Date().toISOString(),
+    })
     .eq('id', item.id);
 
   if (updateError) {
@@ -196,12 +215,15 @@ export async function bulkRejectAction(ids: string[], reason: string) {
   }
 
   // Update each with rejection reason in payload
+  const reviewedBy = await getCurrentUserId();
   for (const item of items) {
     await supabase
       .from('ingestion_queue')
       .update({
         status_code: 540, // 540 = REJECTED
         payload: { ...item.payload, rejection_reason: reason },
+        reviewed_by: reviewedBy,
+        reviewed_at: new Date().toISOString(),
       })
       .eq('id', item.id);
   }
@@ -317,7 +339,15 @@ export async function bulkApproveAction(ids: string[]) {
       }
     }
 
-    await supabase.from('ingestion_queue').update({ status_code: 330 }).eq('id', item.id);
+    const reviewedBy = await getCurrentUserId();
+    await supabase
+      .from('ingestion_queue')
+      .update({
+        status_code: 330,
+        reviewed_by: reviewedBy,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq('id', item.id);
   }
 
   revalidatePath('/review');
