@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { PipelineStatusGrid } from '@/components/dashboard/PipelineStatusGrid';
+import { ThumbnailJobsCard } from '@/components/dashboard/ThumbnailJobsCard';
 
 // Force dynamic rendering to always get fresh data
 export const dynamic = 'force-dynamic';
@@ -293,7 +294,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Other Metrics */}
-      <div className="grid grid-cols-2 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-3 md:p-4">
           <p className="text-xs md:text-sm text-neutral-400">Active A/B Tests</p>
           <p className="mt-1 text-xl md:text-2xl font-bold text-purple-400">{activeTests}</p>
@@ -308,6 +309,11 @@ export default async function DashboardPage() {
             Review proposals →
           </Link>
         </div>
+        <ThumbnailJobsCard
+          pendingCount={
+            (allStatusData?.find((s: { code: number }) => s.code === 230)?.count as number) || 0
+          }
+        />
       </div>
 
       {/* Quick Actions */}
