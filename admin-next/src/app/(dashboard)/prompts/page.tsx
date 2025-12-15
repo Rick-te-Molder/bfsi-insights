@@ -2,27 +2,14 @@
 
 import { useState, useMemo } from 'react';
 import type { PromptVersion } from '@/types/database';
-import { usePrompts, useResizablePanel } from './hooks';
+import { usePrompts } from './hooks';
 import type { CoverageStats as CoverageStatsType } from './types';
-import {
-  AgentDetail,
-  AgentTable,
-  CoverageStats,
-  DiffModal,
-  PromptEditModal,
-  PromptPlayground,
-  ViewVersionModal,
-} from './components';
+import { AgentTable, CoverageStats, PromptEditModal, PromptPlayground } from './components';
 
 export default function PromptsPage() {
-  const { prompts, promptsByAgent, agents, manifest, loading, reload, rollbackToVersion } =
-    usePrompts();
-  const { height: topPanelHeight, containerRef, handleMouseDown } = useResizablePanel();
+  const { prompts, promptsByAgent, agents, manifest, loading, reload } = usePrompts();
 
-  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
-  const [viewingVersion, setViewingVersion] = useState<PromptVersion | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<PromptVersion | null>(null);
-  const [diffMode, setDiffMode] = useState<{ a: PromptVersion; b: PromptVersion } | null>(null);
   const [testingPrompt, setTestingPrompt] = useState<PromptVersion | null>(null);
 
   const coverageStats: CoverageStatsType | null = useMemo(() => {
@@ -76,49 +63,15 @@ export default function PromptsPage() {
         {coverageStats && <CoverageStats stats={coverageStats} />}
       </header>
 
-      <div
-        ref={containerRef}
-        className="flex flex-col overflow-hidden"
-        style={{ height: selectedAgent ? 'calc(100vh - 280px)' : 'auto' }}
-      >
-        <div
-          className="rounded-xl border border-neutral-800 overflow-hidden"
-          style={{ height: selectedAgent ? topPanelHeight : 'auto' }}
-        >
-          <div className="h-full overflow-auto">
-            <AgentTable
-              agents={agents}
-              promptsByAgent={promptsByAgent}
-              selectedAgent={selectedAgent}
-              onSelectAgent={setSelectedAgent}
-              onEdit={setEditingPrompt}
-              onTest={setTestingPrompt}
-            />
-          </div>
+      <div className="rounded-xl border border-neutral-800 overflow-hidden">
+        <div className="overflow-auto">
+          <AgentTable
+            agents={agents}
+            promptsByAgent={promptsByAgent}
+            onEdit={setEditingPrompt}
+            onTest={setTestingPrompt}
+          />
         </div>
-
-        {selectedAgent && (
-          <div
-            onMouseDown={handleMouseDown}
-            className="h-2 cursor-row-resize flex items-center justify-center group hover:bg-neutral-800/50 transition-colors my-1"
-          >
-            <div className="w-16 h-1 rounded-full bg-neutral-700 group-hover:bg-neutral-500 transition-colors" />
-          </div>
-        )}
-
-        {selectedAgent && promptsByAgent[selectedAgent] && (
-          <div className="flex-1 min-h-0 overflow-hidden">
-            <AgentDetail
-              agentName={selectedAgent}
-              prompts={promptsByAgent[selectedAgent]}
-              onEdit={setEditingPrompt}
-              onRollback={rollbackToVersion}
-              onDiff={(a, b) => setDiffMode({ a, b })}
-              onView={setViewingVersion}
-              onTest={setTestingPrompt}
-            />
-          </div>
-        )}
       </div>
 
       {editingPrompt && (
@@ -128,19 +81,6 @@ export default function PromptsPage() {
           onSave={() => {
             setEditingPrompt(null);
             reload();
-          }}
-        />
-      )}
-
-      {diffMode && <DiffModal a={diffMode.a} b={diffMode.b} onClose={() => setDiffMode(null)} />}
-
-      {viewingVersion && (
-        <ViewVersionModal
-          prompt={viewingVersion}
-          onClose={() => setViewingVersion(null)}
-          onRollback={() => {
-            rollbackToVersion(viewingVersion);
-            setViewingVersion(null);
           }}
         />
       )}
