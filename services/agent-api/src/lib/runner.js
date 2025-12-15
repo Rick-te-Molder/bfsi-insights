@@ -1,6 +1,7 @@
 import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { createTrace, traceLLMCall, isTracingEnabled } from './tracing.js';
 
 // Shared clients - Supabase created immediately, OpenAI lazily
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -22,6 +23,7 @@ export class AgentRunner {
     this.supabase = supabase;
     this.runId = null;
     this.stepOrder = 0;
+    this.trace = null; // LangSmith trace
   }
 
   get openai() {
@@ -155,6 +157,19 @@ export class AgentRunner {
     const startTime = Date.now();
 
     try {
+      // 2.5 Create LangSmith trace if enabled
+      if (isTracingEnabled()) {
+        this.trace = await createTrace({
+          name: this.agentName,
+          runType: 'chain',
+          inputs: {
+            prompt: promptConfig.prompt_text?.substring(0, 500),
+            context: { queueId: context.queueId },
+          },
+          queueId: context.queueId,
+        });
+      }
+
       // 3. Execute Logic with step helpers available via tools
       const result = await logicFn(context, promptConfig.prompt_text, {
         openai: this.openai,
@@ -164,6 +179,9 @@ export class AgentRunner {
         finishStepSuccess: (id, details) => this.finishStepSuccess(id, details),
         finishStepError: (id, msg) => this.finishStepError(id, msg),
         addMetric: (name, value, meta) => this.addMetric(name, value, meta),
+        // LangSmith tracing
+        traceLLM: (opts) => this.traceLLMCall(opts),
+        trace: this.trace,
       });
 
       // 4. Log Success
@@ -187,6 +205,11 @@ export class AgentRunner {
         }
       }
 
+      // End LangSmith trace
+      if (this.trace) {
+        await this.trace.end({ result: result?.parsed || result });
+      }
+
       console.log(`✅ [${this.agentName}] Completed in ${duration}ms`);
       return result;
     } catch (error) {
@@ -208,5 +231,19 @@ export class AgentRunner {
 
       throw error;
     }
+  }
+
+  /**
+   * Trace an LLM call to LangSmith
+   * @param {object} options - LLM call details
+   */
+  async traceLLMCall(options) {
+    if (!isTracingEnabled()) return;
+
+    await traceLLMCall({
+      ...options,
+      queueId: options.queueId,
+      parentRunId: this.trace?.id,
+    });
   }
 }
