@@ -17,7 +17,6 @@ const ALLOW_LIST = new Set([
   'src/features/publications/multi-select-filters.ts',
   'src/pages/admin/review.astro',
   'src/pages/admin/sources.astro',
-  'services/agent-api/src/agents/discoverer.js',
   'services/agent-api/src/routes/agents.js', // KB-251: thumbnail job endpoints
 ]);
 
