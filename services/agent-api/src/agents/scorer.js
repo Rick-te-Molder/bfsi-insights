@@ -302,7 +302,7 @@ export async function checkRejectionPatterns(title, description = '', source = '
 /**
  * Score a candidate for executive relevance
  * @param {Object} candidate - { title, description, source }
- * @returns {Object} - { relevance_score, executive_summary, skip_reason, usage }
+ * @returns {Promise<Object>} - { relevance_score, executive_summary, skip_reason, usage }
  */
 export async function scoreRelevance(candidate) {
   const { title, description = '', source = '', publishedDate = null, url = '' } = candidate;
