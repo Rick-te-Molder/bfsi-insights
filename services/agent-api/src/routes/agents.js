@@ -13,6 +13,7 @@ import {
   analyzeAllPendingMisses,
   generateImprovementReport,
 } from '../agents/improver.js';
+import { runPromptEval } from '../lib/prompt-eval.js';
 
 const router = express.Router();
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -314,6 +315,56 @@ router.get('/improvement-report', async (req, res) => {
     res.json(report);
   } catch (err) {
     console.error('Improvement Report Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/agents/eval/run - Run eval for a prompt version
+router.post('/eval/run', async (req, res) => {
+  try {
+    const { agentName, promptVersionId, triggerType = 'manual' } = req.body;
+
+    if (!agentName || !promptVersionId) {
+      return res.status(400).json({
+        error: 'agentName and promptVersionId are required',
+      });
+    }
+
+    const result = await runPromptEval({ agentName, promptVersionId, triggerType });
+    res.json(result);
+  } catch (err) {
+    console.error('Eval Run Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/agents/eval/status/:agentName - Get eval status for an agent
+router.get('/eval/status/:agentName', async (req, res) => {
+  try {
+    const { agentName } = req.params;
+
+    const { data, error } = await supabase
+      .from('prompt_version')
+      .select(
+        `
+        id,
+        agent_name,
+        version,
+        is_current,
+        last_eval_status,
+        last_eval_score,
+        last_eval_at
+      `,
+      )
+      .eq('agent_name', agentName)
+      .eq('is_current', true)
+      .single();
+
+    if (error) throw error;
+
+    res.json(data || { status: 'no_prompt' });
+  } catch (err) {
+    console.error('Eval Status Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
