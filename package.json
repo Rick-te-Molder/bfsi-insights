@@ -29,7 +29,7 @@
     "@astrojs/node": "^9.5.0",
     "@astrojs/rss": "^4.0.7",
     "@astrojs/tailwind": "^6.0.2",
-    "@supabase/supabase-js": "^2.87.0",
+    "@supabase/supabase-js": "^2.87.3",
     "@tailwindcss/typography": "^0.5.19",
     "astro": "^5.16.4",
     "cheerio": "^1.1.2",
