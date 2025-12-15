@@ -66,9 +66,11 @@ export function AgentDetail({
         </div>
       )}
 
-      <div className="flex-shrink-0">
-        <h3 className="text-sm font-medium text-neutral-400 mb-3">Version History</h3>
-        <div className="space-y-2">
+      <div className="flex-shrink-0 max-h-[200px] flex flex-col">
+        <h3 className="text-sm font-medium text-neutral-400 mb-3 flex-shrink-0">
+          Version History ({prompts.length})
+        </h3>
+        <div className="space-y-2 overflow-y-auto flex-1 pr-2">
           {prompts.map((p) => (
             <div
               key={p.version}
