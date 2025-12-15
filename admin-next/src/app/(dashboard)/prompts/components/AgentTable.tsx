@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import type { PromptVersion } from '@/types/database';
 import type { PromptsByAgent } from '../types';
 import { estimateTokens, getStageBadge, getAgentIcon } from '../utils';
@@ -27,20 +28,12 @@ function EvalStatusBadge({ status, score }: { status: string; score?: number }) 
 interface AgentTableProps {
   agents: string[];
   promptsByAgent: PromptsByAgent;
-  selectedAgent: string | null;
-  onSelectAgent: (agent: string | null) => void;
   onEdit: (p: PromptVersion) => void;
   onTest: (p: PromptVersion) => void;
 }
 
-export function AgentTable({
-  agents,
-  promptsByAgent,
-  selectedAgent,
-  onSelectAgent,
-  onEdit,
-  onTest,
-}: AgentTableProps) {
+export function AgentTable({ agents, promptsByAgent, onEdit, onTest }: AgentTableProps) {
+  const router = useRouter();
   return (
     <table className="w-full">
       <thead className="bg-neutral-900 sticky top-0">
@@ -60,13 +53,12 @@ export function AgentTable({
           const agentPrompts = promptsByAgent[agentName];
           const currentPrompt = agentPrompts.find((p) => p.is_current);
           const historyCount = agentPrompts.length - (currentPrompt ? 1 : 0);
-          const isExpanded = selectedAgent === agentName;
 
           return (
             <tr
               key={agentName}
-              className={`hover:bg-neutral-800/50 cursor-pointer ${isExpanded ? 'bg-neutral-800/30' : ''}`}
-              onClick={() => onSelectAgent(isExpanded ? null : agentName)}
+              className="hover:bg-neutral-800/50 cursor-pointer"
+              onClick={() => router.push(`/prompts/${encodeURIComponent(agentName)}`)}
             >
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
