@@ -43,8 +43,7 @@ ALTER FUNCTION public.get_entity_audit_history SET search_path = public;
 -- Fix audit_trigger_func
 ALTER FUNCTION public.audit_trigger_func SET search_path = public;
 
--- Fix approve_from_queue
-ALTER FUNCTION public.approve_from_queue SET search_path = public;
+-- Note: approve_from_queue already has search_path set in 20251211104231
 
 -- =============================================================================
 -- 3. WARNINGS: Revoke anon/authenticated access from materialized view
