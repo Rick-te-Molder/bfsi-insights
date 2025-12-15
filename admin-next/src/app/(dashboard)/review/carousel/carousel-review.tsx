@@ -106,14 +106,17 @@ export function CarouselReview({
     setProcessing(true);
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('ingestion_queue')
         .update({
-          status: 'rejected',
           status_code: 540, // 540 = REJECTED
-          payload: { ...currentItem.payload, rejection_reason: reason || null },
+          reviewer: '00000000-0000-0000-0000-000000000001', // Mark as human-rejected so discovery won't retry
+          reviewed_at: new Date().toISOString(),
+          rejection_reason: reason || 'Manually rejected',
         })
         .eq('id', currentItem.id);
+
+      if (error) throw error;
 
       const newItems = items.filter((_, i) => i !== currentIndex);
       setItems(newItems);
