@@ -72,13 +72,18 @@ const TaggingSchema = z.object({
     .describe('BFSI organizations mentioned (banks, insurers, asset managers)'),
   vendor_names: z.array(z.string()).describe('AI/tech vendors mentioned'),
 
-  // KB-230: Audience relevance scores - dynamic record instead of hardcoded keys
-  // Audience types are loaded from kb_audience table at runtime
+  // Audience relevance scores - fixed keys for OpenAI structured output compatibility
   audience_scores: z
-    .record(z.string(), z.number().min(0).max(1))
-    .describe(
-      'Relevance scores (0-1) per audience type. Keys are audience codes from kb_audience table.',
-    ),
+    .object({
+      executive: z.number().min(0).max(1).describe('Relevance for C-suite and strategy leaders'),
+      specialist: z
+        .number()
+        .min(0)
+        .max(1)
+        .describe('Relevance for domain specialists and practitioners'),
+      researcher: z.number().min(0).max(1).describe('Relevance for analysts and researchers'),
+    })
+    .describe('Relevance scores (0-1) per audience type'),
 
   // Overall metadata
   overall_confidence: z.number().min(0).max(1).describe('Overall confidence in classification 0-1'),
@@ -409,8 +414,8 @@ ${taxonomies.processes}
 
 === PERSONA RELEVANCE (score 0-1 for each audience) ===
 - executive: C-suite, strategy leaders (interested in: business impact, market trends, competitive advantage)
-- technical: Engineers, architects, IT leaders (interested in: implementation, architecture, technical details)
-- compliance: Risk, compliance, legal (interested in: regulations, risk management, audit, governance)
+- specialist: Domain specialists, practitioners (interested in: implementation details, best practices, technical how-to)
+- researcher: Analysts, researchers (interested in: data, trends, in-depth analysis, academic perspectives)
 
 === CONFIDENCE SCORING GUIDE ===
 - 0.9-1.0: Explicitly stated, main focus of the article
