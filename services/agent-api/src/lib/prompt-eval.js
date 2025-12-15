@@ -9,7 +9,14 @@ import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 // Note: runGoldenEval and getEvalHistory are available from ./evals.js for future use
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+// Lazy initialization to avoid crash on import when env vars aren't set
+let supabase = null;
+function getSupabase() {
+  if (!supabase) {
+    supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  }
+  return supabase;
+}
 
 /**
  * Run eval for a specific prompt version
@@ -26,7 +33,7 @@ export async function runPromptEval(options) {
   console.log(`   Trigger: ${triggerType}`);
 
   // Get prompt version details
-  const { data: promptVersion, error: pvError } = await supabase
+  const { data: promptVersion, error: pvError } = await getSupabase()
     .from('prompt_version')
     .select('*')
     .eq('id', promptVersionId)
@@ -37,7 +44,7 @@ export async function runPromptEval(options) {
   }
 
   // Check if golden set exists for this agent
-  const { data: goldenExamples, error: gsError } = await supabase
+  const { data: goldenExamples, error: gsError } = await getSupabase()
     .from('eval_golden_set')
     .select('id')
     .eq('agent_name', agentName)
@@ -49,7 +56,7 @@ export async function runPromptEval(options) {
     console.log(`⚠️ No golden set found for ${agentName}, skipping eval`);
 
     // Update prompt version to indicate no eval available
-    await supabase
+    await getSupabase()
       .from('prompt_version')
       .update({
         last_eval_status: 'pending',
@@ -66,7 +73,7 @@ export async function runPromptEval(options) {
   }
 
   // Get baseline from previous version
-  const { data: previousEvals } = await supabase
+  const { data: previousEvals } = await getSupabase()
     .from('eval_run')
     .select('score')
     .eq('agent_name', agentName)
@@ -77,7 +84,7 @@ export async function runPromptEval(options) {
   const baselineScore = previousEvals?.[0]?.score ?? null;
 
   // Create eval run with prompt_version_id linked
-  const { data: evalRun, error: runError } = await supabase
+  const { data: evalRun, error: runError } = await getSupabase()
     .from('eval_run')
     .insert({
       agent_name: agentName,
@@ -95,7 +102,7 @@ export async function runPromptEval(options) {
   if (runError) throw runError;
 
   // Update prompt version to show eval is running
-  await supabase
+  await getSupabase()
     .from('prompt_version')
     .update({
       last_eval_run_id: evalRun.id,
@@ -112,7 +119,7 @@ export async function runPromptEval(options) {
     }
 
     // Fetch golden examples
-    const { data: examples } = await supabase
+    const { data: examples } = await getSupabase()
       .from('eval_golden_set')
       .select('*')
       .eq('agent_name', agentName);
@@ -128,14 +135,16 @@ export async function runPromptEval(options) {
         if (match) passed++;
         else failed++;
 
-        await supabase.from('eval_result').insert({
-          run_id: evalRun.id,
-          input: example.input,
-          expected_output: example.expected_output,
-          actual_output: actual,
-          passed: match,
-          score: match ? 1 : 0,
-        });
+        await getSupabase()
+          .from('eval_result')
+          .insert({
+            run_id: evalRun.id,
+            input: example.input,
+            expected_output: example.expected_output,
+            actual_output: actual,
+            passed: match,
+            score: match ? 1 : 0,
+          });
       } catch (err) {
         failed++;
         console.error(`   ❌ Error on example: ${err.message}`);
@@ -147,7 +156,7 @@ export async function runPromptEval(options) {
     const regressionDetected = baselineScore !== null && score < baselineScore - 0.1;
 
     // Update eval run with results
-    await supabase
+    await getSupabase()
       .from('eval_run')
       .update({
         status: 'success',
@@ -190,7 +199,7 @@ export async function runPromptEval(options) {
     };
   } catch (err) {
     // Update eval run as failed
-    await supabase
+    await getSupabase()
       .from('eval_run')
       .update({
         status: 'failed',
@@ -261,7 +270,7 @@ function compareResults(expected, actual) {
  * Get eval status for an agent
  */
 export async function getPromptEvalStatus(agentName) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('v_prompt_eval_status')
     .select('*')
     .eq('agent_name', agentName)
