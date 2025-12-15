@@ -23,7 +23,7 @@
     "check:large-files": "node scripts/check-large-files.cjs",
     "publish:approved": "node scripts/publishing/publish-approved.mjs",
     "lhci": "npx @lhci/cli@0.14.0 autorun --config=.lighthouserc.json",
-    "prepare": "husky"
+    "prepare": "node -e \"try { require.resolve('husky') } catch (e) { process.exit(0) }\" && husky || true"
   },
   "dependencies": {
     "@astrojs/cloudflare": "^12.6.12",

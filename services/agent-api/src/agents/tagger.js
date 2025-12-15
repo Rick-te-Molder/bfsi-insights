@@ -86,6 +86,20 @@ const TaggingSchema = z.object({
 });
 
 /**
+ * Build select columns for a taxonomy table query
+ * KB-233: All taxonomy tables use standardized 'code' and 'name' columns
+ */
+function buildSelectColumns(config) {
+  let selectCols = 'code, name';
+  if (!config.is_hierarchical) return selectCols;
+  selectCols += ', level';
+  if (config.parent_code_column) {
+    selectCols += `, ${config.parent_code_column}`;
+  }
+  return selectCols;
+}
+
+/**
  * KB-231: Load taxonomies dynamically from taxonomy_config
  * This allows adding new taxonomy types without code changes.
  */
@@ -112,24 +126,11 @@ async function loadTaxonomies() {
   }
 
   // Build query for each unique source table
-  // KB-233: All taxonomy tables use standardized 'code' and 'name' columns
-  const tableQueries = [];
-  for (const [table, config] of tableConfigs) {
-    // Build select columns based on whether it's hierarchical
-    let selectCols = 'code, name';
-    if (config.is_hierarchical) {
-      selectCols += ', level';
-      if (config.parent_code_column) {
-        selectCols += `, ${config.parent_code_column}`;
-      }
-    }
-
-    tableQueries.push({
-      table,
-      config,
-      promise: supabase.from(table).select(selectCols).order('name'),
-    });
-  }
+  const tableQueries = [...tableConfigs].map(([table, config]) => ({
+    table,
+    config,
+    promise: supabase.from(table).select(buildSelectColumns(config)).order('name'),
+  }));
 
   // Execute all queries in parallel
   const results = await Promise.all(tableQueries.map((q) => q.promise));
@@ -162,7 +163,7 @@ async function loadTaxonomies() {
   // Helper to get formatted data for a slug
   const getFormatted = (slug) => {
     const config = configs?.find((c) => c.slug === slug);
-    if (!config || !config.source_table) return '';
+    if (!config?.source_table) return '';
     const td = tableData.get(config.source_table);
     if (!td) return '';
     if (config.is_hierarchical) {
@@ -173,7 +174,7 @@ async function loadTaxonomies() {
 
   const getValidCodes = (slug) => {
     const config = configs?.find((c) => c.slug === slug);
-    if (!config || !config.source_table) return new Set();
+    if (!config?.source_table) return new Set();
     const td = tableData.get(config.source_table);
     if (!td) return new Set();
     return extractCodes(td.data);
