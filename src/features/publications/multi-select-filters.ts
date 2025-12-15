@@ -9,11 +9,6 @@ import {
   matchesFilters,
   matchesSearch,
   sortIndices,
-  createChip,
-  countActiveFilters,
-  serializeFilterState,
-  deserializeFilterState,
-  createDebouncer,
 } from './filter-utils';
 
 export default function initMultiSelectFilters() {
