@@ -116,6 +116,6 @@ export function isPoorTitle(title) {
   if (!title) return true;
   if (title.length < 10) return true;
   if (!title.includes(' ')) return true;
-  if (/^(fil|nr|bulletin)\d+/i.test(title.replace(/\s+/g, ''))) return true;
+  if (/^(fil|nr|bulletin)\d+/i.test(title.replaceAll(/\s+/g, ''))) return true;
   return false;
 }
