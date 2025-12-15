@@ -78,8 +78,8 @@ export default function PromptsPage() {
 
       <div
         ref={containerRef}
-        className="flex flex-col"
-        style={{ height: selectedAgent ? 'calc(100vh - 350px)' : 'auto' }}
+        className="flex flex-col overflow-hidden"
+        style={{ height: selectedAgent ? 'calc(100vh - 280px)' : 'auto' }}
       >
         <div
           className="rounded-xl border border-neutral-800 overflow-hidden"
@@ -107,7 +107,7 @@ export default function PromptsPage() {
         )}
 
         {selectedAgent && promptsByAgent[selectedAgent] && (
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 overflow-hidden">
             <AgentDetail
               agentName={selectedAgent}
               prompts={promptsByAgent[selectedAgent]}
