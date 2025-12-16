@@ -302,7 +302,10 @@ export default async function DashboardPage() {
           <AgentJobCard
             title="Summarizing"
             pendingCount={
-              (allStatusData?.find((s: { code: number }) => s.code === 210)?.count as number) || 0
+              // Sum of to_summarize (210) + summarizing (211)
+              ((allStatusData?.find((s: { code: number }) => s.code === 210)?.count as number) ||
+                0) +
+              ((allStatusData?.find((s: { code: number }) => s.code === 211)?.count as number) || 0)
             }
             agentName="summarizer"
             color="emerald"
@@ -310,7 +313,10 @@ export default async function DashboardPage() {
           <AgentJobCard
             title="Tagging"
             pendingCount={
-              (allStatusData?.find((s: { code: number }) => s.code === 220)?.count as number) || 0
+              // Sum of to_tag (220) + tagging (221)
+              ((allStatusData?.find((s: { code: number }) => s.code === 220)?.count as number) ||
+                0) +
+              ((allStatusData?.find((s: { code: number }) => s.code === 221)?.count as number) || 0)
             }
             agentName="tagger"
             color="violet"
@@ -318,7 +324,10 @@ export default async function DashboardPage() {
           <AgentJobCard
             title="Thumbnailing"
             pendingCount={
-              (allStatusData?.find((s: { code: number }) => s.code === 230)?.count as number) || 0
+              // Sum of to_thumbnail (230) + thumbnailing (231)
+              ((allStatusData?.find((s: { code: number }) => s.code === 230)?.count as number) ||
+                0) +
+              ((allStatusData?.find((s: { code: number }) => s.code === 231)?.count as number) || 0)
             }
             agentName="thumbnailer"
             color="cyan"
