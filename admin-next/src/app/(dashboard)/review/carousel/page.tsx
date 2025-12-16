@@ -31,11 +31,11 @@ async function getReviewData() {
 
   const taxonomyConfig = (configData || []) as TaxonomyConfig[];
 
-  // Fetch queue items using status_code for consistency with dashboard
+  // Fetch queue items using review_queue_ready view (KB-266)
+  // This ensures items only appear when all enrichment steps succeeded
   const queueResult = await supabase
-    .from('ingestion_queue')
+    .from('review_queue_ready')
     .select('*')
-    .eq('status_code', STATUS_CODE.PENDING_REVIEW)
     .order('fetched_at', { ascending: false })
     .limit(100);
 
