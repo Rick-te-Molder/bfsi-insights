@@ -305,10 +305,46 @@ async function processAgentBatch(agent, jobId, items, config) {
       // Record failure in step run (handles null gracefully)
       await failStepRun(stepRunId, err);
 
-      // Reset item back to "ready" status so it can be retried
+      // Track failure for DLQ (KB-268)
+      const stepName =
+        agent === 'summarizer' ? 'summarize' : agent === 'tagger' ? 'tag' : 'thumbnail';
+      const errorMessage = err?.message || String(err);
+      const errorSignature = errorMessage
+        .substring(0, 100)
+        .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, 'UUID')
+        .replace(/\d+/g, 'N');
+
+      // Get current failure state
+      const { data: currentItem } = await supabase
+        .from('ingestion_queue')
+        .select('failure_count, last_failed_step')
+        .eq('id', item.id)
+        .single();
+
+      // Increment failure count if same step, otherwise reset to 1
+      const isSameStep = currentItem?.last_failed_step === stepName;
+      const newFailureCount = isSameStep ? (currentItem?.failure_count || 0) + 1 : 1;
+
+      // Move to dead_letter (599) after 3 failures on same step
+      const DLQ_THRESHOLD = 3;
+      const newStatusCode = newFailureCount >= DLQ_THRESHOLD ? 599 : config.statusCode();
+
+      if (newFailureCount >= DLQ_THRESHOLD) {
+        console.log(
+          `   💀 ${agent} ${item.id} → dead_letter (${newFailureCount} failures on ${stepName})`,
+        );
+      }
+
       await supabase
         .from('ingestion_queue')
-        .update({ status_code: config.statusCode() })
+        .update({
+          status_code: newStatusCode,
+          failure_count: newFailureCount,
+          last_failed_step: stepName,
+          last_error_message: errorMessage.substring(0, 1000),
+          last_error_signature: errorSignature,
+          last_error_at: new Date().toISOString(),
+        })
         .eq('id', item.id);
     }
   }
