@@ -32,6 +32,20 @@ export async function runThumbnailer(queueItem) {
         throw new Error('No URL provided in payload (expected payload.url or payload.source_url)');
       }
 
+      // Skip URLs that can't be screenshotted - return placeholder instead
+      const lowerUrl = targetUrl.toLowerCase();
+      const PLACEHOLDER_URL =
+        'https://qhyiitnqjzcezrdcupbf.supabase.co/storage/v1/object/public/asset/thumbnails/placeholder.jpg';
+
+      if (lowerUrl.startsWith('javascript:')) {
+        console.log(`   ⚠️ Skipping javascript: URL - using placeholder`);
+        return { bucket: 'asset', path: 'thumbnails/placeholder.jpg', publicUrl: PLACEHOLDER_URL };
+      }
+      if (lowerUrl.endsWith('.pdf') || lowerUrl.includes('.pdf?')) {
+        console.log(`   ⚠️ Skipping PDF URL - using placeholder`);
+        return { bucket: 'asset', path: 'thumbnails/placeholder.jpg', publicUrl: PLACEHOLDER_URL };
+      }
+
       // Step 1: Launch browser
       const browserStepId = await startStep('browser_launch', { url: targetUrl });
       let browser;
