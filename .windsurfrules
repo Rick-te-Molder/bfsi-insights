@@ -115,6 +115,16 @@ When you encounter a bug or incident:
 - Prompts should load definitions from tables, not hardcode them
 - Example: `kb_audience` table contains scoring guides loaded by discovery-relevance
 
+### Prompt Version Migrations (KB-258)
+- **Always INSERT new rows** for prompt versions, never UPDATE existing rows
+- UPDATE keeps original `created_at`, causing incorrect version history
+- Pattern:
+  ```sql
+  -- Mark old as not current
+  UPDATE prompt_version SET is_current = false WHERE agent_name = 'X' AND is_current = true;
+  -- INSERT new version
+  INSERT INTO prompt_version (agent_name, version, prompt_text, is_current, notes) VALUES (...);
+
 ---
 
 ## Taxonomy & Tags (KB-219)
