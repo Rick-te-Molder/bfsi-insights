@@ -86,9 +86,30 @@ export function ReviewActions({ item }: { item: QueueItem }) {
     setLoading('reenrich');
 
     try {
+      // Cancel old pipeline_run and create new one with trigger='re-enrich'
+      await supabase
+        .from('pipeline_run')
+        .update({ status: 'cancelled', completed_at: new Date().toISOString() })
+        .eq('queue_id', item.id)
+        .eq('status', 'running');
+
+      const { data: newRun } = await supabase
+        .from('pipeline_run')
+        .insert({
+          queue_id: item.id,
+          trigger: 're-enrich',
+          status: 'running',
+          created_by: 'system',
+        })
+        .select('id')
+        .single();
+
       const { error } = await supabase
         .from('ingestion_queue')
-        .update({ status_code: 200 }) // 200 = PENDING_ENRICHMENT
+        .update({
+          status_code: 200, // 200 = PENDING_ENRICHMENT
+          current_run_id: newRun?.id || null,
+        })
         .eq('id', item.id);
 
       if (error) throw error;
