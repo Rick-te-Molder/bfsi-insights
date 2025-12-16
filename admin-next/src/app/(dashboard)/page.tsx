@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { PipelineStatusGrid } from '@/components/dashboard/PipelineStatusGrid';
 import { AgentJobCard } from '@/components/dashboard/AgentJobCard';
+import { DiscoveryControlCard } from '@/components/dashboard/DiscoveryControlCard';
 
 // Force dynamic rendering to always get fresh data
 export const dynamic = 'force-dynamic';
@@ -332,6 +333,9 @@ export default async function DashboardPage() {
             agentName="thumbnailer"
             color="cyan"
           />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 mt-3">
+          <DiscoveryControlCard />
         </div>
       </div>
 
