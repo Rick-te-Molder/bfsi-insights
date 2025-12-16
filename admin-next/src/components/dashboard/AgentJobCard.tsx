@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
-interface ThumbnailJob {
+interface AgentJob {
   id: string;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
   total_items: number;
@@ -15,58 +15,105 @@ interface ThumbnailJob {
   current_item_title: string | null;
 }
 
-interface ThumbnailJobsCardProps {
+interface AgentJobCardProps {
+  title: string;
   pendingCount: number;
+  apiEndpoint: string;
+  color: 'cyan' | 'emerald' | 'violet';
+  hasJobTracking?: boolean;
 }
 
-export function ThumbnailJobsCard({ pendingCount }: ThumbnailJobsCardProps) {
-  const [jobs, setJobs] = useState<ThumbnailJob[]>([]);
-  const [starting, setStarting] = useState(false);
-  const [batchSize, setBatchSize] = useState(50);
+const colorClasses = {
+  cyan: {
+    pending: 'text-cyan-400',
+    button: 'bg-cyan-600 hover:bg-cyan-700',
+    progress: 'bg-cyan-500',
+    pulse: 'bg-cyan-400',
+    success: 'text-emerald-400',
+    result: 'text-cyan-400',
+  },
+  emerald: {
+    pending: 'text-emerald-400',
+    button: 'bg-emerald-600 hover:bg-emerald-700',
+    progress: 'bg-emerald-500',
+    pulse: 'bg-emerald-400',
+    success: 'text-emerald-400',
+    result: 'text-emerald-400',
+  },
+  violet: {
+    pending: 'text-violet-400',
+    button: 'bg-violet-600 hover:bg-violet-700',
+    progress: 'bg-violet-500',
+    pulse: 'bg-violet-400',
+    success: 'text-emerald-400',
+    result: 'text-violet-400',
+  },
+};
+
+export function AgentJobCard({
+  title,
+  pendingCount,
+  apiEndpoint,
+  color,
+  hasJobTracking = false,
+}: AgentJobCardProps) {
+  const [jobs, setJobs] = useState<AgentJob[]>([]);
+  const [processing, setProcessing] = useState(false);
+  const [batchSize, setBatchSize] = useState(10);
+  const [result, setResult] = useState<{ processed: number; message?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const colors = colorClasses[color];
+
   const fetchJobs = useCallback(async () => {
+    if (!hasJobTracking) return;
     try {
-      const res = await fetch('/api/thumbnail/jobs');
-      if (!res.ok) throw new Error('Failed to fetch jobs');
+      const res = await fetch(`${apiEndpoint}/jobs`);
+      if (!res.ok) return;
       const data = await res.json();
       setJobs(data.jobs || []);
-    } catch (err) {
-      console.error('Failed to fetch jobs:', err);
+    } catch {
+      // Ignore fetch errors for job status
     }
-  }, []);
+  }, [apiEndpoint, hasJobTracking]);
 
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs]);
 
   useEffect(() => {
+    if (!hasJobTracking) return;
     const hasRunning = jobs.some((j) => j.status === 'running');
     if (!hasRunning) return;
-
     const interval = setInterval(fetchJobs, 5000);
     return () => clearInterval(interval);
-  }, [jobs, fetchJobs]);
+  }, [jobs, fetchJobs, hasJobTracking]);
 
-  const startBatch = async () => {
-    setStarting(true);
+  const runBatch = async () => {
+    setProcessing(true);
     setError(null);
+    setResult(null);
     try {
-      const res = await fetch('/api/thumbnail/start', {
+      const endpoint = hasJobTracking ? `${apiEndpoint}/start` : apiEndpoint;
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ limit: batchSize }),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Failed to start batch');
+        setError(data.error || 'Failed to run batch');
         return;
       }
-      await fetchJobs();
+      if (hasJobTracking) {
+        await fetchJobs();
+      } else {
+        setResult({ processed: data.processed || 0, message: data.message });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
-      setStarting(false);
+      setProcessing(false);
     }
   };
 
@@ -90,20 +137,20 @@ export function ThumbnailJobsCard({ pendingCount }: ThumbnailJobsCardProps) {
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white">Thumbnailing</h3>
-        <span className="text-sm text-cyan-400">{pendingCount} pending</span>
+        <h3 className="text-lg font-semibold text-white">{title}</h3>
+        <span className={`text-sm ${colors.pending}`}>{pendingCount} pending</span>
       </div>
 
       {runningJob ? (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <div className="animate-pulse h-2 w-2 rounded-full bg-cyan-400" />
+            <div className={`animate-pulse h-2 w-2 rounded-full ${colors.pulse}`} />
             <span className="text-sm text-neutral-300">Processing batch...</span>
           </div>
 
           <div className="w-full bg-neutral-800 rounded-full h-2">
             <div
-              className="bg-cyan-500 h-2 rounded-full transition-all duration-500"
+              className={`${colors.progress} h-2 rounded-full transition-all duration-500`}
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -137,26 +184,31 @@ export function ThumbnailJobsCard({ pendingCount }: ThumbnailJobsCardProps) {
               onChange={(e) => setBatchSize(Number(e.target.value))}
               className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-white"
             >
+              <option value={5}>5 items</option>
               <option value={10}>10 items</option>
               <option value={25}>25 items</option>
               <option value={50}>50 items</option>
-              <option value={100}>100 items</option>
             </select>
 
             <button
-              onClick={startBatch}
-              disabled={starting || pendingCount === 0}
-              className="flex-1 px-3 py-1.5 bg-cyan-600 hover:bg-cyan-700 disabled:bg-neutral-700 disabled:text-neutral-500 text-white text-sm rounded transition-colors"
+              onClick={runBatch}
+              disabled={processing || pendingCount === 0}
+              className={`flex-1 px-3 py-1.5 ${colors.button} disabled:bg-neutral-700 disabled:text-neutral-500 text-white text-sm rounded transition-colors`}
             >
-              {starting ? 'Starting...' : 'Start Batch'}
+              {processing ? 'Running...' : 'Run Batch'}
             </button>
           </div>
 
           {error && <p className="text-xs text-red-400">{error}</p>}
+          {result && (
+            <p className={`text-xs ${colors.result}`}>
+              {result.message || `Processed ${result.processed} items`}
+            </p>
+          )}
         </div>
       )}
 
-      {recentJobs.length > 0 && (
+      {hasJobTracking && recentJobs.length > 0 && (
         <div className="mt-4 pt-4 border-t border-neutral-800">
           <p className="text-xs text-neutral-500 mb-2">Recent Jobs</p>
           <div className="space-y-2">

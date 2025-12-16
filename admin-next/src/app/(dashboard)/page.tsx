@@ -1,9 +1,7 @@
 import Link from 'next/link';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { PipelineStatusGrid } from '@/components/dashboard/PipelineStatusGrid';
-import { EnrichmentCard } from '@/components/dashboard/EnrichmentCard';
-import { TaggingCard } from '@/components/dashboard/TaggingCard';
-import { ThumbnailJobsCard } from '@/components/dashboard/ThumbnailJobsCard';
+import { AgentJobCard } from '@/components/dashboard/AgentJobCard';
 
 // Force dynamic rendering to always get fresh data
 export const dynamic = 'force-dynamic';
@@ -301,20 +299,30 @@ export default async function DashboardPage() {
           Agent Controls
         </h2>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
-          <EnrichmentCard
+          <AgentJobCard
+            title="Summarizing"
             pendingCount={
               (allStatusData?.find((s: { code: number }) => s.code === 210)?.count as number) || 0
             }
+            apiEndpoint="/api/enrich"
+            color="emerald"
           />
-          <TaggingCard
+          <AgentJobCard
+            title="Tagging"
             pendingCount={
               (allStatusData?.find((s: { code: number }) => s.code === 220)?.count as number) || 0
             }
+            apiEndpoint="/api/tag"
+            color="violet"
           />
-          <ThumbnailJobsCard
+          <AgentJobCard
+            title="Thumbnailing"
             pendingCount={
               (allStatusData?.find((s: { code: number }) => s.code === 230)?.count as number) || 0
             }
+            apiEndpoint="/api/thumbnail"
+            color="cyan"
+            hasJobTracking
           />
         </div>
       </div>
