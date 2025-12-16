@@ -18,9 +18,8 @@ interface AgentJob {
 interface AgentJobCardProps {
   title: string;
   pendingCount: number;
-  apiEndpoint: string;
+  agentName: string; // 'summarizer', 'tagger', 'thumbnailer'
   color: 'cyan' | 'emerald' | 'violet';
-  hasJobTracking?: boolean;
 }
 
 const colorClasses = {
@@ -50,13 +49,7 @@ const colorClasses = {
   },
 };
 
-export function AgentJobCard({
-  title,
-  pendingCount,
-  apiEndpoint,
-  color,
-  hasJobTracking = false,
-}: AgentJobCardProps) {
+export function AgentJobCard({ title, pendingCount, agentName, color }: AgentJobCardProps) {
   const [jobs, setJobs] = useState<AgentJob[]>([]);
   const [processing, setProcessing] = useState(false);
   const [batchSize, setBatchSize] = useState(10);
@@ -66,36 +59,33 @@ export function AgentJobCard({
   const colors = colorClasses[color];
 
   const fetchJobs = useCallback(async () => {
-    if (!hasJobTracking) return;
     try {
-      const res = await fetch(`${apiEndpoint}/jobs`);
+      const res = await fetch(`/api/jobs/${agentName}/jobs`);
       if (!res.ok) return;
       const data = await res.json();
       setJobs(data.jobs || []);
     } catch {
       // Ignore fetch errors for job status
     }
-  }, [apiEndpoint, hasJobTracking]);
+  }, [agentName]);
 
   useEffect(() => {
     fetchJobs();
   }, [fetchJobs]);
 
   useEffect(() => {
-    if (!hasJobTracking) return;
     const hasRunning = jobs.some((j) => j.status === 'running');
     if (!hasRunning) return;
     const interval = setInterval(fetchJobs, 5000);
     return () => clearInterval(interval);
-  }, [jobs, fetchJobs, hasJobTracking]);
+  }, [jobs, fetchJobs]);
 
   const runBatch = async () => {
     setProcessing(true);
     setError(null);
     setResult(null);
     try {
-      const endpoint = hasJobTracking ? `${apiEndpoint}/start` : apiEndpoint;
-      const res = await fetch(endpoint, {
+      const res = await fetch(`/api/jobs/${agentName}/start`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ limit: batchSize }),
@@ -105,11 +95,7 @@ export function AgentJobCard({
         setError(data.error || 'Failed to run batch');
         return;
       }
-      if (hasJobTracking) {
-        await fetchJobs();
-      } else {
-        setResult({ processed: data.processed || 0, message: data.message });
-      }
+      await fetchJobs();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
@@ -208,7 +194,7 @@ export function AgentJobCard({
         </div>
       )}
 
-      {hasJobTracking && recentJobs.length > 0 && (
+      {recentJobs.length > 0 && (
         <div className="mt-4 pt-4 border-t border-neutral-800">
           <p className="text-xs text-neutral-500 mb-2">Recent Jobs</p>
           <div className="space-y-2">

@@ -304,7 +304,7 @@ export default async function DashboardPage() {
             pendingCount={
               (allStatusData?.find((s: { code: number }) => s.code === 210)?.count as number) || 0
             }
-            apiEndpoint="/api/enrich"
+            agentName="summarizer"
             color="emerald"
           />
           <AgentJobCard
@@ -312,7 +312,7 @@ export default async function DashboardPage() {
             pendingCount={
               (allStatusData?.find((s: { code: number }) => s.code === 220)?.count as number) || 0
             }
-            apiEndpoint="/api/tag"
+            agentName="tagger"
             color="violet"
           />
           <AgentJobCard
@@ -320,9 +320,8 @@ export default async function DashboardPage() {
             pendingCount={
               (allStatusData?.find((s: { code: number }) => s.code === 230)?.count as number) || 0
             }
-            apiEndpoint="/api/thumbnail"
+            agentName="thumbnailer"
             color="cyan"
-            hasJobTracking
           />
         </div>
       </div>
