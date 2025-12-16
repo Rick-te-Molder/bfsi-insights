@@ -4,6 +4,7 @@ import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import agentRoutes from './routes/agents.js';
 import thumbnailRoutes from './routes/thumbnail-routes.js';
+import agentJobRoutes from './routes/agent-jobs.js';
 import { requireApiKey } from './middleware/auth.js';
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -85,6 +86,7 @@ app.post('/api/trigger-build', async (req, res) => {
 
 // Apply API key auth to all agent routes
 // Note: More specific routes must come first
+app.use('/api/jobs', requireApiKey, agentJobRoutes);
 app.use('/api/agents/thumbnail', requireApiKey, thumbnailRoutes);
 app.use('/api/agents', requireApiKey, agentRoutes);
 
