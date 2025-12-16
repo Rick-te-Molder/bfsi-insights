@@ -26,6 +26,60 @@ const findRunningJob = (agent, select = 'id') =>
     .eq('status', 'running')
     .single();
 
+// Stale job threshold: 30 minutes without completion
+const STALE_JOB_THRESHOLD_MS = 30 * 60 * 1000;
+
+// Helper: Check if job is stale and clean it up
+async function cleanupStaleJob(agent, config) {
+  const { data: runningJob } = await supabase
+    .from('agent_jobs')
+    .select('id, started_at, processed_items, total_items')
+    .eq('agent_name', agent)
+    .eq('status', 'running')
+    .single();
+
+  if (!runningJob) return false;
+
+  const startedAt = new Date(runningJob.started_at).getTime();
+  const now = Date.now();
+  const isStale = now - startedAt > STALE_JOB_THRESHOLD_MS;
+
+  if (isStale) {
+    console.log(
+      `🧹 Cleaning up stale ${agent} job ${runningJob.id} (started ${Math.round((now - startedAt) / 60000)}m ago)`,
+    );
+
+    // Mark job as failed
+    await supabase
+      .from('agent_jobs')
+      .update({
+        status: 'failed',
+        error_message: 'Job timed out (stale)',
+        completed_at: new Date().toISOString(),
+        current_item_id: null,
+        current_item_title: null,
+      })
+      .eq('id', runningJob.id);
+
+    // Reset any items stuck in "working" status back to "ready"
+    const workingCode = config.workingStatusCode();
+    const readyCode = config.statusCode();
+    const { data: stuckItems } = await supabase
+      .from('ingestion_queue')
+      .update({ status_code: readyCode })
+      .eq('status_code', workingCode)
+      .select('id');
+
+    if (stuckItems?.length) {
+      console.log(`   Reset ${stuckItems.length} stuck items from ${workingCode} to ${readyCode}`);
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
 // Agent configurations
 const AGENTS = {
   summarizer: {
@@ -96,6 +150,12 @@ router.post('/:agent/start', async (req, res) => {
 
     await loadStatusCodes();
     const config = AGENTS[agent];
+
+    // Clean up any stale jobs first (running > 30 min without progress)
+    const wasStale = await cleanupStaleJob(agent, config);
+    if (wasStale) {
+      console.log(`   Stale job cleaned up, proceeding with new job`);
+    }
 
     // Check if there's already a running job for this agent
     const { data: runningJob } = await findRunningJob(agent);
