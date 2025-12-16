@@ -248,7 +248,7 @@ async function processAgentBatch(agent, jobId, items, config) {
       const result = await withTimeout(config.runner(item), TIMEOUT_MS);
 
       // Update queue item
-      await supabase
+      const { error: updateError } = await supabase
         .from('ingestion_queue')
         .update({
           status_code: config.nextStatusCode(),
@@ -256,6 +256,12 @@ async function processAgentBatch(agent, jobId, items, config) {
         })
         .eq('id', item.id);
 
+      if (updateError) {
+        console.error(`${agent} status update failed for ${item.id}:`, updateError.message);
+        throw new Error(`Status update failed: ${updateError.message}`);
+      }
+
+      console.log(`   ✅ ${agent} ${item.id} → status ${config.nextStatusCode()}`);
       successCount++;
     } catch (err) {
       console.error(`${agent} failed for ${item.id}:`, err.message);
