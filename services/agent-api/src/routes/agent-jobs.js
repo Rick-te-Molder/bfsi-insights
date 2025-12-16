@@ -58,6 +58,92 @@ async function ensurePipelineRun(item) {
   return run.id;
 }
 
+// Helper: Start a step run (insert with status='running')
+async function startStepRun(runId, stepName, inputSnapshot) {
+  if (!runId) return null;
+
+  // Check for existing attempt count
+  const { data: existing } = await supabase
+    .from('pipeline_step_run')
+    .select('attempt')
+    .eq('run_id', runId)
+    .eq('step_name', stepName)
+    .order('attempt', { ascending: false })
+    .limit(1);
+
+  const attempt = (existing?.[0]?.attempt || 0) + 1;
+
+  const { data: stepRun, error } = await supabase
+    .from('pipeline_step_run')
+    .insert({
+      run_id: runId,
+      step_name: stepName,
+      status: 'running',
+      attempt,
+      started_at: new Date().toISOString(),
+      input_snapshot: inputSnapshot,
+    })
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error(`Failed to create step_run for ${stepName}:`, error.message);
+    return null;
+  }
+
+  return stepRun.id;
+}
+
+// Helper: Complete a step run (update status='success')
+async function completeStepRun(stepRunId, output) {
+  if (!stepRunId) return;
+
+  await supabase
+    .from('pipeline_step_run')
+    .update({
+      status: 'success',
+      output,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', stepRunId);
+}
+
+// Helper: Fail a step run (update status='failed')
+async function failStepRun(stepRunId, error) {
+  if (!stepRunId) return;
+
+  // Create error signature (first 100 chars, normalized)
+  const errorMessage = error?.message || String(error);
+  const errorSignature = errorMessage
+    .substring(0, 100)
+    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, 'UUID')
+    .replace(/\d+/g, 'N');
+
+  await supabase
+    .from('pipeline_step_run')
+    .update({
+      status: 'failed',
+      error_message: errorMessage,
+      error_signature: errorSignature,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', stepRunId);
+}
+
+// Helper: Skip a step run (for rejected items)
+async function skipStepRun(stepRunId, reason) {
+  if (!stepRunId) return;
+
+  await supabase
+    .from('pipeline_step_run')
+    .update({
+      status: 'skipped',
+      error_message: reason,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', stepRunId);
+}
+
 // Helper: Find running job for agent
 const findRunningJob = (agent, select = 'id') =>
   supabase
@@ -265,6 +351,7 @@ async function processAgentBatch(agent, jobId, items, config) {
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     const title = item.payload?.title?.substring(0, 100) || 'Unknown';
+    let stepRunId = null; // Declare outside try for access in catch
 
     try {
       // Update current item being processed
@@ -285,6 +372,15 @@ async function processAgentBatch(agent, jobId, items, config) {
         item.current_run_id = runId; // Update local reference
       }
 
+      // Start step run tracking
+      const stepName =
+        agent === 'summarizer' ? 'summarize' : agent === 'tagger' ? 'tag' : 'thumbnail';
+      stepRunId = await startStepRun(runId, stepName, {
+        url: item.url,
+        title: item.payload?.title,
+        payload_keys: Object.keys(item.payload || {}),
+      });
+
       // Set status to "working" while processing
       await supabase
         .from('ingestion_queue')
@@ -297,6 +393,7 @@ async function processAgentBatch(agent, jobId, items, config) {
       // If agent already handled rejection, skip normal update
       if (result?.rejected) {
         console.log(`   🗑️ ${agent} ${item.id} → rejected (bad data)`);
+        await skipStepRun(stepRunId, 'Rejected: bad data');
         successCount++; // Count as processed, not failed
         continue;
       }
@@ -312,14 +409,21 @@ async function processAgentBatch(agent, jobId, items, config) {
 
       if (updateError) {
         console.error(`${agent} status update failed for ${item.id}:`, updateError.message);
+        await failStepRun(stepRunId, new Error(`Status update failed: ${updateError.message}`));
         throw new Error(`Status update failed: ${updateError.message}`);
       }
+
+      // Complete step run with output
+      await completeStepRun(stepRunId, result);
 
       console.log(`   ✅ ${agent} ${item.id} → status ${config.nextStatusCode()}`);
       successCount++;
     } catch (err) {
       console.error(`${agent} failed for ${item.id}:`, err.message);
       failedCount++;
+
+      // Record failure in step run (handles null gracefully)
+      await failStepRun(stepRunId, err);
 
       // Reset item back to "ready" status so it can be retried
       await supabase
