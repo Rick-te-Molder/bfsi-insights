@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 
-type SubmissionStatus = 'idle' | 'submitting' | 'success' | 'error';
+type SubmissionStatus = 'idle' | 'submitting' | 'uploading' | 'success' | 'error';
+type InputMode = 'url' | 'pdf';
 
 interface MissedDiscovery {
   id: string;
@@ -52,7 +53,11 @@ export default function AddArticlePage() {
   const [missedItems, setMissedItems] = useState<MissedDiscovery[]>([]);
   const [loadingList, setLoadingList] = useState(false);
 
+  const [inputMode, setInputMode] = useState<InputMode>('url');
   const [url, setUrl] = useState('');
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfTitle, setPdfTitle] = useState('');
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [submitterName, setSubmitterName] = useState('');
   const [submitterAudience, setSubmitterAudience] = useState('');
   const [submitterChannel, setSubmitterChannel] = useState('');
@@ -124,9 +129,22 @@ export default function AddArticlePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!url.trim()) {
+    // Validate based on input mode
+    if (inputMode === 'url' && !url.trim()) {
       setStatus('error');
       setMessage('Please enter a URL');
+      return;
+    }
+
+    if (inputMode === 'pdf' && !pdfFile) {
+      setStatus('error');
+      setMessage('Please select a PDF file');
+      return;
+    }
+
+    if (inputMode === 'pdf' && !pdfTitle.trim()) {
+      setStatus('error');
+      setMessage('Please enter a title for the PDF');
       return;
     }
 
@@ -164,9 +182,42 @@ export default function AddArticlePage() {
     setMessage('');
 
     try {
-      const urlObj = new URL(url);
-      const urlNorm = (urlObj.origin + urlObj.pathname).toLowerCase();
-      const domain = urlObj.hostname.replace(/^www\./, '');
+      let finalUrl = url.trim();
+      let domain = '';
+      let urlNorm = '';
+
+      // Handle PDF upload
+      if (inputMode === 'pdf' && pdfFile) {
+        setStatus('uploading');
+        setUploadProgress(0);
+
+        const fileId = crypto.randomUUID();
+        const filePath = `pdfs/${fileId}.pdf`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('asset')
+          .upload(filePath, pdfFile, {
+            contentType: 'application/pdf',
+            upsert: false,
+          });
+
+        if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+
+        setUploadProgress(100);
+
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from('asset').getPublicUrl(filePath);
+        finalUrl = publicUrl;
+        domain = 'manual-pdf-upload';
+        urlNorm = publicUrl.toLowerCase();
+
+        setStatus('submitting');
+      } else {
+        const urlObj = new URL(url);
+        urlNorm = (urlObj.origin + urlObj.pathname).toLowerCase();
+        domain = urlObj.hostname.replace(/^www\./, '');
+      }
 
       if (editingId) {
         // Update existing item
@@ -204,7 +255,7 @@ export default function AddArticlePage() {
         }
 
         const { error } = await supabase.from('missed_discovery').insert({
-          url: url.trim(),
+          url: finalUrl,
           url_norm: urlNorm,
           submitter_name: submitterName.trim() || null,
           submitter_type: 'client',
@@ -220,13 +271,16 @@ export default function AddArticlePage() {
 
         if (error) throw error;
 
+        const isPdf = inputMode === 'pdf';
         const { error: queueError } = await supabase.from('ingestion_queue').insert({
-          url: url.trim(),
+          url: finalUrl,
           status: 'pending',
-          status_code: 200,
+          status_code: isPdf ? 230 : 200, // PDFs skip to thumbnailing (230), URLs start at pending_enrichment (200)
           entry_type: 'manual',
           payload: {
             manual_add: true,
+            title: isPdf ? pdfTitle.trim() : null,
+            is_pdf: isPdf,
             submitter: submitterName.trim() || null,
             why_valuable: whyValuable.trim(),
             source: existingSource || null,
@@ -238,10 +292,18 @@ export default function AddArticlePage() {
         }
 
         setStatus('success');
-        setMessage('Article submitted! It will be processed AND help improve our discovery.');
+        setMessage(
+          isPdf
+            ? 'PDF uploaded! It will be processed and available for review.'
+            : 'Article submitted! It will be processed AND help improve our discovery.',
+        );
       }
 
+      setInputMode('url');
       setUrl('');
+      setPdfFile(null);
+      setPdfTitle('');
+      setUploadProgress(0);
       setSubmitterName('');
       setSubmitterAudience('');
       setWhyValuable('');
@@ -359,36 +421,161 @@ export default function AddArticlePage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 space-y-4">
-              <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">
-                The Article
-              </h2>
-              <div>
-                <label htmlFor="url" className="block text-sm font-medium text-neutral-300 mb-2">
-                  URL <span className="text-red-400">*</span>
-                </label>
-                <input
-                  type="url"
-                  id="url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  required
-                  placeholder="https://example.com/article"
-                  className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-3 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none"
-                />
-                {detectedDomain && (
-                  <p className="mt-2 text-sm">
-                    {existingSource ? (
-                      <span className="text-amber-400">
-                        ⚠️ We track <strong>{existingSource}</strong> — why did we miss this?
-                      </span>
-                    ) : (
-                      <span className="text-sky-400">
-                        ⚡ New domain: <strong>{detectedDomain}</strong> (not tracked)
-                      </span>
-                    )}
-                  </p>
-                )}
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">
+                  The Article
+                </h2>
+                <div className="flex rounded-lg border border-neutral-700 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setInputMode('url')}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                      inputMode === 'url'
+                        ? 'bg-sky-600 text-white'
+                        : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    🔗 URL
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputMode('pdf')}
+                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                      inputMode === 'pdf'
+                        ? 'bg-sky-600 text-white'
+                        : 'text-neutral-400 hover:text-white'
+                    }`}
+                  >
+                    📄 PDF
+                  </button>
+                </div>
               </div>
+
+              {inputMode === 'url' ? (
+                <div>
+                  <label htmlFor="url" className="block text-sm font-medium text-neutral-300 mb-2">
+                    URL <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    id="url"
+                    value={url}
+                    onChange={(e) => setUrl(e.target.value)}
+                    placeholder="https://example.com/article"
+                    className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-3 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none"
+                  />
+                  {detectedDomain && (
+                    <p className="mt-2 text-sm">
+                      {existingSource ? (
+                        <span className="text-amber-400">
+                          ⚠️ We track <strong>{existingSource}</strong> — why did we miss this?
+                        </span>
+                      ) : (
+                        <span className="text-sky-400">
+                          ⚡ New domain: <strong>{detectedDomain}</strong> (not tracked)
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div>
+                    <label
+                      htmlFor="pdfTitle"
+                      className="block text-sm font-medium text-neutral-300 mb-2"
+                    >
+                      Title <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="pdfTitle"
+                      value={pdfTitle}
+                      onChange={(e) => setPdfTitle(e.target.value)}
+                      placeholder="e.g., ECB Working Paper on Inflation"
+                      className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-3 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-neutral-300 mb-2">
+                      PDF File <span className="text-red-400">*</span>
+                    </label>
+                    <div
+                      className={`relative rounded-lg border-2 border-dashed transition-colors ${
+                        pdfFile
+                          ? 'border-emerald-500/50 bg-emerald-500/10'
+                          : 'border-neutral-700 hover:border-neutral-600'
+                      }`}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const file = e.dataTransfer.files[0];
+                        if (file?.type === 'application/pdf') {
+                          setPdfFile(file);
+                          if (!pdfTitle) setPdfTitle(file.name.replace('.pdf', ''));
+                        }
+                      }}
+                    >
+                      <input
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setPdfFile(file);
+                            if (!pdfTitle) setPdfTitle(file.name.replace('.pdf', ''));
+                          }
+                        }}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <div className="p-6 text-center">
+                        {pdfFile ? (
+                          <div className="space-y-2">
+                            <p className="text-emerald-400">📄 {pdfFile.name}</p>
+                            <p className="text-xs text-neutral-500">
+                              {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPdfFile(null);
+                              }}
+                              className="text-xs text-red-400 hover:text-red-300"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <p className="text-neutral-400">
+                              📎 Drop PDF here or <span className="text-sky-400">browse</span>
+                            </p>
+                            <p className="text-xs text-neutral-500">Max 50MB</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {status === 'uploading' && (
+                      <div className="mt-2">
+                        <div className="h-1 rounded-full bg-neutral-700 overflow-hidden">
+                          <div
+                            className="h-full bg-sky-500 transition-all duration-300"
+                            style={{ width: `${uploadProgress}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-neutral-500 mt-1">
+                          Uploading... {uploadProgress}%
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 space-y-4">
@@ -549,14 +736,18 @@ export default function AddArticlePage() {
             <div className="flex gap-3">
               <button
                 type="submit"
-                disabled={status === 'submitting'}
+                disabled={status === 'submitting' || status === 'uploading'}
                 className="rounded-lg bg-sky-600 px-6 py-3 font-medium text-white hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {status === 'submitting'
-                  ? 'Submitting...'
-                  : editingId
-                    ? 'Update Article'
-                    : 'Add Article'}
+                {status === 'uploading'
+                  ? 'Uploading PDF...'
+                  : status === 'submitting'
+                    ? 'Submitting...'
+                    : editingId
+                      ? 'Update Article'
+                      : inputMode === 'pdf'
+                        ? 'Upload PDF'
+                        : 'Add Article'}
               </button>
               <Link
                 href="/review"
