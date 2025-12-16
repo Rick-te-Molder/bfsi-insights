@@ -14,6 +14,18 @@ import { STATUS, loadStatusCodes } from '../lib/status-codes.js';
 const router = express.Router();
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
+// Helper: Update job record
+const updateJob = (jobId, updates) => supabase.from('agent_jobs').update(updates).eq('id', jobId);
+
+// Helper: Find running job for agent
+const findRunningJob = (agent, select = 'id') =>
+  supabase
+    .from('agent_jobs')
+    .select(select)
+    .eq('agent_name', agent)
+    .eq('status', 'running')
+    .single();
+
 // Agent configurations
 const AGENTS = {
   summarizer: {
@@ -83,12 +95,7 @@ router.post('/:agent/start', async (req, res) => {
     const config = AGENTS[agent];
 
     // Check if there's already a running job for this agent
-    const { data: runningJob } = await supabase
-      .from('agent_jobs')
-      .select('id')
-      .eq('agent_name', agent)
-      .eq('status', 'running')
-      .single();
+    const { data: runningJob } = await findRunningJob(agent);
 
     if (runningJob) {
       return res.status(409).json({
@@ -157,14 +164,11 @@ async function processAgentBatch(agent, jobId, items, config) {
 
     try {
       // Update current item being processed
-      await supabase
-        .from('agent_jobs')
-        .update({
-          current_item_id: item.id,
-          current_item_title: title,
-          processed_items: i,
-        })
-        .eq('id', jobId);
+      await updateJob(jobId, {
+        current_item_id: item.id,
+        current_item_title: title,
+        processed_items: i,
+      });
 
       // Ensure URL is available
       if (!item.payload.url && !item.payload.source_url && item.url) {
@@ -191,18 +195,15 @@ async function processAgentBatch(agent, jobId, items, config) {
   }
 
   // Mark job complete
-  await supabase
-    .from('agent_jobs')
-    .update({
-      status: 'completed',
-      processed_items: items.length,
-      success_count: successCount,
-      failed_count: failedCount,
-      completed_at: new Date().toISOString(),
-      current_item_id: null,
-      current_item_title: null,
-    })
-    .eq('id', jobId);
+  await updateJob(jobId, {
+    status: 'completed',
+    processed_items: items.length,
+    success_count: successCount,
+    failed_count: failedCount,
+    completed_at: new Date().toISOString(),
+    current_item_id: null,
+    current_item_title: null,
+  });
 
   console.log(`✅ ${agent} job ${jobId} completed: ${successCount}/${items.length} success`);
 }
@@ -230,26 +231,21 @@ router.get('/:agent/jobs', async (req, res) => {
 router.post('/:agent/cancel', async (req, res) => {
   try {
     const { agent } = req.params;
-    const { data: runningJob, error: findError } = await supabase
-      .from('agent_jobs')
-      .select('id, processed_items, success_count, failed_count')
-      .eq('agent_name', agent)
-      .eq('status', 'running')
-      .single();
+    const { data: runningJob, error: findError } = await findRunningJob(
+      agent,
+      'id, processed_items, success_count, failed_count',
+    );
 
     if (findError || !runningJob) {
       return res.json({ message: `No running ${agent} job to cancel` });
     }
 
-    const { error: updateError } = await supabase
-      .from('agent_jobs')
-      .update({
-        status: 'cancelled',
-        completed_at: new Date().toISOString(),
-        current_item_id: null,
-        current_item_title: null,
-      })
-      .eq('id', runningJob.id);
+    const { error: updateError } = await updateJob(runningJob.id, {
+      status: 'cancelled',
+      completed_at: new Date().toISOString(),
+      current_item_id: null,
+      current_item_title: null,
+    });
 
     if (updateError) throw updateError;
 
