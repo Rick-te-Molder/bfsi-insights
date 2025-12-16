@@ -139,9 +139,30 @@ export function CarouselReview({
     setProcessing(true);
 
     try {
+      // Cancel old pipeline_run and create new one with trigger='re-enrich'
+      await supabase
+        .from('pipeline_run')
+        .update({ status: 'cancelled', completed_at: new Date().toISOString() })
+        .eq('queue_id', currentItem.id)
+        .eq('status', 'running');
+
+      const { data: newRun } = await supabase
+        .from('pipeline_run')
+        .insert({
+          queue_id: currentItem.id,
+          trigger: 're-enrich',
+          status: 'running',
+          created_by: 'system',
+        })
+        .select('id')
+        .single();
+
       await supabase
         .from('ingestion_queue')
-        .update({ status: 'queued', status_code: 200 }) // 200 = PENDING_ENRICHMENT
+        .update({
+          status_code: 200, // 200 = PENDING_ENRICHMENT
+          current_run_id: newRun?.id || null,
+        })
         .eq('id', currentItem.id);
 
       const newItems = items.filter((_, i) => i !== currentIndex);

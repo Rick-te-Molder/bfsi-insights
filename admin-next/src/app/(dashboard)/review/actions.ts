@@ -171,15 +171,44 @@ export async function approveQueueItemAction(queueId: string, editedTitle?: stri
 
 export async function bulkReenrichAction(ids: string[]) {
   const supabase = createServiceRoleClient();
+  const userId = await getCurrentUserId();
 
-  const { error } = await supabase
-    .from('ingestion_queue')
-    .update({ status_code: 200 }) // 200 = PENDING_ENRICHMENT
-    .in('id', ids);
+  // For each item, cancel old run and create new one
+  for (const queueId of ids) {
+    // Cancel any running pipeline_run for this item
+    await supabase
+      .from('pipeline_run')
+      .update({ status: 'cancelled', completed_at: new Date().toISOString() })
+      .eq('queue_id', queueId)
+      .eq('status', 'running');
 
-  if (error) {
-    return { success: false, error: error.message };
+    // Create new pipeline_run with trigger='re-enrich'
+    const { data: newRun } = await supabase
+      .from('pipeline_run')
+      .insert({
+        queue_id: queueId,
+        trigger: 're-enrich',
+        status: 'running',
+        created_by: userId || 'system',
+      })
+      .select('id')
+      .single();
+
+    // Update ingestion_queue with new current_run_id and reset status
+    // Also reset failure tracking for DLQ items (KB-268)
+    await supabase
+      .from('ingestion_queue')
+      .update({
+        status_code: 200, // 200 = PENDING_ENRICHMENT
+        current_run_id: newRun?.id || null,
+        failure_count: 0,
+        last_failed_step: null,
+      })
+      .eq('id', queueId);
   }
+
+  // Note: We don't check for errors on pipeline_run operations
+  // because the table might not exist in older environments
 
   // Trigger processing
   const agentApiUrl = process.env.AGENT_API_URL || 'https://bfsi-insights.onrender.com';

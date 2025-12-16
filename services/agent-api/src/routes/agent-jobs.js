@@ -17,6 +17,7 @@ import {
   failStepRun,
   skipStepRun,
 } from '../lib/pipeline-tracking.js';
+import { WIP_LIMITS, getCurrentWIP } from '../lib/wip-limits.js';
 
 const router = express.Router();
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -174,17 +175,34 @@ router.post('/:agent/start', async (req, res) => {
       });
     }
 
+    // Check WIP limits (KB-269) - backpressure to prevent pipeline choking
+    const wipLimit = WIP_LIMITS[agent] || 10;
+    const currentWIP = await getCurrentWIP(config);
+    const availableCapacity = Math.max(0, wipLimit - currentWIP);
+
+    if (availableCapacity === 0) {
+      return res.json({
+        message: `WIP limit reached for ${agent} (${currentWIP}/${wipLimit})`,
+        jobId: null,
+        wipLimit,
+        currentWIP,
+      });
+    }
+
+    // Only enqueue up to available capacity
+    const effectiveLimit = Math.min(limit, availableCapacity);
+
     // Get items to process (include entry_type and current_run_id for pipeline tracking)
     const { data: items, error: queryError } = await supabase
       .from('ingestion_queue')
       .select('id, url, payload, entry_type, current_run_id')
       .eq('status_code', config.statusCode())
       .order('discovered_at', { ascending: true })
-      .limit(limit);
+      .limit(effectiveLimit);
 
     if (queryError) throw queryError;
     if (!items?.length) {
-      return res.json({ message: `No items need ${agent}`, jobId: null });
+      return res.json({ message: `No items need ${agent}`, jobId: null, wipLimit, currentWIP });
     }
 
     // Create job record
@@ -305,10 +323,46 @@ async function processAgentBatch(agent, jobId, items, config) {
       // Record failure in step run (handles null gracefully)
       await failStepRun(stepRunId, err);
 
-      // Reset item back to "ready" status so it can be retried
+      // Track failure for DLQ (KB-268)
+      const stepName =
+        agent === 'summarizer' ? 'summarize' : agent === 'tagger' ? 'tag' : 'thumbnail';
+      const errorMessage = err?.message || String(err);
+      const errorSignature = errorMessage
+        .substring(0, 100)
+        .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, 'UUID')
+        .replace(/\d+/g, 'N');
+
+      // Get current failure state
+      const { data: currentItem } = await supabase
+        .from('ingestion_queue')
+        .select('failure_count, last_failed_step')
+        .eq('id', item.id)
+        .single();
+
+      // Increment failure count if same step, otherwise reset to 1
+      const isSameStep = currentItem?.last_failed_step === stepName;
+      const newFailureCount = isSameStep ? (currentItem?.failure_count || 0) + 1 : 1;
+
+      // Move to dead_letter (599) after 3 failures on same step
+      const DLQ_THRESHOLD = 3;
+      const newStatusCode = newFailureCount >= DLQ_THRESHOLD ? 599 : config.statusCode();
+
+      if (newFailureCount >= DLQ_THRESHOLD) {
+        console.log(
+          `   💀 ${agent} ${item.id} → dead_letter (${newFailureCount} failures on ${stepName})`,
+        );
+      }
+
       await supabase
         .from('ingestion_queue')
-        .update({ status_code: config.statusCode() })
+        .update({
+          status_code: newStatusCode,
+          failure_count: newFailureCount,
+          last_failed_step: stepName,
+          last_error_message: errorMessage.substring(0, 1000),
+          last_error_signature: errorSignature,
+          last_error_at: new Date().toISOString(),
+        })
         .eq('id', item.id);
     }
   }
@@ -406,6 +460,30 @@ router.post('/cleanup', async (req, res) => {
     });
   } catch (err) {
     console.error('Cleanup Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/jobs/wip - Get current WIP status for all agents (KB-269)
+router.get('/wip', async (req, res) => {
+  try {
+    await loadStatusCodes();
+
+    const wipStatus = {};
+    for (const [agent, config] of Object.entries(AGENTS)) {
+      const currentWIP = await getCurrentWIP(config);
+      const wipLimit = WIP_LIMITS[agent] || 10;
+      wipStatus[agent] = {
+        current: currentWIP,
+        limit: wipLimit,
+        available: Math.max(0, wipLimit - currentWIP),
+        utilizationPct: Math.round((currentWIP / wipLimit) * 100),
+      };
+    }
+
+    res.json({ wip: wipStatus });
+  } catch (err) {
+    console.error('WIP Status Error:', err);
     res.status(500).json({ error: err.message });
   }
 });

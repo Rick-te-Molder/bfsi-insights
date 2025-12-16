@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { ReviewActions } from './actions';
 import { EvaluationPanel } from './evaluation-panel';
 import { UnknownEntitiesPanel } from './unknown-entities';
+import { PipelineTimeline } from './pipeline-timeline';
 import { TagDisplay } from '@/components/tags';
 import type {
   TaxonomyConfig,
@@ -30,6 +31,7 @@ interface QueueItem {
   status_code: number;
   payload: Record<string, unknown>;
   discovered_at: string;
+  current_run_id?: string | null;
 }
 
 interface LookupTables {
@@ -293,6 +295,9 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
         <div className="space-y-6">
           {/* Actions */}
           <ReviewActions item={item} />
+
+          {/* Pipeline History */}
+          <PipelineTimeline queueId={item.id} currentRunId={item.current_run_id} />
 
           {/* Metadata */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">

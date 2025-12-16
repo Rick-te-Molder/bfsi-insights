@@ -84,14 +84,19 @@ async function getQueueItems(
     return { items: data as QueueItem[], sources: [] };
   }
 
+  // For pending_review, use the filtered view that checks enrichment completion
+  // This ensures items only appear when all steps (summarize, tag, thumbnail) succeeded
+  const tableName = status === 'pending_review' ? 'review_queue_ready' : 'ingestion_queue';
+
   let query = supabase
-    .from('ingestion_queue')
+    .from(tableName)
     .select('id, url, status_code, payload, discovered_at')
     .order('discovered_at', { ascending: false })
     .limit(100);
 
   // Filter exclusively by status_code (loaded from status_lookup table)
-  if (status && status !== 'all' && statusCodes) {
+  // Skip for review_queue_ready view which already filters by status_code = 300
+  if (status && status !== 'all' && status !== 'pending_review' && statusCodes) {
     const code = statusCodes[status];
     if (code) query = query.eq('status_code', code);
   }
@@ -227,6 +232,7 @@ export default async function ReviewPage({
     { value: 'queued', label: 'Queued' },
     { value: 'processing', label: 'Processing' },
     { value: 'failed', label: 'Failed' },
+    { value: 'dead_letter', label: '💀 Dead Letter' },
     { value: 'rejected', label: 'Rejected' },
     { value: 'approved', label: 'Approved' },
     { value: 'all', label: 'All' },

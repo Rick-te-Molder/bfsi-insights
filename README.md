@@ -91,6 +91,25 @@ discovered → fetched → scored → to_summarize → summarized → to_tag →
 
 See [`docs/architecture/pipeline-status-codes.md`](docs/architecture/pipeline-status-codes.md) for full status documentation.
 
+### Pipeline Orchestration
+
+The pipeline includes run tracking, failure handling, and health monitoring:
+
+| Feature               | Description                                                              |
+| --------------------- | ------------------------------------------------------------------------ |
+| **Run Tracking**      | Each enrichment attempt creates a `pipeline_run` with step-level tracing |
+| **Step Outcomes**     | `pipeline_step_run` records status, duration, errors per step            |
+| **Re-enrich**         | Creates fresh run, cancels old (prevents mixed outputs)                  |
+| **Dead Letter Queue** | Items failing 3+ times on same step → status 599                         |
+| **WIP Limits**        | Backpressure per stage (summarizer: 10, tagger: 20, thumbnailer: 5)      |
+| **Health Dashboard**  | `/pipeline` shows WIP, throughput, stuck items, DLQ count                |
+
+```
+pipeline_run (per enrichment attempt)
+  └── pipeline_step_run (summarize, tag, thumbnail)
+        └── status, duration, error_message, error_signature
+```
+
 ### Running the Pipeline
 
 ```bash
@@ -133,6 +152,7 @@ The admin UI (`admin-next/`) is a Next.js 15 app:
 
 - **Dashboard** — Pipeline stats, agent controls (run batches, pause discovery)
 - **Review Queue** — Master-detail with keyboard shortcuts (↑↓ navigate, a/r/e actions)
+- **Pipeline Health** — WIP utilization, throughput, stuck items, DLQ alerts
 - **Sources** — Health indicators (🟢🟡🔴), discovery stats
 - **Prompts** — Version history, test playground
 - **Golden Sets** — Curated test cases for prompt evaluation
@@ -257,6 +277,7 @@ See [`services/agent-api/DEPLOYMENT.md`](services/agent-api/DEPLOYMENT.md) for f
 - [x] Agentic discovery with LLM relevance scoring
 - [x] Admin UX improvements (master-detail, source health, prompt testing)
 - [x] Dashboard agent controls (run batches, pause discovery)
+- [x] Pipeline orchestration (run tracking, DLQ, WIP limits, health dashboard)
 - [ ] Embedding-based similarity search
 - [ ] Golden Set integration in prompt editor
 - [ ] Draft → Staged → Live prompt lifecycle
