@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -28,10 +28,11 @@ interface PipelineHealth {
   queueCounts: Record<string, number>;
 }
 
-const WIP_LIMITS: Record<string, number> = {
-  summarizer: 10,
-  tagger: 20,
-  thumbnailer: 5,
+// Fallback limits (used while fetching from API)
+const DEFAULT_WIP_LIMITS: Record<string, number> = {
+  summarizer: 50,
+  tagger: 50,
+  thumbnailer: 50,
 };
 
 function formatDuration(ms: number): string {
@@ -51,7 +52,15 @@ function formatTimeAgo(dateStr: string): string {
 export function PipelineMetrics({ initialHealth }: { initialHealth: PipelineHealth }) {
   const [health, _setHealth] = useState(initialHealth);
   const [refreshing, setRefreshing] = useState(false);
+  const [wipLimits, setWipLimits] = useState<Record<string, number>>(DEFAULT_WIP_LIMITS);
   const router = useRouter();
+
+  useEffect(() => {
+    fetch('/api/jobs/wip-limits')
+      .then((res) => res.json())
+      .then((data) => setWipLimits(data))
+      .catch(() => setWipLimits(DEFAULT_WIP_LIMITS));
+  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -107,7 +116,7 @@ export function PipelineMetrics({ initialHealth }: { initialHealth: PipelineHeal
       <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6">
         <h2 className="text-lg font-semibold mb-4">Work in Progress by Stage</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {Object.entries(WIP_LIMITS).map(([stage, limit]) => {
+          {Object.entries(wipLimits).map(([stage, limit]: [string, number]) => {
             const current = health.wipCounts[stage] || 0;
             const pct = Math.round((current / limit) * 100);
             const barColor =
