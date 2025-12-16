@@ -9,9 +9,10 @@ import { createClient } from '@supabase/supabase-js';
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 // WIP limits per agent - controls max concurrent items in "working" status
+// Must match UI dropdown options in admin-next pipeline health dashboard
 export const WIP_LIMITS = {
-  summarizer: 10,
-  tagger: 20,
+  summarizer: 50,
+  tagger: 50,
   thumbnailer: 50,
 };
 

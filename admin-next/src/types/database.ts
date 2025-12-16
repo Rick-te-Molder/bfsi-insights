@@ -35,6 +35,12 @@ export type {
   StatusLookup,
   StatusPhase,
   StatusCode,
+  // Taxonomy
+  TaxonomyItem,
+  TaxonomyConfig,
+  TaxonomyData,
+  TagPayload,
+  ValidationLookups,
 } from '@bfsi/types';
 
 export { STATUS_CODES } from '@bfsi/types';

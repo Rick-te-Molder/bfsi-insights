@@ -488,4 +488,9 @@ router.get('/wip', async (req, res) => {
   }
 });
 
+// GET /api/jobs/wip-limits - Get WIP limits (single source of truth)
+router.get('/wip-limits', (_req, res) => {
+  res.json(WIP_LIMITS);
+});
+
 export default router;
