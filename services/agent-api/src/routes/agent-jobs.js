@@ -31,6 +31,7 @@ const AGENTS = {
   summarizer: {
     runner: runSummarizer,
     statusCode: () => STATUS.TO_SUMMARIZE,
+    workingStatusCode: () => STATUS.SUMMARIZING,
     nextStatusCode: () => STATUS.TO_TAG,
     updatePayload: (item, result) => ({
       ...item.payload,
@@ -43,6 +44,7 @@ const AGENTS = {
   tagger: {
     runner: runTagger,
     statusCode: () => STATUS.TO_TAG,
+    workingStatusCode: () => STATUS.TAGGING,
     nextStatusCode: () => STATUS.TO_THUMBNAIL,
     updatePayload: (item, result) => ({
       ...item.payload,
@@ -60,6 +62,7 @@ const AGENTS = {
   thumbnailer: {
     runner: runThumbnailer,
     statusCode: () => STATUS.TO_THUMBNAIL,
+    workingStatusCode: () => STATUS.THUMBNAILING,
     nextStatusCode: () => STATUS.ENRICHED,
     updatePayload: (item, result) => ({
       ...item.payload,
@@ -174,6 +177,12 @@ async function processAgentBatch(agent, jobId, items, config) {
       if (!item.payload.url && !item.payload.source_url && item.url) {
         item.payload.url = item.url;
       }
+
+      // Set status to "working" while processing
+      await supabase
+        .from('ingestion_queue')
+        .update({ status_code: config.workingStatusCode() })
+        .eq('id', item.id);
 
       // Run agent with timeout
       const result = await withTimeout(config.runner(item), TIMEOUT_MS);
