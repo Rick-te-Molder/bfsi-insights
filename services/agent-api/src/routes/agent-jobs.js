@@ -17,6 +17,47 @@ const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPAB
 // Helper: Update job record
 const updateJob = (jobId, updates) => supabase.from('agent_jobs').update(updates).eq('id', jobId);
 
+// Helper: Ensure pipeline_run exists for an item
+// Creates a new run if current_run_id is null, or returns the existing run
+async function ensurePipelineRun(item) {
+  // Check if item already has a current run
+  if (item.current_run_id) {
+    return item.current_run_id;
+  }
+
+  // Determine trigger based on entry_type
+  const triggerMap = {
+    manual: 'manual',
+    discovery: 'discovery',
+    rss: 'discovery',
+    sitemap: 'discovery',
+  };
+  const trigger = triggerMap[item.entry_type] || 'discovery';
+
+  // Create new pipeline_run
+  const { data: run, error } = await supabase
+    .from('pipeline_run')
+    .insert({
+      queue_id: item.id,
+      trigger,
+      status: 'running',
+      created_by: 'system',
+    })
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error(`Failed to create pipeline_run for ${item.id}:`, error.message);
+    return null;
+  }
+
+  // Update ingestion_queue with current_run_id
+  await supabase.from('ingestion_queue').update({ current_run_id: run.id }).eq('id', item.id);
+
+  console.log(`   📋 Created pipeline_run ${run.id} for item ${item.id}`);
+  return run.id;
+}
+
 // Helper: Find running job for agent
 const findRunningJob = (agent, select = 'id') =>
   supabase
@@ -167,10 +208,10 @@ router.post('/:agent/start', async (req, res) => {
       });
     }
 
-    // Get items to process
+    // Get items to process (include entry_type and current_run_id for pipeline tracking)
     const { data: items, error: queryError } = await supabase
       .from('ingestion_queue')
-      .select('id, url, payload')
+      .select('id, url, payload, entry_type, current_run_id')
       .eq('status_code', config.statusCode())
       .order('discovered_at', { ascending: true })
       .limit(limit);
@@ -236,6 +277,12 @@ async function processAgentBatch(agent, jobId, items, config) {
       // Ensure URL is available
       if (!item.payload.url && !item.payload.source_url && item.url) {
         item.payload.url = item.url;
+      }
+
+      // Ensure pipeline_run exists for tracking
+      const runId = await ensurePipelineRun(item);
+      if (runId) {
+        item.current_run_id = runId; // Update local reference
       }
 
       // Set status to "working" while processing
