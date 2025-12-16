@@ -12,20 +12,28 @@ const MAX_LINES = 500;
 // TODO(KB-151): Gradually refactor and remove entries from allowList.
 // These files are known to exceed the limit and are tracked for refactoring.
 const ALLOW_LIST = new Set([
+  // Astro main site
   'src/pages/publications.astro',
   'src/features/publications/publication-filters.ts',
   'src/features/publications/multi-select-filters.ts',
-  'src/pages/admin/review.astro',
-  'src/pages/admin/sources.astro',
+  // Agent API
+  'services/agent-api/src/cli.js',
+  // Admin-next pages (KB-274: tracked for refactoring)
+  'admin-next/src/app/(dashboard)/sources/page.tsx',
+  'admin-next/src/app/(dashboard)/ab-tests/page.tsx',
+  'admin-next/src/app/(dashboard)/missed/page.tsx',
+  'admin-next/src/app/(dashboard)/page.tsx',
 ]);
 
 // Use git ls-files to only scan tracked files
 const patterns = [
   'src/**/*.ts',
-  'src/**/*.js', 
+  'src/**/*.js',
   'src/**/*.astro',
   'services/agent-api/src/**/*.ts',
   'services/agent-api/src/**/*.js',
+  'admin-next/src/**/*.ts',
+  'admin-next/src/**/*.tsx',
 ];
 
 try {
