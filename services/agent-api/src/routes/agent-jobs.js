@@ -247,6 +247,13 @@ async function processAgentBatch(agent, jobId, items, config) {
       // Run agent with timeout
       const result = await withTimeout(config.runner(item), TIMEOUT_MS);
 
+      // If agent already handled rejection, skip normal update
+      if (result?.rejected) {
+        console.log(`   🗑️ ${agent} ${item.id} → rejected (bad data)`);
+        successCount++; // Count as processed, not failed
+        continue;
+      }
+
       // Update queue item
       const { error: updateError } = await supabase
         .from('ingestion_queue')
