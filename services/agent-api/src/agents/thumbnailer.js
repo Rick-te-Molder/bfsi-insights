@@ -1,7 +1,117 @@
+import { Buffer } from 'node:buffer';
 import { AgentRunner } from '../lib/runner.js';
 import { chromium } from 'playwright';
 
 const runner = new AgentRunner('thumbnailer');
+
+// Process PDF: download, store, and render first page as thumbnail using Playwright
+async function processPdf(
+  pdfUrl,
+  queueId,
+  supabase,
+  config,
+  startStep,
+  finishStepSuccess,
+  finishStepError,
+) {
+  const bucket = 'asset';
+
+  // Step 1: Download PDF
+  const downloadStepId = await startStep('pdf_download', { url: pdfUrl });
+  let pdfBuffer;
+  try {
+    console.log(`   📥 Downloading PDF: ${pdfUrl}`);
+    const response = await fetch(pdfUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+      },
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    pdfBuffer = Buffer.from(await response.arrayBuffer());
+    await finishStepSuccess(downloadStepId, { size: pdfBuffer.length });
+    console.log(`   ✅ Downloaded PDF: ${(pdfBuffer.length / 1024).toFixed(0)}KB`);
+  } catch (err) {
+    await finishStepError(downloadStepId, err.message);
+    throw err;
+  }
+
+  // Step 2: Store PDF in Supabase Storage
+  const pdfPath = `pdfs/${queueId}.pdf`;
+  const storeStepId = await startStep('pdf_store', { path: pdfPath });
+  try {
+    const { error: uploadError } = await supabase.storage.from(bucket).upload(pdfPath, pdfBuffer, {
+      contentType: 'application/pdf',
+      upsert: true,
+    });
+    if (uploadError) throw new Error(`PDF upload failed: ${uploadError.message}`);
+
+    const {
+      data: { publicUrl: pdfPublicUrl },
+    } = supabase.storage.from(bucket).getPublicUrl(pdfPath);
+    await finishStepSuccess(storeStepId, { path: pdfPath, publicUrl: pdfPublicUrl });
+    console.log(`   ✅ Stored PDF: ${pdfPath}`);
+  } catch (err) {
+    await finishStepError(storeStepId, err.message);
+    throw err;
+  }
+
+  // Step 3: Render first page using Playwright's PDF viewer
+  const renderStepId = await startStep('pdf_render', { viewport: config.viewport });
+  let browser;
+  try {
+    browser = await chromium.launch({
+      headless: true,
+      args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
+    });
+
+    const context = await browser.newContext({
+      viewport: config.viewport,
+      deviceScaleFactor: 1,
+    });
+    const page = await context.newPage();
+
+    // Create a data URL from the PDF buffer for local rendering
+    const pdfBase64 = pdfBuffer.toString('base64');
+    const pdfDataUrl = `data:application/pdf;base64,${pdfBase64}`;
+
+    // Use Chrome's built-in PDF viewer
+    await page.goto(pdfDataUrl, { waitUntil: 'networkidle', timeout: 30000 });
+    await new Promise((r) => setTimeout(r, 3000)); // Wait for PDF to render
+
+    const screenshotBuffer = await page.screenshot({ type: 'jpeg', quality: 80 });
+    await finishStepSuccess(renderStepId, { size: screenshotBuffer.length });
+    console.log(`   ✅ Rendered PDF first page`);
+
+    // Step 4: Upload thumbnail
+    const thumbnailPath = `thumbnails/${queueId}.jpg`;
+    const uploadStepId = await startStep('thumbnail_upload', { path: thumbnailPath });
+    try {
+      const { error: thumbError } = await supabase.storage
+        .from(bucket)
+        .upload(thumbnailPath, screenshotBuffer, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
+      if (thumbError) throw new Error(`Thumbnail upload failed: ${thumbError.message}`);
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from(bucket).getPublicUrl(thumbnailPath);
+      await finishStepSuccess(uploadStepId, { path: thumbnailPath, publicUrl });
+      console.log(`   ✅ Thumbnail uploaded: ${publicUrl}`);
+
+      return { bucket, path: thumbnailPath, publicUrl, pdfPath };
+    } catch (err) {
+      await finishStepError(uploadStepId, err.message);
+      throw err;
+    }
+  } catch (err) {
+    await finishStepError(renderStepId, err.message);
+    throw err;
+  } finally {
+    if (browser) await browser.close();
+  }
+}
 
 export async function runThumbnailer(queueItem) {
   return runner.run(
@@ -30,6 +140,39 @@ export async function runThumbnailer(queueItem) {
       const targetUrl = payload.url || payload.source_url;
       if (!targetUrl) {
         throw new Error('No URL provided in payload (expected payload.url or payload.source_url)');
+      }
+
+      // Handle URLs that can't be screenshotted
+      const lowerUrl = targetUrl.toLowerCase();
+
+      // Bad data - reject items with invalid URL schemes (not http/https)
+      const hasValidScheme = lowerUrl.startsWith('http://') || lowerUrl.startsWith('https://');
+      if (!hasValidScheme) {
+        console.log(
+          `   ❌ Rejecting item with invalid URL scheme: ${targetUrl.substring(0, 30)}...`,
+        );
+        await supabase
+          .from('ingestion_queue')
+          .update({
+            status_code: 540,
+            rejection_reason: `Invalid URL scheme: only http/https supported (got: ${targetUrl.substring(0, 50)})`,
+          })
+          .eq('id', queueId);
+        return { bucket: null, path: null, publicUrl: null, rejected: true };
+      }
+
+      // PDFs - download, store, and render first page as thumbnail
+      if (lowerUrl.endsWith('.pdf') || lowerUrl.includes('.pdf?')) {
+        console.log(`   📄 Processing PDF: ${targetUrl}`);
+        return await processPdf(
+          targetUrl,
+          queueId,
+          supabase,
+          config,
+          startStep,
+          finishStepSuccess,
+          finishStepError,
+        );
       }
 
       // Step 1: Launch browser
