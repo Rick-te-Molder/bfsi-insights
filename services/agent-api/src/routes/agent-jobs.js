@@ -6,16 +6,16 @@
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import process from 'node:process';
-import { runSummarizer } from '../agents/summarizer.js';
-import { runTagger } from '../agents/tagger.js';
-import { runThumbnailer } from '../agents/thumbnailer.js';
-import { STATUS, loadStatusCodes } from '../lib/status-codes.js';
+import { loadStatusCodes } from '../lib/status-codes.js';
+import { AGENTS, TIMEOUT_MS, withTimeout } from '../lib/agent-config.js';
 import {
   ensurePipelineRun,
   startStepRun,
   completeStepRun,
   failStepRun,
   skipStepRun,
+  AGENT_STEP_NAMES,
+  handleItemFailure,
 } from '../lib/pipeline-tracking.js';
 import { WIP_LIMITS, getCurrentWIP } from '../lib/wip-limits.js';
 
@@ -36,6 +36,74 @@ const findRunningJob = (agent, select = 'id') =>
 
 // Stale job threshold: 30 minutes without completion
 const STALE_JOB_THRESHOLD_MS = 30 * 60 * 1000;
+
+// Helper: Process a single item through an agent
+async function processItem(item, agent, jobId, index, config) {
+  const title = item.payload?.title?.substring(0, 100) || 'Unknown';
+  const stepName = AGENT_STEP_NAMES[agent];
+
+  // Update current item being processed
+  await updateJob(jobId, {
+    current_item_id: item.id,
+    current_item_title: title,
+    processed_items: index,
+  });
+
+  // Ensure URL is available
+  if (!item.payload.url && !item.payload.source_url && item.url) {
+    item.payload.url = item.url;
+  }
+
+  // Ensure pipeline_run exists for tracking
+  const runId = await ensurePipelineRun(item);
+  if (runId) {
+    item.current_run_id = runId;
+  }
+
+  // Start step run tracking
+  const stepRunId = await startStepRun(runId, stepName, {
+    url: item.url,
+    title: item.payload?.title,
+    payload_keys: Object.keys(item.payload || {}),
+  });
+
+  // Set status to "working" while processing
+  await supabase
+    .from('ingestion_queue')
+    .update({ status_code: config.workingStatusCode() })
+    .eq('id', item.id);
+
+  // Run agent with timeout
+  const result = await withTimeout(config.runner(item), TIMEOUT_MS);
+
+  // If agent already handled rejection, skip normal update
+  if (result?.rejected) {
+    console.log(`   🗑️ ${agent} ${item.id} → rejected (bad data)`);
+    await skipStepRun(stepRunId, 'Rejected: bad data');
+    return { success: true, stepRunId };
+  }
+
+  // Update queue item
+  const { error: updateError } = await supabase
+    .from('ingestion_queue')
+    .update({
+      status_code: config.nextStatusCode(),
+      payload: config.updatePayload(item, result),
+    })
+    .eq('id', item.id);
+
+  if (updateError) {
+    console.error(`${agent} status update failed for ${item.id}:`, updateError.message);
+    await failStepRun(stepRunId, new Error(`Status update failed: ${updateError.message}`));
+    throw new Error(`Status update failed: ${updateError.message}`);
+  }
+
+  // Complete step run with output
+  await completeStepRun(stepRunId, result);
+  console.log(`   ✅ ${agent} ${item.id} → status ${config.nextStatusCode()}`);
+
+  return { success: true, stepRunId };
+}
 
 // Helper: Check if job is stale and clean it up
 async function cleanupStaleJob(agent, config) {
@@ -86,64 +154,6 @@ async function cleanupStaleJob(agent, config) {
   }
 
   return false;
-}
-
-// Agent configurations
-const AGENTS = {
-  summarizer: {
-    runner: runSummarizer,
-    statusCode: () => STATUS.TO_SUMMARIZE,
-    workingStatusCode: () => STATUS.SUMMARIZING,
-    nextStatusCode: () => STATUS.TO_TAG,
-    updatePayload: (item, result) => ({
-      ...item.payload,
-      title: result.title,
-      summary: result.summary,
-      key_takeaways: result.key_takeaways,
-      summarized_at: new Date().toISOString(),
-    }),
-  },
-  tagger: {
-    runner: runTagger,
-    statusCode: () => STATUS.TO_TAG,
-    workingStatusCode: () => STATUS.TAGGING,
-    nextStatusCode: () => STATUS.TO_THUMBNAIL,
-    updatePayload: (item, result) => ({
-      ...item.payload,
-      industry_codes: result.industry_codes,
-      topic_codes: result.topic_codes,
-      geography_codes: result.geography_codes,
-      audience_scores: result.audience_scores,
-      tagging_metadata: {
-        confidence: result.overall_confidence,
-        reasoning: result.reasoning,
-        tagged_at: new Date().toISOString(),
-      },
-    }),
-  },
-  thumbnailer: {
-    runner: runThumbnailer,
-    statusCode: () => STATUS.TO_THUMBNAIL,
-    workingStatusCode: () => STATUS.THUMBNAILING,
-    nextStatusCode: () => STATUS.PENDING_REVIEW,
-    updatePayload: (item, result) => ({
-      ...item.payload,
-      thumbnail_url: result.publicUrl,
-      thumbnail: result.publicUrl,
-      thumbnail_generated_at: new Date().toISOString(),
-    }),
-  },
-};
-
-// Timeout wrapper
-const TIMEOUT_MS = 90000;
-function withTimeout(promise, ms) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Timeout after ${ms / 1000}s`)), ms),
-    ),
-  ]);
 }
 
 // POST /api/jobs/:agent/start - Start a tracked batch job
@@ -240,81 +250,20 @@ router.post('/:agent/start', async (req, res) => {
   }
 });
 
-// Background processor
+// Background processor - refactored to reduce cognitive complexity (KB-273)
 async function processAgentBatch(agent, jobId, items, config) {
   await loadStatusCodes();
   let successCount = 0;
   let failedCount = 0;
+  const stepName = AGENT_STEP_NAMES[agent];
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
-    const title = item.payload?.title?.substring(0, 100) || 'Unknown';
-    let stepRunId = null; // Declare outside try for access in catch
+    let stepRunId = null;
 
     try {
-      // Update current item being processed
-      await updateJob(jobId, {
-        current_item_id: item.id,
-        current_item_title: title,
-        processed_items: i,
-      });
-
-      // Ensure URL is available
-      if (!item.payload.url && !item.payload.source_url && item.url) {
-        item.payload.url = item.url;
-      }
-
-      // Ensure pipeline_run exists for tracking
-      const runId = await ensurePipelineRun(item);
-      if (runId) {
-        item.current_run_id = runId; // Update local reference
-      }
-
-      // Start step run tracking
-      const stepName =
-        agent === 'summarizer' ? 'summarize' : agent === 'tagger' ? 'tag' : 'thumbnail';
-      stepRunId = await startStepRun(runId, stepName, {
-        url: item.url,
-        title: item.payload?.title,
-        payload_keys: Object.keys(item.payload || {}),
-      });
-
-      // Set status to "working" while processing
-      await supabase
-        .from('ingestion_queue')
-        .update({ status_code: config.workingStatusCode() })
-        .eq('id', item.id);
-
-      // Run agent with timeout
-      const result = await withTimeout(config.runner(item), TIMEOUT_MS);
-
-      // If agent already handled rejection, skip normal update
-      if (result?.rejected) {
-        console.log(`   🗑️ ${agent} ${item.id} → rejected (bad data)`);
-        await skipStepRun(stepRunId, 'Rejected: bad data');
-        successCount++; // Count as processed, not failed
-        continue;
-      }
-
-      // Update queue item
-      const { error: updateError } = await supabase
-        .from('ingestion_queue')
-        .update({
-          status_code: config.nextStatusCode(),
-          payload: config.updatePayload(item, result),
-        })
-        .eq('id', item.id);
-
-      if (updateError) {
-        console.error(`${agent} status update failed for ${item.id}:`, updateError.message);
-        await failStepRun(stepRunId, new Error(`Status update failed: ${updateError.message}`));
-        throw new Error(`Status update failed: ${updateError.message}`);
-      }
-
-      // Complete step run with output
-      await completeStepRun(stepRunId, result);
-
-      console.log(`   ✅ ${agent} ${item.id} → status ${config.nextStatusCode()}`);
+      const result = await processItem(item, agent, jobId, i, config);
+      stepRunId = result.stepRunId;
       successCount++;
     } catch (err) {
       console.error(`${agent} failed for ${item.id}:`, err.message);
@@ -323,47 +272,8 @@ async function processAgentBatch(agent, jobId, items, config) {
       // Record failure in step run (handles null gracefully)
       await failStepRun(stepRunId, err);
 
-      // Track failure for DLQ (KB-268)
-      const stepName =
-        agent === 'summarizer' ? 'summarize' : agent === 'tagger' ? 'tag' : 'thumbnail';
-      const errorMessage = err?.message || String(err);
-      const errorSignature = errorMessage
-        .substring(0, 100)
-        .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, 'UUID')
-        .replace(/\d+/g, 'N');
-
-      // Get current failure state
-      const { data: currentItem } = await supabase
-        .from('ingestion_queue')
-        .select('failure_count, last_failed_step')
-        .eq('id', item.id)
-        .single();
-
-      // Increment failure count if same step, otherwise reset to 1
-      const isSameStep = currentItem?.last_failed_step === stepName;
-      const newFailureCount = isSameStep ? (currentItem?.failure_count || 0) + 1 : 1;
-
-      // Move to dead_letter (599) after 3 failures on same step
-      const DLQ_THRESHOLD = 3;
-      const newStatusCode = newFailureCount >= DLQ_THRESHOLD ? 599 : config.statusCode();
-
-      if (newFailureCount >= DLQ_THRESHOLD) {
-        console.log(
-          `   💀 ${agent} ${item.id} → dead_letter (${newFailureCount} failures on ${stepName})`,
-        );
-      }
-
-      await supabase
-        .from('ingestion_queue')
-        .update({
-          status_code: newStatusCode,
-          failure_count: newFailureCount,
-          last_failed_step: stepName,
-          last_error_message: errorMessage.substring(0, 1000),
-          last_error_signature: errorSignature,
-          last_error_at: new Date().toISOString(),
-        })
-        .eq('id', item.id);
+      // Track failure for DLQ
+      await handleItemFailure(item, agent, stepName, err, config);
     }
   }
 
@@ -378,7 +288,7 @@ async function processAgentBatch(agent, jobId, items, config) {
     current_item_title: null,
   });
 
-  console.log(` ${agent} job ${jobId} completed: ${successCount}/${items.length} success`);
+  console.log(`✅ ${agent} job ${jobId} completed: ${successCount}/${items.length} success`);
 }
 
 // GET /api/jobs/:agent/jobs - Get jobs for an agent
