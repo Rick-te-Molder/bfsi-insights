@@ -36,3 +36,5 @@ coverage/
 summaries-review.json
 summaries-review.json
 public/thumbs/
+.vercel
+.env*.local

@@ -3,11 +3,6 @@ import Link from 'next/link';
 import { CarouselReview } from './carousel-review';
 import type { TaxonomyConfig, TaxonomyData, TaxonomyItem } from '@/components/tags';
 
-// Status codes (see docs/architecture/pipeline-status-codes.md)
-const STATUS_CODE = {
-  PENDING_REVIEW: 300,
-};
-
 interface QueueItem {
   id: string;
   url: string;
