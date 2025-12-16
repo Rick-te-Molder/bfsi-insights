@@ -33,6 +33,7 @@ This document explains which files are excluded from coverage requirements in So
 | `**/agents/filter.js`                          | Thin LLM wrapper; AgentRunner orchestration                                            | 2025-12-02    | 2026-06-02 |
 | `**/agents/summarize.js`                       | Thin LLM wrapper; AgentRunner orchestration                                            | 2025-12-02    | 2026-06-02 |
 | `**/agents/thumbnail.js`                       | Thin LLM wrapper; screenshot/image processing                                          | 2025-12-02    | 2026-06-02 |
+| `**/lib/pipeline-tracking.js`                  | Pipeline run/step tracking infrastructure; Supabase client calls only                  | 2025-12-16    | 2026-06-16 |
 | `src/pages/**`                                 | Astro pages; DOM/SSR glue code                                                         | 2025-11-30    | 2026-03-31 |
 | `src/features/**`                              | UI components; DOM wiring (business logic extracted to `src/lib/`)                     | 2025-11-30    | 2026-03-31 |
 | `src/lib/admin/**`                             | Admin UI orchestration; DOM + Supabase client calls                                    | 2025-12-03    | 2026-06-03 |
