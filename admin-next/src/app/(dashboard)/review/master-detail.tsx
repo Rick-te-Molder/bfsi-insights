@@ -181,22 +181,28 @@ export function MasterDetailView({
                     {((item.payload?.industry_codes || []).length > 0 ||
                       (item.payload?.geography_codes || []).length > 0) && (
                       <div className="flex flex-wrap gap-1 mt-1.5">
-                        {(item.payload?.industry_codes || []).slice(0, 2).map((code) => (
-                          <span
-                            key={code}
-                            className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px]"
-                          >
-                            {code.split('-').pop()}
-                          </span>
-                        ))}
-                        {(item.payload?.geography_codes || []).slice(0, 2).map((code) => (
-                          <span
-                            key={code}
-                            className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-300 text-[10px]"
-                          >
-                            {code}
-                          </span>
-                        ))}
+                        {(item.payload?.industry_codes || [])
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .map((code) => (
+                            <span
+                              key={code}
+                              className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px]"
+                            >
+                              {code.split('-').pop()}
+                            </span>
+                          ))}
+                        {(item.payload?.geography_codes || [])
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .map((code) => (
+                            <span
+                              key={code}
+                              className="px-1.5 py-0.5 rounded bg-green-500/20 text-green-300 text-[10px]"
+                            >
+                              {code}
+                            </span>
+                          ))}
                       </div>
                     )}
                   </div>
