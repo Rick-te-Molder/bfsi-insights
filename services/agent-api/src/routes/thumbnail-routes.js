@@ -194,6 +194,44 @@ router.get('/jobs/:id', async (req, res) => {
   }
 });
 
+// POST /api/agents/thumbnail/cancel - Cancel a stuck/running job
+router.post('/cancel', async (req, res) => {
+  try {
+    const { data: runningJob, error: findError } = await supabase
+      .from('thumbnail_jobs')
+      .select('id, processed_items, success_count, failed_count')
+      .eq('status', 'running')
+      .single();
+
+    if (findError || !runningJob) {
+      return res.json({ message: 'No running job to cancel' });
+    }
+
+    const { error: updateError } = await supabase
+      .from('thumbnail_jobs')
+      .update({
+        status: 'cancelled',
+        completed_at: new Date().toISOString(),
+        current_item_id: null,
+        current_item_title: null,
+      })
+      .eq('id', runningJob.id);
+
+    if (updateError) throw updateError;
+
+    res.json({
+      message: 'Job cancelled',
+      jobId: runningJob.id,
+      processed: runningJob.processed_items,
+      success: runningJob.success_count,
+      failed: runningJob.failed_count,
+    });
+  } catch (err) {
+    console.error('Cancel Job Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/agents/thumbnail/single - Re-thumbnail a single item
 router.post('/single', async (req, res) => {
   try {
