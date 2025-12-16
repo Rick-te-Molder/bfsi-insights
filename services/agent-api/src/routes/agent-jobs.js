@@ -63,7 +63,7 @@ const AGENTS = {
     runner: runThumbnailer,
     statusCode: () => STATUS.TO_THUMBNAIL,
     workingStatusCode: () => STATUS.THUMBNAILING,
-    nextStatusCode: () => STATUS.ENRICHED,
+    nextStatusCode: () => STATUS.PENDING_REVIEW,
     updatePayload: (item, result) => ({
       ...item.payload,
       thumbnail_url: result.publicUrl,
