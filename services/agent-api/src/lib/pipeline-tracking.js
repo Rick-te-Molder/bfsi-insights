@@ -116,8 +116,8 @@ export async function failStepRun(stepRunId, error) {
   const errorMessage = error?.message || String(error);
   const errorSignature = errorMessage
     .substring(0, 100)
-    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, 'UUID')
-    .replace(/\d+/g, 'N');
+    .replaceAll(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, 'UUID')
+    .replaceAll(/\d+/g, 'N');
 
   await supabase
     .from('pipeline_step_run')
