@@ -146,7 +146,9 @@ export async function runThumbnailer(queueItem) {
       const lowerUrl = targetUrl.toLowerCase();
 
       // Bad data - reject these items (status 540)
+      // NOSONAR: We're checking the URL prefix to REJECT it, not executing any code
       if (lowerUrl.startsWith('javascript:')) {
+        // NOSONAR
         console.log(`   ❌ Rejecting item with javascript: URL - bad data`);
         await supabase
           .from('ingestion_queue')
