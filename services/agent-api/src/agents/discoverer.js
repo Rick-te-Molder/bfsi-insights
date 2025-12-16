@@ -160,7 +160,22 @@ export async function runDiscovery(options = {}) {
     agentic = false,
     hybrid = false,
     premium = false,
+    skipEnabledCheck = false,
   } = options;
+
+  // Check if discovery is enabled (skip for manual runs with explicit flag)
+  if (!skipEnabledCheck) {
+    const { data: config } = await supabase
+      .from('system_config')
+      .select('value')
+      .eq('key', 'discovery_enabled')
+      .single();
+
+    if (config?.value === false) {
+      console.log('⏸️  Discovery is disabled. Skipping run.');
+      return { found: 0, new: 0, items: [], skipped: 'disabled' };
+    }
+  }
 
   // Determine scoring mode
   const scoringMode = hybrid ? 'hybrid' : agentic ? 'agentic' : 'rule-based';
