@@ -140,6 +140,16 @@ async function processThumbnailBatch(jobId, items) {
       console.error(`Thumbnail failed for ${item.id}:`, err.message);
       failedCount++;
     }
+
+    // Update counts after each item (KB-275: live progress)
+    await supabase
+      .from('thumbnail_jobs')
+      .update({
+        processed_items: i + 1,
+        success_count: successCount,
+        failed_count: failedCount,
+      })
+      .eq('id', jobId);
   }
 
   // Mark job complete

@@ -275,6 +275,13 @@ async function processAgentBatch(agent, jobId, items, config) {
       // Track failure for DLQ
       await handleItemFailure(item, agent, stepName, err, config);
     }
+
+    // Update counts after each item (KB-275: live progress)
+    await updateJob(jobId, {
+      processed_items: i + 1,
+      success_count: successCount,
+      failed_count: failedCount,
+    });
   }
 
   // Mark job complete
