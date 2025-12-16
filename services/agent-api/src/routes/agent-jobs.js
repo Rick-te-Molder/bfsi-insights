@@ -286,13 +286,21 @@ async function processAgentBatch(agent, jobId, items, config) {
     current_item_title: null,
   });
 
-  console.log(`✅ ${agent} job ${jobId} completed: ${successCount}/${items.length} success`);
+  console.log(` ${agent} job ${jobId} completed: ${successCount}/${items.length} success`);
 }
 
-// GET /api/jobs/:agent - Get jobs for an agent
+// GET /api/jobs/:agent/jobs - Get jobs for an agent
 router.get('/:agent/jobs', async (req, res) => {
   try {
     const { agent } = req.params;
+
+    // Auto-cleanup stale jobs when polling status
+    await loadStatusCodes();
+    const config = AGENTS[agent];
+    if (config) {
+      await cleanupStaleJob(agent, config);
+    }
+
     const { data: jobs, error } = await supabase
       .from('agent_jobs')
       .select('*')
@@ -339,6 +347,27 @@ router.post('/:agent/cancel', async (req, res) => {
     });
   } catch (err) {
     console.error('Cancel Job Error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/jobs/cleanup - Cleanup all stale jobs (called by dashboard polling)
+router.post('/cleanup', async (req, res) => {
+  try {
+    await loadStatusCodes();
+    const cleaned = [];
+
+    for (const [agent, config] of Object.entries(AGENTS)) {
+      const wasStale = await cleanupStaleJob(agent, config);
+      if (wasStale) cleaned.push(agent);
+    }
+
+    res.json({
+      message: cleaned.length ? `Cleaned up stale jobs: ${cleaned.join(', ')}` : 'No stale jobs',
+      cleaned,
+    });
+  } catch (err) {
+    console.error('Cleanup Error:', err);
     res.status(500).json({ error: err.message });
   }
 });
