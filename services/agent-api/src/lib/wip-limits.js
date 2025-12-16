@@ -12,7 +12,7 @@ const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPAB
 export const WIP_LIMITS = {
   summarizer: 10,
   tagger: 20,
-  thumbnailer: 5,
+  thumbnailer: 50,
 };
 
 /**
