@@ -3,7 +3,6 @@ import process from 'node:process';
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import agentRoutes from './routes/agents.js';
-import thumbnailRoutes from './routes/thumbnail-routes.js';
 import agentJobRoutes from './routes/agent-jobs.js';
 import discoveryControlRoutes from './routes/discovery-control.js';
 import { requireApiKey } from './middleware/auth.js';
@@ -89,7 +88,6 @@ app.post('/api/trigger-build', async (req, res) => {
 // Note: More specific routes must come first
 app.use('/api/jobs', requireApiKey, agentJobRoutes);
 app.use('/api/discovery', requireApiKey, discoveryControlRoutes);
-app.use('/api/agents/thumbnail', requireApiKey, thumbnailRoutes);
 app.use('/api/agents', requireApiKey, agentRoutes);
 
 app.listen(port, () => {
