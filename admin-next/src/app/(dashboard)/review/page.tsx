@@ -232,6 +232,7 @@ export default async function ReviewPage({
     { value: 'queued', label: 'Queued' },
     { value: 'processing', label: 'Processing' },
     { value: 'failed', label: 'Failed' },
+    { value: 'dead_letter', label: '💀 Dead Letter' },
     { value: 'rejected', label: 'Rejected' },
     { value: 'approved', label: 'Approved' },
     { value: 'all', label: 'All' },

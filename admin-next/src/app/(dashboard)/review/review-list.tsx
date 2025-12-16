@@ -142,7 +142,7 @@ export function ReviewList({
 
   const canBulkApprove = status === 'pending_review';
   const canBulkReject = ['pending_review', 'failed'].includes(status);
-  const canBulkReenrich = ['pending_review', 'failed', 'rejected'].includes(status);
+  const canBulkReenrich = ['pending_review', 'failed', 'rejected', 'dead_letter'].includes(status);
 
   return (
     <div className="space-y-4">

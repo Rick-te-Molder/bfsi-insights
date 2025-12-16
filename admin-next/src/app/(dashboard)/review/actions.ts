@@ -195,11 +195,14 @@ export async function bulkReenrichAction(ids: string[]) {
       .single();
 
     // Update ingestion_queue with new current_run_id and reset status
+    // Also reset failure tracking for DLQ items (KB-268)
     await supabase
       .from('ingestion_queue')
       .update({
         status_code: 200, // 200 = PENDING_ENRICHMENT
         current_run_id: newRun?.id || null,
+        failure_count: 0,
+        last_failed_step: null,
       })
       .eq('id', queueId);
   }
