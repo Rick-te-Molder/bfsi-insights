@@ -10,53 +10,19 @@ import { runSummarizer } from '../agents/summarizer.js';
 import { runTagger } from '../agents/tagger.js';
 import { runThumbnailer } from '../agents/thumbnailer.js';
 import { STATUS, loadStatusCodes } from '../lib/status-codes.js';
+import {
+  ensurePipelineRun,
+  startStepRun,
+  completeStepRun,
+  failStepRun,
+  skipStepRun,
+} from '../lib/pipeline-tracking.js';
 
 const router = express.Router();
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 // Helper: Update job record
 const updateJob = (jobId, updates) => supabase.from('agent_jobs').update(updates).eq('id', jobId);
-
-// Helper: Ensure pipeline_run exists for an item
-// Creates a new run if current_run_id is null, or returns the existing run
-async function ensurePipelineRun(item) {
-  // Check if item already has a current run
-  if (item.current_run_id) {
-    return item.current_run_id;
-  }
-
-  // Determine trigger based on entry_type
-  const triggerMap = {
-    manual: 'manual',
-    discovery: 'discovery',
-    rss: 'discovery',
-    sitemap: 'discovery',
-  };
-  const trigger = triggerMap[item.entry_type] || 'discovery';
-
-  // Create new pipeline_run
-  const { data: run, error } = await supabase
-    .from('pipeline_run')
-    .insert({
-      queue_id: item.id,
-      trigger,
-      status: 'running',
-      created_by: 'system',
-    })
-    .select('id')
-    .single();
-
-  if (error) {
-    console.error(`Failed to create pipeline_run for ${item.id}:`, error.message);
-    return null;
-  }
-
-  // Update ingestion_queue with current_run_id
-  await supabase.from('ingestion_queue').update({ current_run_id: run.id }).eq('id', item.id);
-
-  console.log(`   📋 Created pipeline_run ${run.id} for item ${item.id}`);
-  return run.id;
-}
 
 // Helper: Find running job for agent
 const findRunningJob = (agent, select = 'id') =>
@@ -265,6 +231,7 @@ async function processAgentBatch(agent, jobId, items, config) {
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     const title = item.payload?.title?.substring(0, 100) || 'Unknown';
+    let stepRunId = null; // Declare outside try for access in catch
 
     try {
       // Update current item being processed
@@ -285,6 +252,15 @@ async function processAgentBatch(agent, jobId, items, config) {
         item.current_run_id = runId; // Update local reference
       }
 
+      // Start step run tracking
+      const stepName =
+        agent === 'summarizer' ? 'summarize' : agent === 'tagger' ? 'tag' : 'thumbnail';
+      stepRunId = await startStepRun(runId, stepName, {
+        url: item.url,
+        title: item.payload?.title,
+        payload_keys: Object.keys(item.payload || {}),
+      });
+
       // Set status to "working" while processing
       await supabase
         .from('ingestion_queue')
@@ -297,6 +273,7 @@ async function processAgentBatch(agent, jobId, items, config) {
       // If agent already handled rejection, skip normal update
       if (result?.rejected) {
         console.log(`   🗑️ ${agent} ${item.id} → rejected (bad data)`);
+        await skipStepRun(stepRunId, 'Rejected: bad data');
         successCount++; // Count as processed, not failed
         continue;
       }
@@ -312,14 +289,21 @@ async function processAgentBatch(agent, jobId, items, config) {
 
       if (updateError) {
         console.error(`${agent} status update failed for ${item.id}:`, updateError.message);
+        await failStepRun(stepRunId, new Error(`Status update failed: ${updateError.message}`));
         throw new Error(`Status update failed: ${updateError.message}`);
       }
+
+      // Complete step run with output
+      await completeStepRun(stepRunId, result);
 
       console.log(`   ✅ ${agent} ${item.id} → status ${config.nextStatusCode()}`);
       successCount++;
     } catch (err) {
       console.error(`${agent} failed for ${item.id}:`, err.message);
       failedCount++;
+
+      // Record failure in step run (handles null gracefully)
+      await failStepRun(stepRunId, err);
 
       // Reset item back to "ready" status so it can be retried
       await supabase
