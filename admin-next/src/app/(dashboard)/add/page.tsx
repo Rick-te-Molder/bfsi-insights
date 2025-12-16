@@ -3,50 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-
-type SubmissionStatus = 'idle' | 'submitting' | 'uploading' | 'success' | 'error';
-type InputMode = 'url' | 'pdf';
-
-interface MissedDiscovery {
-  id: string;
-  url: string;
-  source_domain: string;
-  submitter_name: string | null;
-  submitter_audience: string | null;
-  submitter_channel: string | null;
-  why_valuable: string | null;
-  submitter_urgency: string | null;
-  resolution_status: string;
-  submitted_at: string;
-  existing_source_slug: string | null;
-}
-
-const AUDIENCES = [
-  { value: 'executive', label: 'Executive', description: 'C-suite, Board, VP' },
-  {
-    value: 'functional_specialist',
-    label: 'Functional Specialist',
-    description: 'Risk, Compliance, Finance',
-  },
-  { value: 'engineer', label: 'Engineer', description: 'IT, Dev, Data' },
-  { value: 'researcher', label: 'Researcher', description: 'Analyst, Academic' },
-];
-
-const CHANNELS = [
-  { value: 'email', label: 'Email' },
-  { value: 'linkedin', label: 'LinkedIn' },
-  { value: 'meeting', label: 'Meeting' },
-  { value: 'signal', label: 'Signal' },
-  { value: 'slack', label: 'Slack' },
-  { value: 'whatsapp', label: 'WhatsApp' },
-  { value: 'other', label: 'Other' },
-];
-
-const URGENCY_OPTIONS = [
-  { value: 'fyi', label: 'FYI', color: 'text-neutral-400' },
-  { value: 'important', label: 'Important', color: 'text-amber-400' },
-  { value: 'critical', label: 'Critical', color: 'text-red-400' },
-];
+import type { MissedDiscovery } from '@bfsi/types';
+import type { SubmissionStatus, InputMode } from './types';
+import { ArticleInput, SubmitterInfo, WhyValuable, MissedItemsList } from './components';
 
 export default function AddArticlePage() {
   const [activeTab, setActiveTab] = useState<'add' | 'list'>('add');
@@ -420,318 +379,40 @@ export default function AddArticlePage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">
-                  The Article
-                </h2>
-                <div className="flex rounded-lg border border-neutral-700 p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setInputMode('url')}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                      inputMode === 'url'
-                        ? 'bg-sky-600 text-white'
-                        : 'text-neutral-400 hover:text-white'
-                    }`}
-                  >
-                    🔗 URL
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setInputMode('pdf')}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                      inputMode === 'pdf'
-                        ? 'bg-sky-600 text-white'
-                        : 'text-neutral-400 hover:text-white'
-                    }`}
-                  >
-                    📄 PDF
-                  </button>
-                </div>
-              </div>
+            <ArticleInput
+              inputMode={inputMode}
+              setInputMode={setInputMode}
+              url={url}
+              setUrl={setUrl}
+              pdfFile={pdfFile}
+              setPdfFile={setPdfFile}
+              pdfTitle={pdfTitle}
+              setPdfTitle={setPdfTitle}
+              detectedDomain={detectedDomain}
+              existingSource={existingSource}
+              status={status}
+              uploadProgress={uploadProgress}
+            />
 
-              {inputMode === 'url' ? (
-                <div>
-                  <label htmlFor="url" className="block text-sm font-medium text-neutral-300 mb-2">
-                    URL <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="url"
-                    id="url"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    placeholder="https://example.com/article"
-                    className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-3 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none"
-                  />
-                  {detectedDomain && (
-                    <p className="mt-2 text-sm">
-                      {existingSource ? (
-                        <span className="text-amber-400">
-                          ⚠️ We track <strong>{existingSource}</strong> — why did we miss this?
-                        </span>
-                      ) : (
-                        <span className="text-sky-400">
-                          ⚡ New domain: <strong>{detectedDomain}</strong> (not tracked)
-                        </span>
-                      )}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div>
-                    <label
-                      htmlFor="pdfTitle"
-                      className="block text-sm font-medium text-neutral-300 mb-2"
-                    >
-                      Title <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="pdfTitle"
-                      value={pdfTitle}
-                      onChange={(e) => setPdfTitle(e.target.value)}
-                      placeholder="e.g., ECB Working Paper on Inflation"
-                      className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-3 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-neutral-300 mb-2">
-                      PDF File <span className="text-red-400">*</span>
-                    </label>
-                    <div
-                      className={`relative rounded-lg border-2 border-dashed transition-colors ${
-                        pdfFile
-                          ? 'border-emerald-500/50 bg-emerald-500/10'
-                          : 'border-neutral-700 hover:border-neutral-600'
-                      }`}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const file = e.dataTransfer.files[0];
-                        if (file?.type === 'application/pdf') {
-                          setPdfFile(file);
-                          if (!pdfTitle) setPdfTitle(file.name.replace('.pdf', ''));
-                        }
-                      }}
-                    >
-                      <input
-                        type="file"
-                        accept=".pdf,application/pdf"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setPdfFile(file);
-                            if (!pdfTitle) setPdfTitle(file.name.replace('.pdf', ''));
-                          }
-                        }}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                      <div className="p-6 text-center">
-                        {pdfFile ? (
-                          <div className="space-y-2">
-                            <p className="text-emerald-400">📄 {pdfFile.name}</p>
-                            <p className="text-xs text-neutral-500">
-                              {(pdfFile.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setPdfFile(null);
-                              }}
-                              className="text-xs text-red-400 hover:text-red-300"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <p className="text-neutral-400">
-                              📎 Drop PDF here or <span className="text-sky-400">browse</span>
-                            </p>
-                            <p className="text-xs text-neutral-500">Max 50MB</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {status === 'uploading' && (
-                      <div className="mt-2">
-                        <div className="h-1 rounded-full bg-neutral-700 overflow-hidden">
-                          <div
-                            className="h-full bg-sky-500 transition-all duration-300"
-                            style={{ width: `${uploadProgress}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-neutral-500 mt-1">
-                          Uploading... {uploadProgress}%
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+            <SubmitterInfo
+              submitterName={submitterName}
+              setSubmitterName={setSubmitterName}
+              submitterChannel={submitterChannel}
+              setSubmitterChannel={setSubmitterChannel}
+              submitterAudience={submitterAudience}
+              setSubmitterAudience={setSubmitterAudience}
+              submitterUrgency={submitterUrgency}
+              setSubmitterUrgency={setSubmitterUrgency}
+            />
 
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 space-y-4">
-              <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">
-                Who Sent This?
-              </h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Name / Company <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={submitterName}
-                    onChange={(e) => setSubmitterName(e.target.value)}
-                    placeholder="John Smith, Acme Corp"
-                    required
-                    className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-neutral-300 mb-2">
-                    Channel <span className="text-red-400">*</span>
-                  </label>
-                  <select
-                    value={submitterChannel}
-                    onChange={(e) => setSubmitterChannel(e.target.value)}
-                    required
-                    className={`w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 focus:border-sky-500 focus:outline-none ${submitterChannel ? 'text-white' : 'text-neutral-500'}`}
-                  >
-                    <option value="" disabled>
-                      Select channel...
-                    </option>
-                    {CHANNELS.map((c) => (
-                      <option key={c.value} value={c.value}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-300 mb-2">
-                  Their Role / Audience <span className="text-red-400">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {AUDIENCES.map((aud) => (
-                    <button
-                      key={aud.value}
-                      type="button"
-                      onClick={() => setSubmitterAudience(aud.value)}
-                      className={`p-3 rounded-lg border text-left transition-colors ${
-                        submitterAudience === aud.value
-                          ? 'border-sky-500 bg-sky-500/20 text-white'
-                          : 'border-neutral-700 bg-neutral-800 text-neutral-300 hover:border-neutral-600'
-                      }`}
-                    >
-                      <div className="font-medium">{aud.label}</div>
-                      <div className="text-xs text-neutral-500">{aud.description}</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-300 mb-2">
-                  Urgency <span className="text-red-400">*</span>
-                </label>
-                <div className="flex gap-2">
-                  {URGENCY_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setSubmitterUrgency(opt.value)}
-                      className={`px-4 py-2 rounded-lg border transition-colors ${
-                        submitterUrgency === opt.value
-                          ? 'border-sky-500 bg-sky-500/20'
-                          : 'border-neutral-700 bg-neutral-800 hover:border-neutral-600'
-                      } ${opt.color}`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-4">
-              <h2 className="text-sm font-semibold text-amber-300 uppercase tracking-wide">
-                ⭐ Why Was This Valuable?
-              </h2>
-              <p className="text-xs text-neutral-400">
-                This is the most important field — it helps us understand what we&apos;re missing
-              </p>
-              <div>
-                <label htmlFor="why" className="block text-sm font-medium text-neutral-300 mb-2">
-                  Why did they send this? What makes it valuable?{' '}
-                  <span className="text-red-400">*</span>
-                </label>
-                <textarea
-                  id="why"
-                  value={whyValuable}
-                  onChange={(e) => setWhyValuable(e.target.value)}
-                  required
-                  rows={3}
-                  placeholder="Board meeting next week on this topic... Client said 'this is exactly what we needed'..."
-                  className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-3 text-white placeholder-neutral-500 focus:border-amber-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-neutral-300 mb-2">
-                  Their exact words (optional)
-                </label>
-                <input
-                  type="text"
-                  value={verbatimComment}
-                  onChange={(e) => setVerbatimComment(e.target.value)}
-                  placeholder='"This is the kind of content that makes us look smart"'
-                  className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-white placeholder-neutral-500 focus:border-sky-500 focus:outline-none"
-                />
-              </div>
-              <div className="text-xs text-neutral-500 space-y-1">
-                <p className="font-medium">💡 Examples that help us learn:</p>
-                <ul className="ml-4 space-y-0.5">
-                  <li>• &quot;Board asked about this exact topic last week&quot;</li>
-                  <li>• &quot;This is what our risk team has been searching for&quot;</li>
-                  <li>• &quot;Competitor mentioned this, we need to know too&quot;</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 space-y-4">
-              <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">
-                Classification (Optional)
-              </h2>
-              <div>
-                <label className="block text-sm font-medium text-neutral-300 mb-2">
-                  Who should see this?
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {AUDIENCES.map((aud) => (
-                    <button
-                      key={aud.value}
-                      type="button"
-                      onClick={() => toggleAudience(aud.value)}
-                      className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                        suggestedAudiences.includes(aud.value)
-                          ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50'
-                          : 'bg-neutral-800 text-neutral-400 border border-neutral-700 hover:border-neutral-600'
-                      }`}
-                    >
-                      {aud.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <WhyValuable
+              whyValuable={whyValuable}
+              setWhyValuable={setWhyValuable}
+              verbatimComment={verbatimComment}
+              setVerbatimComment={setVerbatimComment}
+              suggestedAudiences={suggestedAudiences}
+              toggleAudience={toggleAudience}
+            />
 
             <div className="flex gap-3">
               <button
@@ -759,85 +440,12 @@ export default function AddArticlePage() {
           </form>
         </div>
       ) : (
-        <div>
-          {loadingList ? (
-            <div className="p-8 text-center text-neutral-500">Loading...</div>
-          ) : missedItems.length === 0 ? (
-            <div className="p-8 text-center text-neutral-500">No articles added yet</div>
-          ) : (
-            <div className="space-y-3">
-              {missedItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 space-y-3"
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sky-400 hover:underline text-sm font-medium"
-                    >
-                      {item.source_domain}
-                    </a>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span
-                        className={`text-xs ${
-                          item.submitter_urgency === 'critical'
-                            ? 'text-red-400'
-                            : item.submitter_urgency === 'important'
-                              ? 'text-amber-400'
-                              : 'text-neutral-400'
-                        }`}
-                      >
-                        {item.submitter_urgency || '—'}
-                      </span>
-                      <span
-                        className={`px-2 py-0.5 rounded text-xs ${
-                          item.resolution_status === 'pending'
-                            ? 'bg-neutral-700 text-neutral-300'
-                            : item.resolution_status === 'source_added'
-                              ? 'bg-emerald-500/20 text-emerald-300'
-                              : 'bg-sky-500/20 text-sky-300'
-                        }`}
-                      >
-                        {item.resolution_status}
-                      </span>
-                    </div>
-                  </div>
-                  {item.why_valuable && (
-                    <p className="text-sm text-neutral-300 line-clamp-2">{item.why_valuable}</p>
-                  )}
-                  <div className="flex items-center justify-between text-xs text-neutral-500">
-                    <span>
-                      {item.submitter_name || 'Anonymous'}
-                      {item.submitter_audience && (
-                        <span className="ml-1 capitalize">
-                          · {item.submitter_audience.replace('_', ' ')}
-                        </span>
-                      )}
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <span>{new Date(item.submitted_at).toLocaleDateString()}</span>
-                      <button
-                        onClick={() => editItem(item)}
-                        className="text-sky-400 hover:text-sky-300"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteItem(item.id)}
-                        className="text-red-400 hover:text-red-300"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <MissedItemsList
+          items={missedItems}
+          loading={loadingList}
+          onEdit={editItem}
+          onDelete={deleteItem}
+        />
       )}
     </div>
   );
