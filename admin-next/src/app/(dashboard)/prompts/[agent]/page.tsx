@@ -21,19 +21,30 @@ export default function AgentDetailPage() {
 
   const supabase = createClient();
 
+  // Parse version string (e.g., "v2.3" -> 2.3) for sorting
+  const parseVersion = (version: string): number => {
+    const match = version.match(/v?(\d+(?:\.\d+)?)/i);
+    return match ? parseFloat(match[1]) : 0;
+  };
+
   const loadPrompts = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('prompt_version')
       .select('*')
-      .eq('agent_name', agentName)
-      .order('created_at', { ascending: false });
+      .eq('agent_name', agentName);
 
     if (error) {
       console.error('Error loading prompts:', error);
     } else {
-      setPrompts(data || []);
-      const current = data?.find((p) => p.is_current);
+      // Sort: current version first, then by version number descending
+      const sorted = (data || []).sort((a, b) => {
+        if (a.is_current && !b.is_current) return -1;
+        if (!a.is_current && b.is_current) return 1;
+        return parseVersion(b.version) - parseVersion(a.version);
+      });
+      setPrompts(sorted);
+      const current = sorted.find((p) => p.is_current);
       if (current && !selectedVersion) {
         setSelectedVersion(current);
       }
