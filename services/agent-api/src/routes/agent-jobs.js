@@ -260,6 +260,12 @@ async function processAgentBatch(agent, jobId, items, config) {
     } catch (err) {
       console.error(`${agent} failed for ${item.id}:`, err.message);
       failedCount++;
+
+      // Reset item back to "ready" status so it can be retried
+      await supabase
+        .from('ingestion_queue')
+        .update({ status_code: config.statusCode() })
+        .eq('id', item.id);
     }
   }
 
