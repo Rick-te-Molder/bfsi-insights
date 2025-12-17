@@ -203,6 +203,11 @@ export class AgentRunner {
           await this.addMetric('tokens_prompt', result.usage.prompt_tokens);
           await this.addMetric('tokens_completion', result.usage.completion_tokens);
         }
+
+        // Write enrichment_meta to queue item payload for version tracking
+        if (context.queueId) {
+          await this.writeEnrichmentMeta(context.queueId, promptConfig, result.usage?.model);
+        }
       }
 
       // End LangSmith trace
@@ -245,5 +250,73 @@ export class AgentRunner {
       queueId: options.queueId,
       parentRunId: this.trace?.id,
     });
+  }
+
+  /**
+   * Write enrichment metadata to queue item payload for version tracking
+   * Maps agent names to enrichment step keys
+   * @param {string} queueId - Queue item ID
+   * @param {object} promptConfig - Prompt configuration with id, version, model_id
+   * @param {string} llmModel - LLM model used (from result.usage.model)
+   */
+  async writeEnrichmentMeta(queueId, promptConfig, llmModel) {
+    // Map agent names to enrichment step keys
+    const agentToStep = {
+      summarizer: 'summarize',
+      tagger: 'tag',
+      'thumbnail-generator': 'thumbnail',
+    };
+
+    const stepKey = agentToStep[this.agentName];
+    if (!stepKey) {
+      // Not an enrichment agent, skip
+      return;
+    }
+
+    try {
+      // Fetch current payload
+      const { data: item, error: fetchError } = await this.supabase
+        .from('ingestion_queue')
+        .select('payload')
+        .eq('id', queueId)
+        .single();
+
+      if (fetchError) {
+        console.warn(`⚠️ Failed to fetch queue item for enrichment_meta: ${fetchError.message}`);
+        return;
+      }
+
+      // Build enrichment_meta entry
+      const metaEntry = {
+        prompt_version_id: promptConfig.id,
+        prompt_version: promptConfig.version,
+        llm_model: llmModel || promptConfig.model_id || 'unknown',
+        processed_at: new Date().toISOString(),
+      };
+
+      // Merge with existing payload
+      const existingMeta = item.payload?.enrichment_meta || {};
+      const updatedPayload = {
+        ...item.payload,
+        enrichment_meta: {
+          ...existingMeta,
+          [stepKey]: metaEntry,
+        },
+      };
+
+      // Update queue item
+      const { error: updateError } = await this.supabase
+        .from('ingestion_queue')
+        .update({ payload: updatedPayload })
+        .eq('id', queueId);
+
+      if (updateError) {
+        console.warn(`⚠️ Failed to update enrichment_meta: ${updateError.message}`);
+      } else {
+        console.log(`📝 [${this.agentName}] Wrote enrichment_meta.${stepKey} to queue item`);
+      }
+    } catch (err) {
+      console.warn(`⚠️ Error writing enrichment_meta: ${err.message}`);
+    }
   }
 }

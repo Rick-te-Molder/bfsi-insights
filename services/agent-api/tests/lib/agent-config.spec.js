@@ -40,6 +40,56 @@ describe('agent-config', () => {
     vi.restoreAllMocks();
   });
 
+  describe('getNextStatus', () => {
+    it('returns defaultNext when no control flags are set', async () => {
+      const { getNextStatus } = await import('../../src/lib/agent-config.js');
+      const item = { payload: { title: 'Test' } };
+      expect(getNextStatus(item, 220)).toBe(220);
+    });
+
+    it('returns _return_status when both _single_step and _return_status are set', async () => {
+      const { getNextStatus } = await import('../../src/lib/agent-config.js');
+      const item = { payload: { _single_step: 'summarize', _return_status: 240 } };
+      expect(getNextStatus(item, 220)).toBe(240);
+    });
+
+    it('returns _return_status at final step even without _single_step', async () => {
+      const { getNextStatus } = await import('../../src/lib/agent-config.js');
+      const item = { payload: { _return_status: 300 } };
+      expect(getNextStatus(item, 300, true)).toBe(300);
+    });
+
+    it('returns defaultNext at non-final step when only _return_status is set', async () => {
+      const { getNextStatus } = await import('../../src/lib/agent-config.js');
+      const item = { payload: { _return_status: 300 } };
+      expect(getNextStatus(item, 220, false)).toBe(220);
+    });
+  });
+
+  describe('cleanPayloadFlags', () => {
+    it('removes _single_step from payload', async () => {
+      const { cleanPayloadFlags } = await import('../../src/lib/agent-config.js');
+      const payload = { title: 'Test', _single_step: 'summarize' };
+      const cleaned = cleanPayloadFlags(payload);
+      expect(cleaned._single_step).toBeUndefined();
+      expect(cleaned.title).toBe('Test');
+    });
+
+    it('preserves _return_status (cleaned separately at final step)', async () => {
+      const { cleanPayloadFlags } = await import('../../src/lib/agent-config.js');
+      const payload = { title: 'Test', _return_status: 300 };
+      const cleaned = cleanPayloadFlags(payload);
+      expect(cleaned._return_status).toBe(300);
+    });
+
+    it('does not mutate original payload', async () => {
+      const { cleanPayloadFlags } = await import('../../src/lib/agent-config.js');
+      const payload = { title: 'Test', _single_step: 'summarize' };
+      cleanPayloadFlags(payload);
+      expect(payload._single_step).toBe('summarize');
+    });
+  });
+
   describe('AGENTS', () => {
     it('exports all three agent configurations', async () => {
       const { AGENTS } = await import('../../src/lib/agent-config.js');
@@ -54,7 +104,7 @@ describe('agent-config', () => {
 
       expect(AGENTS.summarizer.statusCode()).toBe(210);
       expect(AGENTS.summarizer.workingStatusCode()).toBe(211);
-      expect(AGENTS.summarizer.nextStatusCode()).toBe(220);
+      expect(AGENTS.summarizer.nextStatusCode({ payload: {} })).toBe(220);
     });
 
     it('tagger has correct status code functions', async () => {
@@ -62,7 +112,7 @@ describe('agent-config', () => {
 
       expect(AGENTS.tagger.statusCode()).toBe(220);
       expect(AGENTS.tagger.workingStatusCode()).toBe(221);
-      expect(AGENTS.tagger.nextStatusCode()).toBe(230);
+      expect(AGENTS.tagger.nextStatusCode({ payload: {} })).toBe(230);
     });
 
     it('thumbnailer has correct status code functions', async () => {
@@ -70,7 +120,7 @@ describe('agent-config', () => {
 
       expect(AGENTS.thumbnailer.statusCode()).toBe(230);
       expect(AGENTS.thumbnailer.workingStatusCode()).toBe(231);
-      expect(AGENTS.thumbnailer.nextStatusCode()).toBe(300);
+      expect(AGENTS.thumbnailer.nextStatusCode({ payload: {} })).toBe(300);
     });
 
     it('summarizer updatePayload merges item payload with result', async () => {
