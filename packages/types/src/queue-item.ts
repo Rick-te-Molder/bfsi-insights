@@ -14,10 +14,19 @@ export interface QueueItem {
 
 export interface QueueItemPayload {
   title?: string;
-  summary?: { short?: string };
+  summary?: {
+    short?: string;
+    medium?: string;
+    long?: string;
+  };
   rejection_reason?: string;
   source_slug?: string;
+  source_name?: string;
+  date_published?: string;
   published_at?: string;
+  audiences?: string[];
+  geographies?: string[];
+  topics?: string[];
   industry_codes?: string[];
   geography_codes?: string[];
   topic_codes?: string[];

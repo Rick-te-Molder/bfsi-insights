@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { ReviewList } from './review-list';
 import { SourceFilter } from './source-filter';
 import { MasterDetailView } from './master-detail';
+import { ItemsStatusGrid } from './items-status-grid';
+import { CardView } from './card-view';
 import type { TaxonomyConfig, TaxonomyData, TaxonomyItem } from '@/components/tags';
 import type { QueueItem } from '@bfsi/types';
 
@@ -213,17 +215,9 @@ export default async function ReviewPage({
       getTaxonomyData(),
     ]);
 
-  // Status filters using names from status_lookup table
-  const statusFilters = [
-    { value: 'pending_review', label: 'Pending Review' },
-    { value: 'queued', label: 'Queued' },
-    { value: 'processing', label: 'Processing' },
-    { value: 'failed', label: 'Failed' },
-    { value: 'dead_letter', label: '💀 Dead Letter' },
-    { value: 'rejected', label: 'Rejected' },
-    { value: 'approved', label: 'Approved' },
-    { value: 'all', label: 'All' },
-  ];
+  // Fetch status counts for the grid
+  const supabase = createServiceRoleClient();
+  const { data: statusData } = await supabase.rpc('get_pipeline_status_counts');
 
   const timeFilters = [
     { value: '', label: 'All time' },
@@ -247,7 +241,7 @@ export default async function ReviewPage({
       {/* Header */}
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold">Review Queue</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Items</h1>
           <p className="mt-1 text-sm text-neutral-400">
             {items.length} items
             {status !== 'all' && ` · ${status}`}
@@ -256,14 +250,14 @@ export default async function ReviewPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* View Toggle - Split only visible in landscape or md+ */}
+          {/* View Toggle */}
           <div className="flex rounded-lg bg-neutral-800 p-1">
             <Link
               href={buildFilterUrl({ view: 'split' })}
               className={`hidden landscape:inline-flex md:inline-flex px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 viewMode === 'split' ? 'bg-sky-600 text-white' : 'text-neutral-400 hover:text-white'
               }`}
-              title="Split view with keyboard shortcuts (landscape/tablet+)"
+              title="Split view with keyboard shortcuts"
             >
               ⬛ Split
             </Link>
@@ -272,9 +266,18 @@ export default async function ReviewPage({
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 viewMode === 'list' ? 'bg-sky-600 text-white' : 'text-neutral-400 hover:text-white'
               }`}
-              title="List view with bulk actions"
+              title="List view"
             >
               ☰ List
+            </Link>
+            <Link
+              href={buildFilterUrl({ view: 'card' })}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                viewMode === 'card' ? 'bg-sky-600 text-white' : 'text-neutral-400 hover:text-white'
+              }`}
+              title="Card view (website style)"
+            >
+              ▦ Card
             </Link>
           </div>
           <Link
@@ -287,22 +290,12 @@ export default async function ReviewPage({
         </div>
       </header>
 
-      {/* Status Filters - horizontal scroll on mobile */}
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible md:flex-wrap scrollbar-hide">
-        {statusFilters.map((filter) => (
-          <Link
-            key={filter.value}
-            href={buildFilterUrl({ status: filter.value })}
-            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              status === filter.value
-                ? 'bg-sky-600 text-white'
-                : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-            }`}
-          >
-            {filter.label}
-          </Link>
-        ))}
-      </div>
+      {/* Status Grid - 4 categories matching dashboard style */}
+      <ItemsStatusGrid
+        statusData={statusData || []}
+        currentStatus={status}
+        buildFilterUrl={buildFilterUrl}
+      />
 
       {/* Advanced Filters */}
       <div className="flex flex-wrap items-center gap-3 md:gap-4 rounded-lg bg-neutral-800/30 px-3 md:px-4 py-2 md:py-3">
@@ -339,8 +332,15 @@ export default async function ReviewPage({
         )}
       </div>
 
-      {/* Content View - Split view hidden on mobile portrait, shown in landscape/tablet+ */}
-      {viewMode === 'split' ? (
+      {/* Content View */}
+      {viewMode === 'card' ? (
+        <CardView
+          items={items}
+          status={status}
+          taxonomyConfig={taxonomyConfig}
+          taxonomyData={taxonomyData}
+        />
+      ) : viewMode === 'split' ? (
         <>
           {/* Split view for landscape/tablet+ */}
           <div className="hidden landscape:block md:block">
