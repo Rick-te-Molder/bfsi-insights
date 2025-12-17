@@ -30,13 +30,44 @@ interface LookupTables {
 async function getQueueItem(id: string) {
   const supabase = createServiceRoleClient();
 
+  // Try ingestion_queue first
   const { data, error } = await supabase.from('ingestion_queue').select('*').eq('id', id).single();
 
-  if (error || !data) {
+  if (!error && data) {
+    return data as QueueItemWithRun;
+  }
+
+  // If not found, try kb_publication (for published items)
+  const { data: pubData, error: pubError } = await supabase
+    .from('kb_publication')
+    .select(
+      'id, source_url, title, summary_short, summary_medium, summary_long, source_name, date_published, date_added, thumbnail',
+    )
+    .eq('id', id)
+    .single();
+
+  if (pubError || !pubData) {
     return null;
   }
 
-  return data as QueueItemWithRun;
+  // Transform kb_publication to QueueItem format
+  return {
+    id: pubData.id,
+    url: pubData.source_url,
+    status_code: 400,
+    discovered_at: pubData.date_added || '',
+    payload: {
+      title: pubData.title,
+      source_name: pubData.source_name,
+      date_published: pubData.date_published,
+      thumbnail_url: pubData.thumbnail,
+      summary: {
+        short: pubData.summary_short,
+        medium: pubData.summary_medium,
+        long: pubData.summary_long,
+      },
+    },
+  } as QueueItemWithRun;
 }
 
 async function getLookupTables(): Promise<LookupTables> {
