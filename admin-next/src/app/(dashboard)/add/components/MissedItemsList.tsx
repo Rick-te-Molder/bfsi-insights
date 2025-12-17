@@ -1,6 +1,7 @@
 'use client';
 
 import type { MissedDiscovery } from '@bfsi/types';
+import { useStatus } from '@/contexts/StatusContext';
 
 interface MissedItemsListProps {
   items: MissedDiscovery[];
@@ -9,36 +10,16 @@ interface MissedItemsListProps {
   onDelete: (id: string) => void;
 }
 
-// KB-277: Map status codes to human-readable labels and colors
-const STATUS_MAP: Record<number, { label: string; color: string }> = {
-  200: { label: 'Pending Enrichment', color: 'bg-neutral-700 text-neutral-300' },
-  210: { label: 'To Summarize', color: 'bg-amber-500/20 text-amber-300' },
-  211: { label: 'Summarizing...', color: 'bg-amber-500/30 text-amber-200 animate-pulse' },
-  220: { label: 'To Tag', color: 'bg-amber-500/20 text-amber-300' },
-  221: { label: 'Tagging...', color: 'bg-amber-500/30 text-amber-200 animate-pulse' },
-  230: { label: 'To Thumbnail', color: 'bg-amber-500/20 text-amber-300' },
-  231: { label: 'Thumbnailing...', color: 'bg-amber-500/30 text-amber-200 animate-pulse' },
-  240: { label: 'Enriched', color: 'bg-sky-500/20 text-sky-300' },
-  300: { label: 'Pending Review', color: 'bg-sky-500/20 text-sky-300' },
-  330: { label: 'Approved', color: 'bg-emerald-500/20 text-emerald-300' },
-  400: { label: 'Published', color: 'bg-emerald-500/30 text-emerald-200' },
-  500: { label: 'Failed', color: 'bg-red-500/20 text-red-300' },
-  530: { label: 'Irrelevant', color: 'bg-neutral-500/20 text-neutral-400' },
-  540: { label: 'Rejected', color: 'bg-red-500/20 text-red-300' },
-  599: { label: 'Dead Letter', color: 'bg-red-500/30 text-red-200' },
-};
-
-function getPipelineStatus(statusCode: number | undefined) {
-  if (!statusCode) return { label: 'Not in queue', color: 'bg-neutral-800 text-neutral-500' };
-  return (
-    STATUS_MAP[statusCode] || {
-      label: `Status ${statusCode}`,
-      color: 'bg-neutral-700 text-neutral-300',
-    }
-  );
+// KB-280: Format status name for display (snake_case to Title Case)
+function formatStatusLabel(name: string): string {
+  return name
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 }
 
 export function MissedItemsList({ items, loading, onEdit, onDelete }: MissedItemsListProps) {
+  const { getStatusName, getStatusColor } = useStatus();
   if (loading) {
     return <div className="p-8 text-center text-neutral-500">Loading...</div>;
   }
@@ -53,8 +34,14 @@ export function MissedItemsList({ items, loading, onEdit, onDelete }: MissedItem
         // Supabase returns joined data as array
         const queue = item.ingestion_queue?.[0];
         const statusCode = queue?.status_code;
-        const pipelineStatus = getPipelineStatus(statusCode);
         const title = queue?.payload?.title;
+
+        // KB-280: Use StatusContext for dynamic status lookup
+        const statusName = statusCode ? getStatusName(statusCode) : null;
+        const statusColor = statusCode
+          ? getStatusColor(statusCode)
+          : 'bg-neutral-800 text-neutral-500';
+        const statusLabel = statusName ? formatStatusLabel(statusName) : 'Not in queue';
 
         return (
           <div
@@ -74,9 +61,7 @@ export function MissedItemsList({ items, loading, onEdit, onDelete }: MissedItem
                 {title && <p className="text-xs text-neutral-500 truncate">{item.source_domain}</p>}
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className={`px-2 py-0.5 rounded text-xs ${pipelineStatus.color}`}>
-                  {pipelineStatus.label}
-                </span>
+                <span className={`px-2 py-0.5 rounded text-xs ${statusColor}`}>{statusLabel}</span>
               </div>
             </div>
             {item.why_valuable && (

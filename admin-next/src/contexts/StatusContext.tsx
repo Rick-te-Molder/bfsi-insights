@@ -1,0 +1,152 @@
+'use client';
+
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createClient } from '@/lib/supabase/client';
+
+interface StatusInfo {
+  code: number;
+  name: string;
+  description: string | null;
+  category: string;
+  is_terminal: boolean;
+}
+
+interface StatusContextType {
+  statuses: StatusInfo[];
+  loading: boolean;
+  getStatusName: (code: number) => string;
+  getStatusColor: (code: number) => string;
+  getStatusByCode: (code: number) => StatusInfo | undefined;
+}
+
+// Fallback values in case DB load fails
+const FALLBACK_STATUSES: StatusInfo[] = [
+  {
+    code: 200,
+    name: 'pending_enrichment',
+    description: null,
+    category: 'enrichment',
+    is_terminal: false,
+  },
+  {
+    code: 210,
+    name: 'to_summarize',
+    description: null,
+    category: 'enrichment',
+    is_terminal: false,
+  },
+  { code: 211, name: 'summarizing', description: null, category: 'enrichment', is_terminal: false },
+  { code: 220, name: 'to_tag', description: null, category: 'enrichment', is_terminal: false },
+  { code: 221, name: 'tagging', description: null, category: 'enrichment', is_terminal: false },
+  {
+    code: 230,
+    name: 'to_thumbnail',
+    description: null,
+    category: 'enrichment',
+    is_terminal: false,
+  },
+  {
+    code: 231,
+    name: 'thumbnailing',
+    description: null,
+    category: 'enrichment',
+    is_terminal: false,
+  },
+  { code: 240, name: 'enriched', description: null, category: 'enrichment', is_terminal: false },
+  { code: 300, name: 'pending_review', description: null, category: 'review', is_terminal: false },
+  { code: 330, name: 'approved', description: null, category: 'review', is_terminal: false },
+  { code: 400, name: 'published', description: null, category: 'published', is_terminal: true },
+  { code: 500, name: 'failed', description: null, category: 'terminal', is_terminal: true },
+  { code: 530, name: 'irrelevant', description: null, category: 'terminal', is_terminal: true },
+  { code: 540, name: 'rejected', description: null, category: 'terminal', is_terminal: true },
+  { code: 599, name: 'dead_letter', description: null, category: 'terminal', is_terminal: true },
+];
+
+// Color mapping by status name
+const STATUS_COLORS: Record<string, string> = {
+  // Enrichment stages
+  pending_enrichment: 'bg-neutral-500/20 text-neutral-300',
+  to_summarize: 'bg-amber-500/20 text-amber-300',
+  summarizing: 'bg-amber-500/30 text-amber-200',
+  to_tag: 'bg-amber-500/20 text-amber-300',
+  tagging: 'bg-amber-500/30 text-amber-200',
+  to_thumbnail: 'bg-amber-500/20 text-amber-300',
+  thumbnailing: 'bg-amber-500/30 text-amber-200',
+  enriched: 'bg-emerald-500/20 text-emerald-300',
+  // Review stages
+  pending_review: 'bg-sky-500/20 text-sky-300',
+  in_review: 'bg-sky-500/30 text-sky-200',
+  editing: 'bg-sky-500/30 text-sky-200',
+  approved: 'bg-green-500/20 text-green-300',
+  // Published
+  published: 'bg-green-500/30 text-green-200',
+  // Terminal
+  failed: 'bg-red-500/20 text-red-300',
+  irrelevant: 'bg-neutral-500/20 text-neutral-400',
+  rejected: 'bg-red-500/20 text-red-300',
+  dead_letter: 'bg-red-500/30 text-red-200',
+};
+
+const StatusContext = createContext<StatusContextType | null>(null);
+
+export function StatusProvider({ children }: { children: ReactNode }) {
+  const [statuses, setStatuses] = useState<StatusInfo[]>(FALLBACK_STATUSES);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadStatuses() {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('status_lookup')
+          .select('code, name, description, category, is_terminal')
+          .order('code');
+
+        if (error) {
+          console.error('Failed to load status codes:', error.message);
+          return;
+        }
+
+        if (data?.length) {
+          setStatuses(data);
+        }
+      } catch (err) {
+        console.error('Error loading status codes:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadStatuses();
+  }, []);
+
+  const getStatusByCode = (code: number): StatusInfo | undefined => {
+    return statuses.find((s) => s.code === code);
+  };
+
+  const getStatusName = (code: number): string => {
+    const status = getStatusByCode(code);
+    return status?.name || `status_${code}`;
+  };
+
+  const getStatusColor = (code: number): string => {
+    const name = getStatusName(code);
+    return STATUS_COLORS[name] || 'bg-neutral-500/20 text-neutral-300';
+  };
+
+  return (
+    <StatusContext.Provider
+      value={{ statuses, loading, getStatusName, getStatusColor, getStatusByCode }}
+    >
+      {children}
+    </StatusContext.Provider>
+  );
+}
+
+export function useStatus() {
+  const context = useContext(StatusContext);
+  if (!context) {
+    throw new Error('useStatus must be used within a StatusProvider');
+  }
+  return context;
+}
