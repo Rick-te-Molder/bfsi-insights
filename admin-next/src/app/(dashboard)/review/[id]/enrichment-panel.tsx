@@ -29,6 +29,21 @@ const STEP_CONFIG = [
   { key: 'thumbnail', label: 'Thumbnail', agent: 'thumbnail-generator', statusCode: 230 },
 ] as const;
 
+// Check if step has output data in payload (for legacy items without enrichment_meta)
+function hasStepOutput(payload: QueueItem['payload'], stepKey: string): boolean {
+  if (!payload) return false;
+  switch (stepKey) {
+    case 'summarize':
+      return !!(payload.summary || payload.title);
+    case 'tag':
+      return !!(payload.industry_codes?.length || payload.topic_codes?.length);
+    case 'thumbnail':
+      return !!(payload.thumbnail_url || payload.thumbnail);
+    default:
+      return false;
+  }
+}
+
 export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const router = useRouter();
@@ -46,9 +61,14 @@ export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) 
     return meta.prompt_version_id === current.id;
   };
 
-  const hasAnyOutdated = STEP_CONFIG.some(
-    ({ key, agent }) => enrichmentMeta[key] && !isUpToDate(key, agent),
-  );
+  // Legacy items (with output but no meta) are considered outdated since we don't know their version
+  const hasAnyOutdated = STEP_CONFIG.some(({ key, agent }) => {
+    const hasMeta = !!enrichmentMeta[key];
+    const hasLegacy = hasStepOutput(item.payload, key);
+    if (hasMeta) return !isUpToDate(key, agent);
+    if (hasLegacy) return true; // Legacy = outdated (unknown version)
+    return false;
+  });
 
   const triggerStep = async (stepKey: string, statusCode: number) => {
     setLoading(stepKey);
@@ -192,7 +212,10 @@ export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) 
           const meta = enrichmentMeta[key];
           const current = getCurrentPrompt(agent);
           const upToDate = isUpToDate(key, agent);
-          const hasRun = !!meta?.prompt_version;
+          const hasMetaRun = !!meta?.prompt_version;
+          const hasLegacyOutput = hasStepOutput(item.payload, key);
+          const hasRun = hasMetaRun || hasLegacyOutput;
+          const isLegacy = !hasMetaRun && hasLegacyOutput;
 
           return (
             <div key={key} className="flex items-center justify-between gap-2">
@@ -206,7 +229,7 @@ export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) 
                   )}
                 </div>
                 <div className="text-xs text-neutral-500 truncate">
-                  {hasRun ? (
+                  {hasMetaRun ? (
                     <>
                       {meta.prompt_version}
                       {!upToDate && current && (
@@ -214,6 +237,8 @@ export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) 
                       )}
                       <span className="text-neutral-600"> · {formatDate(meta.processed_at)}</span>
                     </>
+                  ) : isLegacy ? (
+                    <span className="text-neutral-500">Legacy (no version info)</span>
                   ) : (
                     <span className="text-neutral-600">Not processed</span>
                   )}
