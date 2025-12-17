@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { PipelineStatusGrid } from '@/components/dashboard/PipelineStatusGrid';
+import { LivePipelineStatus } from '@/components/dashboard/LivePipelineStatus';
 import { AgentJobCard } from '@/components/dashboard/AgentJobCard';
 import { DiscoveryControlCard } from '@/components/dashboard/DiscoveryControlCard';
 
@@ -291,7 +291,7 @@ export default async function DashboardPage() {
         <h2 className="text-xs md:text-sm font-medium text-neutral-400 uppercase tracking-wide">
           Pipeline Status by Code
         </h2>
-        <PipelineStatusGrid statusData={allStatusData} />
+        <LivePipelineStatus initialData={allStatusData} pollInterval={5000} />
       </div>
 
       {/* Agent Controls */}

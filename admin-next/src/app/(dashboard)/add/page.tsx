@@ -35,10 +35,13 @@ export default function AddArticlePage() {
 
   const loadMissedItems = useCallback(async () => {
     setLoadingList(true);
+    // KB-277: Join with ingestion_queue to show pipeline status
     const { data, error } = await supabase
       .from('missed_discovery')
       .select(
-        'id, url, source_domain, submitter_name, submitter_audience, submitter_channel, why_valuable, submitter_urgency, resolution_status, submitted_at, existing_source_slug',
+        `id, url, source_domain, submitter_name, submitter_audience, submitter_channel, 
+         why_valuable, submitter_urgency, resolution_status, submitted_at, existing_source_slug,
+         queue_id, ingestion_queue(status_code, payload)`,
       )
       .order('submitted_at', { ascending: false })
       .limit(100);
@@ -213,9 +216,33 @@ export default function AddArticlePage() {
           return;
         }
 
+        // KB-277: Insert into ingestion_queue FIRST to get the ID
+        const isPdf = inputMode === 'pdf';
+        const { data: queueItem, error: queueError } = await supabase
+          .from('ingestion_queue')
+          .insert({
+            url: finalUrl,
+            status_code: isPdf ? 230 : 200, // PDFs skip to thumbnailing (230), URLs start at pending_enrichment (200)
+            entry_type: 'manual',
+            payload: {
+              manual_add: true,
+              title: isPdf ? pdfTitle.trim() : null,
+              is_pdf: isPdf,
+              submitter: submitterName.trim() || null,
+              why_valuable: whyValuable.trim(),
+              source: existingSource || null,
+            },
+          })
+          .select('id')
+          .single();
+
+        if (queueError) throw queueError;
+
+        // Link missed_discovery to ingestion_queue via queue_id
         const { error } = await supabase.from('missed_discovery').insert({
           url: finalUrl,
           url_norm: urlNorm,
+          queue_id: queueItem.id,
           submitter_name: submitterName.trim() || null,
           submitter_type: 'client',
           submitter_audience: submitterAudience,
@@ -228,32 +255,26 @@ export default function AddArticlePage() {
           existing_source_slug: existingSource,
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Failed to add to missed_discovery:', error);
+        }
 
-        const isPdf = inputMode === 'pdf';
-        const { error: queueError } = await supabase.from('ingestion_queue').insert({
-          url: finalUrl,
-          status_code: isPdf ? 230 : 200, // PDFs skip to thumbnailing (230), URLs start at pending_enrichment (200)
-          entry_type: 'manual',
-          payload: {
-            manual_add: true,
-            title: isPdf ? pdfTitle.trim() : null,
-            is_pdf: isPdf,
-            submitter: submitterName.trim() || null,
-            why_valuable: whyValuable.trim(),
-            source: existingSource || null,
-          },
-        });
-
-        if (queueError) {
-          console.error('Failed to add to ingestion queue:', queueError);
+        // KB-277: Auto-trigger enrichment for priority processing
+        try {
+          await fetch('/api/process-manual', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ queueId: queueItem.id }),
+          });
+        } catch (triggerErr) {
+          console.error('Failed to trigger enrichment:', triggerErr);
         }
 
         setStatus('success');
         setMessage(
           isPdf
-            ? 'PDF uploaded! It will be processed and available for review.'
-            : 'Article submitted! It will be processed AND help improve our discovery.',
+            ? 'PDF uploaded! Processing started - check History tab for progress.'
+            : 'Article submitted! Processing started - check History tab for progress.',
         );
       }
 

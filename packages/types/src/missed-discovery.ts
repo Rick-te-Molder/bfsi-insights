@@ -15,4 +15,12 @@ export interface MissedDiscovery {
   resolution_status: string;
   submitted_at: string;
   existing_source_slug: string | null;
+  // KB-277: Pipeline status from ingestion_queue
+  queue_id: string | null;
+  ingestion_queue:
+    | {
+        status_code: number;
+        payload: { title?: string } | null;
+      }[]
+    | null;
 }

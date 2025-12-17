@@ -373,4 +373,51 @@ router.get('/eval/status/:agentName', async (req, res) => {
   }
 });
 
+// POST /api/agents/process-priority - KB-277: Priority processing for manual articles
+router.post('/process-priority', async (req, res) => {
+  try {
+    const { queueId } = req.body;
+
+    if (!queueId) {
+      return res.status(400).json({ error: 'queueId is required' });
+    }
+
+    await loadStatusCodes();
+
+    // Fetch the specific item
+    const { data: item, error } = await supabase
+      .from('ingestion_queue')
+      .select('*')
+      .eq('id', queueId)
+      .single();
+
+    if (error || !item) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    console.log(`🚀 Priority processing for manual article: ${item.url}`);
+
+    // Run full enrichment pipeline with skipRejection (manual = always relevant)
+    const result = await enrichItem(item, {
+      includeThumbnail: true,
+      skipRejection: true,
+    });
+
+    if (result.success) {
+      console.log(`✅ Priority processing complete: ${item.url}`);
+      res.json({ success: true, message: 'Article processed successfully' });
+    } else {
+      console.log(`⚠️ Priority processing failed: ${result.error || result.reason}`);
+      res.json({
+        success: false,
+        error: result.error || result.reason,
+        willRetry: result.willRetry,
+      });
+    }
+  } catch (err) {
+    console.error('Priority processing error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
