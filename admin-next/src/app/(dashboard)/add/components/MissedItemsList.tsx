@@ -23,6 +23,7 @@ const STATUS_MAP: Record<number, { label: string; color: string }> = {
   330: { label: 'Approved', color: 'bg-emerald-500/20 text-emerald-300' },
   400: { label: 'Published', color: 'bg-emerald-500/30 text-emerald-200' },
   500: { label: 'Failed', color: 'bg-red-500/20 text-red-300' },
+  530: { label: 'Irrelevant', color: 'bg-neutral-500/20 text-neutral-400' },
   540: { label: 'Rejected', color: 'bg-red-500/20 text-red-300' },
   599: { label: 'Dead Letter', color: 'bg-red-500/30 text-red-200' },
 };
