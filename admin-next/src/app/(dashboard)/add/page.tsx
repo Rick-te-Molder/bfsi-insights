@@ -36,12 +36,13 @@ export default function AddArticlePage() {
   const loadMissedItems = useCallback(async () => {
     setLoadingList(true);
     // KB-277: Join with ingestion_queue to show pipeline status
+    // KB-280: Use explicit FK hint for join (queue_id -> ingestion_queue.id)
     const { data, error } = await supabase
       .from('missed_discovery')
       .select(
         `id, url, source_domain, submitter_name, submitter_audience, submitter_channel, 
          why_valuable, submitter_urgency, resolution_status, submitted_at, existing_source_slug,
-         queue_id, ingestion_queue(status_code, payload)`,
+         queue_id, ingestion_queue!queue_id(status_code, payload)`,
       )
       .order('submitted_at', { ascending: false })
       .limit(100);

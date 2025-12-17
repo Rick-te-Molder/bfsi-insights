@@ -37,6 +37,8 @@ export function getStatusColor(status: string): string {
     approved: 'bg-green-500/20 text-green-300',
     rejected: 'bg-red-500/20 text-red-300',
     failed: 'bg-red-500/20 text-red-300',
+    irrelevant: 'bg-neutral-500/20 text-neutral-400',
+    pending_review: 'bg-sky-500/20 text-sky-300',
   };
   return colors[status] || 'bg-neutral-500/20 text-neutral-300';
 }
@@ -51,10 +53,11 @@ const STATUS_CODE_TO_NAME: Record<number, string> = {
   230: 'queued',
   231: 'processing',
   240: 'enriched',
-  300: 'enriched',
+  300: 'pending_review',
   330: 'approved',
   400: 'approved',
   500: 'failed',
+  530: 'irrelevant',
   540: 'rejected',
   599: 'failed',
 };
