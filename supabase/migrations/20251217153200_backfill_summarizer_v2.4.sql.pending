@@ -13,8 +13,7 @@
 
 UPDATE ingestion_queue
 SET 
-  status_code = 210,  -- to_summarize
-  updated_at = NOW()
+  status_code = 210  -- to_summarize
 WHERE 
   status_code >= 212  -- has been summarized
   AND status_code < 400  -- not yet published
