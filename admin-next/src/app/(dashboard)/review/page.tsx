@@ -78,7 +78,7 @@ async function getQueueItems(
     const { data: pubData, error: pubError } = await supabase
       .from('kb_publication')
       .select(
-        'id, url, title, summary_short, summary_medium, summary_long, source_name, date_published, date_added',
+        'id, source_url, title, summary_short, summary_medium, summary_long, source_name, date_published, date_added, thumbnail',
       )
       .order('date_added', { ascending: false })
       .limit(500);
@@ -91,13 +91,14 @@ async function getQueueItems(
     // Transform kb_publication to QueueItem format
     const items: QueueItem[] = (pubData || []).map((pub) => ({
       id: pub.id,
-      url: pub.url,
+      url: pub.source_url,
       status_code: 400,
       discovered_at: pub.date_added || '',
       payload: {
         title: pub.title,
         source_name: pub.source_name,
         date_published: pub.date_published,
+        thumbnail_url: pub.thumbnail,
         summary: {
           short: pub.summary_short,
           medium: pub.summary_medium,

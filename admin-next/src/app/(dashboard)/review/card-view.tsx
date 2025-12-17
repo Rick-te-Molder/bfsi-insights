@@ -25,10 +25,12 @@ function ItemCard({
   item,
   isExpanded,
   onToggle,
+  status,
 }: {
   item: QueueItem;
   isExpanded: boolean;
   onToggle: () => void;
+  status: string;
 }) {
   const payload = item.payload || {};
   const summary = payload.summary || {};
@@ -154,7 +156,7 @@ function ItemCard({
       {/* Action Row */}
       <div className="mt-3 pt-3 border-t border-neutral-800 flex items-center justify-between gap-2">
         <a
-          href={`/review/${item.id}`}
+          href={`/review/${item.id}?view=card&status=${status}`}
           className="text-xs text-sky-400 hover:text-sky-300"
           onClick={(e) => e.stopPropagation()}
         >
@@ -187,7 +189,7 @@ function ItemCard({
 
 export function CardView({
   items,
-  status: _status,
+  status,
   taxonomyConfig: _taxonomyConfig,
   taxonomyData: _taxonomyData,
 }: CardViewProps) {
@@ -209,6 +211,7 @@ export function CardView({
           item={item}
           isExpanded={expandedId === item.id}
           onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
+          status={status}
         />
       ))}
     </ul>

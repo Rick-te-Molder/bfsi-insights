@@ -92,8 +92,16 @@ async function getTaxonomyData() {
   return { taxonomyConfig, taxonomyData };
 }
 
-export default async function ReviewDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ReviewDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ view?: string; status?: string }>;
+}) {
   const { id } = await params;
+  const { view, status } = await searchParams;
+  const backUrl = `/review?${new URLSearchParams({ ...(status && { status }), ...(view && { view }) }).toString()}`;
   const [item, lookups, { taxonomyConfig, taxonomyData }] = await Promise.all([
     getQueueItem(id),
     getLookupTables(),
@@ -148,7 +156,7 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <Link href="/review" className="text-neutral-400 hover:text-white text-sm">
+            <Link href={backUrl} className="text-neutral-400 hover:text-white text-sm">
               ← Back to queue
             </Link>
             <span
