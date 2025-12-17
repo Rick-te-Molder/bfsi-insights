@@ -51,7 +51,7 @@ const STATUS_CODE_TO_NAME: Record<number, string> = {
   230: 'queued',
   231: 'processing',
   240: 'enriched',
-  300: 'enriched',
+  300: 'pending_review',
   330: 'approved',
   400: 'approved',
   500: 'failed',
