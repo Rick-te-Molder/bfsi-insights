@@ -15,94 +15,11 @@ interface StepStats {
 async function getPipelineHealth() {
   const supabase = createServiceRoleClient();
 
-  // Load status codes
-  const { data: statusData } = await supabase
-    .from('status_lookup')
-    .select('code, name')
-    .order('code');
-
-  const statusCodes: Record<string, number> = {};
-  for (const row of statusData || []) {
-    statusCodes[row.name] = row.code;
-  }
-
-  // WIP counts per stage
-  const stages = [
-    { name: 'summarizer', workingCode: statusCodes['summarizing'] },
-    { name: 'tagger', workingCode: statusCodes['tagging'] },
-    { name: 'thumbnailer', workingCode: statusCodes['thumbnailing'] },
-  ];
-
-  const wipCounts: Record<string, number> = {};
-  for (const stage of stages) {
-    if (stage.workingCode) {
-      const { count } = await supabase
-        .from('ingestion_queue')
-        .select('*', { count: 'exact', head: true })
-        .eq('status_code', stage.workingCode);
-      wipCounts[stage.name] = count || 0;
-    }
-  }
-
-  // Dead letter count
-  const { count: dlqCount } = await supabase
-    .from('ingestion_queue')
-    .select('*', { count: 'exact', head: true })
-    .eq('status_code', 599);
-
-  // Stuck items (in working status > 1 hour)
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const workingCodes = stages.map((s) => s.workingCode).filter(Boolean);
-
-  const { data: stuckItems } = await supabase
-    .from('ingestion_queue')
-    .select('id, url, status_code, payload, discovered_at')
-    .in('status_code', workingCodes)
-    .lt('discovered_at', oneHourAgo)
-    .limit(10);
-
-  // Throughput: completed in last 24h
-  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count: completedLast24h } = await supabase
-    .from('pipeline_step_run')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'success')
-    .gte('completed_at', twentyFourHoursAgo);
-
   // Avg time per step (last 24h)
   const { data: stepStats } = await supabase.rpc('get_step_stats_24h');
 
-  // Queue counts per status
-  const queueCounts: Record<string, number> = {};
-  const importantStatuses = [
-    'pending_enrichment',
-    'to_summarize',
-    'to_tag',
-    'to_thumbnail',
-    'pending_review',
-    'approved',
-    'failed',
-    'dead_letter',
-  ];
-
-  for (const status of importantStatuses) {
-    const code = statusCodes[status];
-    if (code) {
-      const { count } = await supabase
-        .from('ingestion_queue')
-        .select('*', { count: 'exact', head: true })
-        .eq('status_code', code);
-      queueCounts[status] = count || 0;
-    }
-  }
-
   return {
-    wipCounts,
-    dlqCount: dlqCount || 0,
-    stuckItems: stuckItems || [],
-    completedLast24h: completedLast24h || 0,
     stepStats: (stepStats || []) as StepStats[],
-    queueCounts,
   };
 }
 
