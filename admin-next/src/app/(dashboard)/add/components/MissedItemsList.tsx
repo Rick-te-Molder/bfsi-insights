@@ -34,7 +34,9 @@ export function MissedItemsList({ items, loading, onEdit, onDelete }: MissedItem
         // Supabase returns joined data as array
         const queue = item.ingestion_queue?.[0];
         const statusCode = queue?.status_code;
-        const title = queue?.payload?.title;
+        const payload = queue?.payload;
+        const title = payload?.title as string | undefined;
+        const publishedAt = payload?.published_at as string | undefined;
 
         // KB-280: Use StatusContext for dynamic status lookup
         const statusName = statusCode ? getStatusName(statusCode) : null;
@@ -48,24 +50,32 @@ export function MissedItemsList({ items, loading, onEdit, onDelete }: MissedItem
             key={item.id}
             className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 space-y-3"
           >
+            {/* Title, Published, Source */}
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <a
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sky-400 hover:underline text-sm font-medium"
+                  className="text-sky-400 hover:underline text-sm font-medium line-clamp-2"
                 >
-                  {title || item.source_domain}
+                  {title || item.url}
                 </a>
-                {title && <p className="text-xs text-neutral-500 truncate">{item.source_domain}</p>}
+                <div className="flex items-center gap-2 mt-1 text-xs text-neutral-500">
+                  {publishedAt && <span>{new Date(publishedAt).toLocaleDateString()}</span>}
+                  <span className="truncate">{item.source_domain}</span>
+                </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className={`px-2 py-0.5 rounded text-xs ${statusColor}`}>{statusLabel}</span>
               </div>
             </div>
+            {/* Why Valuable - background info from submitter */}
             {item.why_valuable && (
-              <p className="text-sm text-neutral-300 line-clamp-2">{item.why_valuable}</p>
+              <div className="text-xs text-neutral-400 border-l-2 border-neutral-700 pl-2">
+                <span className="text-neutral-500">Why valuable:</span>{' '}
+                <span className="text-neutral-300">{item.why_valuable}</span>
+              </div>
             )}
             <div className="flex items-center justify-between text-xs text-neutral-500">
               <span>

@@ -20,7 +20,7 @@ export interface MissedDiscovery {
   ingestion_queue:
     | {
         status_code: number;
-        payload: { title?: string } | null;
+        payload: { title?: string; published_at?: string } | null;
       }[]
     | null;
 }
