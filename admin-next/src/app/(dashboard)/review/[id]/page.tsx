@@ -3,6 +3,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 import { formatDateTime, getStatusColorByCode, getStatusName } from '@/lib/utils';
 import { notFound } from 'next/navigation';
 import { ReviewActions } from './actions';
+import { EnrichmentPanel } from './enrichment-panel';
 import { EvaluationPanel } from './evaluation-panel';
 import { UnknownEntitiesPanel } from './unknown-entities';
 import { PipelineTimeline } from './pipeline-timeline';
@@ -123,6 +124,18 @@ async function getTaxonomyData() {
   return { taxonomyConfig, taxonomyData };
 }
 
+async function getCurrentPrompts() {
+  const supabase = createServiceRoleClient();
+
+  const { data } = await supabase
+    .from('prompt_version')
+    .select('id, version, agent_name')
+    .eq('is_current', true)
+    .in('agent_name', ['summarizer', 'tagger', 'thumbnail-generator']);
+
+  return (data || []) as { id: string; version: string; agent_name: string }[];
+}
+
 export default async function ReviewDetailPage({
   params,
   searchParams,
@@ -133,10 +146,11 @@ export default async function ReviewDetailPage({
   const { id } = await params;
   const { view, status } = await searchParams;
   const backUrl = `/review?${new URLSearchParams({ ...(status && { status }), ...(view && { view }) }).toString()}`;
-  const [item, lookups, { taxonomyConfig, taxonomyData }] = await Promise.all([
+  const [item, lookups, { taxonomyConfig, taxonomyData }, currentPrompts] = await Promise.all([
     getQueueItem(id),
     getLookupTables(),
     getTaxonomyData(),
+    getCurrentPrompts(),
   ]);
 
   if (!item) {
@@ -320,6 +334,9 @@ export default async function ReviewDetailPage({
         <div className="space-y-6">
           {/* Actions */}
           <ReviewActions item={item} />
+
+          {/* Enrichment Panel with version tracking */}
+          <EnrichmentPanel item={item} currentPrompts={currentPrompts} />
 
           {/* Pipeline History */}
           <PipelineTimeline queueId={item.id} currentRunId={item.current_run_id} />
