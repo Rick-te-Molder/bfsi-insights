@@ -5,6 +5,7 @@ import { SourceFilter } from './source-filter';
 import { MasterDetailView } from './master-detail';
 import { ItemsStatusGrid } from './items-status-grid';
 import { CardView } from './card-view';
+import { SearchBar } from './search-bar';
 import type { TaxonomyConfig, TaxonomyData, TaxonomyItem } from '@/components/tags';
 import type { QueueItem } from '@bfsi/types';
 
@@ -42,6 +43,7 @@ async function getQueueItems(
   statusCodes?: Record<string, number>,
   itemId?: string,
   urlSearch?: string,
+  searchQuery?: string,
 ) {
   const supabase = createServiceRoleClient();
 
@@ -71,6 +73,50 @@ async function getQueueItems(
       return { items: [], sources: [] };
     }
     return { items: data as QueueItem[], sources: [] };
+  }
+
+  // Search by title in payload (searches across all statuses)
+  if (searchQuery) {
+    // Search in ingestion_queue using ilike on payload->title
+    const { data: queueData, error: queueError } = await supabase
+      .from('ingestion_queue')
+      .select('id, url, status_code, payload, discovered_at')
+      .ilike('payload->>title', `%${searchQuery}%`)
+      .order('discovered_at', { ascending: false })
+      .limit(100);
+
+    // Also search in kb_publication
+    const { data: pubData, error: pubError } = await supabase
+      .from('kb_publication')
+      .select(
+        'id, source_url, title, summary_short, summary_medium, summary_long, source_name, date_published, date_added, thumbnail',
+      )
+      .ilike('title', `%${searchQuery}%`)
+      .order('date_added', { ascending: false })
+      .limit(100);
+
+    const queueItems = queueError ? [] : (queueData as QueueItem[]);
+    const pubItems = pubError
+      ? []
+      : ((pubData || []).map((pub) => ({
+          id: pub.id,
+          url: pub.source_url,
+          status_code: 400,
+          discovered_at: pub.date_added || '',
+          payload: {
+            title: pub.title,
+            source_name: pub.source_name,
+            date_published: pub.date_published,
+            thumbnail_url: pub.thumbnail,
+            summary: {
+              short: pub.summary_short,
+              medium: pub.summary_medium,
+              long: pub.summary_long,
+            },
+          },
+        })) as QueueItem[]);
+
+    return { items: [...queueItems, ...pubItems], sources: [] };
   }
 
   // Published items are in kb_publication table, not ingestion_queue
@@ -235,9 +281,9 @@ export default async function ReviewPage({
   const params = await searchParams;
   const itemId = params.id || '';
   const urlSearch = params.url || '';
-  const _searchQuery = params.search || ''; // Reserved for future search functionality
-  // When viewing specific item or URL search, show all statuses
-  const status = itemId || urlSearch ? 'all' : params.status || 'pending_review';
+  const searchQuery = params.search || '';
+  // When viewing specific item, URL search, or searching, show all statuses
+  const status = itemId || urlSearch || searchQuery ? 'all' : params.status || 'pending_review';
   const source = params.source || '';
   const timeWindow = params.time || '';
   const viewMode = params.view || 'split'; // 'list' or 'split'
@@ -247,7 +293,7 @@ export default async function ReviewPage({
 
   const [{ items, sources: _sources }, allSources, { taxonomyConfig, taxonomyData }] =
     await Promise.all([
-      getQueueItems(status, source, timeWindow, statusCodes, itemId, urlSearch),
+      getQueueItems(status, source, timeWindow, statusCodes, itemId, urlSearch, searchQuery),
       getAllSources(),
       getTaxonomyData(),
     ]);
@@ -278,13 +324,21 @@ export default async function ReviewPage({
 
   return (
     <div className="space-y-4 md:space-y-6">
+      {/* Search Bar */}
+      <div className="flex items-center gap-4">
+        <SearchBar />
+        {searchQuery && (
+          <span className="text-sm text-neutral-400">Results for &quot;{searchQuery}&quot;</span>
+        )}
+      </div>
+
       {/* Header */}
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl md:text-2xl font-bold">Items</h1>
           <p className="mt-1 text-sm text-neutral-400">
             {items.length} items
-            {status !== 'all' && ` · ${status}`}
+            {status !== 'all' && !searchQuery && ` · ${status}`}
             {source && ` · ${source}`}
             {timeWindow && ` · ${timeWindow}`}
           </p>
