@@ -335,7 +335,11 @@ export default async function ReviewPage({
       {/* Header */}
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold">Items</h1>
+          <Link href="/review" className="group">
+            <h1 className="text-xl md:text-2xl font-bold group-hover:text-sky-400 transition-colors">
+              Items
+            </h1>
+          </Link>
           <p className="mt-1 text-sm text-neutral-400">
             {items.length} items
             {status !== 'all' && !searchQuery && ` · ${status}`}
