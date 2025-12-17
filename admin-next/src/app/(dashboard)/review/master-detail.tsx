@@ -2,31 +2,14 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { formatDateTime, getStatusColor, truncate } from '@/lib/utils';
+import { formatDateTime, getStatusColorByCode, getStatusName, truncate } from '@/lib/utils';
 import { DetailPanel } from './detail-panel';
 import { bulkApproveAction, bulkRejectAction, bulkReenrichAction } from './actions';
 import type { TaxonomyConfig, TaxonomyData } from '@/components/tags';
-
-interface QueueItem {
-  id: string;
-  url: string;
-  status: string;
-  payload: {
-    title?: string;
-    summary?: { short?: string };
-    rejection_reason?: string;
-    source_slug?: string;
-    published_at?: string;
-    industry_codes?: string[];
-    geography_codes?: string[];
-    // KB-230: Dynamic audience scores - keys come from kb_audience table
-    audience_scores?: Record<string, number>;
-  };
-  discovered_at: string;
-}
+import type { QueueItem, QueueItemPayload } from '@bfsi/types';
 
 // Get primary audience from scores
-function getPrimaryAudience(scores?: QueueItem['payload']['audience_scores']): string | null {
+function getPrimaryAudience(scores?: QueueItemPayload['audience_scores']): string | null {
   if (!scores) return null;
   const entries = Object.entries(scores).filter(([, v]) => v && v >= 0.5);
   if (entries.length === 0) return null;
@@ -167,9 +150,9 @@ export function MasterDetailView({
                     {/* URL shown on hover via title attr */}
                     <div className="flex items-center gap-2 mt-1">
                       <span
-                        className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${getStatusColor(item.status)}`}
+                        className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${getStatusColorByCode(item.status_code)}`}
                       >
-                        {item.status}
+                        {getStatusName(item.status_code)}
                       </span>
                       {item.payload?.source_slug && (
                         <span className="text-[10px] text-neutral-500">

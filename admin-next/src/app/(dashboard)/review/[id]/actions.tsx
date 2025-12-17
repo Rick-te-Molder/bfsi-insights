@@ -4,19 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { approveQueueItemAction } from '../actions';
-
-interface QueueItem {
-  id: string;
-  url: string;
-  status_code: number;
-  payload: Record<string, unknown> & {
-    industry_codes?: string[];
-    topic_codes?: string[];
-    regulator_codes?: string[];
-    regulation_codes?: string[];
-    process_codes?: string[];
-  };
-}
+import type { QueueItem } from '@bfsi/types';
 
 const STATUS_CODE = {
   PENDING_REVIEW: 300,

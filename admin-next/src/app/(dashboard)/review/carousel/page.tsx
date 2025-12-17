@@ -2,15 +2,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { CarouselReview } from './carousel-review';
 import type { TaxonomyConfig, TaxonomyData, TaxonomyItem } from '@/components/tags';
-
-interface QueueItem {
-  id: string;
-  url: string;
-  status: string;
-  status_code: number;
-  payload: Record<string, unknown>;
-  discovered_at: string;
-}
+import type { QueueItem } from '@bfsi/types';
 
 async function getReviewData() {
   const supabase = createServiceRoleClient();

@@ -40,3 +40,29 @@ export function getStatusColor(status: string): string {
   };
   return colors[status] || 'bg-neutral-500/20 text-neutral-300';
 }
+
+// KB-277: Convert status_code to status string for display
+const STATUS_CODE_TO_NAME: Record<number, string> = {
+  200: 'pending',
+  210: 'queued',
+  211: 'processing',
+  220: 'queued',
+  221: 'processing',
+  230: 'queued',
+  231: 'processing',
+  240: 'enriched',
+  300: 'enriched',
+  330: 'approved',
+  400: 'approved',
+  500: 'failed',
+  540: 'rejected',
+  599: 'failed',
+};
+
+export function getStatusName(statusCode: number): string {
+  return STATUS_CODE_TO_NAME[statusCode] || 'pending';
+}
+
+export function getStatusColorByCode(statusCode: number): string {
+  return getStatusColor(getStatusName(statusCode));
+}

@@ -52,6 +52,10 @@ export interface QueueItemPayload {
     reasoning?: string;
     tagged_at?: string;
   };
+  // Additional metadata fields
+  relevance_confidence?: number;
+  content_length?: number;
+  [key: string]: unknown; // Allow additional dynamic fields
 }
 
 // Status labels - maps status codes to human-readable labels

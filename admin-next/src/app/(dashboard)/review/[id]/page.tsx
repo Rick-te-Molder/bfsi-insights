@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { formatDateTime, getStatusColor } from '@/lib/utils';
+import { formatDateTime, getStatusColorByCode, getStatusName } from '@/lib/utils';
 import { notFound } from 'next/navigation';
 import { ReviewActions } from './actions';
 import { EvaluationPanel } from './evaluation-panel';
@@ -13,24 +13,10 @@ import type {
   TaxonomyItem,
   ValidationLookups,
 } from '@/components/tags';
+import type { QueueItem } from '@bfsi/types';
 
-const STATUS_LABEL: Record<number, string> = {
-  300: 'pending_review',
-  330: 'approved',
-  500: 'failed',
-  540: 'rejected',
-};
-
-function getStatusLabel(code: number): string {
-  return STATUS_LABEL[code] || String(code);
-}
-
-interface QueueItem {
-  id: string;
-  url: string;
-  status_code: number;
-  payload: Record<string, unknown>;
-  discovered_at: string;
+// Extended QueueItem with current_run_id for this page
+interface QueueItemWithRun extends QueueItem {
   current_run_id?: string | null;
 }
 
@@ -50,7 +36,7 @@ async function getQueueItem(id: string) {
     return null;
   }
 
-  return data as QueueItem;
+  return data as QueueItemWithRun;
 }
 
 async function getLookupTables(): Promise<LookupTables> {
@@ -166,9 +152,9 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
               ← Back to queue
             </Link>
             <span
-              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(getStatusLabel(item.status_code))}`}
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColorByCode(item.status_code)}`}
             >
-              {getStatusLabel(item.status_code)}
+              {getStatusName(item.status_code)}
             </span>
           </div>
           {/* Title */}
