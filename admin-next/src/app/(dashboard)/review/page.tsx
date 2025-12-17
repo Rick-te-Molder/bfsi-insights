@@ -320,13 +320,6 @@ export default async function ReviewPage({
               ▦ Card
             </Link>
           </div>
-          <Link
-            href="/review/carousel"
-            className="flex items-center gap-2 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-1.5 text-sm font-medium text-neutral-300 hover:bg-neutral-700 transition-colors"
-          >
-            <span>🎠</span>
-            <span className="hidden sm:inline">Carousel</span>
-          </Link>
         </div>
       </header>
 
