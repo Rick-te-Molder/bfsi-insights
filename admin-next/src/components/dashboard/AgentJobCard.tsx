@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { DashboardCard } from './DashboardCard';
 
 interface AgentJob {
   id: string;
@@ -24,27 +25,21 @@ interface AgentJobCardProps {
 
 const colorClasses = {
   cyan: {
-    pending: 'text-cyan-400',
     button: 'bg-cyan-600 hover:bg-cyan-700',
     progress: 'bg-cyan-500',
     pulse: 'bg-cyan-400',
-    success: 'text-emerald-400',
     result: 'text-cyan-400',
   },
   emerald: {
-    pending: 'text-emerald-400',
     button: 'bg-emerald-600 hover:bg-emerald-700',
     progress: 'bg-emerald-500',
     pulse: 'bg-emerald-400',
-    success: 'text-emerald-400',
     result: 'text-emerald-400',
   },
   violet: {
-    pending: 'text-violet-400',
     button: 'bg-violet-600 hover:bg-violet-700',
     progress: 'bg-violet-500',
     pulse: 'bg-violet-400',
-    success: 'text-emerald-400',
     result: 'text-violet-400',
   },
 };
@@ -121,12 +116,7 @@ export function AgentJobCard({ title, pendingCount, agentName, color }: AgentJob
     : 0;
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white">{title}</h3>
-        <span className={`text-sm ${colors.pending}`}>{pendingCount} pending</span>
-      </div>
-
+    <DashboardCard title={title} badge={`${pendingCount} pending`} color={color}>
       {runningJob ? (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
@@ -170,6 +160,7 @@ export function AgentJobCard({ title, pendingCount, agentName, color }: AgentJob
               onChange={(e) => setBatchSize(Number(e.target.value))}
               className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-white"
             >
+              <option value={1}>1 item</option>
               <option value={5}>5 items</option>
               <option value={10}>10 items</option>
               <option value={25}>25 items</option>
@@ -221,6 +212,6 @@ export function AgentJobCard({ title, pendingCount, agentName, color }: AgentJob
           </div>
         </div>
       )}
-    </div>
+    </DashboardCard>
   );
 }

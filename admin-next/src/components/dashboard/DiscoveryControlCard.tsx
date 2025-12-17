@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { DashboardCard } from './DashboardCard';
 
 interface DiscoveryStatus {
   enabled: boolean;
@@ -79,12 +80,7 @@ export function DiscoveryControlCard() {
   };
 
   return (
-    <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-white">Discovery</h3>
-        <span className="text-sm text-violet-400">{status?.sourceCount || 0} sources</span>
-      </div>
-
+    <DashboardCard title="Discovery" badge={`${status?.sourceCount || 0} sources`} color="violet">
       <div className="space-y-4">
         {/* Toggle Switch */}
         <div className="flex items-center justify-between">
@@ -128,6 +124,7 @@ export function DiscoveryControlCard() {
               onChange={(e) => setBatchSize(Number(e.target.value))}
               className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-sm text-white"
             >
+              <option value={1}>1 item</option>
               <option value={10}>10 items</option>
               <option value={25}>25 items</option>
               <option value={50}>50 items</option>
@@ -151,6 +148,6 @@ export function DiscoveryControlCard() {
           )}
         </div>
       </div>
-    </div>
+    </DashboardCard>
   );
 }
