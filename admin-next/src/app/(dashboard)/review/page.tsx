@@ -217,7 +217,10 @@ export default async function ReviewPage({
 
   // Fetch status counts for the grid
   const supabase = createServiceRoleClient();
-  const { data: statusData } = await supabase.rpc('get_pipeline_status_counts');
+  const { data: statusData, error: statusError } = await supabase.rpc('get_status_code_counts');
+  if (statusError) {
+    console.error('Failed to fetch status code counts:', statusError);
+  }
 
   const timeFilters = [
     { value: '', label: 'All time' },
