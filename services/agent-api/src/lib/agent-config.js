@@ -9,7 +9,7 @@ import { runThumbnailer } from '../agents/thumbnailer.js';
 import { STATUS } from './status-codes.js';
 
 // Helper: Get next status code, checking for single-step return override
-function getNextStatus(item, defaultNext, isFinalStep = false) {
+export function getNextStatus(item, defaultNext, isFinalStep = false) {
   const singleStep = item.payload?._single_step;
   const returnStatus = item.payload?._return_status;
 
@@ -27,7 +27,7 @@ function getNextStatus(item, defaultNext, isFinalStep = false) {
 }
 
 // Helper: Clean up control flags from payload after processing
-function cleanPayloadFlags(payload) {
+export function cleanPayloadFlags(payload) {
   const cleaned = { ...payload };
   // Clean up single-step flag after processing
   if (cleaned._single_step) {
