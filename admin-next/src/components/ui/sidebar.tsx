@@ -9,7 +9,6 @@ const navItems = [
   { href: '/', label: 'Dashboard', icon: '📊' },
   { href: '/pipeline', label: 'Pipeline Health', icon: '🔧' },
   { href: '/review', label: 'Items', icon: '📋' },
-  { href: '/published', label: 'Published', icon: '✅' },
   { href: '/proposals', label: 'Proposals', icon: '📥' },
   { href: '/sources', label: 'Sources', icon: '📡' },
   { href: '/prompts', label: 'Prompts', icon: '💬' },
