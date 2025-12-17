@@ -46,6 +46,7 @@ function hasStepOutput(payload: QueueItem['payload'], stepKey: string): boolean 
 
 export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) {
   const [loading, setLoading] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
@@ -122,11 +123,15 @@ export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) 
 
       if (error) throw error;
 
+      setMessage({ type: 'success', text: `✓ Queued ${stepKey} (status → ${statusCode})` });
+      setTimeout(() => setMessage(null), 5000);
       router.refresh();
     } catch (err) {
-      alert(
-        `Failed to trigger ${stepKey}: ${err instanceof Error ? err.message : 'Unknown error'}`,
-      );
+      setMessage({
+        type: 'error',
+        text: `Failed: ${err instanceof Error ? err.message : 'Unknown'}`,
+      });
+      setTimeout(() => setMessage(null), 5000);
     } finally {
       setLoading(null);
     }
@@ -181,11 +186,15 @@ export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) 
 
       if (error) throw error;
 
+      setMessage({ type: 'success', text: '✓ Queued full re-enrichment (status → 200)' });
+      setTimeout(() => setMessage(null), 5000);
       router.refresh();
     } catch (err) {
-      alert(
-        `Failed to trigger enrichment: ${err instanceof Error ? err.message : 'Unknown error'}`,
-      );
+      setMessage({
+        type: 'error',
+        text: `Failed: ${err instanceof Error ? err.message : 'Unknown'}`,
+      });
+      setTimeout(() => setMessage(null), 5000);
     } finally {
       setLoading(null);
     }
@@ -206,6 +215,24 @@ export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) 
       <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-4">
         Enrichment
       </h3>
+
+      {/* Status message */}
+      {message && (
+        <div
+          className={`mb-3 px-3 py-2 rounded-lg text-xs font-medium ${
+            message.type === 'success'
+              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+              : 'bg-red-500/10 text-red-400 border border-red-500/20'
+          }`}
+        >
+          {message.text}
+        </div>
+      )}
+
+      {/* Current status indicator */}
+      <div className="mb-3 px-2 py-1.5 rounded bg-neutral-800/50 text-xs text-neutral-400">
+        Status: <span className="font-mono text-neutral-300">{item.status_code}</span>
+      </div>
 
       <div className="space-y-3">
         {STEP_CONFIG.map(({ key, label, agent, statusCode }) => {
