@@ -272,7 +272,9 @@ export async function processQueue(options = {}) {
   let failed = 0;
 
   for (const item of items) {
-    const result = await enrichItem(item, { includeThumbnail });
+    // KB-277: Manual articles skip relevance rejection (human already deemed relevant)
+    const isManual = item.entry_type === 'manual' || item.payload?.manual_add === true;
+    const result = await enrichItem(item, { includeThumbnail, skipRejection: isManual });
     if (result.success) {
       success++;
     } else {
