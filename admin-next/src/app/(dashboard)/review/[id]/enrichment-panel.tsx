@@ -123,7 +123,25 @@ export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) 
 
       if (error) throw error;
 
-      setMessage({ type: 'success', text: `✓ Queued ${stepKey} (status → ${statusCode})` });
+      setMessage({ type: 'success', text: `✓ Processing ${stepKey}...` });
+
+      // KB-285: Trigger immediate processing via agent API
+      const enrichRes = await fetch('/api/enrich-step', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ step: stepKey, id: item.id }),
+      });
+
+      if (!enrichRes.ok) {
+        const errData = await enrichRes.json().catch(() => ({}));
+        throw new Error(errData.error || `Agent API error: ${enrichRes.status}`);
+      }
+
+      const result = await enrichRes.json();
+      setMessage({
+        type: 'success',
+        text: `✓ ${stepKey} complete${result.processed ? ` (${result.processed} processed)` : ''}`,
+      });
       setTimeout(() => setMessage(null), 5000);
       router.refresh();
     } catch (err) {
