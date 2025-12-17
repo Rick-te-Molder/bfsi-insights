@@ -6,20 +6,7 @@ import Link from 'next/link';
 import { formatDateTime, getStatusColor, truncate } from '@/lib/utils';
 import { bulkReenrichAction, bulkRejectAction, bulkApproveAction } from './actions';
 import type { TaxonomyConfig, TaxonomyData } from '@/components/tags';
-
-interface QueueItem {
-  id: string;
-  url: string;
-  status_code: number;
-  payload: {
-    title?: string;
-    summary?: { short?: string };
-    rejection_reason?: string;
-    source_slug?: string;
-    published_at?: string;
-  };
-  discovered_at: string;
-}
+import type { QueueItem } from '@bfsi/types';
 
 interface ReviewListProps {
   items: QueueItem[];

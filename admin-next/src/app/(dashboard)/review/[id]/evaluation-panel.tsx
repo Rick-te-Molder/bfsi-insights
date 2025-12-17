@@ -14,12 +14,7 @@ interface EnrichmentLogEntry {
   error?: string;
 }
 
-interface QueueItem {
-  id: string;
-  url: string;
-  status_code: number;
-  payload: Record<string, unknown>;
-}
+import type { QueueItem } from '@bfsi/types';
 
 // Summary length specs (in characters)
 const SUMMARY_SPECS = {

@@ -4,6 +4,7 @@ import { ReviewList } from './review-list';
 import { SourceFilter } from './source-filter';
 import { MasterDetailView } from './master-detail';
 import type { TaxonomyConfig, TaxonomyData, TaxonomyItem } from '@/components/tags';
+import type { QueueItem } from '@bfsi/types';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -30,20 +31,6 @@ async function loadStatusCodes() {
     codes[row.name] = row.code;
   }
   return codes;
-}
-
-interface QueueItem {
-  id: string;
-  url: string;
-  status: string;
-  status_code: number;
-  payload: {
-    title?: string;
-    summary?: { short?: string };
-    rejection_reason?: string;
-    source_slug?: string;
-  };
-  discovered_at: string;
 }
 
 async function getQueueItems(

@@ -2,17 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { formatDateTime, getStatusColor } from '@/lib/utils';
+import { formatDateTime, getStatusColorByCode, getStatusName } from '@/lib/utils';
 import { TagDisplay } from '@/components/tags';
 import type { TaxonomyConfig, TaxonomyData } from '@/components/tags';
-
-interface QueueItem {
-  id: string;
-  url: string;
-  status: string;
-  payload: Record<string, unknown>;
-  discovered_at: string;
-}
+import type { QueueItem } from '@bfsi/types';
 
 interface Lookups {
   regulators: string[];
@@ -96,13 +89,15 @@ export function DetailPanel({
           if (canNavigateNext) onNavigate('next');
           break;
         case 'a':
-          if (item?.status === 'enriched') {
+          if (item?.status_code === 300) {
+            // enriched = pending_review
             e.preventDefault();
             handleAction('approve');
           }
           break;
         case 'r':
-          if (['enriched', 'failed'].includes(item?.status || '')) {
+          if ([300, 500].includes(item?.status_code || 0)) {
+            // enriched or failed
             e.preventDefault();
             handleAction('reject');
           }
@@ -173,9 +168,9 @@ export function DetailPanel({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1">
               <span
-                className={`rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(item.status)}`}
+                className={`rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColorByCode(item.status_code)}`}
               >
-                {item.status}
+                {getStatusName(item.status_code)}
               </span>
               {payload.source_slug ? (
                 <span className="text-xs text-neutral-500">{String(payload.source_slug)}</span>
@@ -248,7 +243,7 @@ export function DetailPanel({
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Actions */}
         <div className="flex flex-wrap gap-2">
-          {item.status === 'enriched' && (
+          {item.status_code === 300 && (
             <button
               onClick={() => handleAction('approve')}
               disabled={actionLoading !== null}
@@ -257,7 +252,7 @@ export function DetailPanel({
               {actionLoading === 'approve' ? 'Approving...' : '✓ Approve (a)'}
             </button>
           )}
-          {['enriched', 'failed'].includes(item.status) && (
+          {[300, 500].includes(item.status_code) && (
             <button
               onClick={() => handleAction('reject')}
               disabled={actionLoading !== null}

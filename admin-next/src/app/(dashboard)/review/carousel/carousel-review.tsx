@@ -7,29 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { TagDisplay } from '@/components/tags';
 import type { TaxonomyConfig, TaxonomyData } from '@/components/tags';
 import { approveQueueItemAction } from '../actions';
-
-interface QueueItem {
-  id: string;
-  url: string;
-  status: string;
-  payload: Record<string, unknown> & {
-    title?: string;
-    summary?: { short?: string; medium?: string; long?: string };
-    thumbnail?: string;
-    thumbnail_url?: string;
-    thumbnail_path?: string;
-    thumbnail_bucket?: string;
-    published_at?: string;
-    source_slug?: string;
-    relevance_confidence?: number;
-    industry_codes?: string[];
-    topic_codes?: string[];
-    regulator_codes?: string[];
-    regulation_codes?: string[];
-    process_codes?: string[];
-  };
-  discovered_at: string;
-}
+import type { QueueItem } from '@bfsi/types';
 
 interface CarouselReviewProps {
   initialItems: QueueItem[];
@@ -216,7 +194,7 @@ export function CarouselReview({
   const summary = (payload.summary as { short?: string; medium?: string; long?: string }) || {};
 
   // Resolve thumbnail
-  let thumbnailUrl = payload.thumbnail || null;
+  let thumbnailUrl: string | null = (payload.thumbnail as string) || null;
   if (!thumbnailUrl && payload.thumbnail_path && payload.thumbnail_bucket) {
     thumbnailUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${payload.thumbnail_bucket}/${payload.thumbnail_path}`;
   }
