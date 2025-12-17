@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import Link from 'next/link';
 import { ReviewList } from './review-list';
@@ -324,9 +325,11 @@ export default async function ReviewPage({
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* Search Bar */}
+      {/* Search Bar - wrapped in Suspense for useSearchParams */}
       <div className="flex items-center gap-4">
-        <SearchBar />
+        <Suspense fallback={<div className="h-9 w-64 bg-neutral-800 rounded-lg animate-pulse" />}>
+          <SearchBar />
+        </Suspense>
         {searchQuery && (
           <span className="text-sm text-neutral-400">Results for &quot;{searchQuery}&quot;</span>
         )}
