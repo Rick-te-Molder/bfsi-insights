@@ -73,6 +73,42 @@ async function getQueueItems(
     return { items: data as QueueItem[], sources: [] };
   }
 
+  // Published items are in kb_publication table, not ingestion_queue
+  if (status === 'published') {
+    const { data: pubData, error: pubError } = await supabase
+      .from('kb_publication')
+      .select(
+        'id, url, title, summary_short, summary_medium, summary_long, source_name, date_published, date_added',
+      )
+      .order('date_added', { ascending: false })
+      .limit(500);
+
+    if (pubError) {
+      console.error('Error fetching publications:', pubError.message);
+      return { items: [], sources: [] };
+    }
+
+    // Transform kb_publication to QueueItem format
+    const items: QueueItem[] = (pubData || []).map((pub) => ({
+      id: pub.id,
+      url: pub.url,
+      status_code: 400,
+      discovered_at: pub.date_added || '',
+      payload: {
+        title: pub.title,
+        source_name: pub.source_name,
+        date_published: pub.date_published,
+        summary: {
+          short: pub.summary_short,
+          medium: pub.summary_medium,
+          long: pub.summary_long,
+        },
+      },
+    }));
+
+    return { items, sources: [] };
+  }
+
   // For pending_review, use the filtered view that checks enrichment completion
   // This ensures items only appear when all steps (summarize, tag, thumbnail) succeeded
   const tableName = status === 'pending_review' ? 'review_queue_ready' : 'ingestion_queue';
@@ -81,7 +117,7 @@ async function getQueueItems(
     .from(tableName)
     .select('id, url, status_code, payload, discovered_at')
     .order('discovered_at', { ascending: false })
-    .limit(100);
+    .limit(500);
 
   // Filter exclusively by status_code (loaded from status_lookup table)
   // Skip for review_queue_ready view which already filters by status_code = 300
