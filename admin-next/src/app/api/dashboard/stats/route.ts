@@ -10,7 +10,7 @@ export async function GET() {
     const supabase = createServiceRoleClient();
 
     // Get all status counts via RPC
-    const { data: statusData, error } = await supabase.rpc('get_pipeline_status_counts');
+    const { data: statusData, error } = await supabase.rpc('get_status_code_counts');
 
     if (error) {
       console.error('Failed to get pipeline status counts:', error);
