@@ -1,0 +1,13 @@
+-- KB-281: Activate summarizer-v2.4 after approval
+-- RENAME THIS FILE: Remove .pending suffix to activate
+-- Run: mv 20251217153100_activate_summarizer_v2.4.sql.pending 20251217153100_activate_summarizer_v2.4.sql
+
+-- Mark current version as not current
+UPDATE prompt_version 
+SET is_current = false 
+WHERE agent_name = 'summarizer' AND is_current = true;
+
+-- Activate v2.4
+UPDATE prompt_version 
+SET is_current = true 
+WHERE agent_name = 'summarizer' AND version = 'summarizer-v2.4';

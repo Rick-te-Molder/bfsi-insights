@@ -1,0 +1,30 @@
+-- KB-281: Backfill queue items to re-summarize with v2.4
+-- RENAME THIS FILE: Remove .pending suffix to run backfill
+-- Run AFTER activating v2.4: mv 20251217153200_backfill_summarizer_v2.4.sql.pending 20251217153200_backfill_summarizer_v2.4.sql
+
+-- Reset items that have been summarized but not yet published
+-- This includes:
+--   212 (summarized) through 330 (approved) - back to 210 (to_summarize)
+-- 
+-- Does NOT affect:
+--   < 210 (not yet summarized - will use new prompt naturally)
+--   >= 400 (already published)
+--   500+ (terminal states)
+
+UPDATE ingestion_queue
+SET 
+  status_code = 210,  -- to_summarize
+  updated_at = NOW()
+WHERE 
+  status_code >= 212  -- has been summarized
+  AND status_code < 400  -- not yet published
+  AND status_code < 500; -- not in terminal state
+
+-- Log how many items were reset
+DO $$
+DECLARE
+  affected_count INTEGER;
+BEGIN
+  GET DIAGNOSTICS affected_count = ROW_COUNT;
+  RAISE NOTICE 'KB-281: Reset % queue items to to_summarize (210) for re-processing with summarizer-v2.4', affected_count;
+END $$;
