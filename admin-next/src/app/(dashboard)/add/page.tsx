@@ -233,7 +233,6 @@ export default function AddArticlePage() {
         const isPdf = inputMode === 'pdf';
         const { error: queueError } = await supabase.from('ingestion_queue').insert({
           url: finalUrl,
-          status: 'pending',
           status_code: isPdf ? 230 : 200, // PDFs skip to thumbnailing (230), URLs start at pending_enrichment (200)
           entry_type: 'manual',
           payload: {
