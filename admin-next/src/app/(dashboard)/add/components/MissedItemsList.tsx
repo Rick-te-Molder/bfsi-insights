@@ -49,9 +49,11 @@ export function MissedItemsList({ items, loading, onEdit, onDelete }: MissedItem
   return (
     <div className="space-y-3">
       {items.map((item) => {
-        const statusCode = item.ingestion_queue?.status_code;
+        // Supabase returns joined data as array
+        const queue = item.ingestion_queue?.[0];
+        const statusCode = queue?.status_code;
         const pipelineStatus = getPipelineStatus(statusCode);
-        const title = item.ingestion_queue?.payload?.title;
+        const title = queue?.payload?.title;
 
         return (
           <div
