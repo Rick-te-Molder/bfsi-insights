@@ -4,6 +4,7 @@ import { ReviewList } from './review-list';
 import { SourceFilter } from './source-filter';
 import { MasterDetailView } from './master-detail';
 import { ItemsStatusGrid } from './items-status-grid';
+import { CardView } from './card-view';
 import type { TaxonomyConfig, TaxonomyData, TaxonomyItem } from '@/components/tags';
 import type { QueueItem } from '@bfsi/types';
 
@@ -249,14 +250,14 @@ export default async function ReviewPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* View Toggle - Split only visible in landscape or md+ */}
+          {/* View Toggle */}
           <div className="flex rounded-lg bg-neutral-800 p-1">
             <Link
               href={buildFilterUrl({ view: 'split' })}
               className={`hidden landscape:inline-flex md:inline-flex px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 viewMode === 'split' ? 'bg-sky-600 text-white' : 'text-neutral-400 hover:text-white'
               }`}
-              title="Split view with keyboard shortcuts (landscape/tablet+)"
+              title="Split view with keyboard shortcuts"
             >
               ⬛ Split
             </Link>
@@ -265,9 +266,18 @@ export default async function ReviewPage({
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 viewMode === 'list' ? 'bg-sky-600 text-white' : 'text-neutral-400 hover:text-white'
               }`}
-              title="List view with bulk actions"
+              title="List view"
             >
               ☰ List
+            </Link>
+            <Link
+              href={buildFilterUrl({ view: 'card' })}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                viewMode === 'card' ? 'bg-sky-600 text-white' : 'text-neutral-400 hover:text-white'
+              }`}
+              title="Card view (website style)"
+            >
+              ▦ Card
             </Link>
           </div>
           <Link
@@ -322,8 +332,15 @@ export default async function ReviewPage({
         )}
       </div>
 
-      {/* Content View - Split view hidden on mobile portrait, shown in landscape/tablet+ */}
-      {viewMode === 'split' ? (
+      {/* Content View */}
+      {viewMode === 'card' ? (
+        <CardView
+          items={items}
+          status={status}
+          taxonomyConfig={taxonomyConfig}
+          taxonomyData={taxonomyData}
+        />
+      ) : viewMode === 'split' ? (
         <>
           {/* Split view for landscape/tablet+ */}
           <div className="hidden landscape:block md:block">
