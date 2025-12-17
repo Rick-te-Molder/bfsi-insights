@@ -194,7 +194,7 @@ export function CarouselReview({
   const summary = (payload.summary as { short?: string; medium?: string; long?: string }) || {};
 
   // Resolve thumbnail
-  let thumbnailUrl = payload.thumbnail || null;
+  let thumbnailUrl: string | null = (payload.thumbnail as string) || null;
   if (!thumbnailUrl && payload.thumbnail_path && payload.thumbnail_bucket) {
     thumbnailUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${payload.thumbnail_bucket}/${payload.thumbnail_path}`;
   }
