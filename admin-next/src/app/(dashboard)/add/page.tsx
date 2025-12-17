@@ -1,143 +1,94 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
-import type { MissedDiscovery } from '@bfsi/types';
-import type { SubmissionStatus, InputMode } from './types';
+import { useAddArticle } from './hooks';
 import { ArticleInput, SubmitterInfo, WhyValuable, MissedItemsList } from './components';
 
 export default function AddArticlePage() {
-  const [activeTab, setActiveTab] = useState<'add' | 'list'>('add');
-  const [missedItems, setMissedItems] = useState<MissedDiscovery[]>([]);
-  const [loadingList, setLoadingList] = useState(false);
-
-  const [inputMode, setInputMode] = useState<InputMode>('url');
-  const [url, setUrl] = useState('');
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [pdfTitle, setPdfTitle] = useState('');
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [submitterName, setSubmitterName] = useState('');
-  const [submitterAudience, setSubmitterAudience] = useState('');
-  const [submitterChannel, setSubmitterChannel] = useState('');
-  const [submitterUrgency, setSubmitterUrgency] = useState('');
-  const [whyValuable, setWhyValuable] = useState('');
-  const [verbatimComment, setVerbatimComment] = useState('');
-  const [suggestedAudiences, setSuggestedAudiences] = useState<string[]>([]);
-
-  const [status, setStatus] = useState<SubmissionStatus>('idle');
-  const [message, setMessage] = useState('');
-  const [detectedDomain, setDetectedDomain] = useState<string | null>(null);
-  const [existingSource, setExistingSource] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  const supabase = createClient();
-
-  const loadMissedItems = useCallback(async () => {
-    setLoadingList(true);
-    // KB-277: Join with ingestion_queue to show pipeline status
-    // KB-280: Use inner join syntax for FK relationship
-    const { data, error } = await supabase
-      .from('missed_discovery')
-      .select(
-        `id, url, source_domain, submitter_name, submitter_audience, submitter_channel, 
-         why_valuable, submitter_urgency, resolution_status, submitted_at, existing_source_slug,
-         queue_id, ingestion_queue:queue_id(status_code, payload)`,
-      )
-      .order('submitted_at', { ascending: false })
-      .limit(100);
-
-    if (error) {
-      console.error('Failed to load missed items:', error);
-    }
-    if (data) {
-      setMissedItems(data);
-    }
-    setLoadingList(false);
-  }, [supabase]);
-
-  useEffect(() => {
-    if (activeTab === 'list') {
-      loadMissedItems();
-    }
-  }, [activeTab, loadMissedItems]);
-
-  useEffect(() => {
-    if (!url) {
-      setDetectedDomain(null);
-      setExistingSource(null);
-      return;
-    }
-
-    try {
-      const urlObj = new URL(url);
-      const domain = urlObj.hostname.replace(/^www\./, '');
-      setDetectedDomain(domain);
-
-      supabase
-        .from('kb_source')
-        .select('slug, name')
-        .ilike('domain', `%${domain}%`)
-        .limit(1)
-        .then(({ data }) => {
-          if (data && data.length > 0) {
-            setExistingSource(data[0].name || data[0].slug);
-          } else {
-            setExistingSource(null);
-          }
-        });
-    } catch {
-      setDetectedDomain(null);
-      setExistingSource(null);
-    }
-  }, [url, supabase]);
+  const {
+    activeTab,
+    setActiveTab,
+    missedItems,
+    loadingList,
+    loadMissedItems,
+    inputMode,
+    setInputMode,
+    url,
+    setUrl,
+    pdfFile,
+    setPdfFile,
+    pdfTitle,
+    setPdfTitle,
+    uploadProgress,
+    setUploadProgress,
+    submitterName,
+    setSubmitterName,
+    submitterAudience,
+    setSubmitterAudience,
+    submitterChannel,
+    setSubmitterChannel,
+    submitterUrgency,
+    setSubmitterUrgency,
+    whyValuable,
+    setWhyValuable,
+    verbatimComment,
+    setVerbatimComment,
+    suggestedAudiences,
+    toggleAudience,
+    status,
+    setStatus,
+    message,
+    setMessage,
+    detectedDomain,
+    existingSource,
+    editingId,
+    setEditingId,
+    resetForm,
+    editItem,
+    cancelEdit,
+    deleteItem,
+    supabase,
+  } = useAddArticle();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate based on input mode
+    // Validation
     if (inputMode === 'url' && !url.trim()) {
       setStatus('error');
       setMessage('Please enter a URL');
       return;
     }
-
     if (inputMode === 'pdf' && !pdfFile) {
       setStatus('error');
       setMessage('Please select a PDF file');
       return;
     }
-
     if (inputMode === 'pdf' && !pdfTitle.trim()) {
       setStatus('error');
       setMessage('Please enter a title for the PDF');
       return;
     }
-
     if (!submitterName.trim()) {
       setStatus('error');
       setMessage('Please enter the submitter name/company');
       return;
     }
-
     if (!whyValuable.trim()) {
       setStatus('error');
       setMessage('Please explain why this article was valuable');
       return;
     }
-
     if (!submitterAudience) {
       setStatus('error');
       setMessage("Please select the submitter's audience/role");
       return;
     }
-
     if (!submitterChannel) {
       setStatus('error');
       setMessage('Please select the channel');
       return;
     }
-
     if (!submitterUrgency) {
       setStatus('error');
       setMessage('Please select the urgency level');
@@ -156,28 +107,22 @@ export default function AddArticlePage() {
       if (inputMode === 'pdf' && pdfFile) {
         setStatus('uploading');
         setUploadProgress(0);
-
         const fileId = crypto.randomUUID();
         const filePath = `pdfs/${fileId}.pdf`;
-
         const { error: uploadError } = await supabase.storage
           .from('asset')
           .upload(filePath, pdfFile, {
             contentType: 'application/pdf',
             upsert: false,
           });
-
         if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
-
         setUploadProgress(100);
-
         const {
           data: { publicUrl },
         } = supabase.storage.from('asset').getPublicUrl(filePath);
         finalUrl = publicUrl;
         domain = 'manual-pdf-upload';
         urlNorm = publicUrl.toLowerCase();
-
         setStatus('submitting');
       } else {
         const urlObj = new URL(url);
@@ -186,7 +131,6 @@ export default function AddArticlePage() {
       }
 
       if (editingId) {
-        // Update existing item
         const { error } = await supabase
           .from('missed_discovery')
           .update({
@@ -199,34 +143,31 @@ export default function AddArticlePage() {
             suggested_audiences: suggestedAudiences.length > 0 ? suggestedAudiences : null,
           })
           .eq('id', editingId);
-
         if (error) throw error;
-
         setStatus('success');
         setMessage('Article updated successfully!');
         setEditingId(null);
         loadMissedItems();
       } else {
-        // Check for duplicates only on new submissions
+        // Check for duplicates
         const { data: existing } = await supabase
           .from('missed_discovery')
           .select('id')
           .eq('url_norm', urlNorm)
           .maybeSingle();
-
         if (existing) {
           setStatus('error');
           setMessage('This URL has already been reported');
           return;
         }
 
-        // KB-277: Insert into ingestion_queue FIRST to get the ID
+        // KB-277: Insert into ingestion_queue FIRST
         const isPdf = inputMode === 'pdf';
         const { data: queueItem, error: queueError } = await supabase
           .from('ingestion_queue')
           .insert({
             url: finalUrl,
-            status_code: isPdf ? 230 : 200, // PDFs skip to thumbnailing (230), URLs start at pending_enrichment (200)
+            status_code: isPdf ? 230 : 200,
             entry_type: 'manual',
             payload: {
               manual_add: true,
@@ -239,10 +180,9 @@ export default function AddArticlePage() {
           })
           .select('id')
           .single();
-
         if (queueError) throw queueError;
 
-        // Link missed_discovery to ingestion_queue via queue_id
+        // Link missed_discovery to ingestion_queue
         const { error } = await supabase.from('missed_discovery').insert({
           url: finalUrl,
           url_norm: urlNorm,
@@ -258,12 +198,9 @@ export default function AddArticlePage() {
           source_domain: domain,
           existing_source_slug: existingSource,
         });
+        if (error) console.error('Failed to add to missed_discovery:', error);
 
-        if (error) {
-          console.error('Failed to add to missed_discovery:', error);
-        }
-
-        // KB-277: Auto-trigger enrichment for priority processing
+        // KB-277: Auto-trigger enrichment
         try {
           await fetch('/api/process-manual', {
             method: 'POST',
@@ -282,66 +219,10 @@ export default function AddArticlePage() {
         );
       }
 
-      setInputMode('url');
-      setUrl('');
-      setPdfFile(null);
-      setPdfTitle('');
-      setUploadProgress(0);
-      setSubmitterName('');
-      setSubmitterAudience('');
-      setWhyValuable('');
-      setVerbatimComment('');
-      setSuggestedAudiences([]);
-      setDetectedDomain(null);
-      setExistingSource(null);
+      resetForm();
     } catch (err) {
       setStatus('error');
       setMessage(err instanceof Error ? err.message : 'Failed to submit');
-    }
-  };
-
-  const toggleAudience = (audience: string) => {
-    setSuggestedAudiences((prev) =>
-      prev.includes(audience) ? prev.filter((a) => a !== audience) : [...prev, audience],
-    );
-  };
-
-  const editItem = (item: MissedDiscovery) => {
-    setEditingId(item.id);
-    setUrl(item.url);
-    setSubmitterName(item.submitter_name || '');
-    setSubmitterAudience(item.submitter_audience || '');
-    setSubmitterChannel(item.submitter_channel || '');
-    setSubmitterUrgency(item.submitter_urgency || '');
-    setWhyValuable(item.why_valuable || '');
-    setDetectedDomain(item.source_domain);
-    setExistingSource(item.existing_source_slug);
-    setActiveTab('add');
-    setStatus('idle');
-    setMessage('');
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setUrl('');
-    setSubmitterName('');
-    setSubmitterAudience('');
-    setSubmitterChannel('');
-    setSubmitterUrgency('');
-    setWhyValuable('');
-    setVerbatimComment('');
-    setSuggestedAudiences([]);
-    setDetectedDomain(null);
-    setExistingSource(null);
-    setStatus('idle');
-    setMessage('');
-  };
-
-  const deleteItem = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this article?')) return;
-    const { error } = await supabase.from('missed_discovery').delete().eq('id', id);
-    if (!error) {
-      setMissedItems((prev) => prev.filter((item) => item.id !== id));
     }
   };
 
@@ -357,21 +238,13 @@ export default function AddArticlePage() {
       <div className="flex gap-6 border-b border-neutral-800">
         <button
           onClick={() => setActiveTab('add')}
-          className={`pb-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
-            activeTab === 'add'
-              ? 'border-sky-500 text-white'
-              : 'border-transparent text-neutral-400 hover:text-white'
-          }`}
+          className={`pb-3 text-sm font-medium transition-colors border-b-2 -mb-px ${activeTab === 'add' ? 'border-sky-500 text-white' : 'border-transparent text-neutral-400 hover:text-white'}`}
         >
           ➕ Add Article
         </button>
         <button
           onClick={() => setActiveTab('list')}
-          className={`pb-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
-            activeTab === 'list'
-              ? 'border-sky-500 text-white'
-              : 'border-transparent text-neutral-400 hover:text-white'
-          }`}
+          className={`pb-3 text-sm font-medium transition-colors border-b-2 -mb-px ${activeTab === 'list' ? 'border-sky-500 text-white' : 'border-transparent text-neutral-400 hover:text-white'}`}
         >
           📋 History ({missedItems.length || '...'})
         </button>
@@ -417,7 +290,6 @@ export default function AddArticlePage() {
               status={status}
               uploadProgress={uploadProgress}
             />
-
             <SubmitterInfo
               submitterName={submitterName}
               setSubmitterName={setSubmitterName}
@@ -428,7 +300,6 @@ export default function AddArticlePage() {
               submitterUrgency={submitterUrgency}
               setSubmitterUrgency={setSubmitterUrgency}
             />
-
             <WhyValuable
               whyValuable={whyValuable}
               setWhyValuable={setWhyValuable}
@@ -437,7 +308,6 @@ export default function AddArticlePage() {
               suggestedAudiences={suggestedAudiences}
               toggleAudience={toggleAudience}
             />
-
             <div className="flex gap-3">
               <button
                 type="submit"
