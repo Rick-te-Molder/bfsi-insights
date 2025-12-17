@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ReviewList } from './review-list';
 import { SourceFilter } from './source-filter';
 import { MasterDetailView } from './master-detail';
+import { ItemsStatusGrid } from './items-status-grid';
 import type { TaxonomyConfig, TaxonomyData, TaxonomyItem } from '@/components/tags';
 import type { QueueItem } from '@bfsi/types';
 
@@ -213,17 +214,9 @@ export default async function ReviewPage({
       getTaxonomyData(),
     ]);
 
-  // Status filters using names from status_lookup table
-  const statusFilters = [
-    { value: 'pending_review', label: 'Pending Review' },
-    { value: 'queued', label: 'Queued' },
-    { value: 'processing', label: 'Processing' },
-    { value: 'failed', label: 'Failed' },
-    { value: 'dead_letter', label: '💀 Dead Letter' },
-    { value: 'rejected', label: 'Rejected' },
-    { value: 'approved', label: 'Approved' },
-    { value: 'all', label: 'All' },
-  ];
+  // Fetch status counts for the grid
+  const supabase = createServiceRoleClient();
+  const { data: statusData } = await supabase.rpc('get_pipeline_status_counts');
 
   const timeFilters = [
     { value: '', label: 'All time' },
@@ -247,7 +240,7 @@ export default async function ReviewPage({
       {/* Header */}
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold">Review Queue</h1>
+          <h1 className="text-xl md:text-2xl font-bold">Items</h1>
           <p className="mt-1 text-sm text-neutral-400">
             {items.length} items
             {status !== 'all' && ` · ${status}`}
@@ -287,22 +280,12 @@ export default async function ReviewPage({
         </div>
       </header>
 
-      {/* Status Filters - horizontal scroll on mobile */}
-      <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible md:flex-wrap scrollbar-hide">
-        {statusFilters.map((filter) => (
-          <Link
-            key={filter.value}
-            href={buildFilterUrl({ status: filter.value })}
-            className={`shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              status === filter.value
-                ? 'bg-sky-600 text-white'
-                : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-            }`}
-          >
-            {filter.label}
-          </Link>
-        ))}
-      </div>
+      {/* Status Grid - 4 categories matching dashboard style */}
+      <ItemsStatusGrid
+        statusData={statusData || []}
+        currentStatus={status}
+        buildFilterUrl={buildFilterUrl}
+      />
 
       {/* Advanced Filters */}
       <div className="flex flex-wrap items-center gap-3 md:gap-4 rounded-lg bg-neutral-800/30 px-3 md:px-4 py-2 md:py-3">
