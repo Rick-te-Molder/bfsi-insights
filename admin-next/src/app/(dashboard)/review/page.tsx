@@ -297,7 +297,9 @@ export default async function ReviewPage({
       <ItemsStatusGrid
         statusData={statusData || []}
         currentStatus={status}
-        buildFilterUrl={buildFilterUrl}
+        currentSource={source}
+        currentTime={timeWindow}
+        currentView={viewMode}
       />
 
       {/* Advanced Filters */}

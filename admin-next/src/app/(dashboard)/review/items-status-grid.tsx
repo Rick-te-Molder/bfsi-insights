@@ -54,7 +54,9 @@ interface ItemsStatusGridProps {
     count: number;
   }[];
   currentStatus: string;
-  buildFilterUrl: (params: Record<string, string>) => string;
+  currentSource: string;
+  currentTime: string;
+  currentView: string;
 }
 
 const CATEGORY_CONFIG: Record<
@@ -100,10 +102,21 @@ const CATEGORY_CONFIG: Record<
 
 const CATEGORY_ORDER = ['enrichment', 'review', 'published', 'terminal'];
 
+function buildFilterUrl(status: string, source: string, time: string, view: string): string {
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  if (source) params.set('source', source);
+  if (time) params.set('time', time);
+  if (view && view !== 'split') params.set('view', view);
+  return `/review?${params.toString()}`;
+}
+
 export function ItemsStatusGrid({
   statusData,
   currentStatus,
-  buildFilterUrl,
+  currentSource,
+  currentTime,
+  currentView,
 }: ItemsStatusGridProps) {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
     new Set(['enrichment', 'review', 'published', 'terminal']),
@@ -168,7 +181,7 @@ export function ItemsStatusGrid({
                     return (
                       <Link
                         key={status.code}
-                        href={buildFilterUrl({ status: status.name })}
+                        href={buildFilterUrl(status.name, currentSource, currentTime, currentView)}
                         className={cn(
                           'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors',
                           isActive
