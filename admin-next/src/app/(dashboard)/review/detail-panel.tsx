@@ -60,12 +60,25 @@ export function DetailPanel({
 
     setLoading(true);
     fetch(`/api/queue-item/${itemId}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setItem(data.item);
-        setLookups(data.lookups);
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`Failed to fetch item: ${res.status}`);
+        }
+        return res.json();
       })
-      .catch(console.error)
+      .then((data) => {
+        if (data.item) {
+          setItem(data.item);
+          setLookups(data.lookups);
+        } else {
+          console.error('API returned no item:', data);
+          setItem(null);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch item details:', err);
+        setItem(null);
+      })
       .finally(() => setLoading(false));
   }, [itemId]);
 
