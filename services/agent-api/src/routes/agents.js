@@ -81,12 +81,19 @@ router.post('/run/summarize', async (req, res) => {
       // Let's re-summarize for now as that's the point of the agent
       const result = await runSummarizer(item);
 
+      // KB-285: Fetch updated item to preserve enrichment_meta written by runner
+      const { data: updatedItem } = await supabase
+        .from('ingestion_queue')
+        .select('payload')
+        .eq('id', item.id)
+        .single();
+
       await supabase
         .from('ingestion_queue')
         .update({
           status_code: STATUS.TO_TAG,
           payload: {
-            ...item.payload,
+            ...(updatedItem?.payload || item.payload),
             title: result.title,
             summary: result.summary,
             key_takeaways: result.key_takeaways,
@@ -124,12 +131,19 @@ router.post('/run/tag', async (req, res) => {
     for (const item of items) {
       const result = await runTagger(item);
 
+      // KB-285: Fetch updated item to preserve enrichment_meta written by runner
+      const { data: updatedItem } = await supabase
+        .from('ingestion_queue')
+        .select('payload')
+        .eq('id', item.id)
+        .single();
+
       await supabase
         .from('ingestion_queue')
         .update({
           status_code: STATUS.TO_THUMBNAIL,
           payload: {
-            ...item.payload,
+            ...(updatedItem?.payload || item.payload),
             industry_codes: [result.industry_code],
             topic_codes: [result.topic_code],
             tagging_metadata: {
@@ -190,12 +204,19 @@ router.post('/run/thumbnail', async (req, res) => {
 
       const result = await runThumbnailer(item);
 
+      // KB-285: Fetch updated item to preserve enrichment_meta written by runner
+      const { data: updatedItem } = await supabase
+        .from('ingestion_queue')
+        .select('payload')
+        .eq('id', item.id)
+        .single();
+
       await supabase
         .from('ingestion_queue')
         .update({
           status_code: STATUS.ENRICHED,
           payload: {
-            ...item.payload,
+            ...(updatedItem?.payload || item.payload),
             thumbnail_url: result.publicUrl,
             thumbnail: result.publicUrl,
             thumbnail_generated_at: new Date().toISOString(),
