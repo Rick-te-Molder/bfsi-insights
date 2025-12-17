@@ -54,6 +54,19 @@ export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) 
     setLoading(stepKey);
 
     try {
+      // Fetch current item to get payload
+      const { data: currentItem } = await supabase
+        .from('ingestion_queue')
+        .select('payload, status_code')
+        .eq('id', item.id)
+        .single();
+
+      // Determine return status:
+      // - If published (400), return to pending_review (300) for re-approval
+      // - Otherwise, return to enriched (240)
+      const isPublished = currentItem?.status_code === 400;
+      const returnStatus = isPublished ? 300 : 240;
+
       // Cancel any running pipeline
       await supabase
         .from('pipeline_run')
@@ -73,12 +86,17 @@ export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) 
         .select('id')
         .single();
 
-      // Update status to trigger the specific step
+      // Update status and set return_status in payload for single-step return
       const { error } = await supabase
         .from('ingestion_queue')
         .update({
           status_code: statusCode,
           current_run_id: newRun?.id || null,
+          payload: {
+            ...currentItem?.payload,
+            _return_status: returnStatus,
+            _single_step: stepKey,
+          },
         })
         .eq('id', item.id);
 
@@ -98,6 +116,16 @@ export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) 
     setLoading('enrich');
 
     try {
+      // Fetch current item to check if published
+      const { data: currentItem } = await supabase
+        .from('ingestion_queue')
+        .select('payload, status_code')
+        .eq('id', item.id)
+        .single();
+
+      // If published, set return status to pending_review for re-approval
+      const isPublished = currentItem?.status_code === 400;
+
       await supabase
         .from('pipeline_run')
         .update({ status: 'cancelled', completed_at: new Date().toISOString() })
@@ -115,11 +143,19 @@ export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) 
         .select('id')
         .single();
 
+      // For full re-enrich, clear single-step flags but keep return status for published
+      const updatedPayload = {
+        ...currentItem?.payload,
+        _single_step: null,
+        _return_status: isPublished ? 300 : null, // Return to pending_review if published
+      };
+
       const { error } = await supabase
         .from('ingestion_queue')
         .update({
           status_code: 200, // PENDING_ENRICHMENT
           current_run_id: newRun?.id || null,
+          payload: updatedPayload,
         })
         .eq('id', item.id);
 

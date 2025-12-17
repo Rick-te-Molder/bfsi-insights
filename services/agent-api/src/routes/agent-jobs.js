@@ -84,10 +84,11 @@ async function processItem(item, agent, jobId, index, config) {
   }
 
   // Update queue item
+  const nextStatus = config.nextStatusCode(item);
   const { error: updateError } = await supabase
     .from('ingestion_queue')
     .update({
-      status_code: config.nextStatusCode(),
+      status_code: nextStatus,
       payload: config.updatePayload(item, result),
     })
     .eq('id', item.id);
@@ -100,7 +101,7 @@ async function processItem(item, agent, jobId, index, config) {
 
   // Complete step run with output
   await completeStepRun(stepRunId, result);
-  console.log(`   ✅ ${agent} ${item.id} → status ${config.nextStatusCode()}`);
+  console.log(`   ✅ ${agent} ${item.id} → status ${nextStatus}`);
 
   return { success: true, stepRunId };
 }
