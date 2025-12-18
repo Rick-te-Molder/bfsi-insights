@@ -1,6 +1,4 @@
 ---
-import PublicationModal from '../features/publications/PublicationModal.astro';
-
 const {
   title = 'BFSI Insights',
   description = 'Agentic AI insights for executives, professionals, and researchers in banking, financial services and insurance.',
@@ -271,93 +269,9 @@ const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.s
         </div>
       </footer>
 
-      <PublicationModal />
-
       <!-- Scripts -->
       <script type="module">
-        import { marked } from 'https://cdn.jsdelivr.net/npm/marked@11/+esm';
-
-        marked.setOptions({ breaks: true, gfm: true });
-
         (function () {
-          // ---------- MODAL HANDLING ----------
-          const modal = document.getElementById('modal');
-          if (modal) {
-            let lastFocus = null;
-
-            const parseSummary = (t) => (t ? marked.parse(t.replace(/\(more\)\s*$/, '')) : '');
-
-            const openModal = (el) => {
-              lastFocus = document.activeElement;
-              modal.classList.remove('hidden');
-              document.body.style.overflow = 'hidden';
-
-              const title =
-                el.getAttribute('data-title') || el.querySelector('a')?.textContent || '';
-              const href = el.querySelector('a')?.href || '#';
-
-              const titleEl = document.getElementById('modal-title-text');
-              if (titleEl) titleEl.textContent = title;
-
-              const metaParts = [];
-              const authors = el.getAttribute('data-authors');
-              const source = el.getAttribute('data-source_name');
-              if (authors) metaParts.push(authors);
-              if (source) metaParts.push(source);
-              const metaEl = document.getElementById('modal-meta');
-              if (metaEl) metaEl.textContent = metaParts.join(' • ');
-
-              const tagsEl = document.getElementById('modal-tags');
-              if (tagsEl) {
-                tagsEl.innerHTML = '';
-                ['role', 'industry', 'topic', 'content_type', 'geography'].forEach((attr) => {
-                  const value = el.getAttribute(`data-${attr}`);
-                  if (value) {
-                    const span = document.createElement('span');
-                    span.className =
-                      'rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-xs text-neutral-300';
-                    span.textContent = value;
-                    tagsEl.appendChild(span);
-                  }
-                });
-              }
-
-              const summaryEl = document.getElementById('modal-summary');
-              if (summaryEl) {
-                const summary = el.getAttribute('data-summary-medium') || '';
-                summaryEl.innerHTML = parseSummary(summary);
-              }
-
-              const viewDetails = document.getElementById('modal-view-details');
-              if (viewDetails) viewDetails.setAttribute('href', href);
-            };
-
-            const closeModal = () => {
-              modal.classList.add('hidden');
-              document.body.style.overflow = '';
-              if (lastFocus && typeof lastFocus.focus === 'function') {
-                lastFocus.focus();
-              }
-            };
-
-            document.getElementById('modal-close')?.addEventListener('click', closeModal);
-            document.getElementById('modal-backdrop')?.addEventListener('click', closeModal);
-            window.addEventListener('keydown', (e) => {
-              if (e.key === 'Escape') closeModal();
-            });
-
-            document.addEventListener('click', (e) => {
-              const target = e.target;
-              if (!target) return;
-              const btn = target.closest('[data-open-modal]');
-              if (!btn) return;
-              e.preventDefault();
-              e.stopPropagation();
-              const card = btn.closest('li');
-              if (card) openModal(card);
-            });
-          }
-
           // ---------- MOBILE MENU ----------
           const menuBtn = document.getElementById('mobile-menu-btn');
           const menu = document.getElementById('mobile-menu');

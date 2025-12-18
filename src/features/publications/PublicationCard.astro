@@ -332,12 +332,12 @@ const candidates = [...itemThumbs];
             </span>
           )
         }
-        {/* +X indicator for extra tags - opens modal */}
+        {/* +X indicator for extra tags - expands card */}
         {
           extraTagCount > 0 && (
             <button
               type="button"
-              data-open-modal="true"
+              data-expand-card="true"
               class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-700/50 text-neutral-400 ring-1 ring-inset ring-neutral-600/30 hover:bg-neutral-600/50 hover:text-neutral-300 transition-colors pointer-events-auto"
             >
               +{extraTagCount} more
