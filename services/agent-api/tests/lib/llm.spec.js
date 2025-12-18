@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectProvider } from './llm.js';
+import { detectProvider } from '../../src/lib/llm.js';
 
 describe('llm.js', () => {
   describe('detectProvider', () => {
