@@ -97,15 +97,16 @@ describe('agent-registry', () => {
       expect(runTagger).toHaveBeenCalledWith(input, options);
     });
 
-    it('scorer agent function calls scoreRelevance (no options)', async () => {
+    it('scorer agent function calls scoreRelevance with options', async () => {
       const { getAgentFunction } = await import('../../src/lib/agent-registry.js');
       const { scoreRelevance } = await import('../../src/agents/scorer.js');
 
       const fn = await getAgentFunction('scorer');
       const input = { id: 'abc', payload: { title: 'Test' } };
-      await fn(input);
+      const options = { promptOverride: { version: 'test-v1' } };
+      await fn(input, options);
 
-      expect(scoreRelevance).toHaveBeenCalledWith(input);
+      expect(scoreRelevance).toHaveBeenCalledWith(input, options);
     });
   });
 });

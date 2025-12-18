@@ -7,45 +7,17 @@
  * KB-155: Agentic Discovery System - Phase 1
  */
 
-import OpenAI from 'openai';
 import { createClient } from '@supabase/supabase-js';
 import process from 'node:process';
+import { AgentRunner } from '../lib/runner.js';
+
+const runner = new AgentRunner('scorer');
 
 // Lazy-load clients
-let openai = null;
 let supabase = null;
 let cachedPrompt = null;
 let cachedAudiences = null;
 let cachedRejectionPatterns = null;
-let cachedPromptConfig = null;
-
-function getOpenAI() {
-  if (!openai) {
-    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  }
-  return openai;
-}
-
-// Load prompt config from DB (model, max_tokens)
-async function getPromptConfig() {
-  if (cachedPromptConfig) return cachedPromptConfig;
-
-  const { data, error } = await getSupabase()
-    .from('prompt_version')
-    .select('model_id, max_tokens')
-    .eq('agent_name', 'scorer')
-    .eq('is_current', true)
-    .single();
-
-  if (error || !data) {
-    console.warn('Warning: No prompt_version for scorer, using defaults');
-    cachedPromptConfig = { model_id: 'gpt-4o-mini', max_tokens: 200 };
-  } else {
-    cachedPromptConfig = data;
-  }
-
-  return cachedPromptConfig;
-}
 
 function getSupabase() {
   if (!supabase) {
@@ -324,9 +296,10 @@ export async function checkRejectionPatterns(title, description = '', source = '
 /**
  * Score a candidate for executive relevance
  * @param {Object} candidate - { title, description, source }
+ * @param {Object} options - { promptOverride } for head-to-head evals
  * @returns {Promise<Object>} - { relevance_score, executive_summary, skip_reason, usage }
  */
-export async function scoreRelevance(candidate) {
+export async function scoreRelevance(candidate, options = {}) {
   const { title, description = '', source = '', publishedDate = null, url = '' } = candidate;
 
   // KB-206: Check for staleness indicators BEFORE trusted source bypass
@@ -384,10 +357,10 @@ export async function scoreRelevance(candidate) {
       relevance_scores: {
         executive: adjustedScore,
         functional_specialist: adjustedScore,
-        engineer: Math.max(1, 6 - agePenalty), // Slightly lower for engineers (less technical detail)
-        researcher: Math.max(1, 6 - agePenalty), // Slightly lower for researchers (less academic rigor)
+        engineer: Math.max(1, 6 - agePenalty),
+        researcher: Math.max(1, 6 - agePenalty),
       },
-      primary_audience: 'executive', // Trusted sources are typically exec-focused
+      primary_audience: 'executive',
       executive_summary: `Trusted source: ${source}${agePenalty > 0 ? ` (age penalty: -${agePenalty})` : ''}`,
       skip_reason: adjustedScore < MIN_RELEVANCE_SCORE ? `Old content from trusted source` : null,
       should_queue: adjustedScore >= MIN_RELEVANCE_SCORE,
@@ -408,69 +381,87 @@ export async function scoreRelevance(candidate) {
     };
   }
 
-  const userContent = `Source: ${source}
+  // Use AgentRunner for LLM call with logging and tracing
+  return runner
+    .run(
+      {
+        payload: candidate,
+        promptOverride: options.promptOverride,
+      },
+      async (context, promptTemplate, tools) => {
+        const { llm } = tools;
+        const modelId = tools.model || 'gpt-4o-mini';
+        const maxTokens = tools.promptConfig?.max_tokens || 200;
+
+        // Use promptTemplate from DB, or fall back to dynamically built prompt
+        const systemPrompt = promptTemplate || (await getSystemPrompt());
+
+        const userContent = `Source: ${source}
 Title: ${title}
 Description: ${description || '(no description available)'}`;
 
-  try {
-    const systemPrompt = await getSystemPrompt();
-    const promptConfig = await getPromptConfig();
-    const completion = await getOpenAI().chat.completions.create({
-      model: promptConfig.model_id,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.1,
-      max_tokens: promptConfig.max_tokens,
-    });
+        const completion = await llm.complete({
+          model: modelId,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent },
+          ],
+          responseFormat: { type: 'json_object' },
+          temperature: 0.1,
+          maxTokens,
+        });
 
-    const result = JSON.parse(completion.choices[0].message.content);
-    const usage = completion.usage;
+        const result = JSON.parse(completion.content);
+        const usage = completion.usage;
 
-    // KB-208: Handle multi-audience scores
-    const scores = result.relevance_scores || {};
-    const adjustedScores = {
-      executive: Math.max(1, (scores.executive || 5) - agePenalty),
-      functional_specialist: Math.max(1, (scores.functional_specialist || 5) - agePenalty),
-      engineer: Math.max(1, (scores.engineer || 5) - agePenalty),
-      researcher: Math.max(1, (scores.researcher || 5) - agePenalty),
-    };
+        // KB-208: Handle multi-audience scores
+        const scores = result.relevance_scores || {};
+        const adjustedScores = {
+          executive: Math.max(1, (scores.executive || 5) - agePenalty),
+          functional_specialist: Math.max(1, (scores.functional_specialist || 5) - agePenalty),
+          engineer: Math.max(1, (scores.engineer || 5) - agePenalty),
+          researcher: Math.max(1, (scores.researcher || 5) - agePenalty),
+        };
 
-    // Find highest score to determine if we should queue
-    const maxScore = Math.max(...Object.values(adjustedScores));
-    const primaryAudience =
-      result.primary_audience || Object.entries(adjustedScores).sort((a, b) => b[1] - a[1])[0][0];
+        const maxScore = Math.max(...Object.values(adjustedScores));
+        const primaryAudience =
+          result.primary_audience ||
+          Object.entries(adjustedScores).sort((a, b) => b[1] - a[1])[0][0];
 
-    return {
-      relevance_score: maxScore, // For backward compatibility
-      relevance_scores: adjustedScores, // New: per-audience scores
-      primary_audience: primaryAudience,
-      executive_summary: result.executive_summary || '',
-      skip_reason:
-        result.skip_reason ||
-        (maxScore < MIN_RELEVANCE_SCORE && agePenalty > 0 ? `Score reduced by age penalty` : null),
-      should_queue: maxScore >= MIN_RELEVANCE_SCORE,
-      usage: {
-        prompt_tokens: usage.prompt_tokens,
-        completion_tokens: usage.completion_tokens,
-        total_tokens: usage.total_tokens,
+        return {
+          relevance_score: maxScore,
+          relevance_scores: adjustedScores,
+          primary_audience: primaryAudience,
+          executive_summary: result.executive_summary || '',
+          skip_reason:
+            result.skip_reason ||
+            (maxScore < MIN_RELEVANCE_SCORE && agePenalty > 0
+              ? `Score reduced by age penalty`
+              : null),
+          should_queue: maxScore >= MIN_RELEVANCE_SCORE,
+          usage: usage
+            ? {
+                prompt_tokens: usage.prompt_tokens,
+                completion_tokens: usage.completion_tokens,
+                total_tokens: usage.total_tokens,
+                model: modelId,
+              }
+            : null,
+          age_penalty: agePenalty > 0 ? agePenalty : undefined,
+        };
       },
-      age_penalty: agePenalty > 0 ? agePenalty : undefined,
-    };
-  } catch (error) {
-    console.error(`   ⚠️ Relevance scoring failed: ${error.message}`);
-    // On error, default to queuing (don't lose candidates due to API issues)
-    return {
-      relevance_score: 5,
-      executive_summary: 'Scoring failed - queued for manual review',
-      skip_reason: null,
-      should_queue: true,
-      usage: null,
-      error: error.message,
-    };
-  }
+    )
+    .catch((error) => {
+      console.error(`   ⚠️ Relevance scoring failed: ${error.message}`);
+      return {
+        relevance_score: 5,
+        executive_summary: 'Scoring failed - queued for manual review',
+        skip_reason: null,
+        should_queue: true,
+        usage: null,
+        error: error.message,
+      };
+    });
 }
 
 /**
