@@ -192,11 +192,12 @@ function getAnthropic() {
   return _anthropic;
 }
 
-export async function runSummarizer(queueItem) {
+export async function runSummarizer(queueItem, options = {}) {
   return runner.run(
     {
       queueId: queueItem.id,
       payload: queueItem.payload,
+      promptOverride: options.promptOverride,
     },
     async (context, promptTemplate, tools) => {
       const { payload } = context;

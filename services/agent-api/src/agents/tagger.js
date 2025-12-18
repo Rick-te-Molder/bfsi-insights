@@ -320,7 +320,7 @@ function enforceIndustryMutualExclusivity(industryCodes) {
   });
 }
 
-export async function runTagger(queueItem) {
+export async function runTagger(queueItem, options = {}) {
   // Load taxonomies
   const taxonomies = await loadTaxonomies();
 
@@ -333,6 +333,7 @@ export async function runTagger(queueItem) {
       queueId,
       publicationId,
       payload: queueItem.payload,
+      promptOverride: options.promptOverride,
     },
     async (context, promptTemplate, tools) => {
       const { payload } = context;

@@ -105,23 +105,34 @@ export class AgentRunner {
 
   /**
    * Main execution method
-   * @param {object} context - { publicationId, queueId, payload, etc. }
+   * @param {object} context - { publicationId, queueId, payload, promptOverride, etc. }
    * @param {function} logicFn - (context, prompt, tools) => Promise<result>
    */
   async run(context, logicFn) {
     console.log(`🤖 [${this.agentName}] Starting run...`);
     this.stepOrder = 0;
 
-    // 1. Fetch Active Prompt Configuration
-    const { data: promptConfig, error: promptError } = await this.supabase
-      .from('prompt_version')
-      .select('*')
-      .eq('agent_name', this.agentName)
-      .eq('is_current', true)
-      .single();
+    let promptConfig;
 
-    if (promptError || !promptConfig) {
-      throw new Error(`❌ Missing active prompt for agent: ${this.agentName}`);
+    // Check for prompt override (used by head-to-head evals)
+    if (context.promptOverride) {
+      console.log(
+        `🔄 [${this.agentName}] Using prompt override: ${context.promptOverride.version}`,
+      );
+      promptConfig = context.promptOverride;
+    } else {
+      // 1. Fetch Active Prompt Configuration
+      const { data, error: promptError } = await this.supabase
+        .from('prompt_version')
+        .select('*')
+        .eq('agent_name', this.agentName)
+        .eq('is_current', true)
+        .single();
+
+      if (promptError || !data) {
+        throw new Error(`❌ Missing active prompt for agent: ${this.agentName}`);
+      }
+      promptConfig = data;
     }
 
     // 2. Log Run Start

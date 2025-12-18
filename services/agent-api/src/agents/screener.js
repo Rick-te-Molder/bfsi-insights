@@ -2,11 +2,12 @@ import { AgentRunner } from '../lib/runner.js';
 
 const runner = new AgentRunner('screener');
 
-export async function runRelevanceFilter(queueItem) {
+export async function runRelevanceFilter(queueItem, options = {}) {
   return runner.run(
     {
       queueId: queueItem.id,
       payload: queueItem.payload,
+      promptOverride: options.promptOverride,
     },
     async (context, promptTemplate, tools) => {
       const { payload } = context;

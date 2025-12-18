@@ -18,7 +18,7 @@ vi.mock('../../src/agents/tagger.js', () => ({
 }));
 
 vi.mock('../../src/agents/scorer.js', () => ({
-  runScorer: vi.fn().mockResolvedValue({ score: 0.8 }),
+  scoreRelevance: vi.fn().mockResolvedValue({ score: 0.8 }),
 }));
 
 describe('agent-registry', () => {
@@ -61,48 +61,51 @@ describe('agent-registry', () => {
       expect(fn).toBeNull();
     });
 
-    it('screener agent function calls runRelevanceFilter', async () => {
+    it('screener agent function calls runRelevanceFilter with options', async () => {
       const { getAgentFunction } = await import('../../src/lib/agent-registry.js');
       const { runRelevanceFilter } = await import('../../src/agents/screener.js');
 
       const fn = await getAgentFunction('screener');
       const input = { id: '123', payload: { title: 'Test' } };
-      await fn(input);
+      const options = { promptOverride: { version: 'test-v1' } };
+      await fn(input, options);
 
-      expect(runRelevanceFilter).toHaveBeenCalledWith(input);
+      expect(runRelevanceFilter).toHaveBeenCalledWith(input, options);
     });
 
-    it('summarizer agent function calls runSummarizer', async () => {
+    it('summarizer agent function calls runSummarizer with options', async () => {
       const { getAgentFunction } = await import('../../src/lib/agent-registry.js');
       const { runSummarizer } = await import('../../src/agents/summarizer.js');
 
       const fn = await getAgentFunction('summarizer');
       const input = { id: '456', payload: { title: 'Test' } };
-      await fn(input);
+      const options = { promptOverride: { version: 'test-v1' } };
+      await fn(input, options);
 
-      expect(runSummarizer).toHaveBeenCalledWith(input);
+      expect(runSummarizer).toHaveBeenCalledWith(input, options);
     });
 
-    it('tagger agent function calls runTagger', async () => {
+    it('tagger agent function calls runTagger with options', async () => {
       const { getAgentFunction } = await import('../../src/lib/agent-registry.js');
       const { runTagger } = await import('../../src/agents/tagger.js');
 
       const fn = await getAgentFunction('tagger');
       const input = { id: '789', payload: { title: 'Test' } };
-      await fn(input);
+      const options = { promptOverride: { version: 'test-v1' } };
+      await fn(input, options);
 
-      expect(runTagger).toHaveBeenCalledWith(input);
+      expect(runTagger).toHaveBeenCalledWith(input, options);
     });
 
-    it('scorer agent function calls runScorer', async () => {
+    it('scorer agent function calls scoreRelevance (no options)', async () => {
       const { getAgentFunction } = await import('../../src/lib/agent-registry.js');
-      const { runScorer } = await import('../../src/agents/scorer.js');
+      const { scoreRelevance } = await import('../../src/agents/scorer.js');
 
       const fn = await getAgentFunction('scorer');
       const input = { id: 'abc', payload: { title: 'Test' } };
       await fn(input);
 
-      expect(runScorer).toHaveBeenCalledWith(input);
+      expect(scoreRelevance).toHaveBeenCalledWith(input);
     });
   });
 });
