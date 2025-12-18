@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import agentRoutes from './routes/agents.js';
 import agentJobRoutes from './routes/agent-jobs.js';
 import discoveryControlRoutes from './routes/discovery-control.js';
+import evalsRoutes from './routes/evals.js';
 import { requireApiKey } from './middleware/auth.js';
 
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -88,6 +89,7 @@ app.post('/api/trigger-build', async (req, res) => {
 // Note: More specific routes must come first
 app.use('/api/jobs', requireApiKey, agentJobRoutes);
 app.use('/api/discovery', requireApiKey, discoveryControlRoutes);
+app.use('/api/evals', requireApiKey, evalsRoutes);
 app.use('/api/agents', requireApiKey, agentRoutes);
 
 app.listen(port, () => {
