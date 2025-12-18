@@ -1,13 +1,13 @@
 'use client';
 
 import type { PromptVersion } from '@/types/database';
-import { estimateTokens } from '../utils';
+import { estimateTokens, getStageBadge } from '../utils';
 
 interface AgentDetailProps {
   agentName: string;
   prompts: PromptVersion[];
   onEdit: (p: PromptVersion) => void;
-  onRollback: (p: PromptVersion) => void;
+  onPromote: (p: PromptVersion) => void;
   onDiff: (a: PromptVersion, b: PromptVersion) => void;
   onView: (p: PromptVersion) => void;
   onTest: (p: PromptVersion) => void;
@@ -17,7 +17,7 @@ export function AgentDetail({
   agentName,
   prompts,
   onEdit,
-  onRollback,
+  onPromote,
   onDiff,
   onView,
   onTest,
@@ -90,6 +90,13 @@ export function AgentDetail({
                       {p.version}
                     </span>
                     {p.is_current && <span className="text-xs text-emerald-400">(current)</span>}
+                    {p.stage && (
+                      <span
+                        className={`text-xs rounded-full px-2 py-0.5 ${getStageBadge(p.stage).className}`}
+                      >
+                        {getStageBadge(p.stage).label}
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-neutral-500">
                     {new Date(p.created_at).toLocaleString()}
@@ -108,23 +115,29 @@ export function AgentDetail({
                 >
                   View
                 </button>
-                {!p.is_current && (
-                  <>
-                    <button
-                      onClick={() => onRollback(p)}
-                      className="text-xs text-amber-400 hover:text-amber-300"
-                    >
-                      Rollback
-                    </button>
-                    {currentPrompt && (
-                      <button
-                        onClick={() => onDiff(currentPrompt, p)}
-                        className="text-xs text-purple-400 hover:text-purple-300"
-                      >
-                        Diff
-                      </button>
-                    )}
-                  </>
+                {(p.stage as string) === 'DEV' && (
+                  <button
+                    onClick={() => onPromote(p)}
+                    className="text-xs text-amber-400 hover:text-amber-300"
+                  >
+                    → TST
+                  </button>
+                )}
+                {(p.stage as string) === 'TST' && (
+                  <button
+                    onClick={() => onPromote(p)}
+                    className="text-xs text-emerald-400 hover:text-emerald-300"
+                  >
+                    → PRD
+                  </button>
+                )}
+                {!p.is_current && currentPrompt && (
+                  <button
+                    onClick={() => onDiff(currentPrompt, p)}
+                    className="text-xs text-purple-400 hover:text-purple-300"
+                  >
+                    Diff
+                  </button>
                 )}
               </div>
             </div>
