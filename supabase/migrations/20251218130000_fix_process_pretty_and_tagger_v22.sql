@@ -1,19 +1,19 @@
 -- ============================================================================
--- Migration: Fix bfsi_process_taxonomy_pretty view and add tagger v2.2
+-- Migration: Create bfsi_process_pretty view and add tagger v2.2
 -- ============================================================================
--- 1. Fix bfsi_process_taxonomy_pretty view (broken after refactor to use code/parent_code)
+-- 1. Create bfsi_process_pretty view (flattened hierarchy like bfsi_industry_pretty)
 -- 2. Add tagger v2.2 prompt with improved entity categorization and process tagging
 -- ============================================================================
 
 -- ============================================================================
--- 1. FIX bfsi_process_taxonomy_pretty VIEW
+-- 1. CREATE bfsi_process_pretty VIEW
 -- ============================================================================
--- The original view used 'id' and 'parent_id' but the refactor migration
--- changed these to 'code' and 'parent_code'. This recreates the view correctly.
+-- Creates a flattened view of the process hierarchy for easy querying.
+-- Table is bfsi_process (consistent with bfsi_industry naming).
 
-DROP VIEW IF EXISTS bfsi_process_taxonomy_pretty;
+DROP VIEW IF EXISTS bfsi_process_pretty;
 
-CREATE VIEW bfsi_process_taxonomy_pretty
+CREATE VIEW bfsi_process_pretty
 WITH (security_invoker = true)
 AS
 SELECT 
@@ -31,10 +31,10 @@ SELECT
     COALESCE(' / ' || l2.name, '') || 
     COALESCE(' / ' || l3.name, '')
   ) AS path
-FROM bfsi_process_taxonomy l0
-LEFT JOIN bfsi_process_taxonomy l1 ON l1.parent_code = l0.code AND l1.level = 1
-LEFT JOIN bfsi_process_taxonomy l2 ON l2.parent_code = l1.code AND l2.level = 2
-LEFT JOIN bfsi_process_taxonomy l3 ON l3.parent_code = l2.code AND l3.level = 3
+FROM bfsi_process l0
+LEFT JOIN bfsi_process l1 ON l1.parent_code = l0.code AND l1.level = 1
+LEFT JOIN bfsi_process l2 ON l2.parent_code = l1.code AND l2.level = 2
+LEFT JOIN bfsi_process l3 ON l3.parent_code = l2.code AND l3.level = 3
 WHERE l0.level = 0;
 
 -- ============================================================================
