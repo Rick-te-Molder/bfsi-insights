@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { PageHeader, LoadingState } from '../components';
@@ -40,7 +40,7 @@ interface ComparisonResult {
   reasoning?: string;
 }
 
-export default function HeadToHeadPage() {
+function HeadToHeadContent() {
   const searchParams = useSearchParams();
   const initialItemId = searchParams.get('item') || '';
 
@@ -374,5 +374,13 @@ export default function HeadToHeadPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function HeadToHeadPage() {
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <HeadToHeadContent />
+    </Suspense>
   );
 }
