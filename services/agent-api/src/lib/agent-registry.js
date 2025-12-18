@@ -22,9 +22,9 @@ export async function getAgentFunction(agentName) {
       const { runTagger } = await import('../agents/tagger.js');
       return runTagger(input, options);
     },
-    scorer: async (input) => {
+    scorer: async (input, options) => {
       const { scoreRelevance } = await import('../agents/scorer.js');
-      return scoreRelevance(input);
+      return scoreRelevance(input, options);
     },
   };
   return agentMap[agentName] || null;

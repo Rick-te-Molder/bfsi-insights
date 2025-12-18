@@ -26,6 +26,38 @@ vi.mock('openai', () => ({
   },
 }));
 
+// Mock AgentRunner to call the callback with mock tools that use our mockCreate
+vi.mock('../../src/lib/runner.js', () => ({
+  AgentRunner: class MockAgentRunner {
+    constructor() {
+      this.run = vi.fn(async (context, callback) => {
+        // Simulate runner calling the callback with mock tools
+        const mockLlm = {
+          complete: vi.fn(async (opts) => {
+            // Call the mockCreate to maintain test compatibility
+            const result = await mockCreate({
+              model: opts.model,
+              messages: opts.messages,
+              response_format: opts.responseFormat,
+              temperature: opts.temperature,
+              max_tokens: opts.maxTokens,
+            });
+            return {
+              content: result.choices[0].message.content,
+              usage: result.usage,
+            };
+          }),
+        };
+        return callback(context, context.promptOverride?.prompt_text || null, {
+          llm: mockLlm,
+          model: 'gpt-4o-mini',
+          promptConfig: { max_tokens: 200 },
+        });
+      });
+    }
+  },
+}));
+
 // Mock Supabase to return valid data for kb_audience, kb_rejection_pattern, and prompt_version
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({
@@ -239,6 +271,7 @@ describe('scoreRelevance', () => {
         prompt_tokens: 100,
         completion_tokens: 50,
         total_tokens: 150,
+        model: 'gpt-4o-mini',
       });
     });
   });
