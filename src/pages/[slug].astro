@@ -13,7 +13,10 @@ import { getAllPublications, getPublicationBySlug } from '../lib/supabase';
 // ------------------------------------------------------------
 export async function getStaticPaths() {
   const publications = await getAllPublications();
-  return publications.map((item) => ({ params: { slug: item.slug } }));
+  // Filter out any publications with missing or invalid slugs
+  return publications
+    .filter((item) => item.slug && typeof item.slug === 'string')
+    .map((item) => ({ params: { slug: item.slug } }));
 }
 
 // ------------------------------------------------------------

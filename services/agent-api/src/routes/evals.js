@@ -37,7 +37,7 @@ router.post('/head-to-head', async (req, res) => {
       .select('id, version, prompt_text')
       .in('id', [version_a_id, version_b_id]);
 
-    if (!versions || versions.length !== 2) {
+    if (versions?.length !== 2) {
       return res.status(404).json({ error: 'Prompt versions not found' });
     }
 

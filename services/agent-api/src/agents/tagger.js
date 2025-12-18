@@ -286,10 +286,12 @@ CRITICAL: Distinguish between ORGANIZATIONS and VENDORS:
 - Data providers, analytics companies
 - RegTech, InsurTech, WealthTech companies
 
-HEURISTICS for vendor detection:
-- Company name contains: Platform, Solutions, Labs, Tech, Systems, Software, AI, Analytics
-- Company provides services TO banks/insurers (not IS a bank/insurer)
-- Startups, fintechs, technology partners mentioned in partnerships
+HEURISTICS for vendor detection (APPLY STRICTLY):
+- Company name contains: Platform, Solutions, Labs, Tech, Systems, Software, AI, Analytics → VENDOR
+- Company provides services TO banks/insurers (not IS a bank/insurer) → VENDOR
+- Startups, fintechs, technology partners mentioned in partnerships → VENDOR
+- If article describes partnership between bank + fintech, the fintech is the VENDOR
+- "Embedded finance" providers like Kee Platforms, Stripe, Plaid → VENDOR
 
 Known vendors (extract if mentioned):
 ${vendorData.formatted}
@@ -309,6 +311,15 @@ ${vendorData.formatted}
       // Use model and max_tokens from prompt_version instead of hardcoding
       const modelId = tools.model || 'gpt-4o-mini';
       const maxTokens = tools.promptConfig?.max_tokens;
+
+      // Debug: Log if prompt mentions Kee Platforms
+      const hasKeeInSystemPrompt = promptTemplate?.includes('Kee Platforms');
+      const hasKeeInUserContent = content.includes('Kee Platforms');
+      console.log(
+        `🔍 [tagger] Prompt debug: Kee in system=${hasKeeInSystemPrompt}, Kee in user=${hasKeeInUserContent}`,
+      );
+      console.log(`🔍 [tagger] System prompt length: ${promptTemplate?.length || 0} chars`);
+
       const completion = await llm.parseStructured({
         model: modelId,
         maxTokens,

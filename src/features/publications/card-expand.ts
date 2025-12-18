@@ -16,13 +16,13 @@ function toggleCard(card: HTMLElement, expand: boolean) {
     expanded.classList.remove('hidden');
     expandLabel?.classList.add('hidden');
     collapseLabel?.classList.remove('hidden');
-    card.setAttribute('data-expanded', 'true');
+    card.dataset.expanded = 'true';
   } else {
     collapsed.classList.remove('hidden');
     expanded.classList.add('hidden');
     expandLabel?.classList.remove('hidden');
     collapseLabel?.classList.add('hidden');
-    card.removeAttribute('data-expanded');
+    delete card.dataset.expanded;
   }
 }
 
@@ -33,7 +33,7 @@ function bindExpandButton(btn: HTMLElement) {
     const card = btn.closest('li.group') as HTMLElement;
     if (!card) return;
 
-    const isExpanded = card.hasAttribute('data-expanded');
+    const isExpanded = 'expanded' in card.dataset;
     toggleCard(card, !isExpanded);
   });
 }

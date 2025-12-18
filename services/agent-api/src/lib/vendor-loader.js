@@ -50,5 +50,9 @@ export async function loadVendors() {
     )
     .join('\n');
 
+  console.log(
+    `📦 Loaded ${data?.length || 0} vendors from ag_vendor (${vendorNames.size} names/aliases)`,
+  );
+
   return { vendors: data || [], vendorNames, formatted };
 }

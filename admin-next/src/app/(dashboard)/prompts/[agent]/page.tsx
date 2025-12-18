@@ -77,8 +77,7 @@ export default function AgentDetailPage() {
       const { error } = await supabase
         .from('prompt_version')
         .update({ stage: nextStage, is_current: true })
-        .eq('agent_name', agentName)
-        .eq('version', prompt.version);
+        .eq('id', prompt.id);
 
       if (error) {
         alert('Failed to promote: ' + error.message);
@@ -90,8 +89,7 @@ export default function AgentDetailPage() {
       const { error } = await supabase
         .from('prompt_version')
         .update({ stage: nextStage })
-        .eq('agent_name', agentName)
-        .eq('version', prompt.version);
+        .eq('id', prompt.id);
 
       if (error) {
         alert('Failed to promote: ' + error.message);
