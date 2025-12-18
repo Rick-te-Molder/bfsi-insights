@@ -162,15 +162,13 @@ export function PipelineStatusGrid({ statusData }: PipelineStatusGridProps) {
                       )}
                       title={`Code ${status.code}: ${status.name}`}
                     >
-                      <span className="px-2 py-1 bg-neutral-800/80 text-neutral-400 font-mono">
-                        {status.code}
-                      </span>
-                      <span className="px-2 py-1 text-neutral-300">
+                      <span className="px-2 py-1 text-neutral-400 font-mono">{status.code}</span>
+                      <span className="px-2 py-1 text-neutral-400 border-r border-neutral-700">
                         {status.name.replace(/_/g, ' ')}
                       </span>
                       <span
                         className={cn(
-                          'px-2 py-1 font-semibold',
+                          'px-2 py-1 font-bold',
                           status.count > 0 ? cat.bgColor : 'bg-neutral-800/50',
                           status.count > 0 ? cat.color : 'text-neutral-500',
                         )}
