@@ -18,7 +18,7 @@ interface QueueItem {
   payload: {
     title?: string;
   };
-  created_at: string;
+  discovered_at: string;
 }
 
 interface ComparisonResult {
@@ -57,8 +57,8 @@ export default function HeadToHeadPage() {
         .order('agent_name'),
       supabase
         .from('ingestion_queue')
-        .select('id, url, payload, created_at')
-        .order('created_at', { ascending: false })
+        .select('id, url, payload, discovered_at')
+        .order('discovered_at', { ascending: false })
         .limit(100),
     ]);
 
