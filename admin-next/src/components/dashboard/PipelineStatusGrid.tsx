@@ -28,6 +28,7 @@ const ChevronRight = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 import { cn } from '@/lib/utils';
+import { StatusPill } from '@/components/ui/status-pill';
 
 interface StatusCode {
   code: number;
@@ -153,29 +154,14 @@ export function PipelineStatusGrid({ statusData }: PipelineStatusGridProps) {
               <div className="px-3 pb-3 pl-10">
                 <div className="flex flex-wrap gap-2">
                   {cat.statuses.map((status) => (
-                    <div
+                    <StatusPill
                       key={status.code}
-                      className={cn(
-                        'inline-flex items-center rounded-full text-xs overflow-hidden',
-                        status.count > 0 ? cat.borderColor : 'border-neutral-700',
-                        'border',
-                      )}
-                      title={`Code ${status.code}: ${status.name}`}
-                    >
-                      <span className="px-2 py-1 text-neutral-400 font-mono">{status.code}</span>
-                      <span className="px-2 py-1 text-neutral-400 border-r border-neutral-700">
-                        {status.name.replace(/_/g, ' ')}
-                      </span>
-                      <span
-                        className={cn(
-                          'px-2 py-1 font-bold',
-                          status.count > 0 ? cat.bgColor : 'bg-neutral-800/50',
-                          status.count > 0 ? cat.color : 'text-neutral-500',
-                        )}
-                      >
-                        {status.count}
-                      </span>
-                    </div>
+                      code={status.code}
+                      name={status.name}
+                      count={status.count}
+                      color={cat.color}
+                      borderColor={cat.borderColor}
+                    />
                   ))}
                 </div>
               </div>

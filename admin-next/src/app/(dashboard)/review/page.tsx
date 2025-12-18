@@ -289,22 +289,26 @@ export default async function ReviewPage({
   const timeWindow = params.time || '';
   const viewMode = params.view || 'card'; // 'card', 'list', or 'split'
 
-  // Load status codes from status_lookup table (single source of truth)
-  const statusCodes = await loadStatusCodes();
-
-  const [{ items, sources: _sources }, allSources, { taxonomyConfig, taxonomyData }] =
+  // Run all data fetching in parallel for performance
+  const supabase = createServiceRoleClient();
+  const [statusCodes, allSources, { taxonomyConfig, taxonomyData }, { data: statusData }] =
     await Promise.all([
-      getQueueItems(status, source, timeWindow, statusCodes, itemId, urlSearch, searchQuery),
+      loadStatusCodes(),
       getAllSources(),
       getTaxonomyData(),
+      supabase.rpc('get_status_code_counts'),
     ]);
 
-  // Fetch status counts for the grid
-  const supabase = createServiceRoleClient();
-  const { data: statusData, error: statusError } = await supabase.rpc('get_status_code_counts');
-  if (statusError) {
-    console.error('Failed to fetch status code counts:', statusError);
-  }
+  // Fetch items (depends on statusCodes, so must be after first Promise.all)
+  const { items, sources: _sources } = await getQueueItems(
+    status,
+    source,
+    timeWindow,
+    statusCodes,
+    itemId,
+    urlSearch,
+    searchQuery,
+  );
 
   const timeFilters = [
     { value: '', label: 'All time' },
