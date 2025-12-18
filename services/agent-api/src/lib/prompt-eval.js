@@ -7,6 +7,7 @@
 
 import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
+import { getAgentFunction } from './agent-registry.js';
 // Note: runGoldenEval and getEvalHistory are available from ./evals.js for future use
 
 // Lazy initialization to avoid crash on import when env vars aren't set
@@ -248,32 +249,7 @@ export async function runPromptEval(options) {
   }
 }
 
-/**
- * Get agent function for running eval
- */
-async function getAgentFunction(agentName) {
-  // Map agent names to their runner functions
-  const agentMap = {
-    screener: async (input) => {
-      const { runRelevanceFilter } = await import('../agents/screener.js');
-      return runRelevanceFilter(input);
-    },
-    summarizer: async (input) => {
-      const { runSummarizer } = await import('../agents/summarizer.js');
-      return runSummarizer(input);
-    },
-    tagger: async (input) => {
-      const { runTagger } = await import('../agents/tagger.js');
-      return runTagger(input);
-    },
-    scorer: async (input) => {
-      const { runScorer } = await import('../agents/scorer.js');
-      return runScorer(input);
-    },
-  };
-
-  return agentMap[agentName] || null;
-}
+// getAgentFunction imported from ./agent-registry.js
 
 /**
  * Simple comparison of expected vs actual output

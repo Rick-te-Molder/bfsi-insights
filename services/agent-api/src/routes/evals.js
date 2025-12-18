@@ -2,32 +2,7 @@ import process from 'node:process';
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { complete } from '../lib/llm.js';
-
-/**
- * Get agent function for running eval
- * Based on pattern from lib/prompt-eval.js
- */
-async function getAgentFunction(agentName) {
-  const agentMap = {
-    screener: async (input) => {
-      const { runRelevanceFilter } = await import('../agents/screener.js');
-      return runRelevanceFilter(input);
-    },
-    summarizer: async (input) => {
-      const { runSummarizer } = await import('../agents/summarizer.js');
-      return runSummarizer(input);
-    },
-    tagger: async (input) => {
-      const { runTagger } = await import('../agents/tagger.js');
-      return runTagger(input);
-    },
-    scorer: async (input) => {
-      const { runScorer } = await import('../agents/scorer.js');
-      return runScorer(input);
-    },
-  };
-  return agentMap[agentName] || null;
-}
+import { getAgentFunction } from '../lib/agent-registry.js';
 
 const router = express.Router();
 
