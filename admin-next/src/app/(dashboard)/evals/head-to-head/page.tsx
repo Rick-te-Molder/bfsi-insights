@@ -14,9 +14,9 @@ interface PromptVersion {
 
 interface QueueItem {
   id: string;
+  url: string;
   payload: {
     title?: string;
-    url?: string;
   };
   created_at: string;
 }
@@ -57,13 +57,18 @@ export default function HeadToHeadPage() {
         .order('agent_name'),
       supabase
         .from('ingestion_queue')
-        .select('id, payload, created_at')
+        .select('id, url, payload, created_at')
+        .in('status_code', [300, 330]) // Only pending_review and approved items
         .order('created_at', { ascending: false })
         .limit(100),
     ]);
 
     if (!promptsRes.error) setPrompts(promptsRes.data || []);
-    if (!itemsRes.error) setItems(itemsRes.data || []);
+    if (!itemsRes.error) {
+      setItems(itemsRes.data || []);
+    } else {
+      console.error('Failed to load items:', itemsRes.error);
+    }
     setLoading(false);
   }, [supabase]);
 
@@ -187,11 +192,15 @@ export default function HeadToHeadPage() {
               className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
             >
               <option value="">Select item...</option>
-              {items.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {(item.payload?.title || 'Untitled').substring(0, 40)}...
-                </option>
-              ))}
+              {items.map((item) => {
+                const label = item.payload?.title || item.url || item.id;
+                return (
+                  <option key={item.id} value={item.id}>
+                    {label.substring(0, 50)}
+                    {label.length > 50 ? '...' : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
           <div className="flex flex-col justify-end gap-2">
