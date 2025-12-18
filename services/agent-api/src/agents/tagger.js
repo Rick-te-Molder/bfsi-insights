@@ -424,8 +424,12 @@ ${taxonomies.processes}
 - 0.3-0.5: Tangentially related
 - Below 0.3: Don't include (too uncertain)`;
 
+      // Use model and max_tokens from prompt_version instead of hardcoding
+      const modelId = tools.model || 'gpt-4o-mini';
+      const maxTokens = tools.promptConfig?.max_tokens;
       const completion = await openai.beta.chat.completions.parse({
-        model: 'gpt-4o-mini',
+        model: modelId,
+        max_tokens: maxTokens,
         messages: [
           { role: 'system', content: promptTemplate },
           { role: 'user', content: content },

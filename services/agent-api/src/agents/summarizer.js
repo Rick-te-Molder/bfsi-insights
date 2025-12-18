@@ -198,9 +198,10 @@ export async function runSummarizer(queueItem) {
       queueId: queueItem.id,
       payload: queueItem.payload,
     },
-    async (context, promptTemplate) => {
+    async (context, promptTemplate, tools) => {
       const { payload } = context;
       const anthropic = getAnthropic();
+      const modelId = tools.model || 'claude-sonnet-4-20250514';
 
       // Load writing rules dynamically
       const writingRules = await loadWritingRules();
@@ -221,9 +222,10 @@ ${JSON_SCHEMA_DESCRIPTION}
 
 Respond with ONLY the JSON object, no markdown code blocks or other text.`;
 
+      const maxTokens = tools.promptConfig?.max_tokens;
       const message = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4096,
+        model: modelId,
+        max_tokens: maxTokens,
         messages: [
           {
             role: 'user',
@@ -258,7 +260,7 @@ Respond with ONLY the JSON object, no markdown code blocks or other text.`;
       const usage = {
         input_tokens: message.usage.input_tokens,
         output_tokens: message.usage.output_tokens,
-        model: 'claude-sonnet-4-20250514',
+        model: modelId,
       };
 
       // Flatten for backward compatibility
