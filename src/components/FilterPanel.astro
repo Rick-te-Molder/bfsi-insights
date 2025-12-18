@@ -1,0 +1,270 @@
+---
+import HierarchicalFilter from './HierarchicalFilter.astro';
+import type { TaxonomyItem, FilterValue, FilterConfig } from '../lib/publications-data';
+
+interface Props {
+  flatFilters: FilterConfig[];
+  values: Record<string, FilterValue[]>;
+  industryWithCounts: TaxonomyItem[];
+  processWithCounts: TaxonomyItem[];
+  geographyWithCounts: TaxonomyItem[];
+}
+
+const { flatFilters, values, industryWithCounts, processWithCounts, geographyWithCounts } =
+  Astro.props;
+
+const audienceFilter = flatFilters.find((f) => f.column_name === 'audience');
+const audienceValues = audienceFilter ? values[audienceFilter.column_name] || [] : [];
+const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
+---
+
+<div id="filter-panel" class="fixed inset-0 z-50 hidden">
+  <div id="panel-backdrop" class="absolute inset-0 bg-black/80 backdrop-blur-sm"></div>
+
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="panel-title"
+    class="absolute inset-0 sm:inset-4 sm:rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col overflow-hidden"
+  >
+    <!-- Header -->
+    <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+      <div class="flex items-center gap-3">
+        <h3 id="panel-title" class="text-lg font-semibold">Filters</h3>
+        <span id="panel-result-count" class="text-sm text-neutral-400">
+          <span id="panel-count-number" class="font-semibold text-sky-300">0</span> results
+        </span>
+      </div>
+      <button
+        id="close-panel"
+        class="rounded-lg p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+        aria-label="Close filters"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Filter groups (scrollable) -->
+    <div class="flex-1 overflow-y-auto p-4">
+      <div class="max-w-3xl mx-auto space-y-3">
+        <!-- View For (Audience) -->
+        {
+          audienceFilter && audienceValues.length > 0 && (
+            <details
+              class="filter-group border border-neutral-800 rounded-lg overflow-hidden"
+              data-filter-key="audience"
+              open
+            >
+              <summary class="flex items-center justify-between px-4 py-3 cursor-pointer bg-neutral-900/50 hover:bg-neutral-800/50 transition-colors">
+                <span class="text-sm font-medium text-neutral-200">View for</span>
+                <svg
+                  class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </summary>
+              <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
+                <div class="flex flex-wrap gap-2">
+                  {audienceValues.map((v) => (
+                    <label class="filter-checkbox cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="filter-audience"
+                        value={v.value}
+                        class="sr-only peer"
+                      />
+                      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border border-neutral-700 bg-neutral-900 text-neutral-300 transition-all peer-checked:border-amber-500 peer-checked:bg-amber-500/10 peer-checked:text-amber-300 hover:border-neutral-600 hover:bg-neutral-800">
+                        {v.value}
+                        <span class="text-xs text-neutral-500">{v.count}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </details>
+          )
+        }
+
+        <!-- Industry Filter -->
+        <details
+          class="filter-group border border-neutral-800 rounded-lg overflow-hidden"
+          data-filter-key="industry"
+          open
+        >
+          <summary
+            class="flex items-center justify-between px-4 py-3 cursor-pointer bg-neutral-900/50 hover:bg-neutral-800/50 transition-colors"
+          >
+            <span class="text-sm font-medium text-neutral-200">Industry</span>
+            <svg
+              class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </summary>
+          <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
+            <HierarchicalFilter
+              filterKey="industry"
+              items={industryWithCounts}
+              color="cyan"
+              emptyMessage="No industry tags yet"
+              cascadeClass="industry"
+            />
+          </div>
+        </details>
+
+        <!-- Process Filter -->
+        <details
+          class="filter-group border border-neutral-800 rounded-lg overflow-hidden"
+          data-filter-key="process"
+        >
+          <summary
+            class="flex items-center justify-between px-4 py-3 cursor-pointer bg-neutral-900/50 hover:bg-neutral-800/50 transition-colors"
+          >
+            <span class="text-sm font-medium text-neutral-200">Process</span>
+            <svg
+              class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </summary>
+          <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
+            <HierarchicalFilter
+              filterKey="process"
+              items={processWithCounts}
+              color="emerald"
+              emptyMessage="No process tags yet"
+              cascadeClass="process"
+            />
+          </div>
+        </details>
+
+        <!-- Geography Filter -->
+        <details
+          class="filter-group border border-neutral-800 rounded-lg overflow-hidden"
+          data-filter-key="geography"
+        >
+          <summary
+            class="flex items-center justify-between px-4 py-3 cursor-pointer bg-neutral-900/50 hover:bg-neutral-800/50 transition-colors"
+          >
+            <span class="text-sm font-medium text-neutral-200">Geography</span>
+            <svg
+              class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </summary>
+          <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
+            <HierarchicalFilter
+              filterKey="geography"
+              items={geographyWithCounts}
+              color="sky"
+              emptyMessage="No geography tags yet"
+              cascadeClass="geography"
+              flattenRoots={['GLOBAL']}
+            />
+          </div>
+        </details>
+
+        <!-- Other flat filters -->
+        {
+          otherFilters.map((filter) => {
+            const filterValues = values[filter.column_name] || [];
+            if (filterValues.length === 0) return null;
+            return (
+              <details
+                class="filter-group border border-neutral-800 rounded-lg overflow-hidden"
+                data-filter-key={filter.column_name}
+              >
+                <summary class="flex items-center justify-between px-4 py-3 cursor-pointer bg-neutral-900/50 hover:bg-neutral-800/50 transition-colors">
+                  <span class="text-sm font-medium text-neutral-200">{filter.display_label}</span>
+                  <svg
+                    class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </summary>
+                <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
+                  <div class="flex flex-wrap gap-2">
+                    {filterValues.map((v) => (
+                      <label class="filter-checkbox cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name={`filter-${filter.column_name}`}
+                          value={v.value}
+                          class="sr-only peer"
+                        />
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border border-neutral-700 bg-neutral-900 text-neutral-300 transition-all peer-checked:border-sky-500 peer-checked:bg-sky-500/10 peer-checked:text-sky-300 hover:border-neutral-600 hover:bg-neutral-800">
+                          {v.value}
+                          <span class="text-xs text-neutral-500">{v.count}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </details>
+            );
+          })
+        }
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-4 py-3 border-t border-neutral-800 flex items-center justify-between gap-4">
+      <button
+        id="clear-all-filters"
+        class="px-4 py-2 text-sm font-medium text-neutral-400 hover:text-white transition-colors"
+      >
+        Clear all
+      </button>
+      <button
+        id="apply-filters"
+        class="px-6 py-2 rounded-lg bg-sky-600 text-sm font-medium text-white hover:bg-sky-500 transition-colors"
+      >
+        Show results
+      </button>
+    </div>
+  </div>
+</div>

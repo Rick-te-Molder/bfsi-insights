@@ -178,54 +178,125 @@ const candidates = [...itemThumbs];
       {item.authors?.length > 0 && <span> · {item.authors[0]}</span>}
     </div>
 
-    <!-- Thumbnail area (fixed height) -->
-    <div
-      class="relative mt-2 w-full rounded-md border border-neutral-800 bg-neutral-800/40"
-      style="aspect-ratio: 16 / 9; overflow: hidden;"
-    >
-      {
-        hasImage ? (
-          <>
-            <div class="absolute inset-0 rounded-md bg-neutral-800/40" />
-            <img
-              src={candidates[0]}
-              data-next={candidates.slice(1).join('|')}
-              alt={`${item.source_name || 'Source'} preview`}
-              width={isFirst ? 960 : 640}
-              height={isFirst ? 540 : 360}
-              loading={isFirst ? 'eager' : 'lazy'}
-              fetchpriority={isFirst ? 'high' : 'auto'}
-              decoding="async"
-              referrerpolicy="no-referrer"
-              sizes="(min-width: 1024px) 560px, (min-width: 640px) 480px, 100vw"
-              class="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
-            />
-          </>
-        ) : (
-          <div class="absolute inset-0 flex items-center justify-center">
-            <svg
-              class="h-10 w-10 text-neutral-700"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="1.5"
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+    <!-- Collapsed view: Thumbnail + short summary -->
+    <div class="card-collapsed">
+      <!-- Thumbnail area (fixed height) -->
+      <div
+        class="relative mt-2 w-full rounded-md border border-neutral-800 bg-neutral-800/40"
+        style="aspect-ratio: 16 / 9; overflow: hidden;"
+      >
+        {
+          hasImage ? (
+            <>
+              <div class="absolute inset-0 rounded-md bg-neutral-800/40" />
+              <img
+                src={candidates[0]}
+                data-next={candidates.slice(1).join('|')}
+                alt={`${item.source_name || 'Source'} preview`}
+                width={isFirst ? 960 : 640}
+                height={isFirst ? 540 : 360}
+                loading={isFirst ? 'eager' : 'lazy'}
+                fetchpriority={isFirst ? 'high' : 'auto'}
+                decoding="async"
+                referrerpolicy="no-referrer"
+                sizes="(min-width: 1024px) 560px, (min-width: 640px) 480px, 100vw"
+                class="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-300"
               />
-            </svg>
-          </div>
+            </>
+          ) : (
+            <div class="absolute inset-0 flex items-center justify-center">
+              <svg
+                class="h-10 w-10 text-neutral-700"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+          )
+        }
+      </div>
+
+      {
+        item.summary_short && (
+          <p class="mt-2 text-sm text-neutral-300 line-clamp-2">{item.summary_short}</p>
         )
       }
     </div>
 
-    {
-      item.summary_short && (
-        <p class="mt-2 text-sm text-neutral-300 line-clamp-2">{item.summary_short}</p>
-      )
-    }
+    <!-- Expanded view: Medium summary + all tags -->
+    <div class="card-expanded hidden">
+      <div
+        class="mt-2 max-h-48 overflow-y-auto rounded-md border border-neutral-800 bg-neutral-800/40 p-3"
+      >
+        {
+          item.summary_medium ? (
+            <p class="text-sm text-neutral-300">{item.summary_medium}</p>
+          ) : (
+            <p class="text-sm text-neutral-500 italic">No summary available</p>
+          )
+        }
+      </div>
+
+      <!-- All tags when expanded -->
+      <div class="mt-3 flex flex-wrap gap-1.5">
+        {
+          audiences.map((a: string) => (
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/20">
+              {a}
+            </span>
+          ))
+        }
+        {
+          geographies.map((g: string) => (
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-500/10 text-teal-300 ring-1 ring-inset ring-teal-500/20">
+              {g}
+            </span>
+          ))
+        }
+        {
+          industries.map((i: string) => (
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-300 ring-1 ring-inset ring-blue-500/20">
+              {i}
+            </span>
+          ))
+        }
+        {
+          topic.map((t: string) => (
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-violet-500/10 text-violet-300 ring-1 ring-inset ring-violet-500/20">
+              {t}
+            </span>
+          ))
+        }
+        {
+          regulators.map((r: string) => (
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-300 ring-1 ring-inset ring-rose-500/20">
+              {r}
+            </span>
+          ))
+        }
+        {
+          regulations.map((r: string) => (
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-500/10 text-orange-300 ring-1 ring-inset ring-orange-500/20">
+              {r}
+            </span>
+          ))
+        }
+        {
+          processes.map((p: string) => (
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-500/10 text-cyan-300 ring-1 ring-inset ring-cyan-500/20">
+              {p}
+            </span>
+          ))
+        }
+      </div>
+    </div>
 
     <!-- Tags row with Preview button aligned - pushed to bottom -->
     <div class="mt-auto pt-3 flex items-start justify-between gap-2">
@@ -275,27 +346,15 @@ const candidates = [...itemThumbs];
         }
       </div>
 
-      <!-- Preview button -->
+      <!-- Expand/Collapse button -->
       <button
         class="relative z-30 flex-shrink-0 inline-flex items-center gap-1 text-xs text-sky-300 hover:text-sky-200 transition-colors px-2 py-0.5 rounded hover:bg-neutral-800/50 pointer-events-auto"
         type="button"
-        data-open-modal="true"
-        aria-label="Preview summary"
+        data-expand-card="true"
+        aria-label="Expand card"
       >
-        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-          ></path>
-        </svg>
-        Preview
+        <span class="expand-label">Expand</span>
+        <span class="collapse-label hidden">Collapse</span>
       </button>
     </div>
   </div>
