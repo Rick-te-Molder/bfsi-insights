@@ -22,7 +22,7 @@ export interface PromptVersion {
 
 export type PromptEvalStatus = 'pending' | 'running' | 'passed' | 'warning' | 'failed';
 
-export type PromptStage = 'development' | 'staging' | 'production';
+export type PromptStage = 'DEV' | 'TST' | 'PRD';
 
 export interface PromptABTest {
   id: string;
