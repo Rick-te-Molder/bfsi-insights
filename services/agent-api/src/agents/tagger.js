@@ -1,11 +1,10 @@
-import process from 'node:process';
 import { AgentRunner } from '../lib/runner.js';
 import { z } from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
-import { createClient } from '@supabase/supabase-js';
+import { loadVendors } from '../lib/vendor-loader.js';
+import { loadTaxonomies } from '../lib/taxonomy-loader.js';
 
 const runner = new AgentRunner('tagger');
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
 /**
  * Tagged item with confidence score
@@ -89,147 +88,6 @@ const TaggingSchema = z.object({
   overall_confidence: z.number().min(0).max(1).describe('Overall confidence in classification 0-1'),
   reasoning: z.string().describe('Brief explanation of classification choices'),
 });
-
-/**
- * Build select columns for a taxonomy table query
- * KB-233: All taxonomy tables use standardized 'code' and 'name' columns
- */
-function buildSelectColumns(config) {
-  let selectCols = 'code, name';
-  if (!config.is_hierarchical) return selectCols;
-  selectCols += ', level';
-  if (config.parent_code_column) {
-    selectCols += `, ${config.parent_code_column}`;
-  }
-  return selectCols;
-}
-
-/**
- * KB-231: Load taxonomies dynamically from taxonomy_config
- * This allows adding new taxonomy types without code changes.
- */
-async function loadTaxonomies() {
-  // First, load taxonomy_config to discover which tables to load
-  // KB-233: Removed source_code_column/source_name_column - all tables use 'code' and 'name'
-  const { data: configs, error: configError } = await supabase
-    .from('taxonomy_config')
-    .select('slug, source_table, is_hierarchical, parent_code_column, behavior_type')
-    .eq('is_active', true)
-    .not('source_table', 'is', null);
-
-  if (configError) {
-    console.error('Failed to load taxonomy_config:', configError);
-    throw new Error('CRITICAL: Cannot load taxonomy configuration');
-  }
-
-  // Group configs by source_table to avoid duplicate queries
-  const tableConfigs = new Map();
-  for (const config of configs || []) {
-    if (!tableConfigs.has(config.source_table)) {
-      tableConfigs.set(config.source_table, config);
-    }
-  }
-
-  // Build query for each unique source table
-  const tableQueries = [...tableConfigs].map(([table, config]) => ({
-    table,
-    config,
-    promise: supabase.from(table).select(buildSelectColumns(config)).order('name'),
-  }));
-
-  // Execute all queries in parallel
-  const results = await Promise.all(tableQueries.map((q) => q.promise));
-
-  // Build lookup map: table name -> query result
-  const tableData = new Map();
-  for (let i = 0; i < tableQueries.length; i++) {
-    tableData.set(tableQueries[i].table, {
-      data: results[i].data || [],
-      config: tableQueries[i].config,
-    });
-  }
-
-  // Helper functions for formatting
-  // KB-233: Simplified - all tables use 'code' and 'name'
-  const format = (data) => data?.map((i) => `${i.code}: ${i.name}`).join('\n') || '';
-
-  const formatHierarchical = (data, parentCol = 'parent_code') =>
-    data
-      ?.map((i) => {
-        const indent = '  '.repeat((i.level || 1) - 1);
-        const levelTag = i.level ? `[L${i.level}]` : '';
-        const parentTag = i[parentCol] ? ` (parent: ${i[parentCol]})` : '';
-        return `${indent}${i.code}: ${i.name} ${levelTag}${parentTag}`;
-      })
-      .join('\n') || '';
-
-  const extractCodes = (data) => new Set(data?.map((i) => i.code) || []);
-
-  // Helper to get formatted data for a slug
-  const getFormatted = (slug) => {
-    const config = configs?.find((c) => c.slug === slug);
-    if (!config?.source_table) return '';
-    const td = tableData.get(config.source_table);
-    if (!td) return '';
-    if (config.is_hierarchical) {
-      return formatHierarchical(td.data, config.parent_code_column || 'parent_code');
-    }
-    return format(td.data);
-  };
-
-  const getValidCodes = (slug) => {
-    const config = configs?.find((c) => c.slug === slug);
-    if (!config?.source_table) return new Set();
-    const td = tableData.get(config.source_table);
-    if (!td) return new Set();
-    return extractCodes(td.data);
-  };
-
-  // Build geography parent map for code expansion
-  const geographyParentMap = new Map();
-  const geoConfig = configs?.find((c) => c.slug === 'geography');
-  if (geoConfig) {
-    const geoData = tableData.get(geoConfig.source_table);
-    const parentCol = geoConfig.parent_code_column || 'parent_code';
-    for (const geo of geoData?.data || []) {
-      if (geo[parentCol]) {
-        geographyParentMap.set(geo.code, geo[parentCol]);
-      }
-    }
-  }
-
-  // Return structure matching existing API for backward compatibility
-  return {
-    // Formatted strings for LLM prompt
-    industries: getFormatted('industry'),
-    topics: getFormatted('topic'),
-    geographies: getFormatted('geography'),
-    useCases: getFormatted('use_case'),
-    capabilities: getFormatted('capability'),
-    regulators: getFormatted('regulator'),
-    regulations: getFormatted('regulation'),
-    obligations: '', // Special case - not in taxonomy_config yet
-    processes: getFormatted('process'),
-    // Valid code sets for post-validation
-    validCodes: {
-      industries: getValidCodes('industry'),
-      topics: getValidCodes('topic'),
-      geographies: getValidCodes('geography'),
-      useCases: getValidCodes('use_case'),
-      capabilities: getValidCodes('capability'),
-      regulators: getValidCodes('regulator'),
-      regulations: getValidCodes('regulation'),
-      processes: getValidCodes('process'),
-    },
-    // Parent maps for hierarchy expansion
-    parentMaps: {
-      geographies: geographyParentMap,
-    },
-    // KB-231: Also expose the raw configs for future dynamic prompt building
-    _configs: configs,
-    _tableData: tableData,
-  };
-}
 
 /**
  * Expand geography codes to include parent codes
@@ -321,8 +179,8 @@ function enforceIndustryMutualExclusivity(industryCodes) {
 }
 
 export async function runTagger(queueItem, options = {}) {
-  // Load taxonomies
-  const taxonomies = await loadTaxonomies();
+  // Load taxonomies and vendors in parallel
+  const [taxonomies, vendorData] = await Promise.all([loadTaxonomies(), loadVendors()]);
 
   const hasQueueId = Object.hasOwn(queueItem, 'queueId');
   const queueId = hasQueueId ? queueItem.queueId : queueItem.id;
@@ -410,8 +268,31 @@ ${taxonomies.obligations}
 ${taxonomies.processes}
 
 === EXPANDABLE ENTITIES (extract names as found) ===
-- organization_names: Banks, insurers, asset managers mentioned by name
-- vendor_names: AI/tech vendors mentioned by name
+
+CRITICAL: Distinguish between ORGANIZATIONS and VENDORS:
+
+**organization_names** - Traditional BFSI institutions that USE/BUY technology:
+- Banks (retail, commercial, investment, central banks)
+- Insurers (life, P&C, reinsurers)
+- Asset managers, pension funds, wealth managers
+- Card networks (Visa, Mastercard, Amex)
+- Stock exchanges, clearinghouses
+
+**vendor_names** - Companies that PROVIDE/SELL technology or services to BFSI:
+- Fintechs, neobanks, embedded finance providers
+- Payment processors, BaaS platforms
+- Software vendors, SaaS providers
+- Consulting firms, system integrators
+- Data providers, analytics companies
+- RegTech, InsurTech, WealthTech companies
+
+HEURISTICS for vendor detection:
+- Company name contains: Platform, Solutions, Labs, Tech, Systems, Software, AI, Analytics
+- Company provides services TO banks/insurers (not IS a bank/insurer)
+- Startups, fintechs, technology partners mentioned in partnerships
+
+Known vendors (extract if mentioned):
+${vendorData.formatted}
 
 === PERSONA RELEVANCE (score 0-1 for each audience) ===
 - executive: C-suite, strategy leaders (interested in: business impact, market trends, competitive advantage)
