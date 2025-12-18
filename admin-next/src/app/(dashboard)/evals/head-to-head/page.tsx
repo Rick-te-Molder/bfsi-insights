@@ -249,7 +249,7 @@ function HeadToHeadContent() {
                 <option value="">All statuses</option>
                 {statuses.map((s) => (
                   <option key={s.code} value={s.code}>
-                    {s.name}
+                    {s.code} {s.name}
                   </option>
                 ))}
               </select>
@@ -264,7 +264,11 @@ function HeadToHeadContent() {
             <select
               value={selectedItem}
               onChange={(e) => setSelectedItem(e.target.value)}
-              className="w-full mt-2 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
+              onClick={(e) => {
+                const target = e.target as HTMLOptionElement;
+                if (target.value) setSelectedItem(target.value);
+              }}
+              className="w-full mt-2 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white cursor-pointer"
               size={5}
             >
               {filteredItems.length === 0 ? (
