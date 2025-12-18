@@ -40,6 +40,7 @@ export function AgentTable({ agents, promptsByAgent, onEdit, onTest }: AgentTabl
         <tr className="text-left text-xs font-medium uppercase tracking-wider text-neutral-400">
           <th className="px-4 py-3">Agent</th>
           <th className="px-4 py-3">Current Version</th>
+          <th className="px-4 py-3">Model</th>
           <th className="px-4 py-3">Last Updated</th>
           <th className="px-4 py-3">Chars</th>
           <th className="px-4 py-3">~Tokens</th>
@@ -67,6 +68,9 @@ export function AgentTable({ agents, promptsByAgent, onEdit, onTest }: AgentTabl
                 </div>
               </td>
               <td className="px-4 py-3 text-neutral-300">{currentPrompt?.version || '-'}</td>
+              <td className="px-4 py-3 text-neutral-400 text-sm font-mono">
+                {currentPrompt?.model_id || '-'}
+              </td>
               <td className="px-4 py-3 text-neutral-400 text-sm">
                 {currentPrompt ? new Date(currentPrompt.created_at).toLocaleDateString() : '-'}
               </td>
