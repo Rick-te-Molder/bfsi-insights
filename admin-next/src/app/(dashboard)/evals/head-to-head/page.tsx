@@ -58,7 +58,6 @@ export default function HeadToHeadPage() {
       supabase
         .from('ingestion_queue')
         .select('id, url, payload, created_at')
-        .in('status_code', [300, 330]) // Only pending_review and approved items
         .order('created_at', { ascending: false })
         .limit(100),
     ]);
