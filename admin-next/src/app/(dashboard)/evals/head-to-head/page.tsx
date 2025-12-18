@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { PageHeader, LoadingState } from '../components';
 
 interface PromptVersion {
   id: string;
@@ -113,21 +114,15 @@ export default function HeadToHeadPage() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-neutral-400">Loading...</div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Head-to-Head Comparison</h1>
-        <p className="text-neutral-400 mt-1">
-          Run the same input through two prompt versions and compare outputs side-by-side
-        </p>
-      </header>
+      <PageHeader
+        title="Head-to-Head Comparison"
+        description="Run the same input through two prompt versions and compare outputs side-by-side"
+      />
 
       {/* Run New Comparison */}
       <div className="mb-8 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
