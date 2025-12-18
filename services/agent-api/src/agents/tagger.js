@@ -336,7 +336,7 @@ export async function runTagger(queueItem) {
     },
     async (context, promptTemplate, tools) => {
       const { payload } = context;
-      const { openai } = tools;
+      const { llm } = tools;
 
       // Extract domain TLD for geography hints
       const url = payload.url || '';
@@ -427,18 +427,18 @@ ${taxonomies.processes}
       // Use model and max_tokens from prompt_version instead of hardcoding
       const modelId = tools.model || 'gpt-4o-mini';
       const maxTokens = tools.promptConfig?.max_tokens;
-      const completion = await openai.beta.chat.completions.parse({
+      const completion = await llm.parseStructured({
         model: modelId,
-        max_tokens: maxTokens,
+        maxTokens,
         messages: [
           { role: 'system', content: promptTemplate },
           { role: 'user', content: content },
         ],
-        response_format: zodResponseFormat(TaggingSchema, 'classification'),
+        responseFormat: zodResponseFormat(TaggingSchema, 'classification'),
         temperature: 0.1,
       });
 
-      const result = completion.choices[0].message.parsed;
+      const result = completion.parsed;
       const usage = completion.usage;
       const { validCodes, parentMaps } = taxonomies;
 

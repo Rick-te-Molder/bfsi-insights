@@ -160,16 +160,8 @@ export class AgentRunner {
       }
 
       // 3. Execute Logic with step helpers available via tools
-      // DEBUG: Check if openai client is available
-      const openaiClient = this.openai;
-      console.log(`🔍 [${this.agentName}] OpenAI client available:`, !!openaiClient);
-      if (!openaiClient) {
-        console.error(
-          `❌ [${this.agentName}] OpenAI client is undefined! Check OPENAI_API_KEY env var.`,
-        );
-      }
       const result = await logicFn(context, promptConfig.prompt_text, {
-        openai: openaiClient,
+        openai: this.openai,
         supabase: this.supabase,
         // LLM abstraction layer - model from prompt_version
         llm,
