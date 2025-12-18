@@ -185,7 +185,7 @@ export function ItemsStatusGrid({
                         className={cn(
                           'inline-flex items-center rounded-full text-xs overflow-hidden transition-colors',
                           isActive
-                            ? 'border-transparent ring-2 ring-offset-1 ring-offset-neutral-900'
+                            ? 'ring-2 ring-offset-1 ring-offset-neutral-900'
                             : status.count > 0
                               ? cat.borderColor
                               : 'border-neutral-700',
@@ -197,24 +197,22 @@ export function ItemsStatusGrid({
                         <span
                           className={cn(
                             'px-2 py-1 font-mono',
-                            isActive
-                              ? config.activeColor + ' text-white'
-                              : 'bg-neutral-800/80 text-neutral-400',
+                            isActive ? config.activeColor + ' text-white' : 'text-neutral-400',
                           )}
                         >
                           {status.code}
                         </span>
                         <span
                           className={cn(
-                            'px-2 py-1',
-                            isActive ? 'text-white ' + config.activeColor : 'text-neutral-300',
+                            'px-2 py-1 border-r border-neutral-700',
+                            isActive ? config.activeColor + ' text-white' : 'text-neutral-400',
                           )}
                         >
                           {status.name.replace(/_/g, ' ')}
                         </span>
                         <span
                           className={cn(
-                            'px-2 py-1 font-semibold',
+                            'px-2 py-1 font-bold',
                             isActive
                               ? config.activeColor + ' text-white'
                               : status.count > 0
