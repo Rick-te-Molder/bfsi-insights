@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
 
 interface EnrichmentLogEntry {
   agent: string;
@@ -34,10 +35,12 @@ function SummaryBlock({
   label,
   text,
   spec,
+  useMarkdown = false,
 }: {
   label: string;
   text?: string;
   spec: { min: number; max: number; label: string };
+  useMarkdown?: boolean;
 }) {
   if (!text) return null;
 
@@ -61,7 +64,14 @@ function SummaryBlock({
           {statusIcons[status]} {text.length} chars (spec: {spec.min}-{spec.max})
         </span>
       </div>
-      <p className="text-sm text-neutral-300 leading-relaxed">{text}</p>
+      {useMarkdown ? (
+        <MarkdownRenderer
+          content={text}
+          className="prose prose-invert prose-sm max-w-none prose-headings:text-neutral-200 prose-headings:font-semibold prose-headings:text-sm prose-p:my-1 prose-ul:my-1 prose-li:my-0 text-neutral-300"
+        />
+      ) : (
+        <p className="text-sm text-neutral-300 leading-relaxed">{text}</p>
+      )}
     </div>
   );
 }
@@ -242,7 +252,12 @@ export function EvaluationPanel({ item }: { item: QueueItem }) {
                   {/* Medium Summary */}
                   <SummaryBlock label="Medium" text={summary.medium} spec={SUMMARY_SPECS.medium} />
                   {/* Long Summary */}
-                  <SummaryBlock label="Long" text={summary.long} spec={SUMMARY_SPECS.long} />
+                  <SummaryBlock
+                    label="Long"
+                    text={summary.long}
+                    spec={SUMMARY_SPECS.long}
+                    useMarkdown
+                  />
                   {!summary.short && !summary.medium && !summary.long && (
                     <p className="text-neutral-600 italic text-center py-4">
                       No summaries generated yet
