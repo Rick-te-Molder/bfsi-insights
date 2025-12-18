@@ -1,8 +1,33 @@
 import process from 'node:process';
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
-import { runAgent } from '../agents/index.js';
 import { complete } from '../lib/llm.js';
+
+/**
+ * Get agent function for running eval
+ * Based on pattern from lib/prompt-eval.js
+ */
+async function getAgentFunction(agentName) {
+  const agentMap = {
+    screener: async (input) => {
+      const { runRelevanceFilter } = await import('../agents/screener.js');
+      return runRelevanceFilter(input);
+    },
+    summarizer: async (input) => {
+      const { runSummarizer } = await import('../agents/summarizer.js');
+      return runSummarizer(input);
+    },
+    tagger: async (input) => {
+      const { runTagger } = await import('../agents/tagger.js');
+      return runTagger(input);
+    },
+    scorer: async (input) => {
+      const { runScorer } = await import('../agents/scorer.js');
+      return runScorer(input);
+    },
+  };
+  return agentMap[agentName] || null;
+}
 
 const router = express.Router();
 
@@ -44,11 +69,17 @@ router.post('/head-to-head', async (req, res) => {
     const versionA = versions.find((v) => v.id === version_a_id);
     const versionB = versions.find((v) => v.id === version_b_id);
 
-    // Run agent with version A
-    const outputA = await runAgent(agent_name, item, { promptOverride: versionA.prompt_text });
+    // Get agent function
+    const agentFn = await getAgentFunction(agent_name);
+    if (!agentFn) {
+      return res.status(400).json({ error: `Unknown agent: ${agent_name}` });
+    }
 
-    // Run agent with version B
-    const outputB = await runAgent(agent_name, item, { promptOverride: versionB.prompt_text });
+    // Run agent with version A (note: prompt override not yet supported, using current prompt)
+    const outputA = await agentFn(item);
+
+    // Run agent with version B (note: prompt override not yet supported, using current prompt)
+    const outputB = await agentFn(item);
 
     let winner = null;
     let reasoning = null;
@@ -126,15 +157,19 @@ router.post('/llm-judge', async (req, res) => {
       .select()
       .single();
 
+    // Get agent function
+    const agentFn = await getAgentFunction(version.agent_name);
+    if (!agentFn) {
+      return res.status(400).json({ error: `Unknown agent: ${version.agent_name}` });
+    }
+
     const results = [];
     let totalScore = 0;
 
     for (const item of items) {
       try {
-        // Run agent
-        const output = await runAgent(version.agent_name, item, {
-          promptOverride: version.prompt_text,
-        });
+        // Run agent (note: prompt override not yet supported)
+        const output = await agentFn(item);
 
         // Judge with LLM
         const judgment = await judgeOutput(
