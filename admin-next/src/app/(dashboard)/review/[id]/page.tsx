@@ -299,9 +299,12 @@ export default async function ReviewDetailPage({
                     {summary.long?.length || 0} chars
                   </span>
                 </div>
-                <div className="text-neutral-200 bg-neutral-800/50 rounded-lg p-3 prose prose-invert prose-sm max-w-none prose-headings:text-neutral-200 prose-headings:font-semibold prose-headings:text-sm prose-p:my-1 prose-ul:my-1 prose-li:my-0">
+                <div className="text-neutral-200 bg-neutral-800/50 rounded-lg p-3">
                   {summary.long ? (
-                    <MarkdownRenderer content={summary.long} />
+                    <MarkdownRenderer
+                      content={summary.long}
+                      className="prose prose-invert prose-sm max-w-none prose-headings:text-neutral-200 prose-headings:font-semibold prose-headings:text-sm prose-p:my-1 prose-ul:my-1 prose-li:my-0"
+                    />
                   ) : (
                     <p>No long summary</p>
                   )}

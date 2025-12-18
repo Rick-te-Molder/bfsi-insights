@@ -20,7 +20,12 @@ interface LivePipelineStatusProps {
  */
 export function LivePipelineStatus({ initialData, pollInterval = 5000 }: LivePipelineStatusProps) {
   const [statusData, setStatusData] = useState<StatusData[]>(initialData);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Set initial timestamp only on client to avoid hydration mismatch
+  useEffect(() => {
+    setLastUpdated(new Date());
+  }, []);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -44,7 +49,7 @@ export function LivePipelineStatus({ initialData, pollInterval = 5000 }: LivePip
     <div className="space-y-2">
       <PipelineStatusGrid statusData={statusData} />
       <p className="text-xs text-neutral-500 text-right">
-        Updated {lastUpdated.toLocaleTimeString()}
+        {lastUpdated && `Updated ${lastUpdated.toLocaleTimeString()}`}
       </p>
     </div>
   );
