@@ -29,219 +29,47 @@ const STATUS = {
 
 async function getStats() {
   const supabase = createServiceRoleClient();
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-  // Get counts by status_code ranges for pipeline view
+  // Run all queries in parallel for performance
   const [
-    { count: pendingEnrichment },
-    { count: inEnrichment },
-    { count: pendingReview },
-    { count: approved },
-    { count: failed },
-    { count: rejected },
+    { data: allStatusData },
+    { data: recentFailures },
+    { count: failedLast24h },
+    { count: pendingProposals },
   ] = await Promise.all([
-    // Pending enrichment (200)
+    // Primary data: status counts from RPC (single query replaces 6+ individual counts)
+    supabase.rpc('get_status_code_counts'),
+    // Recent failures for alert section
+    supabase
+      .from('ingestion_queue')
+      .select('id, url, payload, updated_at')
+      .eq('status_code', STATUS.FAILED)
+      .order('updated_at', { ascending: false })
+      .limit(5),
+    // Failed count in last 24h for alerts
     supabase
       .from('ingestion_queue')
       .select('*', { count: 'exact', head: true })
-      .eq('status_code', STATUS.PENDING_ENRICHMENT),
-    // In enrichment (201-239)
+      .eq('status_code', STATUS.FAILED)
+      .gte('updated_at', oneDayAgo),
+    // Pending proposals count
     supabase
-      .from('ingestion_queue')
+      .from('proposed_entity')
       .select('*', { count: 'exact', head: true })
-      .gt('status_code', STATUS.PENDING_ENRICHMENT)
-      .lt('status_code', STATUS.ENRICHED),
-    // Pending review (300)
-    supabase
-      .from('ingestion_queue')
-      .select('*', { count: 'exact', head: true })
-      .eq('status_code', STATUS.PENDING_REVIEW),
-    // Approved (330)
-    supabase
-      .from('ingestion_queue')
-      .select('*', { count: 'exact', head: true })
-      .eq('status_code', STATUS.APPROVED),
-    // Failed (500)
-    supabase
-      .from('ingestion_queue')
-      .select('*', { count: 'exact', head: true })
-      .eq('status_code', STATUS.FAILED),
-    // Rejected (540)
-    supabase
-      .from('ingestion_queue')
-      .select('*', { count: 'exact', head: true })
-      .eq('status_code', STATUS.REJECTED),
+      .eq('status', 'pending'),
   ]);
 
-  // Legacy status counts for backward compatibility
-  const statusCounts = {
-    pending: pendingEnrichment || 0,
-    processing: inEnrichment || 0,
-    enriched: pendingReview || 0,
-    approved: approved || 0,
-    failed: failed || 0,
-    rejected: rejected || 0,
-    // New granular counts
-    pendingEnrichment: pendingEnrichment || 0,
-    inEnrichment: inEnrichment || 0,
-    pendingReview: pendingReview || 0,
-  };
-
-  // Calculate success rate (last 7 days) using status_code
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const { count: recentSuccessCount } = await supabase
-    .from('ingestion_queue')
-    .select('*', { count: 'exact', head: true })
-    .gte('status_code', STATUS.PENDING_REVIEW)
-    .lt('status_code', STATUS.FAILED)
-    .gte('updated_at', sevenDaysAgo);
-
-  const { count: recentTotalCount } = await supabase
-    .from('ingestion_queue')
-    .select('*', { count: 'exact', head: true })
-    .gte('updated_at', sevenDaysAgo);
-
-  const successRate = recentTotalCount ? ((recentSuccessCount || 0) / recentTotalCount) * 100 : 0;
-
-  // Skip avg processing time for now (requires payload access)
-  const avgProcessingTime = 0;
-
-  // Get recent failures
-  const { data: recentFailures } = await supabase
-    .from('ingestion_queue')
-    .select('id, url, payload, updated_at')
-    .eq('status_code', STATUS.FAILED)
-    .order('updated_at', { ascending: false })
-    .limit(5);
-
-  // Get failed count in last 24h for alerts
-  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count: failedLast24h } = await supabase
-    .from('ingestion_queue')
-    .select('*', { count: 'exact', head: true })
-    .eq('status_code', STATUS.FAILED)
-    .gte('updated_at', oneDayAgo);
-
-  // Get sources with no items in last 72h (potential dead sources)
-  const threeDaysAgo = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString();
-  const { data: recentSources } = await supabase
-    .from('ingestion_queue')
-    .select('payload')
-    .gte('discovered_at', threeDaysAgo);
-
-  const activeSourceSlugs = new Set(
-    (recentSources || [])
-      .map((r) => (r.payload as { source_slug?: string })?.source_slug)
-      .filter(Boolean),
-  );
-
-  // Queue age metrics - oldest pending items
-  const { data: oldestPending } = await supabase
-    .from('ingestion_queue')
-    .select('discovered_at')
-    .eq('status_code', STATUS.PENDING_ENRICHMENT)
-    .order('discovered_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  const { data: oldestQueued } = await supabase
-    .from('ingestion_queue')
-    .select('discovered_at')
-    .gt('status_code', STATUS.PENDING_ENRICHMENT)
-    .lt('status_code', STATUS.PENDING_REVIEW)
-    .order('discovered_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  // Calculate age in hours
-  const getAgeHours = (dateStr: string | null) => {
-    if (!dateStr) return 0;
-    return Math.round((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60));
-  };
-
-  const oldestPendingAge = getAgeHours(oldestPending?.discovered_at);
-  const oldestQueuedAge = getAgeHours(oldestQueued?.discovered_at);
-
-  // Items discovered today
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const { count: discoveredToday } = await supabase
-    .from('ingestion_queue')
-    .select('*', { count: 'exact', head: true })
-    .gte('discovered_at', todayStart.toISOString());
-
-  // Items processed today (status changed from pending/queued)
-  const { count: enrichedToday } = await supabase
-    .from('ingestion_queue')
-    .select('*', { count: 'exact', head: true })
-    .in('status_code', [300, 330, 540, 500])
-    .gte('updated_at', todayStart.toISOString());
-
-  // Get publication count
-  const { count: publishedCount } = await supabase
-    .from('kb_publication')
-    .select('*', { count: 'exact', head: true });
-
-  // Get active A/B tests
-  const { count: activeTests } = await supabase
-    .from('prompt_ab_test')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'running');
-
-  // Get pending proposals
-  const { count: pendingProposals } = await supabase
-    .from('proposed_entity')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'pending');
-
-  // Get all status codes with counts directly from database (MECE)
-  const { data: allStatusData } = await supabase.rpc('get_status_code_counts');
-
   return {
-    statusCounts,
     recentFailures: recentFailures || [],
-    publishedCount: publishedCount || 0,
-    successRate,
-    avgProcessingTime,
-    recentItemsCount: recentTotalCount || 0,
-    failedCount: statusCounts.failed || 0,
-    activeTests: activeTests || 0,
     pendingProposals: pendingProposals || 0,
     failedLast24h: failedLast24h || 0,
-    activeSourceCount: activeSourceSlugs.size,
-    // New queue metrics
-    oldestPendingAge,
-    oldestQueuedAge,
-    discoveredToday: discoveredToday || 0,
-    enrichedToday: enrichedToday || 0,
     allStatusData,
   };
 }
 
 export default async function DashboardPage() {
-  const {
-    statusCounts: _statusCounts,
-    recentFailures,
-    publishedCount: _publishedCount,
-    successRate: _successRate,
-    recentItemsCount: _recentItemsCount,
-    activeTests: _activeTests,
-    pendingProposals,
-    failedLast24h,
-    oldestPendingAge: _oldestPendingAge,
-    oldestQueuedAge: _oldestQueuedAge,
-    discoveredToday: _discoveredToday,
-    enrichedToday: _enrichedToday,
-    allStatusData,
-  } = await getStats();
-
-  // Format age for display (reserved for future use)
-  const _formatAge = (hours: number) => {
-    if (hours === 0) return '-';
-    if (hours < 24) return `${hours}h`;
-    const days = Math.floor(hours / 24);
-    const remainingHours = hours % 24;
-    return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
-  };
+  const { recentFailures, pendingProposals, failedLast24h, allStatusData } = await getStats();
 
   return (
     <div className="space-y-6 md:space-y-8">
