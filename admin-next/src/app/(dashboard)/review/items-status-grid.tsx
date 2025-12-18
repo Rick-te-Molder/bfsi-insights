@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { StatusPill } from '@/components/ui/status-pill';
 
 const ChevronDown = ({ size = 16 }: { size?: number }) => (
   <svg
@@ -176,55 +176,19 @@ export function ItemsStatusGrid({
             {isExpanded && cat.statuses.length > 0 && (
               <div className="px-3 pb-3 pl-10">
                 <div className="flex flex-wrap gap-2">
-                  {cat.statuses.map((status) => {
-                    const isActive = currentStatus === status.name;
-                    return (
-                      <Link
-                        key={status.code}
-                        href={buildFilterUrl(status.name, currentSource, currentTime, currentView)}
-                        className={cn(
-                          'inline-flex items-center rounded-full text-xs overflow-hidden transition-colors',
-                          isActive
-                            ? 'ring-2 ring-offset-1 ring-offset-neutral-900'
-                            : status.count > 0
-                              ? cat.borderColor
-                              : 'border-neutral-700',
-                          isActive && config.activeColor.replace('bg-', 'ring-'),
-                          'border hover:opacity-80',
-                        )}
-                        title={`Code ${status.code}: ${status.name} (${status.count} items)`}
-                      >
-                        <span
-                          className={cn(
-                            'px-2 py-1 font-mono',
-                            isActive ? config.activeColor + ' text-white' : 'text-neutral-400',
-                          )}
-                        >
-                          {status.code}
-                        </span>
-                        <span
-                          className={cn(
-                            'px-2 py-1 border-r border-neutral-700',
-                            isActive ? config.activeColor + ' text-white' : 'text-neutral-400',
-                          )}
-                        >
-                          {status.name.replace(/_/g, ' ')}
-                        </span>
-                        <span
-                          className={cn(
-                            'px-2 py-1 font-bold',
-                            isActive
-                              ? config.activeColor + ' text-white'
-                              : status.count > 0
-                                ? cat.bgColor + ' ' + cat.color
-                                : 'bg-neutral-800/50 text-neutral-500',
-                          )}
-                        >
-                          {status.count}
-                        </span>
-                      </Link>
-                    );
-                  })}
+                  {cat.statuses.map((status) => (
+                    <StatusPill
+                      key={status.code}
+                      code={status.code}
+                      name={status.name}
+                      count={status.count}
+                      color={cat.color}
+                      borderColor={cat.borderColor}
+                      isActive={currentStatus === status.name}
+                      activeColor={config.activeColor}
+                      href={buildFilterUrl(status.name, currentSource, currentTime, currentView)}
+                    />
+                  ))}
                 </div>
               </div>
             )}
