@@ -1,21 +1,10 @@
 import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
 import { createTrace, traceLLMCall, isTracingEnabled } from './tracing.js';
+import * as llm from './llm.js';
 
-// Shared clients - Supabase created immediately, OpenAI lazily
+// Shared Supabase client
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-let _openai = null;
-
-function getOpenAI() {
-  if (!_openai) {
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY environment variable is required for this agent');
-    }
-    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  }
-  return _openai;
-}
 
 export class AgentRunner {
   constructor(agentName) {
@@ -27,7 +16,7 @@ export class AgentRunner {
   }
 
   get openai() {
-    return getOpenAI();
+    return llm.getOpenAI();
   }
 
   /**
@@ -174,6 +163,10 @@ export class AgentRunner {
       const result = await logicFn(context, promptConfig.prompt_text, {
         openai: this.openai,
         supabase: this.supabase,
+        // LLM abstraction layer - model from prompt_version
+        llm,
+        model: promptConfig.model_id,
+        promptConfig,
         // Step helpers for granular logging
         startStep: (type, details) => this.startStep(type, details),
         finishStepSuccess: (id, details) => this.finishStepSuccess(id, details),

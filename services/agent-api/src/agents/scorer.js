@@ -17,12 +17,34 @@ let supabase = null;
 let cachedPrompt = null;
 let cachedAudiences = null;
 let cachedRejectionPatterns = null;
+let cachedPromptConfig = null;
 
 function getOpenAI() {
   if (!openai) {
     openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   }
   return openai;
+}
+
+// Load prompt config from DB (model, max_tokens)
+async function getPromptConfig() {
+  if (cachedPromptConfig) return cachedPromptConfig;
+
+  const { data, error } = await getSupabase()
+    .from('prompt_version')
+    .select('model_id, max_tokens')
+    .eq('agent_name', 'scorer')
+    .eq('is_current', true)
+    .single();
+
+  if (error || !data) {
+    console.warn('Warning: No prompt_version for scorer, using defaults');
+    cachedPromptConfig = { model_id: 'gpt-4o-mini', max_tokens: 200 };
+  } else {
+    cachedPromptConfig = data;
+  }
+
+  return cachedPromptConfig;
 }
 
 function getSupabase() {
@@ -392,15 +414,16 @@ Description: ${description || '(no description available)'}`;
 
   try {
     const systemPrompt = await getSystemPrompt();
+    const promptConfig = await getPromptConfig();
     const completion = await getOpenAI().chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: promptConfig.model_id,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userContent },
       ],
       response_format: { type: 'json_object' },
       temperature: 0.1,
-      max_tokens: 200,
+      max_tokens: promptConfig.max_tokens,
     });
 
     const result = JSON.parse(completion.choices[0].message.content);

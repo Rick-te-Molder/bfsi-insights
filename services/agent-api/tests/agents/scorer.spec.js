@@ -87,7 +87,11 @@ vi.mock('@supabase/supabase-js', () => ({
           eq: vi.fn(() => ({
             single: vi.fn(() =>
               Promise.resolve({
-                data: { prompt_text: 'You are a relevance scoring assistant.' },
+                data: {
+                  prompt_text: 'You are a relevance scoring assistant.',
+                  model_id: 'gpt-4o-mini',
+                  max_tokens: 200,
+                },
                 error: null,
               }),
             ),

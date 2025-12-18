@@ -15,9 +15,12 @@ export async function runRelevanceFilter(queueItem) {
       // Prepare Prompt
       const content = `Title: ${payload.title}\nDescription: ${payload.description || ''}`;
 
-      // Call LLM
+      // Call LLM - use model and max_tokens from prompt_version
+      const modelId = tools.model || 'gpt-4o-mini';
+      const maxTokens = tools.promptConfig?.max_tokens;
       const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
+        model: modelId,
+        max_tokens: maxTokens,
         messages: [
           { role: 'system', content: promptTemplate }, // System prompt from DB
           { role: 'user', content: content },
