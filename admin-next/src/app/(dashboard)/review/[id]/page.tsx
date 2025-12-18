@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import Markdown from 'react-markdown';
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { formatDateTime, getStatusColorByCode, getStatusName } from '@/lib/utils';
 import { notFound } from 'next/navigation';
@@ -300,7 +300,11 @@ export default async function ReviewDetailPage({
                   </span>
                 </div>
                 <div className="text-neutral-200 bg-neutral-800/50 rounded-lg p-3 prose prose-invert prose-sm max-w-none prose-headings:text-neutral-200 prose-headings:font-semibold prose-headings:text-sm prose-p:my-1 prose-ul:my-1 prose-li:my-0">
-                  {summary.long ? <Markdown>{summary.long}</Markdown> : <p>No long summary</p>}
+                  {summary.long ? (
+                    <MarkdownRenderer content={summary.long} />
+                  ) : (
+                    <p>No long summary</p>
+                  )}
                 </div>
               </div>
             </div>
