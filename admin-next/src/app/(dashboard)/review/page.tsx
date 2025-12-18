@@ -287,7 +287,7 @@ export default async function ReviewPage({
   const status = itemId || urlSearch || searchQuery ? 'all' : params.status || 'pending_review';
   const source = params.source || '';
   const timeWindow = params.time || '';
-  const viewMode = params.view || 'split'; // 'list' or 'split'
+  const viewMode = params.view || 'card'; // 'card', 'list', or 'split'
 
   // Load status codes from status_lookup table (single source of truth)
   const statusCodes = await loadStatusCodes();
@@ -318,7 +318,7 @@ export default async function ReviewPage({
     const searchParams = new URLSearchParams();
     const merged = { status, source, time: timeWindow, view: viewMode, ...newParams };
     Object.entries(merged).forEach(([key, value]) => {
-      if (value && value !== 'split') searchParams.set(key, value); // split is default
+      if (value && value !== 'card') searchParams.set(key, value); // card is default
     });
     return `/review?${searchParams.toString()}`;
   };

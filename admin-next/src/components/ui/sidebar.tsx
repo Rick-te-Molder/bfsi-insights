@@ -14,7 +14,6 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { href: '/', label: 'Dashboard', icon: '📊' },
-  { href: '/pipeline', label: 'Pipeline Health', icon: '🔧' },
   { href: '/review', label: 'Items', icon: '📋' },
   { href: '/proposals', label: 'Entities', icon: '📥' },
   { href: '/sources', label: 'Sources', icon: '📡' },
@@ -35,6 +34,7 @@ const navItems: NavItem[] = [
     label: 'Observability',
     icon: '📈',
     children: [
+      { href: '/pipeline', label: 'Pipeline Health' },
       { href: '/observability/metrics', label: 'Metrics Dashboard' },
       { href: '/observability/quality', label: 'Quality Trends' },
       { href: '/observability/drift', label: 'Drift Detection' },
@@ -73,6 +73,28 @@ export function Sidebar() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(() => {
+    // Initialize with menus that contain the current path
+    const initial = new Set<string>();
+    navItems.forEach((item) => {
+      if (item.children && pathname.startsWith(item.href)) {
+        initial.add(item.href);
+      }
+    });
+    return initial;
+  });
+
+  const toggleMenu = useCallback((href: string) => {
+    setExpandedMenus((prev) => {
+      const next = new Set(prev);
+      if (next.has(href)) {
+        next.delete(href);
+      } else {
+        next.add(href);
+      }
+      return next;
+    });
+  }, []);
 
   // Close sidebar when route changes (mobile)
   useEffect(() => {
@@ -282,15 +304,15 @@ export function Sidebar() {
             const isActive =
               pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
             const hasChildren = item.children && item.children.length > 0;
-            const isExpanded = hasChildren && pathname.startsWith(item.href);
+            const isExpanded = hasChildren && expandedMenus.has(item.href);
 
             if (hasChildren) {
               return (
                 <div key={item.href}>
-                  <Link
-                    href={item.children![0].href}
+                  <button
+                    onClick={() => toggleMenu(item.href)}
                     className={cn(
-                      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                      'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                       isActive
                         ? 'bg-neutral-800 text-white'
                         : 'text-neutral-400 hover:bg-neutral-800/50 hover:text-white',
@@ -299,7 +321,7 @@ export function Sidebar() {
                     <span>{item.icon}</span>
                     <span>{item.label}</span>
                     <span className="ml-auto text-xs">{isExpanded ? '▼' : '▶'}</span>
-                  </Link>
+                  </button>
                   {isExpanded && (
                     <div className="ml-6 mt-1 space-y-1">
                       {item.children!.map((child) => {
@@ -357,16 +379,10 @@ export function Sidebar() {
             className="flex w-full flex-col items-center justify-center gap-0.5 rounded-lg bg-sky-600 px-3 py-2 text-white hover:bg-sky-500 disabled:opacity-50 transition-colors"
           >
             {processingQueue ? (
-              <div className="flex items-center gap-2">
-                <span className="animate-spin">⏳</span>
-                <span className="text-sm font-medium">Processing...</span>
-              </div>
+              <span className="text-sm font-medium">Processing...</span>
             ) : (
               <>
-                <div className="flex items-center gap-2">
-                  <span>🔄</span>
-                  <span className="text-sm font-medium">Process Queue</span>
-                </div>
+                <span className="text-sm font-medium">Process Queue</span>
                 {pipelineStatus?.lastQueueRun && (
                   <span className="text-[10px] text-sky-200/70">
                     Last: {formatTimeAgo(pipelineStatus.lastQueueRun)}
@@ -381,16 +397,10 @@ export function Sidebar() {
             className="flex w-full flex-col items-center justify-center gap-0.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 transition-colors"
           >
             {triggeringBuild ? (
-              <div className="flex items-center gap-2">
-                <span className="animate-spin">⏳</span>
-                <span className="text-sm font-medium">Building...</span>
-              </div>
+              <span className="text-sm font-medium">Building...</span>
             ) : (
               <>
-                <div className="flex items-center gap-2">
-                  <span>🚀</span>
-                  <span className="text-sm font-medium">Trigger Build</span>
-                </div>
+                <span className="text-sm font-medium">Trigger Build</span>
                 {pipelineStatus?.lastBuildTime && (
                   <span className="text-[10px] text-emerald-400/70">
                     Last: {formatTimeAgo(pipelineStatus.lastBuildTime)}

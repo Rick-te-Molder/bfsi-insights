@@ -219,18 +219,18 @@ async function getStats() {
 
 export default async function DashboardPage() {
   const {
-    statusCounts,
+    statusCounts: _statusCounts,
     recentFailures,
     publishedCount: _publishedCount,
-    successRate,
-    recentItemsCount,
-    activeTests,
+    successRate: _successRate,
+    recentItemsCount: _recentItemsCount,
+    activeTests: _activeTests,
     pendingProposals,
     failedLast24h,
     oldestPendingAge: _oldestPendingAge,
     oldestQueuedAge: _oldestQueuedAge,
-    discoveredToday,
-    enrichedToday,
+    discoveredToday: _discoveredToday,
+    enrichedToday: _enrichedToday,
     allStatusData,
   } = await getStats();
 
@@ -250,41 +250,6 @@ export default async function DashboardPage() {
         <h1 className="text-xl md:text-2xl font-bold">Dashboard</h1>
         <p className="mt-1 text-sm text-neutral-400">Overview of the ingestion pipeline</p>
       </header>
-
-      {/* Activity Today */}
-      <div className="space-y-3">
-        <h2 className="text-xs md:text-sm font-medium text-neutral-400 uppercase tracking-wide">
-          Activity Today
-        </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-3 md:p-4">
-            <p className="text-xs md:text-sm text-neutral-400">Discovered Today</p>
-            <p className="mt-1 text-xl md:text-2xl font-bold text-violet-400">{discoveredToday}</p>
-            <p className="text-[10px] md:text-xs text-neutral-500">New items found</p>
-          </div>
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 md:p-4">
-            <p className="text-xs md:text-sm text-neutral-400">Processed Today</p>
-            <p className="mt-1 text-xl md:text-2xl font-bold text-emerald-400">{enrichedToday}</p>
-            <p className="text-[10px] md:text-xs text-neutral-500">Enriched + reviewed</p>
-          </div>
-          <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-3 md:p-4">
-            <p className="text-xs md:text-sm text-neutral-400">Total in Pipeline</p>
-            <p className="mt-1 text-xl md:text-2xl font-bold text-sky-400">
-              {(statusCounts.pending || 0) +
-                (statusCounts.processing || 0) +
-                (statusCounts.enriched || 0)}
-            </p>
-            <p className="text-[10px] md:text-xs text-neutral-500">Awaiting action</p>
-          </div>
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 md:p-4">
-            <p className="text-xs md:text-sm text-neutral-400">Success Rate (7d)</p>
-            <p className="mt-1 text-xl md:text-2xl font-bold text-amber-400">
-              {successRate.toFixed(1)}%
-            </p>
-            <p className="text-[10px] md:text-xs text-neutral-500">{recentItemsCount} items</p>
-          </div>
-        </div>
-      </div>
 
       {/* Detailed Pipeline Status */}
       <div className="space-y-3">
@@ -337,95 +302,6 @@ export default async function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 mt-3">
           <DiscoveryControlCard />
         </div>
-      </div>
-
-      {/* Other Metrics */}
-      <div className="grid grid-cols-2 gap-3 md:gap-4">
-        <div className="rounded-xl border border-purple-500/20 bg-purple-500/5 p-3 md:p-4">
-          <p className="text-xs md:text-sm text-neutral-400">Active A/B Tests</p>
-          <p className="mt-1 text-xl md:text-2xl font-bold text-purple-400">{activeTests}</p>
-          <Link href="/ab-tests" className="text-xs text-purple-400 hover:text-purple-300">
-            View tests →
-          </Link>
-        </div>
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 md:p-4">
-          <p className="text-xs md:text-sm text-neutral-400">Pending Proposals</p>
-          <p className="mt-1 text-xl md:text-2xl font-bold text-amber-400">{pendingProposals}</p>
-          <Link href="/proposals" className="text-xs text-amber-400 hover:text-amber-300">
-            Review proposals →
-          </Link>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Review Queue CTA */}
-        <Link
-          href="/review"
-          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 hover:border-sky-500/50 transition-all group hover:scale-[1.02]"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold group-hover:text-sky-400 transition-colors flex items-center gap-2">
-                Review Queue
-                <span className="text-neutral-600 group-hover:text-sky-400/50 transition-colors">
-                  →
-                </span>
-              </h2>
-              <p className="mt-0.5 text-xs text-neutral-500">Triage and approve new content</p>
-              <p className="mt-2 text-sm text-neutral-300">
-                {statusCounts.enriched || 0} items waiting
-              </p>
-            </div>
-            <span className="text-3xl opacity-80 group-hover:opacity-100 transition-opacity">
-              📋
-            </span>
-          </div>
-        </Link>
-
-        {/* Prompts CTA */}
-        <Link
-          href="/prompts"
-          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 hover:border-purple-500/50 transition-all group hover:scale-[1.02]"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold group-hover:text-purple-400 transition-colors flex items-center gap-2">
-                Prompt Engineering
-                <span className="text-neutral-600 group-hover:text-purple-400/50 transition-colors">
-                  →
-                </span>
-              </h2>
-              <p className="mt-0.5 text-xs text-neutral-500">Edit and test agent prompts</p>
-              <p className="mt-2 text-sm text-neutral-300">Manage prompt versions</p>
-            </div>
-            <span className="text-3xl opacity-80 group-hover:opacity-100 transition-opacity">
-              💬
-            </span>
-          </div>
-        </Link>
-
-        {/* Golden Sets CTA */}
-        <Link
-          href="/golden-sets"
-          className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 hover:border-amber-500/50 transition-all group hover:scale-[1.02]"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold group-hover:text-amber-400 transition-colors flex items-center gap-2">
-                Golden Sets
-                <span className="text-neutral-600 group-hover:text-amber-400/50 transition-colors">
-                  →
-                </span>
-              </h2>
-              <p className="mt-0.5 text-xs text-neutral-500">Maintain evaluation datasets</p>
-              <p className="mt-2 text-sm text-neutral-300">Test prompts against curated cases</p>
-            </div>
-            <span className="text-3xl opacity-80 group-hover:opacity-100 transition-opacity">
-              ⭐
-            </span>
-          </div>
-        </Link>
       </div>
 
       {/* Issues / Alerts Section */}
