@@ -61,7 +61,7 @@ describe('agent-registry', () => {
       expect(fn).toBeNull();
     });
 
-    it('agent function calls the correct runner', async () => {
+    it('screener agent function calls runRelevanceFilter', async () => {
       const { getAgentFunction } = await import('../../src/lib/agent-registry.js');
       const { runRelevanceFilter } = await import('../../src/agents/screener.js');
 
@@ -70,6 +70,39 @@ describe('agent-registry', () => {
       await fn(input);
 
       expect(runRelevanceFilter).toHaveBeenCalledWith(input);
+    });
+
+    it('summarizer agent function calls runSummarizer', async () => {
+      const { getAgentFunction } = await import('../../src/lib/agent-registry.js');
+      const { runSummarizer } = await import('../../src/agents/summarizer.js');
+
+      const fn = await getAgentFunction('summarizer');
+      const input = { id: '456', payload: { title: 'Test' } };
+      await fn(input);
+
+      expect(runSummarizer).toHaveBeenCalledWith(input);
+    });
+
+    it('tagger agent function calls runTagger', async () => {
+      const { getAgentFunction } = await import('../../src/lib/agent-registry.js');
+      const { runTagger } = await import('../../src/agents/tagger.js');
+
+      const fn = await getAgentFunction('tagger');
+      const input = { id: '789', payload: { title: 'Test' } };
+      await fn(input);
+
+      expect(runTagger).toHaveBeenCalledWith(input);
+    });
+
+    it('scorer agent function calls runScorer', async () => {
+      const { getAgentFunction } = await import('../../src/lib/agent-registry.js');
+      const { runScorer } = await import('../../src/agents/scorer.js');
+
+      const fn = await getAgentFunction('scorer');
+      const input = { id: 'abc', payload: { title: 'Test' } };
+      await fn(input);
+
+      expect(runScorer).toHaveBeenCalledWith(input);
     });
   });
 });
