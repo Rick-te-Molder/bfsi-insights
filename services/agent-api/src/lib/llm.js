@@ -181,7 +181,7 @@ async function completeAnthropic({ model, messages, maxTokens, temperature }) {
  * @returns {Promise<{parsed: object, usage: object, model: string}>}
  */
 export async function parseStructured(options) {
-  const { model, messages, responseFormat, maxTokens = 4096 } = options;
+  const { model, messages, responseFormat, maxTokens = 4096, temperature } = options;
   const provider = detectProvider(model);
 
   if (provider !== 'openai') {
@@ -192,16 +192,33 @@ export async function parseStructured(options) {
 
   const openai = getOpenAI();
 
-  const response = await openai.beta.chat.completions.parse({
+  // Use non-beta API with response_format - openai.beta.chat is undefined in SDK v6
+  const params = {
     model,
     messages,
     response_format: responseFormat,
     max_tokens: maxTokens,
-  });
+  };
+  if (temperature !== undefined) {
+    params.temperature = temperature;
+  }
+
+  const response = await openai.chat.completions.create(params);
+
+  // Parse the JSON content manually since we're not using the beta parse method
+  const content = response.choices[0]?.message?.content;
+  let parsed = null;
+  if (content) {
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      console.warn('Failed to parse structured output as JSON:', content);
+    }
+  }
 
   return {
-    parsed: response.choices[0]?.message?.parsed,
-    content: response.choices[0]?.message?.content,
+    parsed,
+    content,
     usage: {
       input_tokens: response.usage?.prompt_tokens,
       output_tokens: response.usage?.completion_tokens,
