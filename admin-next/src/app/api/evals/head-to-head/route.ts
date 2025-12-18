@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 
 const AGENT_API_URL = process.env.AGENT_API_URL || 'https://bfsi-insights.onrender.com';
+const AGENT_API_KEY = process.env.AGENT_API_KEY || '';
 
 export async function POST(request: Request) {
   try {
@@ -18,7 +19,10 @@ export async function POST(request: Request) {
 
     const response = await fetch(`${AGENT_API_URL}/api/evals/head-to-head`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': AGENT_API_KEY,
+      },
       body: JSON.stringify({
         agent_name: agentName,
         version_a_id: versionAId,
