@@ -66,11 +66,15 @@ If a warning cannot be fixed (e.g., third-party library issue, intentional patte
 - Include Linear issue ID in commits: `fix(KB-XXX): description`
 - Create PR immediately after first push to start CI
 
-### PR State Check (KB-280)
-- **Always check if PR is still open** before pushing commits to a branch
-- Run `gh pr list --state open` or `gh pr view <NUMBER> --json state`
-- If PR was merged, create a new branch from main instead of pushing to old branch
-- Prevents orphan commits and keeps git history clean
+### Pre-Commit & Push Checks (KB-280, KB-285)
+**BEFORE every `git commit`, verify:**
+1. Run `git branch` — confirm you're on the correct feature branch, not `main`
+2. Run `gh pr view <NUMBER> --json state` — if PR exists, confirm it's not merged
+   - If **merged**: STOP. Create new branch from main
+   - If **open** or **no PR yet**: Safe to proceed
+3. Run `npm run lint` in admin-next — must pass with 0 errors and 0 warnings
+
+**Why:** Prevents commits to wrong branch, orphan commits to merged branches, and lint failures in CI.
 
 ---
 
