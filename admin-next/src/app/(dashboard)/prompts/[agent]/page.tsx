@@ -21,12 +21,6 @@ export default function AgentDetailPage() {
 
   const supabase = createClient();
 
-  // Parse version string (e.g., "v2.3" -> 2.3) for sorting
-  const parseVersion = (version: string): number => {
-    const match = version.match(/v?(\d+(?:\.\d+)?)/i);
-    return match ? parseFloat(match[1]) : 0;
-  };
-
   const loadPrompts = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -37,11 +31,9 @@ export default function AgentDetailPage() {
     if (error) {
       console.error('Error loading prompts:', error);
     } else {
-      // Sort: current version first, then by version number descending
+      // Sort: most recent first (by created_at)
       const sorted = (data || []).sort((a, b) => {
-        if (a.is_current && !b.is_current) return -1;
-        if (!a.is_current && b.is_current) return 1;
-        return parseVersion(b.version) - parseVersion(a.version);
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
       setPrompts(sorted);
       const current = sorted.find((p) => p.is_current);
