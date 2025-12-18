@@ -71,61 +71,14 @@ export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) 
     return false;
   });
 
-  const triggerStep = async (stepKey: string, statusCode: number) => {
+  const triggerStep = async (stepKey: string, _statusCode: number) => {
     setLoading(stepKey);
 
     try {
-      // Fetch current item to get payload
-      const { data: currentItem } = await supabase
-        .from('ingestion_queue')
-        .select('payload, status_code')
-        .eq('id', item.id)
-        .single();
-
-      // Determine return status:
-      // - If published (400), return to pending_review (300) for re-approval
-      // - Otherwise, return to enriched (240)
-      const isPublished = currentItem?.status_code === 400;
-      const returnStatus = isPublished ? 300 : 240;
-
-      // Cancel any running pipeline
-      await supabase
-        .from('pipeline_run')
-        .update({ status: 'cancelled', completed_at: new Date().toISOString() })
-        .eq('queue_id', item.id)
-        .eq('status', 'running');
-
-      // Create new pipeline run
-      const { data: newRun } = await supabase
-        .from('pipeline_run')
-        .insert({
-          queue_id: item.id,
-          trigger: `re-${stepKey}`,
-          status: 'running',
-          created_by: 'system',
-        })
-        .select('id')
-        .single();
-
-      // Update status and set return_status in payload for single-step return
-      const { error } = await supabase
-        .from('ingestion_queue')
-        .update({
-          status_code: statusCode,
-          current_run_id: newRun?.id || null,
-          payload: {
-            ...currentItem?.payload,
-            _return_status: returnStatus,
-            _single_step: stepKey,
-          },
-        })
-        .eq('id', item.id);
-
-      if (error) throw error;
-
       setMessage({ type: 'success', text: `✓ Processing ${stepKey}...` });
 
-      // KB-285: Trigger immediate processing via agent API
+      // KB-285: All pipeline_run operations moved to server-side API route
+      // to use service role (bypasses RLS restrictions)
       const enrichRes = await fetch('/api/enrich-step', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
