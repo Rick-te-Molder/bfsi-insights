@@ -311,6 +311,15 @@ ${vendorData.formatted}
       // Use model and max_tokens from prompt_version instead of hardcoding
       const modelId = tools.model || 'gpt-4o-mini';
       const maxTokens = tools.promptConfig?.max_tokens;
+
+      // Debug: Log if prompt mentions Kee Platforms
+      const hasKeeInSystemPrompt = promptTemplate?.includes('Kee Platforms');
+      const hasKeeInUserContent = content.includes('Kee Platforms');
+      console.log(
+        `🔍 [tagger] Prompt debug: Kee in system=${hasKeeInSystemPrompt}, Kee in user=${hasKeeInUserContent}`,
+      );
+      console.log(`🔍 [tagger] System prompt length: ${promptTemplate?.length || 0} chars`);
+
       const completion = await llm.parseStructured({
         model: modelId,
         maxTokens,
