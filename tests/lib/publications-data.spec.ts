@@ -1,26 +1,46 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock Supabase client before importing publications-data
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => ({
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-        })),
-        order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-      })),
-    })),
-  })),
-}));
-
 // Mock the supabase lib to avoid env var check
 vi.mock('../../src/lib/supabase', () => ({
   getAllPublications: vi.fn(() => Promise.resolve([])),
 }));
 
-import { buildHierarchy, addCounts, createValuesWithCounts } from '../../src/lib/publications-data';
+// Mock Supabase client
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+    })),
+  })),
+}));
+
+import {
+  buildHierarchy,
+  addCounts,
+  createValuesWithCounts,
+  loadPublicationsData,
+} from '../../src/lib/publications-data';
 import type { TaxonomyItem } from '../../src/lib/publications-data';
+import { getAllPublications } from '../../src/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+// Get mock references after import
+const mockGetAllPublications = vi.mocked(getAllPublications);
+const mockCreateClient = vi.mocked(createClient);
+
+// Helper to create mock chain
+const createMockChain = (data: any = []) => ({
+  select: vi.fn().mockReturnThis(),
+  eq: vi.fn().mockReturnThis(),
+  order: vi.fn().mockResolvedValue({ data, error: null }),
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockGetAllPublications.mockResolvedValue([]);
+});
 
 describe('buildHierarchy', () => {
   it('returns empty array for null input', () => {
@@ -208,5 +228,46 @@ describe('createValuesWithCounts', () => {
   it('handles empty publications array', () => {
     const result = createValuesWithCounts([], 'audience');
     expect(result).toEqual([]);
+  });
+});
+
+describe('loadPublicationsData', () => {
+  it('returns empty arrays when no data', async () => {
+    mockGetAllPublications.mockResolvedValue([]);
+
+    const result = await loadPublicationsData();
+
+    expect(result.publications).toEqual([]);
+    expect(result.filters).toEqual([]);
+    expect(result.flatFilters).toEqual([]);
+    expect(result.values).toEqual({});
+    expect(result.industryWithCounts).toEqual([]);
+    expect(result.processWithCounts).toEqual([]);
+    expect(result.geographyWithCounts).toEqual([]);
+  });
+
+  it('processes publications with various field combinations', async () => {
+    // Test the counting logic by providing publications with different field patterns
+    const publications = [
+      { industries: ['BANK'], processes: ['PROC1'], geography: 'US', industry: null },
+      { industries: null, processes: [], geography: 'EU', industry: 'INS' },
+      {
+        industries: ['BANK', 'INS'],
+        processes: ['PROC1', 'PROC2'],
+        geography: 'US',
+        industry: null,
+      },
+      { industries: [], processes: [], geography: null, industry: null },
+    ] as any[];
+
+    mockGetAllPublications.mockResolvedValue(publications);
+
+    const result = await loadPublicationsData();
+
+    // Verify the function completes and returns expected structure
+    expect(result.publications).toHaveLength(4);
+    expect(result).toHaveProperty('industryWithCounts');
+    expect(result).toHaveProperty('processWithCounts');
+    expect(result).toHaveProperty('geographyWithCounts');
   });
 });
