@@ -135,9 +135,7 @@ export function AgentTable({ agents, promptsByAgent, onEdit, onTest }: AgentTabl
                       <span className="text-neutral-600">•</span>
                     </>
                   )}
-                  <span className="text-neutral-500 text-xs">
-                    {historyCount} version{historyCount !== 1 ? 's' : ''}
-                  </span>
+                  <span className="text-neutral-500 text-xs">+ {historyCount} older</span>
                 </div>
               </td>
             </tr>
