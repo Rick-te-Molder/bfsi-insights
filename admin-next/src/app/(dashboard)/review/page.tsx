@@ -325,16 +325,6 @@ export default async function ReviewPage({
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* Search Bar - wrapped in Suspense for useSearchParams */}
-      <div className="flex items-center gap-4">
-        <Suspense fallback={<div className="h-9 w-64 bg-neutral-800 rounded-lg animate-pulse" />}>
-          <SearchBar />
-        </Suspense>
-        {searchQuery && (
-          <span className="text-sm text-neutral-400">Results for &quot;{searchQuery}&quot;</span>
-        )}
-      </div>
-
       {/* Header */}
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -350,7 +340,11 @@ export default async function ReviewPage({
             {timeWindow && ` · ${timeWindow}`}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-6">
+          {/* Search Bar */}
+          <Suspense fallback={<div className="h-9 w-48 bg-neutral-800 rounded-lg animate-pulse" />}>
+            <SearchBar />
+          </Suspense>
           {/* View Toggle */}
           <div className="flex rounded-lg bg-neutral-800 p-1">
             <Link

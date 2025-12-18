@@ -16,7 +16,7 @@ const navItems: NavItem[] = [
   { href: '/', label: 'Dashboard', icon: '📊' },
   { href: '/pipeline', label: 'Pipeline Health', icon: '🔧' },
   { href: '/review', label: 'Items', icon: '📋' },
-  { href: '/proposals', label: 'Proposals', icon: '📥' },
+  { href: '/proposals', label: 'Entities', icon: '📥' },
   { href: '/sources', label: 'Sources', icon: '📡' },
   { href: '/prompts', label: 'Prompts', icon: '💬' },
   {

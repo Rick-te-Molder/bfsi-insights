@@ -48,9 +48,9 @@ export default async function ProposalsPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold">Entity Proposals</h1>
+        <h1 className="text-2xl font-bold">Entities</h1>
         <p className="mt-1 text-sm text-neutral-400">
-          {proposals.length} pending proposals from agent discovery
+          {proposals.length} pending entities from agent discovery
         </p>
       </header>
 
