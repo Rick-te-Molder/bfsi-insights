@@ -156,17 +156,22 @@ export function PipelineStatusGrid({ statusData }: PipelineStatusGridProps) {
                     <div
                       key={status.code}
                       className={cn(
-                        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs',
-                        status.count > 0 ? cat.bgColor : 'bg-neutral-800/50',
+                        'inline-flex items-center rounded-full text-xs overflow-hidden',
                         status.count > 0 ? cat.borderColor : 'border-neutral-700',
                         'border',
                       )}
                       title={`Code ${status.code}: ${status.name}`}
                     >
-                      <span className="text-neutral-400">{status.name.replace(/_/g, ' ')}</span>
+                      <span className="px-2 py-1 bg-neutral-800/80 text-neutral-400 font-mono">
+                        {status.code}
+                      </span>
+                      <span className="px-2 py-1 text-neutral-300">
+                        {status.name.replace(/_/g, ' ')}
+                      </span>
                       <span
                         className={cn(
-                          'font-semibold',
+                          'px-2 py-1 font-semibold',
+                          status.count > 0 ? cat.bgColor : 'bg-neutral-800/50',
                           status.count > 0 ? cat.color : 'text-neutral-500',
                         )}
                       >

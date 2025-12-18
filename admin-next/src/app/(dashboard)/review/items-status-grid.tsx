@@ -183,27 +183,43 @@ export function ItemsStatusGrid({
                         key={status.code}
                         href={buildFilterUrl(status.name, currentSource, currentTime, currentView)}
                         className={cn(
-                          'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs transition-colors',
+                          'inline-flex items-center rounded-full text-xs overflow-hidden transition-colors',
                           isActive
-                            ? `${config.activeColor} text-white border-transparent`
+                            ? 'border-transparent ring-2 ring-offset-1 ring-offset-neutral-900'
                             : status.count > 0
-                              ? `${cat.bgColor} ${cat.borderColor} hover:bg-opacity-20`
-                              : 'bg-neutral-800/50 border-neutral-700 hover:bg-neutral-700/50',
-                          'border',
+                              ? cat.borderColor
+                              : 'border-neutral-700',
+                          isActive && config.activeColor.replace('bg-', 'ring-'),
+                          'border hover:opacity-80',
                         )}
                         title={`Code ${status.code}: ${status.name} (${status.count} items)`}
                       >
-                        <span className={isActive ? 'text-white' : 'text-neutral-400'}>
+                        <span
+                          className={cn(
+                            'px-2 py-1 font-mono',
+                            isActive
+                              ? config.activeColor + ' text-white'
+                              : 'bg-neutral-800/80 text-neutral-400',
+                          )}
+                        >
+                          {status.code}
+                        </span>
+                        <span
+                          className={cn(
+                            'px-2 py-1',
+                            isActive ? 'text-white ' + config.activeColor : 'text-neutral-300',
+                          )}
+                        >
                           {status.name.replace(/_/g, ' ')}
                         </span>
                         <span
                           className={cn(
-                            'font-semibold',
+                            'px-2 py-1 font-semibold',
                             isActive
-                              ? 'text-white'
+                              ? config.activeColor + ' text-white'
                               : status.count > 0
-                                ? cat.color
-                                : 'text-neutral-500',
+                                ? cat.bgColor + ' ' + cat.color
+                                : 'bg-neutral-800/50 text-neutral-500',
                           )}
                         >
                           {status.count}
