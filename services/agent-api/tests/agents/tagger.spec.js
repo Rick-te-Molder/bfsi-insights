@@ -68,40 +68,34 @@ vi.mock('../../src/lib/runner.js', () => ({
     constructor() {
       this.run = vi.fn(async (context, callback) => {
         // Simulate runner calling the callback with mock tools
+        const mockParsedResult = {
+          industry_codes: [
+            { code: 'banking', confidence: 0.95 },
+            { code: 'retail-banking', confidence: 0.85 },
+          ],
+          topic_codes: [{ code: 'ai-strategy', confidence: 0.9 }],
+          geography_codes: [{ code: 'global', confidence: 0.8 }],
+          use_case_codes: [],
+          capability_codes: [],
+          regulator_codes: [],
+          regulation_codes: [],
+          process_codes: [],
+          organization_names: ['JPMorgan'],
+          vendor_names: ['OpenAI'],
+          overall_confidence: 0.92,
+          reasoning: 'Test reasoning with granular confidence',
+        };
         const mockTools = {
-          openai: {
-            beta: {
-              chat: {
-                completions: {
-                  parse: vi.fn(async () => ({
-                    choices: [
-                      {
-                        message: {
-                          parsed: {
-                            industry_codes: [
-                              { code: 'banking', confidence: 0.95 },
-                              { code: 'retail-banking', confidence: 0.85 },
-                            ],
-                            topic_codes: [{ code: 'ai-strategy', confidence: 0.9 }],
-                            geography_codes: [{ code: 'global', confidence: 0.8 }],
-                            use_case_codes: [],
-                            capability_codes: [],
-                            regulator_codes: [],
-                            regulation_codes: [],
-                            process_codes: [],
-                            organization_names: ['JPMorgan'],
-                            vendor_names: ['OpenAI'],
-                            overall_confidence: 0.92,
-                            reasoning: 'Test reasoning with granular confidence',
-                          },
-                        },
-                      },
-                    ],
-                    usage: { total_tokens: 100 },
-                  })),
-                },
+          llm: {
+            parseStructured: vi.fn(async () => ({
+              parsed: mockParsedResult,
+              content: JSON.stringify(mockParsedResult),
+              usage: {
+                input_tokens: 50,
+                output_tokens: 50,
+                total_tokens: 100,
               },
-            },
+            })),
           },
         };
         return callback(context, 'test prompt', mockTools);

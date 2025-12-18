@@ -197,9 +197,10 @@ describe('llm.js', () => {
   });
 
   describe('parseStructured', () => {
-    it('should call OpenAI beta parse endpoint', async () => {
-      mockOpenAIParse.mockResolvedValue({
-        choices: [{ message: { parsed: { name: 'test' }, content: '{"name":"test"}' } }],
+    it('should call OpenAI chat completions create endpoint', async () => {
+      // parseStructured now uses the non-beta API (SDK v6 compatibility)
+      mockOpenAICreate.mockResolvedValue({
+        choices: [{ message: { content: '{"name":"test"}' } }],
         usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
       });
 
@@ -209,7 +210,7 @@ describe('llm.js', () => {
         responseFormat: { type: 'json_schema' },
       });
 
-      expect(mockOpenAIParse).toHaveBeenCalled();
+      expect(mockOpenAICreate).toHaveBeenCalled();
       expect(result.parsed).toEqual({ name: 'test' });
       expect(result.model).toBe('gpt-4o-mini');
     });
