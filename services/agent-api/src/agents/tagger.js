@@ -105,6 +105,48 @@ function buildSelectColumns(config) {
 }
 
 /**
+ * Load known vendors from ag_vendor table for improved recognition
+ */
+async function loadVendors() {
+  const { data, error } = await supabase
+    .from('ag_vendor')
+    .select('name, aliases, category')
+    .order('name');
+
+  if (error) {
+    console.warn('Warning: Failed to load vendors:', error.message);
+    return { vendors: [], vendorNames: new Set() };
+  }
+
+  // Build set of all vendor names and aliases for matching
+  const vendorNames = new Set();
+  for (const v of data || []) {
+    vendorNames.add(v.name.toLowerCase());
+    if (v.aliases) {
+      for (const alias of v.aliases) {
+        vendorNames.add(alias.toLowerCase());
+      }
+    }
+  }
+
+  // Format for prompt - group by category
+  const byCategory = new Map();
+  for (const v of data || []) {
+    const cat = v.category || 'Other';
+    if (!byCategory.has(cat)) byCategory.set(cat, []);
+    byCategory.get(cat).push(v.name);
+  }
+
+  const formatted = [...byCategory.entries()]
+    .map(
+      ([cat, names]) => `${cat}: ${names.slice(0, 10).join(', ')}${names.length > 10 ? '...' : ''}`,
+    )
+    .join('\n');
+
+  return { vendors: data || [], vendorNames, formatted };
+}
+
+/**
  * KB-231: Load taxonomies dynamically from taxonomy_config
  * This allows adding new taxonomy types without code changes.
  */
@@ -321,8 +363,8 @@ function enforceIndustryMutualExclusivity(industryCodes) {
 }
 
 export async function runTagger(queueItem, options = {}) {
-  // Load taxonomies
-  const taxonomies = await loadTaxonomies();
+  // Load taxonomies and vendors in parallel
+  const [taxonomies, vendorData] = await Promise.all([loadTaxonomies(), loadVendors()]);
 
   const hasQueueId = Object.hasOwn(queueItem, 'queueId');
   const queueId = hasQueueId ? queueItem.queueId : queueItem.id;
@@ -410,8 +452,31 @@ ${taxonomies.obligations}
 ${taxonomies.processes}
 
 === EXPANDABLE ENTITIES (extract names as found) ===
-- organization_names: Banks, insurers, asset managers mentioned by name
-- vendor_names: AI/tech vendors mentioned by name
+
+CRITICAL: Distinguish between ORGANIZATIONS and VENDORS:
+
+**organization_names** - Traditional BFSI institutions that USE/BUY technology:
+- Banks (retail, commercial, investment, central banks)
+- Insurers (life, P&C, reinsurers)
+- Asset managers, pension funds, wealth managers
+- Card networks (Visa, Mastercard, Amex)
+- Stock exchanges, clearinghouses
+
+**vendor_names** - Companies that PROVIDE/SELL technology or services to BFSI:
+- Fintechs, neobanks, embedded finance providers
+- Payment processors, BaaS platforms
+- Software vendors, SaaS providers
+- Consulting firms, system integrators
+- Data providers, analytics companies
+- RegTech, InsurTech, WealthTech companies
+
+HEURISTICS for vendor detection:
+- Company name contains: Platform, Solutions, Labs, Tech, Systems, Software, AI, Analytics
+- Company provides services TO banks/insurers (not IS a bank/insurer)
+- Startups, fintechs, technology partners mentioned in partnerships
+
+Known vendors (extract if mentioned):
+${vendorData.formatted}
 
 === PERSONA RELEVANCE (score 0-1 for each audience) ===
 - executive: C-suite, strategy leaders (interested in: business impact, market trends, competitive advantage)
