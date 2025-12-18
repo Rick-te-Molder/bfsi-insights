@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import type { PromptVersion } from '@/types/database';
 import { PromptEditModal, PromptPlayground, DiffModal } from '../components';
-import { estimateTokens } from '../utils';
+import { estimateTokens, getStageBadge } from '../utils';
 
 export default function AgentDetailPage() {
   const params = useParams();
@@ -58,21 +58,53 @@ export default function AgentDetailPage() {
 
   const currentPrompt = prompts.find((p) => p.is_current);
 
-  async function rollbackToVersion(prompt: PromptVersion) {
-    if (!confirm(`Make "${prompt.version}" the current version?`)) return;
+  async function promoteVersion(prompt: PromptVersion) {
+    const stage = prompt.stage as string;
+    let nextStage: string;
+    let message: string;
 
-    await supabase.from('prompt_version').update({ is_current: false }).eq('agent_name', agentName);
-
-    const { error } = await supabase
-      .from('prompt_version')
-      .update({ is_current: true })
-      .eq('agent_name', agentName)
-      .eq('version', prompt.version);
-
-    if (error) {
-      alert('Failed to rollback: ' + error.message);
+    if (stage === 'DEV') {
+      nextStage = 'TST';
+      message = `Promote "${prompt.version}" to TEST?`;
+    } else if (stage === 'TST') {
+      nextStage = 'PRD';
+      message = `Promote "${prompt.version}" to PRODUCTION? This will make it the current active version.`;
     } else {
-      loadPrompts();
+      return; // Already PRD, can't promote
+    }
+
+    if (!confirm(message)) return;
+
+    if (nextStage === 'PRD') {
+      // Promoting to PRD: set is_current=true, unset others
+      await supabase
+        .from('prompt_version')
+        .update({ is_current: false })
+        .eq('agent_name', agentName);
+      const { error } = await supabase
+        .from('prompt_version')
+        .update({ stage: nextStage, is_current: true })
+        .eq('agent_name', agentName)
+        .eq('version', prompt.version);
+
+      if (error) {
+        alert('Failed to promote: ' + error.message);
+      } else {
+        loadPrompts();
+      }
+    } else {
+      // Promoting to TST: just update stage
+      const { error } = await supabase
+        .from('prompt_version')
+        .update({ stage: nextStage })
+        .eq('agent_name', agentName)
+        .eq('version', prompt.version);
+
+      if (error) {
+        alert('Failed to promote: ' + error.message);
+      } else {
+        loadPrompts();
+      }
     }
   }
 
@@ -166,6 +198,13 @@ export default function AgentDetailPage() {
                       current
                     </span>
                   )}
+                  {p.stage && (
+                    <span
+                      className={`text-xs px-1.5 py-0.5 rounded ${getStageBadge(p.stage).className}`}
+                    >
+                      {getStageBadge(p.stage).label}
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-neutral-500 mt-1">
                   {new Date(p.created_at).toLocaleDateString()}
@@ -200,12 +239,20 @@ export default function AgentDetailPage() {
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    {!selectedVersion.is_current && (
+                    {(selectedVersion.stage as string) === 'DEV' && (
                       <button
-                        onClick={() => rollbackToVersion(selectedVersion)}
+                        onClick={() => promoteVersion(selectedVersion)}
                         className="text-sm text-amber-400 hover:text-amber-300"
                       >
-                        Make Current
+                        Promote to TST
+                      </button>
+                    )}
+                    {(selectedVersion.stage as string) === 'TST' && (
+                      <button
+                        onClick={() => promoteVersion(selectedVersion)}
+                        className="text-sm text-emerald-400 hover:text-emerald-300"
+                      >
+                        Promote to PRD
                       </button>
                     )}
                     {currentPrompt && !selectedVersion.is_current && (

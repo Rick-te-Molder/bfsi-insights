@@ -4,11 +4,11 @@ export function estimateTokens(text: string): number {
 
 export function getStageBadge(stage?: string) {
   switch (stage) {
-    case 'production':
+    case 'PRD':
       return { label: 'Live', className: 'bg-emerald-500/20 text-emerald-300' };
-    case 'staging':
-      return { label: 'Staged', className: 'bg-amber-500/20 text-amber-300' };
-    case 'development':
+    case 'TST':
+      return { label: 'Test', className: 'bg-amber-500/20 text-amber-300' };
+    case 'DEV':
       return { label: 'Draft', className: 'bg-neutral-500/20 text-neutral-300' };
     default:
       return { label: stage || 'Unknown', className: 'bg-neutral-500/20 text-neutral-400' };
