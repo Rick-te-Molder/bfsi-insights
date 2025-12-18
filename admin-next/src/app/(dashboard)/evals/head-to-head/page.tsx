@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { PageHeader, LoadingState } from '../components';
 
@@ -17,8 +18,15 @@ interface QueueItem {
   url: string;
   payload: {
     title?: string;
+    source_name?: string;
   };
   discovered_at: string;
+  status_code: number;
+}
+
+interface StatusOption {
+  code: number;
+  name: string;
 }
 
 interface ComparisonResult {
@@ -33,6 +41,9 @@ interface ComparisonResult {
 }
 
 export default function HeadToHeadPage() {
+  const searchParams = useSearchParams();
+  const initialItemId = searchParams.get('item') || '';
+
   const [prompts, setPrompts] = useState<PromptVersion[]>([]);
   const [items, setItems] = useState<QueueItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,24 +53,29 @@ export default function HeadToHeadPage() {
   const [selectedAgent, setSelectedAgent] = useState<string>('');
   const [versionA, setVersionA] = useState<string>('');
   const [versionB, setVersionB] = useState<string>('');
-  const [selectedItem, setSelectedItem] = useState<string>('');
+  const [selectedItem, setSelectedItem] = useState<string>(initialItemId);
   const [useLLMJudge, setUseLLMJudge] = useState(false);
+
+  const [statuses, setStatuses] = useState<StatusOption[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   const supabase = createClient();
 
   const loadData = useCallback(async () => {
     setLoading(true);
 
-    const [promptsRes, itemsRes] = await Promise.all([
+    const [promptsRes, itemsRes, statusRes] = await Promise.all([
       supabase
         .from('prompt_version')
         .select('id, agent_name, version, is_current, stage')
         .order('agent_name'),
       supabase
         .from('ingestion_queue')
-        .select('id, url, payload, discovered_at')
+        .select('id, url, payload, discovered_at, status_code')
         .order('discovered_at', { ascending: false })
-        .limit(100),
+        .limit(500),
+      supabase.from('status_lookup').select('code, name').order('sort_order'),
     ]);
 
     if (!promptsRes.error) setPrompts(promptsRes.data || []);
@@ -68,6 +84,7 @@ export default function HeadToHeadPage() {
     } else {
       console.error('Failed to load items:', itemsRes.error);
     }
+    if (!statusRes.error) setStatuses(statusRes.data || []);
     setLoading(false);
   }, [supabase]);
 
@@ -77,6 +94,41 @@ export default function HeadToHeadPage() {
 
   const agents = [...new Set(prompts.map((p) => p.agent_name))];
   const agentPrompts = prompts.filter((p) => p.agent_name === selectedAgent);
+
+  // Helper to get source from URL if not in payload
+  const getSource = (item: QueueItem): string => {
+    if (item.payload?.source_name) return item.payload.source_name;
+    try {
+      const url = new URL(item.url);
+      return url.hostname.replace('www.', '');
+    } catch {
+      return 'Unknown';
+    }
+  };
+
+  // Helper to format item label as "Source | Title"
+  const getItemLabel = (item: QueueItem): string => {
+    const source = getSource(item);
+    const title = item.payload?.title || item.url || item.id;
+    return `${source} | ${title}`;
+  };
+
+  // Filter items by status and search query
+  const filteredItems = items.filter((item) => {
+    // Status filter
+    if (statusFilter && item.status_code !== Number(statusFilter)) {
+      return false;
+    }
+    // Search filter
+    if (searchQuery) {
+      const label = getItemLabel(item).toLowerCase();
+      const query = searchQuery.toLowerCase();
+      if (!label.includes(query)) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   async function handleRunComparison() {
     if (!versionA || !versionB || !selectedItem) {
@@ -183,24 +235,57 @@ export default function HeadToHeadPage() {
               ))}
             </select>
           </div>
-          <div>
+          <div className="lg:col-span-2">
             <label className="block text-sm text-neutral-400 mb-1">Test Item</label>
+            <div className="flex gap-2">
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setSelectedItem('');
+                }}
+                className="w-32 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white text-sm"
+              >
+                <option value="">All statuses</option>
+                {statuses.map((s) => (
+                  <option key={s.code} value={s.code}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search items..."
+                className="flex-1 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white placeholder:text-neutral-500"
+              />
+            </div>
             <select
               value={selectedItem}
               onChange={(e) => setSelectedItem(e.target.value)}
-              className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
+              className="w-full mt-2 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-white"
+              size={5}
             >
-              <option value="">Select item...</option>
-              {items.map((item) => {
-                const label = item.payload?.title || item.url || item.id;
-                return (
-                  <option key={item.id} value={item.id}>
-                    {label.substring(0, 50)}
-                    {label.length > 50 ? '...' : ''}
-                  </option>
-                );
-              })}
+              {filteredItems.length === 0 ? (
+                <option value="" disabled>
+                  No items match filters
+                </option>
+              ) : (
+                filteredItems.map((item) => {
+                  const label = getItemLabel(item);
+                  return (
+                    <option key={item.id} value={item.id}>
+                      {label.substring(0, 80)}
+                      {label.length > 80 ? '...' : ''}
+                    </option>
+                  );
+                })
+              )}
             </select>
+            <div className="text-xs text-neutral-500 mt-1">
+              {filteredItems.length} items {statusFilter || searchQuery ? '(filtered)' : ''}
+            </div>
           </div>
           <div className="flex flex-col justify-end gap-2">
             <label className="flex items-center gap-2 text-sm text-neutral-400">

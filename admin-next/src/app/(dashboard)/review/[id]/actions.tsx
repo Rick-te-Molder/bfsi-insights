@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { approveQueueItemAction } from '../actions';
 import type { QueueItem } from '@bfsi/types';
@@ -174,6 +175,13 @@ export function ReviewActions({ item }: { item: QueueItem }) {
             ✓ This item has been published
           </p>
         )}
+
+        <Link
+          href={`/evals/head-to-head?item=${item.id}`}
+          className="block w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-700 hover:text-white text-center transition-colors"
+        >
+          Compare head-to-head
+        </Link>
       </div>
     </div>
   );
