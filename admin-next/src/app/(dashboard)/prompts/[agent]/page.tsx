@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { PromptVersion } from '@/types/database';
 import { PromptEditModal, PromptPlayground, DiffModal } from '../components';
 import { estimateTokens, getStageBadge } from '../utils';
+import { MarkdownRenderer } from '@/components/ui/markdown-renderer';
 
 export default function AgentDetailPage() {
   const params = useParams();
@@ -264,9 +265,10 @@ export default function AgentDetailPage() {
 
               {/* Prompt content */}
               <div className="flex-1 overflow-auto p-4">
-                <pre className="text-sm text-neutral-300 whitespace-pre-wrap font-mono leading-relaxed">
-                  {selectedVersion.prompt_text}
-                </pre>
+                <MarkdownRenderer
+                  content={selectedVersion.prompt_text}
+                  className="prose prose-invert prose-sm max-w-none prose-headings:text-neutral-200 prose-headings:font-semibold prose-p:text-neutral-300 prose-strong:text-neutral-200 prose-ul:text-neutral-300 prose-li:text-neutral-300 prose-code:text-sky-300 prose-code:bg-neutral-800 prose-code:px-1 prose-code:rounded"
+                />
               </div>
             </>
           ) : (
