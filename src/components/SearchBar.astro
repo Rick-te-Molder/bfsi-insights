@@ -1,0 +1,58 @@
+---
+interface Props {
+  placeholder?: string;
+}
+
+const { placeholder = 'Search publications…' } = Astro.props;
+---
+
+<section class="mb-6">
+  <div class="relative">
+    <svg
+      class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-500 pointer-events-none"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+    </svg>
+    <input
+      id="q"
+      type="search"
+      placeholder={placeholder}
+      autocomplete="off"
+      class="w-full rounded-xl border border-neutral-700 bg-neutral-900 pl-11 pr-11 py-3 text-base placeholder:text-neutral-500 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
+    />
+    <div id="search-spinner" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
+      <svg class="animate-spin h-5 w-5 text-sky-400" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+        ></circle>
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        ></path>
+      </svg>
+    </div>
+  </div>
+  <!-- Active filter chips + Sort -->
+  <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+    <div id="filter-chips" class="flex flex-wrap gap-2 empty:hidden"></div>
+    <div class="flex items-center gap-2 text-sm">
+      <label for="sort-select" class="text-neutral-400 whitespace-nowrap">Sort by</label>
+      <select
+        id="sort-select"
+        class="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20"
+      >
+        <option value="date_added_desc">Recently added</option>
+        <option value="date_added_asc">Oldest added</option>
+        <option value="date_published_desc">Recently published</option>
+        <option value="date_published_asc">Oldest published</option>
+      </select>
+    </div>
+  </div>
+</section>
