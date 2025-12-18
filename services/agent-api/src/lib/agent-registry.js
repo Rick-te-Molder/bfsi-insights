@@ -10,21 +10,21 @@
  */
 export async function getAgentFunction(agentName) {
   const agentMap = {
-    screener: async (input) => {
+    screener: async (input, options) => {
       const { runRelevanceFilter } = await import('../agents/screener.js');
-      return runRelevanceFilter(input);
+      return runRelevanceFilter(input, options);
     },
-    summarizer: async (input) => {
+    summarizer: async (input, options) => {
       const { runSummarizer } = await import('../agents/summarizer.js');
-      return runSummarizer(input);
+      return runSummarizer(input, options);
     },
-    tagger: async (input) => {
+    tagger: async (input, options) => {
       const { runTagger } = await import('../agents/tagger.js');
-      return runTagger(input);
+      return runTagger(input, options);
     },
     scorer: async (input) => {
-      const { runScorer } = await import('../agents/scorer.js');
-      return runScorer(input);
+      const { scoreRelevance } = await import('../agents/scorer.js');
+      return scoreRelevance(input);
     },
   };
   return agentMap[agentName] || null;

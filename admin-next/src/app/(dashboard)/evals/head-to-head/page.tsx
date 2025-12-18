@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { PageHeader, LoadingState } from '../components';
+import { OutputDisplay } from './output-display';
 
 interface PromptVersion {
   id: string;
@@ -347,17 +348,17 @@ function HeadToHeadContent() {
                   <div className="text-sm font-medium text-blue-400 mb-2">
                     Version A: {result.versionA}
                   </div>
-                  <pre className="text-xs text-neutral-300 overflow-auto max-h-64 bg-neutral-950 rounded p-2">
-                    {JSON.stringify(result.outputA, null, 2)}
-                  </pre>
+                  <div className="overflow-auto max-h-96 bg-neutral-950 rounded p-3">
+                    <OutputDisplay output={result.outputA} />
+                  </div>
                 </div>
                 <div className="p-4">
                   <div className="text-sm font-medium text-emerald-400 mb-2">
                     Version B: {result.versionB}
                   </div>
-                  <pre className="text-xs text-neutral-300 overflow-auto max-h-64 bg-neutral-950 rounded p-2">
-                    {JSON.stringify(result.outputB, null, 2)}
-                  </pre>
+                  <div className="overflow-auto max-h-96 bg-neutral-950 rounded p-3">
+                    <OutputDisplay output={result.outputB} />
+                  </div>
                 </div>
               </div>
               {result.reasoning && (
