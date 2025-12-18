@@ -18,9 +18,11 @@ const { mockEmbeddingsCreate, mockSupabaseSelect } = vi.hoisted(() => ({
 }));
 
 vi.mock('openai', () => ({
-  default: vi.fn(() => ({
-    embeddings: { create: mockEmbeddingsCreate },
-  })),
+  default: class MockOpenAI {
+    constructor() {
+      this.embeddings = { create: mockEmbeddingsCreate };
+    }
+  },
 }));
 
 vi.mock('@supabase/supabase-js', () => ({

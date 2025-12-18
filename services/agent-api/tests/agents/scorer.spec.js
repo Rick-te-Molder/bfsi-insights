@@ -19,11 +19,11 @@ const { mockCreate } = vi.hoisted(() => ({
 }));
 
 vi.mock('openai', () => ({
-  default: vi.fn(() => ({
-    chat: {
-      completions: { create: mockCreate },
-    },
-  })),
+  default: class MockOpenAI {
+    constructor() {
+      this.chat = { completions: { create: mockCreate } };
+    }
+  },
 }));
 
 // Mock Supabase to return valid data for kb_audience, kb_rejection_pattern, and prompt_version
