@@ -17,6 +17,7 @@ export default function AgentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [selectedVersion, setSelectedVersion] = useState<PromptVersion | null>(null);
   const [editingPrompt, setEditingPrompt] = useState<PromptVersion | null>(null);
+  const [creatingNewVersion, setCreatingNewVersion] = useState<PromptVersion | null>(null);
   const [testingPrompt, setTestingPrompt] = useState<PromptVersion | null>(null);
   const [diffMode, setDiffMode] = useState<{ a: PromptVersion; b: PromptVersion } | null>(null);
 
@@ -50,6 +51,24 @@ export default function AgentDetailPage() {
   }, [loadPrompts]);
 
   const currentPrompt = prompts.find((p) => p.is_current);
+
+  async function deleteVersion(prompt: PromptVersion) {
+    if (!confirm(`Delete version "${prompt.version}"? This cannot be undone.`)) {
+      return;
+    }
+
+    const { error } = await supabase.from('prompt_version').delete().eq('id', prompt.id);
+
+    if (error) {
+      alert('Failed to delete version: ' + error.message);
+    } else {
+      // If we deleted the selected version, clear selection
+      if (selectedVersion?.id === prompt.id) {
+        setSelectedVersion(null);
+      }
+      loadPrompts();
+    }
+  }
 
   async function promoteVersion(prompt: PromptVersion) {
     const stage = prompt.stage as string;
@@ -146,10 +165,31 @@ export default function AgentDetailPage() {
                 </button>
                 <button
                   onClick={() => setEditingPrompt(selectedVersion)}
-                  className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500"
+                  disabled={(selectedVersion.stage as string) === 'PRD'}
+                  className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={
+                    (selectedVersion.stage as string) === 'PRD'
+                      ? 'Cannot edit production versions'
+                      : 'Edit this version in-place'
+                  }
                 >
                   Edit
                 </button>
+                <button
+                  onClick={() => setCreatingNewVersion(selectedVersion)}
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+                >
+                  Create New Version
+                </button>
+                {(selectedVersion.stage as string) === 'DEV' && !selectedVersion.is_current && (
+                  <button
+                    onClick={() => deleteVersion(selectedVersion)}
+                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
+                    title="Delete this draft version"
+                  >
+                    Delete
+                  </button>
+                )}
               </>
             )}
           </div>
@@ -281,9 +321,22 @@ export default function AgentDetailPage() {
       {editingPrompt && (
         <PromptEditModal
           prompt={editingPrompt}
+          mode="edit"
           onClose={() => setEditingPrompt(null)}
           onSave={() => {
             setEditingPrompt(null);
+            loadPrompts();
+          }}
+        />
+      )}
+
+      {creatingNewVersion && (
+        <PromptEditModal
+          prompt={creatingNewVersion}
+          mode="create"
+          onClose={() => setCreatingNewVersion(null)}
+          onSave={() => {
+            setCreatingNewVersion(null);
             loadPrompts();
           }}
         />
