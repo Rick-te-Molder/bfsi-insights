@@ -70,11 +70,15 @@ export function createValuesWithCounts(
   const audienceOrder = ['executive', 'functional_specialist', 'engineer', 'researcher'];
 
   return Array.from(counts.entries())
-    .map(([value, count]) => ({
-      value,
-      count,
-      label: value === 'functional_specialist' ? 'Functional Specialist' : value,
-    }))
+    .map(([value, count]) => {
+      // Format display name for functional_specialist
+      const displayValue = value === 'functional_specialist' ? 'Functional Specialist' : value;
+      return {
+        value,
+        count,
+        label: `${displayValue} (${count})`,
+      };
+    })
     .sort((a, b) => {
       if (field === 'audience') {
         const aIndex = audienceOrder.indexOf(a.value.toLowerCase());
