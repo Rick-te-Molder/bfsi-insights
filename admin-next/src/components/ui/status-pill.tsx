@@ -27,7 +27,7 @@ function PillContent({
       <span
         className={cn(
           'pl-2 pr-1 py-1 font-mono',
-          isActive ? activeColor + ' text-white' : 'bg-neutral-700/50 text-neutral-300',
+          isActive ? activeColor + ' text-white' : 'bg-neutral-700/50 text-neutral-400',
         )}
       >
         {code}
