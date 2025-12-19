@@ -25,7 +25,7 @@ const { placeholder = 'Search publications…' } = Astro.props;
       type="search"
       placeholder={placeholder}
       autocomplete="off"
-      class="w-full rounded-xl border border-neutral-700 bg-neutral-900 pl-11 pr-11 py-3 text-base placeholder:text-neutral-500 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
+      class="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 pl-11 pr-11 py-3 text-base text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all"
     />
     <div id="search-spinner" class="absolute right-3 top-1/2 -translate-y-1/2 hidden">
       <svg class="animate-spin h-5 w-5 text-sky-400" fill="none" viewBox="0 0 24 24">
@@ -43,10 +43,12 @@ const { placeholder = 'Search publications…' } = Astro.props;
   <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
     <div id="filter-chips" class="flex flex-wrap gap-2 empty:hidden"></div>
     <div class="flex items-center gap-2 text-sm">
-      <label for="sort-select" class="text-neutral-400 whitespace-nowrap">Sort by</label>
+      <label for="sort-select" class="text-neutral-600 dark:text-neutral-400 whitespace-nowrap"
+        >Sort by</label
+      >
       <select
         id="sort-select"
-        class="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-neutral-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20"
+        class="rounded-lg border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 px-3 py-1.5 text-sm text-neutral-700 dark:text-neutral-200 focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20"
       >
         <option value="date_added_desc">Recently added</option>
         <option value="date_added_asc">Oldest added</option>

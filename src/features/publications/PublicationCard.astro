@@ -308,9 +308,9 @@ const candidates = [...itemThumbs];
       </div>
     </div>
 
-    <!-- Tags row with Preview button aligned - pushed to bottom -->
-    <div class="mt-auto pt-3 flex items-start justify-between gap-2">
-      <div class="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
+    <!-- Tags row - pushed to bottom, leave space for absolute button -->
+    <div class="mt-auto pt-3 pr-24">
+      <div class="flex flex-wrap items-center gap-1.5">
         {/* Card view: audience + geography only */}
         {
           audience && (
@@ -373,18 +373,18 @@ const candidates = [...itemThumbs];
           )
         }
       </div>
-
-      <!-- Expand/Collapse button - min 44px touch target -->
-      <button
-        class="relative z-30 flex-shrink-0 inline-flex items-center justify-center gap-1 text-sm text-sky-600 dark:text-sky-300 hover:text-sky-700 dark:hover:text-sky-200 transition-colors min-w-[44px] min-h-[44px] px-3 py-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800/50 focus:outline-none focus:ring-2 focus:ring-sky-500 pointer-events-auto"
-        type="button"
-        data-expand-card="true"
-        aria-expanded="false"
-        aria-label="Expand card to show more details"
-      >
-        <span class="expand-label">Expand</span>
-        <span class="collapse-label hidden">Collapse</span>
-      </button>
     </div>
+
+    <!-- Expand/Collapse button - fixed position at bottom-right so it doesn't move when content changes -->
+    <button
+      class="absolute bottom-4 right-4 z-30 inline-flex items-center justify-center gap-1 text-sm text-sky-600 dark:text-sky-300 hover:text-sky-700 dark:hover:text-sky-200 transition-colors min-w-[44px] min-h-[44px] px-3 py-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800/50 focus:outline-none focus:ring-2 focus:ring-sky-500 pointer-events-auto"
+      type="button"
+      data-expand-card="true"
+      aria-expanded="false"
+      aria-label="Expand card to show more details"
+    >
+      <span class="expand-label">Expand</span>
+      <span class="collapse-label hidden">Collapse</span>
+    </button>
   </div>
 </li>

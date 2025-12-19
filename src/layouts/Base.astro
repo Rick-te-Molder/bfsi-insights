@@ -88,14 +88,14 @@ const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.s
             {
               navItems.map((item, idx) => (
                 <>
-                  {idx > 0 && <span class="mx-2 text-neutral-700">|</span>}
+                  {idx > 0 && <span class="mx-2 text-neutral-400 dark:text-neutral-700">|</span>}
                   <a
                     href={item.href}
                     class:list={[
                       'px-3 py-1.5 rounded-md transition-colors',
                       isActive(item.href)
-                        ? 'text-sky-400 font-medium border-b-2 border-sky-400'
-                        : 'text-neutral-300 hover:text-white hover:bg-neutral-800',
+                        ? 'text-sky-600 dark:text-sky-400 font-medium border-b-2 border-sky-600 dark:border-sky-400'
+                        : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800',
                     ]}
                     aria-current={isActive(item.href) ? 'page' : undefined}
                   >
@@ -113,13 +113,14 @@ const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.s
             class="w-9 h-9 flex items-center justify-center rounded-lg text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
             aria-label="Toggle theme"
           >
-            <!-- Sun icon (shown in dark mode) -->
+            <!-- Sun icon (shown in dark mode) - click to switch to light -->
             <svg
               class="w-5 h-5 hidden dark:block"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
+              <title>Switch to light mode</title>
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -127,13 +128,14 @@ const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.s
                 d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
               ></path>
             </svg>
-            <!-- Moon icon (shown in light mode) -->
+            <!-- Moon icon (shown in light mode) - click to switch to dark -->
             <svg
               class="w-5 h-5 block dark:hidden"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
+              <title>Switch to dark mode</title>
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -158,6 +160,7 @@ const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.s
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
+              <title>Switch to light mode</title>
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -171,6 +174,7 @@ const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.s
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
+              <title>Switch to dark mode</title>
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -250,9 +254,9 @@ const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.s
       </main>
 
       <!-- FOOTER -->
-      <footer class="border-t border-neutral-800">
+      <footer class="border-t border-neutral-200 dark:border-neutral-800">
         <div
-          class="mx-auto max-w-5xl px-4 py-6 text-xs text-neutral-400 flex items-center justify-between"
+          class="mx-auto max-w-5xl px-4 py-6 text-xs text-neutral-500 dark:text-neutral-400 flex items-center justify-between"
         >
           <a
             href="https://www.rtminnovations.com/"
