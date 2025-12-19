@@ -64,23 +64,23 @@ const displayItems = flattenItems(items, flattenRoots);
 const colorClasses: Record<string, { checkbox: string; pill: string }> = {
   cyan: {
     checkbox: 'text-cyan-500 focus:ring-cyan-500',
-    pill: 'peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 peer-checked:text-cyan-300',
+    pill: 'peer-checked:border-cyan-500 peer-checked:bg-cyan-500/10 peer-checked:text-cyan-700 dark:peer-checked:text-cyan-300',
   },
   sky: {
     checkbox: 'text-sky-500 focus:ring-sky-500',
-    pill: 'peer-checked:border-sky-500 peer-checked:bg-sky-500/10 peer-checked:text-sky-300',
+    pill: 'peer-checked:border-sky-500 peer-checked:bg-sky-500/10 peer-checked:text-sky-700 dark:peer-checked:text-sky-300',
   },
   emerald: {
     checkbox: 'text-emerald-500 focus:ring-emerald-500',
-    pill: 'peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 peer-checked:text-emerald-300',
+    pill: 'peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 peer-checked:text-emerald-700 dark:peer-checked:text-emerald-300',
   },
   amber: {
     checkbox: 'text-amber-500 focus:ring-amber-500',
-    pill: 'peer-checked:border-amber-500 peer-checked:bg-amber-500/10 peer-checked:text-amber-300',
+    pill: 'peer-checked:border-amber-500 peer-checked:bg-amber-500/10 peer-checked:text-amber-700 dark:peer-checked:text-amber-300',
   },
   purple: {
     checkbox: 'text-purple-500 focus:ring-purple-500',
-    pill: 'peer-checked:border-purple-500 peer-checked:bg-purple-500/10 peer-checked:text-purple-300',
+    pill: 'peer-checked:border-purple-500 peer-checked:bg-purple-500/10 peer-checked:text-purple-700 dark:peer-checked:text-purple-300',
   },
 };
 
@@ -93,10 +93,10 @@ const checkboxClass = cascadeClass ? `${cascadeClass}-checkbox` : '';
     <div class="space-y-2">
       {displayItems.map((l1) => (
         <details
-          class={`${cascadeClass}-l1 border border-neutral-800/50 rounded-md overflow-hidden`}
+          class={`${cascadeClass}-l1 border border-neutral-200 dark:border-neutral-800/50 rounded-md overflow-hidden`}
           data-code={l1.code}
         >
-          <summary class="flex items-center justify-between px-3 py-2 cursor-pointer bg-neutral-900/30 hover:bg-neutral-800/30 transition-colors text-xs">
+          <summary class="flex items-center justify-between px-3 py-2 cursor-pointer bg-neutral-50 dark:bg-neutral-900/30 hover:bg-neutral-100 dark:hover:bg-neutral-800/30 transition-colors text-xs">
             <div class="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -104,17 +104,19 @@ const checkboxClass = cascadeClass ? `${cascadeClass}-checkbox` : '';
                 value={l1.code}
                 class:list={[
                   checkboxClass,
-                  'h-3.5 w-3.5 rounded border-neutral-600 bg-neutral-800 focus:ring-offset-0 cursor-pointer',
+                  'h-3.5 w-3.5 rounded border-neutral-400 dark:border-neutral-600 bg-white dark:bg-neutral-800 focus:ring-offset-0 cursor-pointer',
                   colors.checkbox,
                 ]}
                 data-level="1"
                 data-code={l1.code}
                 onclick="event.stopPropagation()"
               />
-              <span class="font-medium text-neutral-400 uppercase tracking-wider">{l1.name}</span>
+              <span class="font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wider">
+                {l1.name}
+              </span>
             </div>
             <svg
-              class="w-3.5 h-3.5 text-neutral-600 transition-transform [details[open]>&]:rotate-180"
+              class="w-3.5 h-3.5 text-neutral-400 dark:text-neutral-600 transition-transform [details[open]>&]:rotate-180"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -127,15 +129,15 @@ const checkboxClass = cascadeClass ? `${cascadeClass}-checkbox` : '';
               />
             </svg>
           </summary>
-          <div class="px-3 py-2 bg-neutral-950/30 space-y-1.5">
+          <div class="px-3 py-2 bg-neutral-100/50 dark:bg-neutral-950/30 space-y-1.5">
             {/* L2 items - always rows with checkboxes, collapsible if they have children */}
             {l1.children?.map((l2) => (
               <details
-                class={`${cascadeClass}-l2 ml-2 border border-neutral-800/40 rounded overflow-hidden`}
+                class={`${cascadeClass}-l2 ml-2 border border-neutral-200 dark:border-neutral-800/40 rounded overflow-hidden`}
                 data-code={l2.code}
                 data-parent={l1.code}
               >
-                <summary class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer bg-neutral-900/20 hover:bg-neutral-800/30 transition-colors">
+                <summary class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer bg-white dark:bg-neutral-900/20 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
                   <div class="flex items-center gap-2">
                     <input
                       type="checkbox"
@@ -143,7 +145,7 @@ const checkboxClass = cascadeClass ? `${cascadeClass}-checkbox` : '';
                       value={l2.code}
                       class:list={[
                         checkboxClass,
-                        'h-3 w-3 rounded border-neutral-600 bg-neutral-800 focus:ring-offset-0 cursor-pointer',
+                        'h-3 w-3 rounded border-neutral-400 dark:border-neutral-600 bg-white dark:bg-neutral-800 focus:ring-offset-0 cursor-pointer',
                         colors.checkbox,
                       ]}
                       data-level="2"
@@ -151,10 +153,10 @@ const checkboxClass = cascadeClass ? `${cascadeClass}-checkbox` : '';
                       data-parent={l1.code}
                       onclick="event.stopPropagation()"
                     />
-                    <span class="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">
+                    <span class="text-[11px] font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wide">
                       {l2.name}
                       {l2.count ? (
-                        <span class="text-neutral-500 font-normal normal-case ml-1">
+                        <span class="text-neutral-400 dark:text-neutral-500 font-normal normal-case ml-1">
                           {l2.count}
                         </span>
                       ) : null}
@@ -162,7 +164,7 @@ const checkboxClass = cascadeClass ? `${cascadeClass}-checkbox` : '';
                   </div>
                   {l2.children && l2.children.length > 0 && (
                     <svg
-                      class="w-3 h-3 text-neutral-600 transition-transform [details[open]>&]:rotate-180"
+                      class="w-3 h-3 text-neutral-400 dark:text-neutral-600 transition-transform [details[open]>&]:rotate-180"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -177,16 +179,16 @@ const checkboxClass = cascadeClass ? `${cascadeClass}-checkbox` : '';
                   )}
                 </summary>
                 {l2.children && l2.children.length > 0 && (
-                  <div class="px-2.5 py-2 bg-neutral-950/20 flex flex-wrap gap-1.5">
+                  <div class="px-2.5 py-2 bg-neutral-100/30 dark:bg-neutral-950/20 flex flex-wrap gap-1.5">
                     {l2.children?.map((l3) =>
                       l3.children && l3.children.length > 0 ? (
                         // L3 with children - collapsible (e.g. European Union → countries)
                         <details
-                          class={`${cascadeClass}-l3 w-full border border-neutral-800/40 rounded overflow-hidden`}
+                          class={`${cascadeClass}-l3 w-full border border-neutral-200 dark:border-neutral-800/40 rounded overflow-hidden`}
                           data-code={l3.code}
                           data-parent={l2.code}
                         >
-                          <summary class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer bg-neutral-900/20 hover:bg-neutral-800/30 transition-colors">
+                          <summary class="flex items-center justify-between px-2.5 py-1.5 cursor-pointer bg-white dark:bg-neutral-900/20 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
                             <div class="flex items-center gap-2">
                               <input
                                 type="checkbox"
@@ -194,7 +196,7 @@ const checkboxClass = cascadeClass ? `${cascadeClass}-checkbox` : '';
                                 value={l3.code}
                                 class:list={[
                                   checkboxClass,
-                                  'h-3 w-3 rounded border-neutral-600 bg-neutral-800 focus:ring-offset-0 cursor-pointer',
+                                  'h-3 w-3 rounded border-neutral-400 dark:border-neutral-600 bg-white dark:bg-neutral-800 focus:ring-offset-0 cursor-pointer',
                                   colors.checkbox,
                                 ]}
                                 data-level="3"
@@ -202,17 +204,17 @@ const checkboxClass = cascadeClass ? `${cascadeClass}-checkbox` : '';
                                 data-parent={l2.code}
                                 onclick="event.stopPropagation()"
                               />
-                              <span class="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">
+                              <span class="text-[11px] font-medium text-neutral-600 dark:text-neutral-400 uppercase tracking-wide">
                                 {l3.name}
                                 {l3.count ? (
-                                  <span class="text-neutral-500 font-normal normal-case ml-1">
+                                  <span class="text-neutral-400 dark:text-neutral-500 font-normal normal-case ml-1">
                                     {l3.count}
                                   </span>
                                 ) : null}
                               </span>
                             </div>
                             <svg
-                              class="w-3 h-3 text-neutral-600 transition-transform [details[open]>&]:rotate-180"
+                              class="w-3 h-3 text-neutral-400 dark:text-neutral-600 transition-transform [details[open]>&]:rotate-180"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -225,7 +227,7 @@ const checkboxClass = cascadeClass ? `${cascadeClass}-checkbox` : '';
                               />
                             </svg>
                           </summary>
-                          <div class="px-2.5 py-2 bg-neutral-950/20 flex flex-wrap gap-1.5">
+                          <div class="px-2.5 py-2 bg-neutral-100/30 dark:bg-neutral-950/20 flex flex-wrap gap-1.5">
                             {l3.children?.map((l4) => (
                               <label class="filter-checkbox cursor-pointer">
                                 <input
@@ -240,14 +242,16 @@ const checkboxClass = cascadeClass ? `${cascadeClass}-checkbox` : '';
                                 <span
                                   class:list={[
                                     'inline-flex items-center gap-1 px-2 py-1 rounded text-xs',
-                                    'border border-neutral-700/70 bg-neutral-900/70 text-neutral-400',
-                                    'transition-all hover:border-neutral-600 hover:bg-neutral-800',
+                                    'border border-neutral-300 dark:border-neutral-700/70 bg-white dark:bg-neutral-900/70 text-neutral-600 dark:text-neutral-400',
+                                    'transition-all hover:border-neutral-400 dark:hover:border-neutral-600 hover:bg-neutral-50 dark:hover:bg-neutral-800',
                                     colors.pill,
                                   ]}
                                 >
                                   {l4.name}
                                   {l4.count ? (
-                                    <span class="text-neutral-500">{l4.count}</span>
+                                    <span class="text-neutral-400 dark:text-neutral-500">
+                                      {l4.count}
+                                    </span>
                                   ) : null}
                                 </span>
                               </label>
@@ -269,13 +273,15 @@ const checkboxClass = cascadeClass ? `${cascadeClass}-checkbox` : '';
                           <span
                             class:list={[
                               'inline-flex items-center gap-1 px-2 py-1 rounded text-xs',
-                              'border border-neutral-700/70 bg-neutral-900/70 text-neutral-400',
-                              'transition-all hover:border-neutral-600 hover:bg-neutral-800',
+                              'border border-neutral-300 dark:border-neutral-700/70 bg-white dark:bg-neutral-900/70 text-neutral-600 dark:text-neutral-400',
+                              'transition-all hover:border-neutral-400 dark:hover:border-neutral-600 hover:bg-neutral-50 dark:hover:bg-neutral-800',
                               colors.pill,
                             ]}
                           >
                             {l3.name}
-                            {l3.count ? <span class="text-neutral-500">{l3.count}</span> : null}
+                            {l3.count ? (
+                              <span class="text-neutral-400 dark:text-neutral-500">{l3.count}</span>
+                            ) : null}
                           </span>
                         </label>
                       ),
