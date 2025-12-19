@@ -77,6 +77,7 @@ export default function PromptsPage() {
       {editingPrompt && (
         <PromptEditModal
           prompt={editingPrompt}
+          mode="create"
           onClose={() => setEditingPrompt(null)}
           onSave={() => {
             setEditingPrompt(null);
