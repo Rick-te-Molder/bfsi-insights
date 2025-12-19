@@ -259,7 +259,13 @@ export default function AgentDetailPage() {
                   )}
                 </div>
                 <div className="text-xs text-neutral-500 mt-1">
-                  {new Date(p.created_at).toLocaleDateString()}
+                  {(() => {
+                    const stage = p.stage as string;
+                    let date = p.created_at;
+                    if (stage === 'PRD' && p.deployed_at) date = p.deployed_at;
+                    if (stage === 'RET' && p.retired_at) date = p.retired_at;
+                    return new Date(date).toLocaleDateString();
+                  })()}
                 </div>
                 {p.notes && (
                   <div className="text-xs text-neutral-500 mt-1 truncate" title={p.notes}>
