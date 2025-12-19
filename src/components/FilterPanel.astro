@@ -15,7 +15,13 @@ const { flatFilters, values, industryWithCounts, processWithCounts, geographyWit
 
 const audienceFilter = flatFilters.find((f) => f.column_name === 'audience');
 const audienceValues = audienceFilter ? values[audienceFilter.column_name] || [] : [];
-const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
+const topicFilter = flatFilters.find((f) => f.column_name === 'topic');
+const topicValues = topicFilter ? values[topicFilter.column_name] || [] : [];
+const contentTypeFilter = flatFilters.find((f) => f.column_name === 'content_type');
+const contentTypeValues = contentTypeFilter ? values[contentTypeFilter.column_name] || [] : [];
+const otherFilters = flatFilters.filter(
+  (f) => !['audience', 'topic', 'content_type'].includes(f.column_name),
+);
 ---
 
 <div id="filter-panel" class="fixed inset-0 z-50 hidden">
@@ -55,7 +61,7 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
     <!-- Filter groups (scrollable) -->
     <div class="flex-1 overflow-y-auto p-4">
       <div class="max-w-3xl mx-auto space-y-3">
-        <!-- View For (Audience) -->
+        <!-- Audience Filter -->
         {
           audienceFilter && audienceValues.length > 0 && (
             <details
@@ -64,7 +70,7 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
               open
             >
               <summary class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors">
-                <span class="text-sm font-medium text-primary">View for</span>
+                <span class="text-sm font-medium text-primary">Audience</span>
                 <svg
                   class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
                   fill="none"
@@ -101,6 +107,40 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
           )
         }
 
+        <!-- Geography Filter -->
+        <details
+          class="filter-group filter-group-bg rounded-lg overflow-hidden"
+          data-filter-key="geography"
+        >
+          <summary
+            class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors"
+          >
+            <span class="text-sm font-medium text-primary">Geography</span>
+            <svg
+              class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </summary>
+          <div class="px-4 py-3 filter-group-content border-t">
+            <HierarchicalFilter
+              filterKey="geography"
+              items={geographyWithCounts}
+              color="sky"
+              emptyMessage="No geography tags yet"
+              cascadeClass="geography"
+              hideRoots={['GLOBAL']}
+            />
+          </div>
+        </details>
+
         <!-- Industry Filter -->
         <details
           class="filter-group filter-group-bg rounded-lg overflow-hidden"
@@ -135,6 +175,96 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
           </div>
         </details>
 
+        <!-- Topic Filter -->
+        {
+          topicFilter && topicValues.length > 0 && (
+            <details
+              class="filter-group filter-group-bg rounded-lg overflow-hidden"
+              data-filter-key="topic"
+            >
+              <summary class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors">
+                <span class="text-sm font-medium text-primary">Topic</span>
+                <svg
+                  class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </summary>
+              <div class="px-4 py-3 filter-group-content border-t">
+                <div class="flex flex-wrap gap-2">
+                  {topicValues.map((v) => (
+                    <label class="filter-checkbox cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="filter-topic"
+                        value={v.value}
+                        class="sr-only peer"
+                      />
+                      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm filter-chip transition-all peer-checked:border-violet-500 peer-checked:bg-violet-500/10 peer-checked:text-violet-600 dark:peer-checked:text-violet-300">
+                        {v.value}
+                        <span class="text-xs filter-chip-count">{v.count}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </details>
+          )
+        }
+
+        <!-- Content Type Filter -->
+        {
+          contentTypeFilter && contentTypeValues.length > 0 && (
+            <details
+              class="filter-group filter-group-bg rounded-lg overflow-hidden"
+              data-filter-key="content_type"
+            >
+              <summary class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors">
+                <span class="text-sm font-medium text-primary">Content Type</span>
+                <svg
+                  class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </summary>
+              <div class="px-4 py-3 filter-group-content border-t">
+                <div class="flex flex-wrap gap-2">
+                  {contentTypeValues.map((v) => (
+                    <label class="filter-checkbox cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="filter-content_type"
+                        value={v.value}
+                        class="sr-only peer"
+                      />
+                      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm filter-chip transition-all peer-checked:border-rose-500 peer-checked:bg-rose-500/10 peer-checked:text-rose-600 dark:peer-checked:text-rose-300">
+                        {v.value}
+                        <span class="text-xs filter-chip-count">{v.count}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </details>
+          )
+        }
+
         <!-- Process Filter -->
         <details
           class="filter-group filter-group-bg rounded-lg overflow-hidden"
@@ -164,40 +294,6 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
               color="emerald"
               emptyMessage="No process tags yet"
               cascadeClass="process"
-            />
-          </div>
-        </details>
-
-        <!-- Geography Filter -->
-        <details
-          class="filter-group filter-group-bg rounded-lg overflow-hidden"
-          data-filter-key="geography"
-        >
-          <summary
-            class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors"
-          >
-            <span class="text-sm font-medium text-primary">Geography</span>
-            <svg
-              class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 9l-7 7-7-7"></path>
-            </svg>
-          </summary>
-          <div class="px-4 py-3 filter-group-content border-t">
-            <HierarchicalFilter
-              filterKey="geography"
-              items={geographyWithCounts}
-              color="sky"
-              emptyMessage="No geography tags yet"
-              cascadeClass="geography"
-              flattenRoots={['GLOBAL']}
             />
           </div>
         </details>

@@ -9,6 +9,7 @@ function toggleCard(card: HTMLElement, expand: boolean) {
   const expandLabel = card.querySelector('.expand-label');
   const collapseLabel = card.querySelector('.collapse-label');
   const expandButtons = card.querySelectorAll('[data-expand-card]');
+  const collapsedOnlyElements = card.querySelectorAll('.card-collapsed-only');
 
   if (!collapsed || !expanded) return;
 
@@ -18,6 +19,8 @@ function toggleCard(card: HTMLElement, expand: boolean) {
     expandLabel?.classList.add('hidden');
     collapseLabel?.classList.remove('hidden');
     card.dataset.expanded = 'true';
+    // Hide collapsed-only elements (like +X more button)
+    collapsedOnlyElements.forEach((el) => (el as HTMLElement).classList.add('hidden'));
     // Update aria-expanded on all expand buttons
     expandButtons.forEach((btn) => btn.setAttribute('aria-expanded', 'true'));
   } else {
@@ -26,12 +29,18 @@ function toggleCard(card: HTMLElement, expand: boolean) {
     expandLabel?.classList.remove('hidden');
     collapseLabel?.classList.add('hidden');
     delete card.dataset.expanded;
+    // Show collapsed-only elements
+    collapsedOnlyElements.forEach((el) => (el as HTMLElement).classList.remove('hidden'));
     // Update aria-expanded on all expand buttons
     expandButtons.forEach((btn) => btn.setAttribute('aria-expanded', 'false'));
   }
 }
 
 function bindExpandButton(btn: HTMLElement) {
+  // Prevent duplicate bindings
+  if (btn.dataset.expandBound === 'true') return;
+  btn.dataset.expandBound = 'true';
+
   btn.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
