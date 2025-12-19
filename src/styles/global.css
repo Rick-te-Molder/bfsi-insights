@@ -89,7 +89,7 @@
 
   /* Hierarchical filter items */
   .hier-filter-l1 {
-    @apply border border-neutral-200 dark:border-neutral-800/50 rounded-md overflow-hidden;
+    @apply border border-neutral-200 dark:border-neutral-700 rounded-md overflow-hidden;
   }
 
   .hier-filter-l1-header {
@@ -97,11 +97,11 @@
   }
 
   .hier-filter-l1-text {
-    @apply font-medium text-neutral-800 dark:text-neutral-300 uppercase tracking-wider;
+    @apply font-medium text-neutral-800 dark:text-white uppercase tracking-wider;
   }
 
   .hier-filter-l2 {
-    @apply border border-neutral-200 dark:border-neutral-800/40 rounded overflow-hidden;
+    @apply border border-neutral-200 dark:border-neutral-700 rounded overflow-hidden;
   }
 
   .hier-filter-l2-header {
@@ -109,7 +109,7 @@
   }
 
   .hier-filter-l2-text {
-    @apply font-medium text-neutral-700 dark:text-neutral-400 uppercase tracking-wide;
+    @apply font-medium text-neutral-800 dark:text-white uppercase tracking-wide;
   }
 
   .hier-filter-content {
@@ -121,10 +121,10 @@
   }
 
   .hier-filter-pill {
-    @apply border border-neutral-300 dark:border-neutral-700/70 
-           bg-white dark:bg-neutral-900/70 
-           text-neutral-700 dark:text-neutral-400
-           hover:border-neutral-400 dark:hover:border-neutral-600 
-           hover:bg-neutral-50 dark:hover:bg-neutral-800;
+    @apply border border-neutral-300 dark:border-neutral-600 
+           bg-white dark:bg-neutral-800 
+           text-neutral-800 dark:text-white
+           hover:border-neutral-400 dark:hover:border-neutral-500 
+           hover:bg-neutral-50 dark:hover:bg-neutral-700;
   }
 }
