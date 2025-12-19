@@ -52,7 +52,7 @@ export function AgentTable({ agents, promptsByAgent, onEdit, onTest }: AgentTabl
       <tbody className="divide-y divide-neutral-800">
         {agents.map((agentName) => {
           const agentPrompts = promptsByAgent[agentName];
-          const currentPrompt = agentPrompts.find((p) => p.is_current);
+          const currentPrompt = agentPrompts.find((p) => p.stage === 'PRD');
           const historyCount = agentPrompts.length - (currentPrompt ? 1 : 0);
 
           return (

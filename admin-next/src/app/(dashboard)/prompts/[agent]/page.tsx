@@ -38,7 +38,7 @@ export default function AgentDetailPage() {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
       setPrompts(sorted);
-      const current = sorted.find((p) => p.is_current);
+      const current = sorted.find((p) => p.stage === 'PRD');
       if (current && !selectedVersion) {
         setSelectedVersion(current);
       }
@@ -50,7 +50,7 @@ export default function AgentDetailPage() {
     loadPrompts();
   }, [loadPrompts]);
 
-  const currentPrompt = prompts.find((p) => p.is_current);
+  const currentPrompt = prompts.find((p) => p.stage === 'PRD');
 
   async function deleteVersion(prompt: PromptVersion) {
     if (!confirm(`Delete version "${prompt.version}"? This cannot be undone.`)) {
@@ -94,7 +94,6 @@ export default function AgentDetailPage() {
         .from('prompt_version')
         .update({
           stage: 'RET',
-          is_current: false,
           retired_at: new Date().toISOString(),
         })
         .eq('agent_name', agentName)
@@ -110,7 +109,6 @@ export default function AgentDetailPage() {
         .from('prompt_version')
         .update({
           stage: nextStage,
-          is_current: true,
           deployed_at: new Date().toISOString(),
         })
         .eq('id', prompt.id);
@@ -202,7 +200,7 @@ export default function AgentDetailPage() {
                 >
                   Create New Version
                 </button>
-                {(selectedVersion.stage as string) === 'DEV' && !selectedVersion.is_current && (
+                {(selectedVersion.stage as string) === 'DEV' && selectedVersion.stage !== 'PRD' && (
                   <button
                     onClick={() => deleteVersion(selectedVersion)}
                     className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
@@ -232,7 +230,7 @@ export default function AgentDetailPage() {
                 className={`w-full text-left p-3 rounded-lg mb-1 transition-colors ${
                   selectedVersion?.version === p.version
                     ? 'bg-sky-600/20 border border-sky-500/50'
-                    : p.is_current
+                    : p.stage === 'PRD'
                       ? 'bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20'
                       : 'bg-neutral-800/30 hover:bg-neutral-800/50 border border-transparent'
                 }`}
@@ -240,16 +238,11 @@ export default function AgentDetailPage() {
                 <div className="flex items-center gap-2">
                   <span
                     className={`font-medium text-sm ${
-                      p.is_current ? 'text-emerald-300' : 'text-white'
+                      p.stage === 'PRD' ? 'text-emerald-300' : 'text-white'
                     }`}
                   >
                     {p.version}
                   </span>
-                  {p.is_current && (
-                    <span className="text-xs bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded">
-                      current
-                    </span>
-                  )}
                   {p.stage && (
                     <span
                       className={`text-xs px-1.5 py-0.5 rounded ${getStageBadge(p.stage).className}`}
@@ -286,11 +279,6 @@ export default function AgentDetailPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <span className="font-medium text-white">{selectedVersion.version}</span>
-                    {selectedVersion.is_current && (
-                      <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full">
-                        Current
-                      </span>
-                    )}
                     <span className="text-sm text-neutral-400">
                       {selectedVersion.prompt_text.length.toLocaleString()} chars • ~
                       {estimateTokens(selectedVersion.prompt_text).toLocaleString()} tokens
@@ -313,7 +301,7 @@ export default function AgentDetailPage() {
                         Promote to PRD
                       </button>
                     )}
-                    {currentPrompt && !selectedVersion.is_current && (
+                    {currentPrompt && selectedVersion.stage !== 'PRD' && (
                       <button
                         onClick={() => setDiffMode({ a: currentPrompt, b: selectedVersion })}
                         className="text-sm text-purple-400 hover:text-purple-300"

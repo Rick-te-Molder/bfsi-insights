@@ -21,18 +21,23 @@ export function ViewVersionModal({ prompt, onClose, onRollback }: ViewVersionMod
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {prompt.is_current ? (
-            <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-xs">
-              Current
-            </span>
-          ) : (
-            <button
-              onClick={onRollback}
-              className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-500"
+          {prompt.stage && (
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs ${
+                prompt.stage === 'PRD'
+                  ? 'bg-emerald-500/20 text-emerald-300'
+                  : 'bg-neutral-700 text-neutral-400'
+              }`}
             >
-              Make Current
-            </button>
+              {prompt.stage === 'PRD' ? 'Live' : prompt.stage}
+            </span>
           )}
+          <button
+            onClick={onRollback}
+            className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-500"
+          >
+            Make Current
+          </button>
         </div>
       </div>
 

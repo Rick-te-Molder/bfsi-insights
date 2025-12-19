@@ -83,7 +83,7 @@ export async function getCurrentPrompts() {
   const { data } = await supabase
     .from('prompt_version')
     .select('id, version, agent_name')
-    .eq('is_current', true)
+    .eq('stage', 'PRD')
     .in('agent_name', ['summarizer', 'tagger', 'thumbnail-generator']);
 
   return (data || []) as { id: string; version: string; agent_name: string }[];

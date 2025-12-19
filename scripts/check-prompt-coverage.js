@@ -73,8 +73,8 @@ async function main() {
   // Try prompt_version (new canonical name) first
   const result1 = await supabase
     .from('prompt_version')
-    .select('agent_name, version, is_current')
-    .eq('is_current', true);
+    .select('agent_name, version, stage')
+    .eq('stage', 'PRD');
 
   if (!result1.error) {
     prompts = result1.data;
@@ -82,8 +82,8 @@ async function main() {
     // Fall back to prompt_versions (old name) for backwards compatibility
     const result2 = await supabase
       .from('prompt_versions')
-      .select('agent_name, version, is_current')
-      .eq('is_current', true);
+      .select('agent_name, version, stage')
+      .eq('stage', 'PRD');
     prompts = result2.data;
     promptError = result2.error;
   }

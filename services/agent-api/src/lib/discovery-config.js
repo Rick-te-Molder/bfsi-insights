@@ -51,7 +51,7 @@ export async function loadDiscoveryConfig() {
     .from('prompt_version')
     .select('prompt_text')
     .eq('agent_name', 'discoverer-config')
-    .eq('is_current', true)
+    .eq('stage', 'PRD')
     .single();
 
   // Extract keywords from taxonomy labels

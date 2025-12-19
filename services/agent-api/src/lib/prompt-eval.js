@@ -287,7 +287,7 @@ export async function getPromptEvalStatus(agentName) {
     .from('v_prompt_eval_status')
     .select('*')
     .eq('agent_name', agentName)
-    .eq('is_current', true)
+    .eq('stage', 'PRD')
     .single();
 
   if (error) return null;

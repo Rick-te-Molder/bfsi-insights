@@ -22,7 +22,7 @@ export function AgentDetail({
   onView,
   onTest,
 }: AgentDetailProps) {
-  const currentPrompt = prompts.find((p) => p.is_current);
+  const currentPrompt = prompts.find((p) => p.stage === 'PRD');
 
   return (
     <div className="h-full flex flex-col rounded-xl border border-neutral-800 bg-neutral-900/60 p-6 overflow-hidden">
@@ -75,7 +75,7 @@ export function AgentDetail({
             <div
               key={p.version}
               className={`flex items-center justify-between p-3 rounded-lg ${
-                p.is_current
+                p.stage === 'PRD'
                   ? 'bg-emerald-500/10 border border-emerald-500/30'
                   : 'bg-neutral-800/30'
               }`}
@@ -85,11 +85,10 @@ export function AgentDetail({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`font-medium ${p.is_current ? 'text-emerald-300' : 'text-white'}`}
+                      className={`font-medium ${p.stage === 'PRD' ? 'text-emerald-300' : 'text-white'}`}
                     >
                       {p.version}
                     </span>
-                    {p.is_current && <span className="text-xs text-emerald-400">(current)</span>}
                     {p.stage && (
                       <span
                         className={`text-xs rounded-full px-2 py-0.5 ${getStageBadge(p.stage).className}`}
@@ -131,7 +130,7 @@ export function AgentDetail({
                     → PRD
                   </button>
                 )}
-                {!p.is_current && currentPrompt && (
+                {p.stage !== 'PRD' && currentPrompt && (
                   <button
                     onClick={() => onDiff(currentPrompt, p)}
                     className="text-xs text-purple-400 hover:text-purple-300"

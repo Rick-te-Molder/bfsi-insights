@@ -68,14 +68,17 @@ export function usePrompts() {
       return false;
     }
 
+    // Retire current PRD version
     await supabase
       .from('prompt_version')
-      .update({ is_current: false })
-      .eq('agent_name', prompt.agent_name);
+      .update({ stage: 'RET', retired_at: new Date().toISOString() })
+      .eq('agent_name', prompt.agent_name)
+      .eq('stage', 'PRD');
 
+    // Promote selected version to PRD
     const { error } = await supabase
       .from('prompt_version')
-      .update({ is_current: true })
+      .update({ stage: 'PRD', deployed_at: new Date().toISOString() })
       .eq('agent_name', prompt.agent_name)
       .eq('version', prompt.version);
 

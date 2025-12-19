@@ -21,7 +21,7 @@ interface PromptVersion {
   id: string;
   agent_name: string;
   version: string;
-  is_current: boolean;
+  stage: string;
 }
 
 export default function LLMJudgePage() {
@@ -45,10 +45,7 @@ export default function LLMJudgePage() {
         .eq('eval_type', 'llm_judge')
         .order('created_at', { ascending: false })
         .limit(50),
-      supabase
-        .from('prompt_version')
-        .select('id, agent_name, version, is_current')
-        .order('agent_name'),
+      supabase.from('prompt_version').select('id, agent_name, version, stage').order('agent_name'),
     ]);
 
     if (!runsRes.error) setRuns(runsRes.data || []);
@@ -143,7 +140,7 @@ export default function LLMJudgePage() {
               <option value="">Select version...</option>
               {agentPrompts.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.version} {p.is_current ? '(current)' : ''}
+                  {p.version} {p.stage === 'PRD' ? '(live)' : ''}
                 </option>
               ))}
             </select>

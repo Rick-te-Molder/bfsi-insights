@@ -10,7 +10,6 @@ export interface PromptVersion {
   prompt_text: string;
   model_id?: string;
   stage?: PromptStage;
-  is_current: boolean;
   created_at: string;
   notes?: string;
   // Timestamp tracking for production lifecycle

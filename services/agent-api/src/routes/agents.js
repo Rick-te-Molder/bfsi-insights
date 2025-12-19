@@ -375,14 +375,14 @@ router.get('/eval/status/:agentName', async (req, res) => {
         id,
         agent_name,
         version,
-        is_current,
+        stage,
         last_eval_status,
         last_eval_score,
         last_eval_at
       `,
       )
       .eq('agent_name', agentName)
-      .eq('is_current', true)
+      .eq('stage', 'PRD')
       .single();
 
     if (error) throw error;
