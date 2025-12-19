@@ -28,6 +28,8 @@ interface Props {
   cascadeClass?: string;
   /** L1 codes to flatten - item stays at L1 (no children), its children become L1 siblings */
   flattenRoots?: string[];
+  /** L1 codes to hide from filter UI entirely (still valid as tags) */
+  hideRoots?: string[];
 }
 
 const {
@@ -37,6 +39,7 @@ const {
   emptyMessage = 'No items available',
   cascadeClass,
   flattenRoots = [],
+  hideRoots = [],
 } = Astro.props;
 
 // Flatten specified roots: item becomes childless L1, its children become L1 siblings
@@ -58,7 +61,13 @@ const flattenItems = (items: TaxonomyItem[], rootsToFlatten: string[]): Taxonomy
   return result;
 };
 
-const displayItems = flattenItems(items, flattenRoots);
+// Hide specified roots completely from the filter UI
+const filterHiddenRoots = (items: TaxonomyItem[], rootsToHide: string[]): TaxonomyItem[] => {
+  if (rootsToHide.length === 0) return items;
+  return items.filter((item) => !rootsToHide.includes(item.code));
+};
+
+const displayItems = filterHiddenRoots(flattenItems(items, flattenRoots), hideRoots);
 
 // Color scheme mappings
 const colorClasses: Record<string, { checkbox: string; pill: string }> = {
