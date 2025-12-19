@@ -43,14 +43,17 @@ export function TestDetailModal({ test, onClose, onUpdate }: TestDetailModalProp
 
     const winnerVersion = winner === 'a' ? test.variant_a_version : test.variant_b_version;
 
+    // Retire current PRD version
     await supabase
       .from('prompt_version')
-      .update({ is_current: false })
-      .eq('agent_name', test.agent_name);
+      .update({ stage: 'RET', retired_at: new Date().toISOString() })
+      .eq('agent_name', test.agent_name)
+      .eq('stage', 'PRD');
 
+    // Promote winner to PRD
     const { error } = await supabase
       .from('prompt_version')
-      .update({ is_current: true })
+      .update({ stage: 'PRD', deployed_at: new Date().toISOString() })
       .eq('agent_name', test.agent_name)
       .eq('version', winnerVersion);
 

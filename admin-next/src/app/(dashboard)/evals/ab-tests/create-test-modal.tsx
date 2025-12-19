@@ -23,7 +23,7 @@ export function CreateTestModal({ agents, prompts, onClose, onCreated }: CreateT
   const supabase = createClient();
 
   const agentPrompts = prompts.filter((p) => p.agent_name === agentName);
-  const currentPrompt = agentPrompts.find((p) => p.is_current);
+  const currentPrompt = agentPrompts.find((p) => p.stage === 'PRD');
 
   useEffect(() => {
     if (currentPrompt) {
@@ -113,7 +113,7 @@ export function CreateTestModal({ agents, prompts, onClose, onCreated }: CreateT
                 <option value="">Select version</option>
                 {agentPrompts.map((p) => (
                   <option key={p.version} value={p.version}>
-                    {p.version} {p.is_current ? '(current)' : ''}
+                    {p.version} {p.stage === 'PRD' ? '(live)' : ''}
                   </option>
                 ))}
               </select>
@@ -130,7 +130,7 @@ export function CreateTestModal({ agents, prompts, onClose, onCreated }: CreateT
                 <option value="">Select version</option>
                 {agentPrompts.map((p) => (
                   <option key={p.version} value={p.version}>
-                    {p.version} {p.is_current ? '(current)' : ''}
+                    {p.version} {p.stage === 'PRD' ? '(live)' : ''}
                   </option>
                 ))}
               </select>
