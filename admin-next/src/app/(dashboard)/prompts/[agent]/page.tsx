@@ -80,22 +80,39 @@ export default function AgentDetailPage() {
       message = `Promote "${prompt.version}" to TEST?`;
     } else if (stage === 'TST') {
       nextStage = 'PRD';
-      message = `Promote "${prompt.version}" to PRODUCTION? This will make it the current active version.`;
+      message = `Promote "${prompt.version}" to PRODUCTION? This will retire the current PRD version.`;
     } else {
-      return; // Already PRD, can't promote
+      return; // Already PRD or RET, can't promote
     }
 
     if (!confirm(message)) return;
 
     if (nextStage === 'PRD') {
-      // Promoting to PRD: set is_current=true, unset others
-      await supabase
+      // Promoting to PRD: retire old PRD, set new PRD
+      // Step 1: Move current PRD to RET
+      const { error: retireError } = await supabase
         .from('prompt_version')
-        .update({ is_current: false })
-        .eq('agent_name', agentName);
+        .update({
+          stage: 'RET',
+          is_current: false,
+          retired_at: new Date().toISOString(),
+        })
+        .eq('agent_name', agentName)
+        .eq('stage', 'PRD');
+
+      if (retireError) {
+        alert('Failed to retire old PRD: ' + retireError.message);
+        return;
+      }
+
+      // Step 2: Promote new version to PRD
       const { error } = await supabase
         .from('prompt_version')
-        .update({ stage: nextStage, is_current: true })
+        .update({
+          stage: nextStage,
+          is_current: true,
+          deployed_at: new Date().toISOString(),
+        })
         .eq('id', prompt.id);
 
       if (error) {
@@ -165,10 +182,14 @@ export default function AgentDetailPage() {
                 </button>
                 <button
                   onClick={() => setEditingPrompt(selectedVersion)}
-                  disabled={(selectedVersion.stage as string) === 'PRD'}
+                  disabled={
+                    (selectedVersion.stage as string) === 'PRD' ||
+                    (selectedVersion.stage as string) === 'RET'
+                  }
                   className="rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   title={
-                    (selectedVersion.stage as string) === 'PRD'
+                    (selectedVersion.stage as string) === 'PRD' ||
+                    (selectedVersion.stage as string) === 'RET'
                       ? 'Cannot edit production versions'
                       : 'Edit this version in-place'
                   }

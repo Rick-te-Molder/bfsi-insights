@@ -10,6 +10,8 @@ export function getStageBadge(stage?: string) {
       return { label: 'Test', className: 'bg-amber-500/20 text-amber-300' };
     case 'DEV':
       return { label: 'Draft', className: 'bg-neutral-500/20 text-neutral-300' };
+    case 'RET':
+      return { label: 'Retired', className: 'bg-neutral-600/20 text-neutral-400' };
     default:
       return { label: stage || 'Unknown', className: 'bg-neutral-500/20 text-neutral-400' };
   }

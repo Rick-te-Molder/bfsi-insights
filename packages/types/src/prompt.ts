@@ -13,6 +13,9 @@ export interface PromptVersion {
   is_current: boolean;
   created_at: string;
   notes?: string;
+  // Timestamp tracking for production lifecycle
+  deployed_at?: string;
+  retired_at?: string;
   // Eval status (KB-248)
   last_eval_run_id?: string;
   last_eval_score?: number;
@@ -22,7 +25,7 @@ export interface PromptVersion {
 
 export type PromptEvalStatus = 'pending' | 'running' | 'passed' | 'warning' | 'failed';
 
-export type PromptStage = 'DEV' | 'TST' | 'PRD';
+export type PromptStage = 'DEV' | 'TST' | 'PRD' | 'RET';
 
 export interface PromptABTest {
   id: string;
