@@ -10,6 +10,7 @@ function toggleCard(card: HTMLElement, expand: boolean) {
   const collapseLabel = card.querySelector('.collapse-label');
   const expandButtons = card.querySelectorAll('[data-expand-card]');
   const collapsedOnlyElements = card.querySelectorAll('.card-collapsed-only');
+  const expandedOnlyElements = card.querySelectorAll('.card-expanded-only');
 
   if (!collapsed || !expanded) return;
 
@@ -21,6 +22,8 @@ function toggleCard(card: HTMLElement, expand: boolean) {
     card.dataset.expanded = 'true';
     // Hide collapsed-only elements (like +X more button)
     collapsedOnlyElements.forEach((el) => (el as HTMLElement).classList.add('hidden'));
+    // Show expanded-only elements (extra tags)
+    expandedOnlyElements.forEach((el) => (el as HTMLElement).classList.remove('hidden'));
     // Update aria-expanded on all expand buttons
     expandButtons.forEach((btn) => btn.setAttribute('aria-expanded', 'true'));
   } else {
@@ -31,6 +34,8 @@ function toggleCard(card: HTMLElement, expand: boolean) {
     delete card.dataset.expanded;
     // Show collapsed-only elements
     collapsedOnlyElements.forEach((el) => (el as HTMLElement).classList.remove('hidden'));
+    // Hide expanded-only elements
+    expandedOnlyElements.forEach((el) => (el as HTMLElement).classList.add('hidden'));
     // Update aria-expanded on all expand buttons
     expandButtons.forEach((btn) => btn.setAttribute('aria-expanded', 'false'));
   }
