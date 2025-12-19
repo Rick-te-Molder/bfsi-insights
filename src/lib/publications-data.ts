@@ -66,9 +66,29 @@ export function createValuesWithCounts(
     }
   });
 
+  // Custom sort order for audience
+  const audienceOrder = ['executive', 'functional_specialist', 'engineer', 'researcher'];
+
   return Array.from(counts.entries())
-    .map(([value, count]) => ({ value, count, label: `${value} (${count})` }))
-    .sort((a, b) => a.value.localeCompare(b.value));
+    .map(([value, count]) => {
+      // Format display name for functional_specialist
+      const displayValue = value === 'functional_specialist' ? 'Functional Specialist' : value;
+      return {
+        value,
+        count,
+        label: `${displayValue} (${count})`,
+      };
+    })
+    .sort((a, b) => {
+      if (field === 'audience') {
+        const aIndex = audienceOrder.indexOf(a.value.toLowerCase());
+        const bIndex = audienceOrder.indexOf(b.value.toLowerCase());
+        if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+        if (aIndex !== -1) return -1;
+        if (bIndex !== -1) return 1;
+      }
+      return a.value.localeCompare(b.value);
+    });
 }
 
 export async function loadPublicationsData() {

@@ -42,18 +42,16 @@ const {
   hideRoots = [],
 } = Astro.props;
 
-// Flatten specified roots: item becomes childless L1, its children become L1 siblings
+// Flatten specified roots: promote children to L1, remove the root itself
 const flattenItems = (items: TaxonomyItem[], rootsToFlatten: string[]): TaxonomyItem[] => {
   if (rootsToFlatten.length === 0) return items;
   const result: TaxonomyItem[] = [];
   for (const item of items) {
     if (rootsToFlatten.includes(item.code)) {
-      // Promote children to L1 level as siblings
+      // Promote children to L1 level as siblings, don't keep the root
       if (item.children && item.children.length > 0) {
         result.push(...item.children.map((child) => ({ ...child, level: 1, parent_code: null })));
       }
-      // Keep the item itself as childless L1
-      result.push({ ...item, children: [], level: 1, parent_code: null });
     } else {
       result.push(item);
     }
