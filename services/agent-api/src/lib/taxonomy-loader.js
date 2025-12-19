@@ -120,6 +120,12 @@ export async function loadTaxonomies() {
     }
   }
 
+  // Build behavior type map for dynamic guardrail/expandable logic
+  const behaviorTypes = new Map();
+  for (const config of configs || []) {
+    behaviorTypes.set(config.slug, config.behavior_type);
+  }
+
   // Return structure matching existing API for backward compatibility
   return {
     // Formatted strings for LLM prompt
@@ -147,6 +153,8 @@ export async function loadTaxonomies() {
     parentMaps: {
       geographies: geographyParentMap,
     },
+    // Behavior types for dynamic guardrail/expandable logic
+    behaviorTypes,
     // KB-231: Also expose the raw configs for future dynamic prompt building
     _configs: configs,
     _tableData: tableData,

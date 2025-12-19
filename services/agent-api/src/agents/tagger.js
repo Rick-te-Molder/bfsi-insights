@@ -196,86 +196,35 @@ export async function runTagger(queueItem, options = {}) {
         ? `\nNOTE: Source domain ends in .${tld} - this strongly suggests ${tld.toUpperCase()} as a primary geography.`
         : '';
 
+      // Build context data to inject into database prompt
+      const contextData = {
+        title: payload.title,
+        summary: payload.summary?.short || payload.description || '',
+        url: url,
+        countryTldHint: countryTldHint,
+        industries: taxonomies.industries,
+        topics: taxonomies.topics,
+        geographies: taxonomies.geographies,
+        useCases: taxonomies.useCases,
+        capabilities: taxonomies.capabilities,
+        regulators: taxonomies.regulators,
+        regulations: taxonomies.regulations,
+        obligations: taxonomies.obligations,
+        processes: taxonomies.processes,
+        vendors: vendorData.formatted,
+      };
+
+      // Replace placeholders in database prompt with actual data
+      let systemPrompt = promptTemplate;
+      for (const [key, value] of Object.entries(contextData)) {
+        const placeholder = `{{${key}}}`;
+        systemPrompt = systemPrompt.replace(new RegExp(placeholder, 'g'), value || '');
+      }
+
+      // User content is just the article data
       const content = `TITLE: ${payload.title}
 SUMMARY: ${payload.summary?.short || payload.description || ''}
-URL: ${url}
-
-=== AVAILABLE TAXONOMY CODES ===
-Use ONLY codes from these lists. Include confidence scores (0-1) for each.
-
-=== INDUSTRIES (hierarchical - include L1 parent + L2/L3 specific) ===
-${taxonomies.industries}
-
-=== TOPICS (hierarchical - include parent and sub-topics) ===
-${taxonomies.topics}
-
-=== GEOGRAPHIES (pick the MOST SPECIFIC geography first) ===
-IMPORTANT: Always prefer country codes over regional codes.
-- If content is from a specific country's regulator/authority, tag that COUNTRY first (e.g., 'nl' for Dutch DPA, 'de' for BaFin)
-- If content mentions specific country laws/regulations, tag that country
-- Regional codes (eu, emea, apac) will be auto-added as parents - you don't need to add them manually
-- Only use regional codes directly if the content genuinely applies to the entire region${countryTldHint}
-
-${taxonomies.geographies}
-
-=== AI USE CASES (if AI-related content) ===
-${taxonomies.useCases}
-
-=== AI CAPABILITIES (if AI-related content) ===
-${taxonomies.capabilities}
-
-=== REGULATORS (if regulatory content) ===
-${taxonomies.regulators}
-
-=== REGULATIONS (if specific regulations mentioned) ===
-${taxonomies.regulations}
-
-OBLIGATIONS (pick all that apply if specific compliance requirements mentioned, or empty):
-${taxonomies.obligations}
-
-=== BFSI PROCESSES (hierarchical - what business processes are discussed) ===
-${taxonomies.processes}
-
-=== EXPANDABLE ENTITIES (extract names as found) ===
-
-CRITICAL: Distinguish between ORGANIZATIONS and VENDORS:
-
-**organization_names** - Traditional BFSI institutions that USE/BUY technology:
-- Banks (retail, commercial, investment, central banks)
-- Insurers (life, P&C, reinsurers)
-- Asset managers, pension funds, wealth managers
-- Card networks (Visa, Mastercard, Amex)
-- Stock exchanges, clearinghouses
-
-**vendor_names** - Companies that PROVIDE/SELL technology or services to BFSI:
-- Fintechs, neobanks, embedded finance providers
-- Payment processors, BaaS platforms
-- Software vendors, SaaS providers
-- Consulting firms, system integrators
-- Data providers, analytics companies
-- RegTech, InsurTech, WealthTech companies
-
-HEURISTICS for vendor detection (APPLY STRICTLY):
-- Company name contains: Platform, Solutions, Labs, Tech, Systems, Software, AI, Analytics → VENDOR
-- Company provides services TO banks/insurers (not IS a bank/insurer) → VENDOR
-- Startups, fintechs, technology partners mentioned in partnerships → VENDOR
-- If article describes partnership between bank + fintech, the fintech is the VENDOR
-- "Embedded finance" providers like Kee Platforms, Stripe, Plaid → VENDOR
-
-Known vendors (extract if mentioned):
-${vendorData.formatted}
-
-=== PERSONA RELEVANCE (score 0-1 for each audience) ===
-- executive: C-suite, strategy leaders (interested in: business impact, market trends, competitive advantage)
-- specialist: Domain specialists, practitioners (interested in: implementation details, best practices, technical how-to)
-- researcher: Analysts, researchers (interested in: data, trends, in-depth analysis, academic perspectives)
-
-=== CONFIDENCE SCORING GUIDE ===
-- 0.9-1.0: Explicitly stated, main focus of the article
-- 0.7-0.9: Clearly implied or secondary focus
-- 0.5-0.7: Mentioned but not central
-- 0.3-0.5: Tangentially related
-- Below 0.3: Don't include (too uncertain)`;
+URL: ${url}`;
 
       // Use model and max_tokens from prompt_version instead of hardcoding
       const modelId = tools.model || 'gpt-4o-mini';
@@ -287,13 +236,13 @@ ${vendorData.formatted}
       console.log(
         `🔍 [tagger] Prompt debug: Kee in system=${hasKeeInSystemPrompt}, Kee in user=${hasKeeInUserContent}`,
       );
-      console.log(`🔍 [tagger] System prompt length: ${promptTemplate?.length || 0} chars`);
+      console.log(`🔍 [tagger] System prompt length: ${systemPrompt?.length || 0} chars`);
 
       const completion = await llm.parseStructured({
         model: modelId,
         maxTokens,
         messages: [
-          { role: 'system', content: promptTemplate },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: content },
         ],
         responseFormat: zodResponseFormat(TaggingSchema, 'classification'),
@@ -302,42 +251,72 @@ ${vendorData.formatted}
 
       const result = completion.parsed;
       const usage = completion.usage;
-      const { validCodes } = taxonomies;
+      const { validCodes, behaviorTypes } = taxonomies;
 
-      // Validate all codes against actual taxonomy - reject LLM hallucinations
-      // Then enforce B/FS/I mutual exclusivity for industries
-      const validatedIndustries = validateCodes(
+      // Dynamic validation based on behavior_type from taxonomy_config
+      // GUARDRAIL: Validate against taxonomy list (reject LLM hallucinations)
+      // EXPANDABLE: Pass through as-is (LLM can propose new entries)
+
+      // Helper to conditionally validate based on behavior_type
+      const conditionalValidate = (codes, validSet, slug, categoryName) => {
+        const behavior = behaviorTypes.get(slug);
+        if (behavior === 'expandable') {
+          // Pass through without validation - LLM can propose new entries
+          return codes || [];
+        }
+        // Default to guardrail behavior - validate against taxonomy
+        return validateCodes(codes, validSet, categoryName);
+      };
+
+      // Validate industries and enforce mutual exclusivity
+      const validatedIndustries = conditionalValidate(
         result.industry_codes,
         validCodes.industries,
+        'industry',
         'industry',
       );
       const exclusiveIndustries = enforceIndustryMutualExclusivity(validatedIndustries);
 
-      // Validate geography codes - NO expansion, use only what LLM tagged
-      const validatedGeographies = validateCodes(
-        result.geography_codes,
-        validCodes.geographies,
-        'geography',
-      );
-
       const validatedResult = {
         ...result,
         industry_codes: exclusiveIndustries,
-        topic_codes: validateCodes(result.topic_codes, validCodes.topics, 'topic'),
-        geography_codes: validatedGeographies,
-        use_case_codes: validateCodes(result.use_case_codes, validCodes.useCases, 'use_case'),
-        capability_codes: validateCodes(
+        topic_codes: conditionalValidate(result.topic_codes, validCodes.topics, 'topic', 'topic'),
+        geography_codes: conditionalValidate(
+          result.geography_codes,
+          validCodes.geographies,
+          'geography',
+          'geography',
+        ),
+        use_case_codes: conditionalValidate(
+          result.use_case_codes,
+          validCodes.useCases,
+          'use_case',
+          'use_case',
+        ),
+        capability_codes: conditionalValidate(
           result.capability_codes,
           validCodes.capabilities,
           'capability',
+          'capability',
         ),
-        regulator_codes: validateCodes(result.regulator_codes, validCodes.regulators, 'regulator'),
-        regulation_codes: validateCodes(
+        regulator_codes: conditionalValidate(
+          result.regulator_codes,
+          validCodes.regulators,
+          'regulator',
+          'regulator',
+        ),
+        regulation_codes: conditionalValidate(
           result.regulation_codes,
           validCodes.regulations,
           'regulation',
+          'regulation',
         ),
-        process_codes: validateCodes(result.process_codes, validCodes.processes, 'process'),
+        process_codes: conditionalValidate(
+          result.process_codes,
+          validCodes.processes,
+          'process',
+          'process',
+        ),
         usage,
       };
 
