@@ -86,4 +86,45 @@
   .filter-chip-count {
     @apply text-neutral-500 dark:text-neutral-500;
   }
+
+  /* Hierarchical filter items */
+  .hier-filter-l1 {
+    @apply border border-neutral-200 dark:border-neutral-800/50 rounded-md overflow-hidden;
+  }
+
+  .hier-filter-l1-header {
+    @apply bg-neutral-50 dark:bg-neutral-900/30 hover:bg-neutral-100 dark:hover:bg-neutral-800/30;
+  }
+
+  .hier-filter-l1-text {
+    @apply font-medium text-neutral-800 dark:text-neutral-300 uppercase tracking-wider;
+  }
+
+  .hier-filter-l2 {
+    @apply border border-neutral-200 dark:border-neutral-800/40 rounded overflow-hidden;
+  }
+
+  .hier-filter-l2-header {
+    @apply bg-white dark:bg-neutral-900/20 hover:bg-neutral-50 dark:hover:bg-neutral-800/30;
+  }
+
+  .hier-filter-l2-text {
+    @apply font-medium text-neutral-700 dark:text-neutral-400 uppercase tracking-wide;
+  }
+
+  .hier-filter-content {
+    @apply bg-neutral-100/50 dark:bg-neutral-950/30;
+  }
+
+  .hier-filter-checkbox {
+    @apply rounded border-neutral-400 dark:border-neutral-600 bg-white dark:bg-neutral-800 focus:ring-offset-0 cursor-pointer;
+  }
+
+  .hier-filter-pill {
+    @apply border border-neutral-300 dark:border-neutral-700/70 
+           bg-white dark:bg-neutral-900/70 
+           text-neutral-700 dark:text-neutral-400
+           hover:border-neutral-400 dark:hover:border-neutral-600 
+           hover:bg-neutral-50 dark:hover:bg-neutral-800;
+  }
 }
