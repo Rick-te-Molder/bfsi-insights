@@ -1,3 +1,89 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Shared component styles for light/dark mode
+ * Use these classes instead of repeating dark: variants everywhere
+ */
+@layer components {
+  /* Panel backgrounds */
+  .panel-bg {
+    @apply bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800;
+  }
+
+  .panel-bg-subtle {
+    @apply bg-neutral-50 dark:bg-neutral-900/50;
+  }
+
+  .panel-bg-inset {
+    @apply bg-neutral-100 dark:bg-neutral-950/50;
+  }
+
+  /* Text colors */
+  .text-primary {
+    @apply text-neutral-900 dark:text-neutral-100;
+  }
+
+  .text-secondary {
+    @apply text-neutral-600 dark:text-neutral-400;
+  }
+
+  .text-muted {
+    @apply text-neutral-500 dark:text-neutral-500;
+  }
+
+  /* Form inputs */
+  .input-base {
+    @apply border border-neutral-300 dark:border-neutral-700 
+           bg-white dark:bg-neutral-900 
+           text-neutral-900 dark:text-neutral-100
+           placeholder:text-neutral-400 dark:placeholder:text-neutral-500
+           focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20;
+  }
+
+  .select-base {
+    @apply border border-neutral-300 dark:border-neutral-700 
+           bg-white dark:bg-neutral-900 
+           text-neutral-700 dark:text-neutral-200
+           focus:border-sky-500 focus:ring-1 focus:ring-sky-500/20;
+  }
+
+  /* Links */
+  .link-primary {
+    @apply text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300;
+  }
+
+  .link-secondary {
+    @apply text-sky-700 dark:text-sky-200 hover:text-sky-800 dark:hover:text-sky-100;
+  }
+
+  /* Filter panel specific */
+  .filter-panel-bg {
+    @apply bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800;
+  }
+
+  .filter-group-bg {
+    @apply border border-neutral-200 dark:border-neutral-800;
+  }
+
+  .filter-group-header {
+    @apply bg-neutral-50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-800/50;
+  }
+
+  .filter-group-content {
+    @apply bg-neutral-100/50 dark:bg-neutral-950/50 border-neutral-200 dark:border-neutral-800;
+  }
+
+  .filter-chip {
+    @apply border border-neutral-300 dark:border-neutral-700 
+           bg-white dark:bg-neutral-900 
+           text-neutral-700 dark:text-neutral-300
+           hover:border-neutral-400 dark:hover:border-neutral-600 
+           hover:bg-neutral-50 dark:hover:bg-neutral-800;
+  }
+
+  .filter-chip-count {
+    @apply text-neutral-500 dark:text-neutral-500;
+  }
+}

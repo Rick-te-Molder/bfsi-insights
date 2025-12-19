@@ -25,19 +25,21 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
     role="dialog"
     aria-modal="true"
     aria-labelledby="panel-title"
-    class="absolute inset-0 sm:inset-4 sm:rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col overflow-hidden"
+    class="absolute inset-0 sm:inset-4 sm:rounded-2xl filter-panel-bg border flex flex-col overflow-hidden"
   >
     <!-- Header -->
-    <div class="flex items-center justify-between px-4 py-3 border-b border-neutral-800">
+    <div
+      class="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-800"
+    >
       <div class="flex items-center gap-3">
-        <h3 id="panel-title" class="text-lg font-semibold">Filters</h3>
-        <span id="panel-result-count" class="text-sm text-neutral-400">
+        <h3 id="panel-title" class="text-lg font-semibold text-primary">Filters</h3>
+        <span id="panel-result-count" class="text-sm text-secondary">
           <span id="panel-count-number" class="font-semibold text-sky-300">0</span> results
         </span>
       </div>
       <button
         id="close-panel"
-        class="rounded-lg p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+        class="rounded-lg p-2 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
         aria-label="Close filters"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -57,12 +59,12 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
         {
           audienceFilter && audienceValues.length > 0 && (
             <details
-              class="filter-group border border-neutral-800 rounded-lg overflow-hidden"
+              class="filter-group filter-group-bg rounded-lg overflow-hidden"
               data-filter-key="audience"
               open
             >
-              <summary class="flex items-center justify-between px-4 py-3 cursor-pointer bg-neutral-900/50 hover:bg-neutral-800/50 transition-colors">
-                <span class="text-sm font-medium text-neutral-200">View for</span>
+              <summary class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors">
+                <span class="text-sm font-medium text-primary">View for</span>
                 <svg
                   class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
                   fill="none"
@@ -77,7 +79,7 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
                   />
                 </svg>
               </summary>
-              <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
+              <div class="px-4 py-3 filter-group-content border-t">
                 <div class="flex flex-wrap gap-2">
                   {audienceValues.map((v) => (
                     <label class="filter-checkbox cursor-pointer">
@@ -87,9 +89,9 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
                         value={v.value}
                         class="sr-only peer"
                       />
-                      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border border-neutral-700 bg-neutral-900 text-neutral-300 transition-all peer-checked:border-amber-500 peer-checked:bg-amber-500/10 peer-checked:text-amber-300 hover:border-neutral-600 hover:bg-neutral-800">
+                      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm filter-chip transition-all peer-checked:border-amber-500 peer-checked:bg-amber-500/10 peer-checked:text-amber-600 dark:peer-checked:text-amber-300">
                         {v.value}
-                        <span class="text-xs text-neutral-500">{v.count}</span>
+                        <span class="text-xs filter-chip-count">{v.count}</span>
                       </span>
                     </label>
                   ))}
@@ -101,14 +103,14 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
 
         <!-- Industry Filter -->
         <details
-          class="filter-group border border-neutral-800 rounded-lg overflow-hidden"
+          class="filter-group filter-group-bg rounded-lg overflow-hidden"
           data-filter-key="industry"
           open
         >
           <summary
-            class="flex items-center justify-between px-4 py-3 cursor-pointer bg-neutral-900/50 hover:bg-neutral-800/50 transition-colors"
+            class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors"
           >
-            <span class="text-sm font-medium text-neutral-200">Industry</span>
+            <span class="text-sm font-medium text-primary">Industry</span>
             <svg
               class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
               fill="none"
@@ -122,7 +124,7 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
                 d="M19 9l-7 7-7-7"></path>
             </svg>
           </summary>
-          <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
+          <div class="px-4 py-3 filter-group-content border-t">
             <HierarchicalFilter
               filterKey="industry"
               items={industryWithCounts}
@@ -135,13 +137,13 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
 
         <!-- Process Filter -->
         <details
-          class="filter-group border border-neutral-800 rounded-lg overflow-hidden"
+          class="filter-group filter-group-bg rounded-lg overflow-hidden"
           data-filter-key="process"
         >
           <summary
-            class="flex items-center justify-between px-4 py-3 cursor-pointer bg-neutral-900/50 hover:bg-neutral-800/50 transition-colors"
+            class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors"
           >
-            <span class="text-sm font-medium text-neutral-200">Process</span>
+            <span class="text-sm font-medium text-primary">Process</span>
             <svg
               class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
               fill="none"
@@ -155,7 +157,7 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
                 d="M19 9l-7 7-7-7"></path>
             </svg>
           </summary>
-          <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
+          <div class="px-4 py-3 filter-group-content border-t">
             <HierarchicalFilter
               filterKey="process"
               items={processWithCounts}
@@ -168,13 +170,13 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
 
         <!-- Geography Filter -->
         <details
-          class="filter-group border border-neutral-800 rounded-lg overflow-hidden"
+          class="filter-group filter-group-bg rounded-lg overflow-hidden"
           data-filter-key="geography"
         >
           <summary
-            class="flex items-center justify-between px-4 py-3 cursor-pointer bg-neutral-900/50 hover:bg-neutral-800/50 transition-colors"
+            class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors"
           >
-            <span class="text-sm font-medium text-neutral-200">Geography</span>
+            <span class="text-sm font-medium text-primary">Geography</span>
             <svg
               class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
               fill="none"
@@ -188,7 +190,7 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
                 d="M19 9l-7 7-7-7"></path>
             </svg>
           </summary>
-          <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
+          <div class="px-4 py-3 filter-group-content border-t">
             <HierarchicalFilter
               filterKey="geography"
               items={geographyWithCounts}
@@ -207,11 +209,11 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
             if (filterValues.length === 0) return null;
             return (
               <details
-                class="filter-group border border-neutral-800 rounded-lg overflow-hidden"
+                class="filter-group filter-group-bg rounded-lg overflow-hidden"
                 data-filter-key={filter.column_name}
               >
-                <summary class="flex items-center justify-between px-4 py-3 cursor-pointer bg-neutral-900/50 hover:bg-neutral-800/50 transition-colors">
-                  <span class="text-sm font-medium text-neutral-200">{filter.display_label}</span>
+                <summary class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors">
+                  <span class="text-sm font-medium text-primary">{filter.display_label}</span>
                   <svg
                     class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
                     fill="none"
@@ -226,7 +228,7 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
                     />
                   </svg>
                 </summary>
-                <div class="px-4 py-3 bg-neutral-950/50 border-t border-neutral-800">
+                <div class="px-4 py-3 filter-group-content border-t">
                   <div class="flex flex-wrap gap-2">
                     {filterValues.map((v) => (
                       <label class="filter-checkbox cursor-pointer">
@@ -236,9 +238,9 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
                           value={v.value}
                           class="sr-only peer"
                         />
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border border-neutral-700 bg-neutral-900 text-neutral-300 transition-all peer-checked:border-sky-500 peer-checked:bg-sky-500/10 peer-checked:text-sky-300 hover:border-neutral-600 hover:bg-neutral-800">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm filter-chip transition-all peer-checked:border-sky-500 peer-checked:bg-sky-500/10 peer-checked:text-sky-600 dark:peer-checked:text-sky-300">
                           {v.value}
-                          <span class="text-xs text-neutral-500">{v.count}</span>
+                          <span class="text-xs filter-chip-count">{v.count}</span>
                         </span>
                       </label>
                     ))}
@@ -252,10 +254,12 @@ const otherFilters = flatFilters.filter((f) => f.column_name !== 'audience');
     </div>
 
     <!-- Footer -->
-    <div class="px-4 py-3 border-t border-neutral-800 flex items-center justify-between gap-4">
+    <div
+      class="px-4 py-3 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between gap-4"
+    >
       <button
         id="clear-all-filters"
-        class="px-4 py-2 text-sm font-medium text-neutral-400 hover:text-white transition-colors"
+        class="px-4 py-2 text-sm font-medium text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
       >
         Clear all
       </button>
