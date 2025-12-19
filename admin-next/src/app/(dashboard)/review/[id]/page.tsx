@@ -239,9 +239,9 @@ export default async function ReviewDetailPage({
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content - Left 2 columns */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Thumbnail - mimics published site layout */}
+        {/* Main Content - Left 2 columns - mimics live site layout */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Thumbnail - 16:9 aspect ratio like live site */}
           {(() => {
             const thumbnailUrl =
               (payload.thumbnail_url as string) ||
@@ -279,35 +279,104 @@ export default async function ReviewDetailPage({
             );
           })()}
 
-          {/* Long Summary Only - mimics published site */}
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-semibold">AI Summary</h2>
-              <span
-                className={`text-xs ${
-                  summary.long && summary.long.length >= 400 && summary.long.length <= 600
-                    ? 'text-emerald-400'
-                    : 'text-amber-400'
-                }`}
-              >
-                {summary.long?.length || 0} chars
-              </span>
-            </div>
-            <div className="text-neutral-200 bg-neutral-800/50 rounded-lg p-3">
-              {summary.long ? (
-                <MarkdownRenderer
-                  content={summary.long}
-                  className="prose prose-invert prose-sm max-w-none prose-headings:text-neutral-200 prose-headings:font-semibold prose-headings:text-sm prose-p:my-1 prose-ul:my-1 prose-li:my-0"
-                />
-              ) : (
-                <p className="text-neutral-500 italic">No summary available</p>
-              )}
-            </div>
+          {/* Summary - no header, just content like live site */}
+          <div className="text-sm text-neutral-200">
+            {summary.long ? (
+              <MarkdownRenderer
+                content={summary.long}
+                className="prose prose-invert prose-sm max-w-none prose-headings:text-neutral-200 prose-headings:font-semibold prose-headings:text-sm prose-p:my-2 prose-ul:my-2 prose-li:my-0.5"
+              />
+            ) : (
+              <p className="text-neutral-500 italic">No summary available</p>
+            )}
           </div>
 
-          {/* Tags - Dynamic from taxonomy_config with validation */}
+          {/* Tags - colored like live site */}
+          <div className="flex flex-wrap gap-2 text-xs">
+            {((payload.audiences as string[]) || []).map((code: string) => (
+              <span
+                key={`aud-${code}`}
+                className="rounded-md border border-amber-800/50 bg-amber-900/20 px-2 py-0.5 text-amber-300"
+              >
+                {code}
+              </span>
+            ))}
+            {((payload.geographies as string[]) || []).map((code: string) => (
+              <span
+                key={`geo-${code}`}
+                className="rounded-md border border-teal-800/50 bg-teal-900/20 px-2 py-0.5 text-teal-300"
+              >
+                {code}
+              </span>
+            ))}
+            {((payload.industries as string[]) || []).map((code: string) => (
+              <span
+                key={`ind-${code}`}
+                className="rounded-md border border-cyan-800/50 bg-cyan-900/20 px-2 py-0.5 text-cyan-300"
+              >
+                {code}
+              </span>
+            ))}
+            {((payload.topics as string[]) || []).map((code: string) => (
+              <span
+                key={`top-${code}`}
+                className="rounded-md border border-purple-800/50 bg-purple-900/20 px-2 py-0.5 text-purple-300"
+              >
+                {code}
+              </span>
+            ))}
+            {((payload.regulator_codes as string[]) || []).map((code: string) => (
+              <span
+                key={`reg-${code}`}
+                className="rounded-md border border-rose-800/50 bg-rose-900/20 px-2 py-0.5 text-rose-300"
+              >
+                {code}
+              </span>
+            ))}
+            {((payload.regulation_codes as string[]) || []).map((code: string) => (
+              <span
+                key={`regn-${code}`}
+                className="rounded-md border border-orange-800/50 bg-orange-900/20 px-2 py-0.5 text-orange-300"
+              >
+                {code}
+              </span>
+            ))}
+            {((payload.process_codes as string[]) || []).map((code: string) => (
+              <span
+                key={`proc-${code}`}
+                className="rounded-md border border-emerald-800/50 bg-emerald-900/20 px-2 py-0.5 text-emerald-300"
+              >
+                {code}
+              </span>
+            ))}
+          </div>
+
+          {/* Open on source button - like live site */}
+          <div className="mt-2">
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-lg border border-sky-600 bg-sky-600/10 px-5 py-2.5 text-sm font-semibold text-sky-300 hover:bg-sky-600/20 transition-colors"
+            >
+              Open on {(payload.source_name as string) || 'original'}
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                />
+              </svg>
+            </a>
+          </div>
+
+          {/* Separator before admin-only sections */}
+          <hr className="border-neutral-800 my-6" />
+
+          {/* Tags & Classification - admin view with validation */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6">
-            <h2 className="text-lg font-semibold mb-4">Tags & Classification</h2>
+            <h2 className="text-lg font-semibold mb-4">Tags & Classification (Admin View)</h2>
             <TagDisplay
               payload={payload}
               taxonomyConfig={taxonomyConfig}
