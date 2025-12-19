@@ -88,14 +88,14 @@ const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.s
             {
               navItems.map((item, idx) => (
                 <>
-                  {idx > 0 && <span class="mx-2 text-neutral-400 dark:text-neutral-700">|</span>}
+                  {idx > 0 && <span class="mx-2 text-neutral-300 dark:text-neutral-700">|</span>}
                   <a
                     href={item.href}
                     class:list={[
                       'px-3 py-1.5 rounded-md transition-colors',
                       isActive(item.href)
                         ? 'text-sky-600 dark:text-sky-400 font-medium border-b-2 border-sky-600 dark:border-sky-400'
-                        : 'text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800',
+                        : 'text-neutral-500 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800',
                     ]}
                     aria-current={isActive(item.href) ? 'page' : undefined}
                   >
