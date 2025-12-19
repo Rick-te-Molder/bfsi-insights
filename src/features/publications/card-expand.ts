@@ -8,6 +8,7 @@ function toggleCard(card: HTMLElement, expand: boolean) {
   const expanded = card.querySelector('.card-expanded');
   const expandLabel = card.querySelector('.expand-label');
   const collapseLabel = card.querySelector('.collapse-label');
+  const expandButtons = card.querySelectorAll('[data-expand-card]');
 
   if (!collapsed || !expanded) return;
 
@@ -17,12 +18,16 @@ function toggleCard(card: HTMLElement, expand: boolean) {
     expandLabel?.classList.add('hidden');
     collapseLabel?.classList.remove('hidden');
     card.dataset.expanded = 'true';
+    // Update aria-expanded on all expand buttons
+    expandButtons.forEach((btn) => btn.setAttribute('aria-expanded', 'true'));
   } else {
     collapsed.classList.remove('hidden');
     expanded.classList.add('hidden');
     expandLabel?.classList.remove('hidden');
     collapseLabel?.classList.add('hidden');
     delete card.dataset.expanded;
+    // Update aria-expanded on all expand buttons
+    expandButtons.forEach((btn) => btn.setAttribute('aria-expanded', 'false'));
   }
 }
 

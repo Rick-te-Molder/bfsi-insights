@@ -76,7 +76,7 @@ const ogImage = thumbCandidates[0];
     <button
       id="back-btn"
       type="button"
-      class="mb-4 inline-flex items-center gap-1.5 text-sm text-sky-400 hover:text-sky-300 transition-colors"
+      class="mb-4 inline-flex items-center gap-1.5 text-sm text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 rounded"
     >
       <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"
@@ -95,15 +95,20 @@ const ogImage = thumbCandidates[0];
 
     <header>
       <h1 class="text-3xl font-bold tracking-tight">{item.title}</h1>
-      <div class="mt-2 text-sm text-neutral-300">
+      <div class="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
         {
           item.date_published && (
             <span title="Date published">
-              <span class="text-neutral-400">Published</span> {fmt(item.date_published)}
+              <span class="text-neutral-500 dark:text-neutral-400">Published</span>{' '}
+              {fmt(item.date_published)}
             </span>
           )
         }
-        {item.source_name && <span> · {item.source_name}</span>}
+        {
+          item.source_name && (
+            <span class="text-neutral-600 dark:text-neutral-300"> · {item.source_name}</span>
+          )
+        }
         {item.authors?.length ? <span> · {item.authors[0]}</span> : null}
       </div>
     </header>
@@ -114,7 +119,7 @@ const ogImage = thumbCandidates[0];
           <div style="aspect-ratio: 16 / 9" />
           <div
             id="skeleton"
-            class="absolute inset-0 rounded-md border border-neutral-800 bg-neutral-800/40"
+            class="absolute inset-0 rounded-md border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-800/40"
           />
           <img
             src={thumbCandidates[0]}
@@ -122,7 +127,7 @@ const ogImage = thumbCandidates[0];
             alt={`${item.source_name || 'Source'} preview`}
             width="960"
             height="540"
-            class="absolute inset-0 h-full w-full rounded-md border border-neutral-800 object-cover"
+            class="absolute inset-0 h-full w-full rounded-md border border-neutral-200 dark:border-neutral-800 object-cover"
             loading="eager"
             onload="const s=document.getElementById('skeleton'); if(s) s.style.display='none'"
             onerror="const n=this.dataset.next||''; if(n){ const parts=n.split('|'); const nx=parts.shift(); this.dataset.next=parts.join('|'); if(nx){ this.src=nx; return; } } const s2=document.getElementById('skeleton'); if(s2) s2.style.display='none'; this.style.display='none'"
@@ -134,7 +139,7 @@ const ogImage = thumbCandidates[0];
     {
       item.summary_long && (
         <div
-          class="mt-4 text-sm text-neutral-200 prose prose-invert prose-sm max-w-none"
+          class="mt-4 text-sm text-neutral-700 dark:text-neutral-200 prose dark:prose-invert prose-sm max-w-none"
           set:html={marked.parse(item.summary_long)}
         />
       )
@@ -145,7 +150,7 @@ const ogImage = thumbCandidates[0];
         (item.audiences || [item.audience])
           .filter((c): c is string => Boolean(c))
           .map((code) => (
-            <span class="rounded-md border border-amber-800/50 bg-amber-900/20 px-2 py-0.5 text-amber-300">
+            <span class="rounded-md border border-amber-300 dark:border-amber-800/50 bg-amber-100 dark:bg-amber-900/20 px-2 py-0.5 text-amber-700 dark:text-amber-300">
               {code}
             </span>
           ))
@@ -154,56 +159,56 @@ const ogImage = thumbCandidates[0];
         (item.geographies || [item.geography])
           .filter((c): c is string => Boolean(c))
           .map((code) => (
-            <span class="rounded-md border border-teal-800/50 bg-teal-900/20 px-2 py-0.5 text-teal-300">
+            <span class="rounded-md border border-teal-300 dark:border-teal-800/50 bg-teal-100 dark:bg-teal-900/20 px-2 py-0.5 text-teal-700 dark:text-teal-300">
               {code}
             </span>
           ))
       }
       {
         item.content_type && (
-          <span class="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-neutral-300">
+          <span class="rounded-md border border-neutral-300 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 px-2 py-0.5 text-neutral-700 dark:text-neutral-300">
             {item.content_type}
           </span>
         )
       }
       {
         (item.industries || []).map((code: string) => (
-          <span class="rounded-md border border-cyan-800/50 bg-cyan-900/20 px-2 py-0.5 text-cyan-300">
+          <span class="rounded-md border border-cyan-300 dark:border-cyan-800/50 bg-cyan-100 dark:bg-cyan-900/20 px-2 py-0.5 text-cyan-700 dark:text-cyan-300">
             {code}
           </span>
         ))
       }
       {
         (item.topics || []).map((code: string) => (
-          <span class="rounded-md border border-purple-800/50 bg-purple-900/20 px-2 py-0.5 text-purple-300">
+          <span class="rounded-md border border-purple-300 dark:border-purple-800/50 bg-purple-100 dark:bg-purple-900/20 px-2 py-0.5 text-purple-700 dark:text-purple-300">
             {code}
           </span>
         ))
       }
       {
         (item.regulators || []).map((code: string) => (
-          <span class="rounded-md border border-rose-800/50 bg-rose-900/20 px-2 py-0.5 text-rose-300">
+          <span class="rounded-md border border-rose-300 dark:border-rose-800/50 bg-rose-100 dark:bg-rose-900/20 px-2 py-0.5 text-rose-700 dark:text-rose-300">
             {code}
           </span>
         ))
       }
       {
         (item.regulations || []).map((code: string) => (
-          <span class="rounded-md border border-orange-800/50 bg-orange-900/20 px-2 py-0.5 text-orange-300">
+          <span class="rounded-md border border-orange-300 dark:border-orange-800/50 bg-orange-100 dark:bg-orange-900/20 px-2 py-0.5 text-orange-700 dark:text-orange-300">
             {code}
           </span>
         ))
       }
       {
         (item.obligations || []).map((code: string) => (
-          <span class="rounded-md border border-yellow-800/50 bg-yellow-900/20 px-2 py-0.5 text-yellow-300">
+          <span class="rounded-md border border-yellow-300 dark:border-yellow-800/50 bg-yellow-100 dark:bg-yellow-900/20 px-2 py-0.5 text-yellow-700 dark:text-yellow-300">
             {code}
           </span>
         ))
       }
       {
         (item.processes || []).map((code: string) => (
-          <span class="rounded-md border border-emerald-800/50 bg-emerald-900/20 px-2 py-0.5 text-emerald-300">
+          <span class="rounded-md border border-emerald-300 dark:border-emerald-800/50 bg-emerald-100 dark:bg-emerald-900/20 px-2 py-0.5 text-emerald-700 dark:text-emerald-300">
             {code}
           </span>
         ))
@@ -215,7 +220,7 @@ const ogImage = thumbCandidates[0];
         href={item.url}
         target="_blank"
         rel="noopener noreferrer"
-        class="inline-flex items-center gap-2 rounded-lg border border-sky-600 bg-sky-600/10 px-5 py-2.5 text-sm font-semibold text-sky-300 hover:bg-sky-600/20 transition-colors"
+        class="inline-flex items-center gap-2 rounded-lg border border-sky-600 bg-sky-100 dark:bg-sky-600/10 px-5 py-2.5 text-sm font-semibold text-sky-700 dark:text-sky-300 hover:bg-sky-200 dark:hover:bg-sky-600/20 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500"
         aria-label={`Open original on ${item.source_name || 'source'} for ${item.title}`}
         title={`Opens ${item.source_name || 'the publisher'} in a new tab`}
       >
