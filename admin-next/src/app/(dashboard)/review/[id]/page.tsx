@@ -90,6 +90,18 @@ async function getLookupTables(): Promise<LookupTables> {
   };
 }
 
+async function getProposedEntities(sourceQueueId: string) {
+  const supabase = createServiceRoleClient();
+
+  const { data } = await supabase
+    .from('proposed_entity')
+    .select('entity_type, name, slug')
+    .eq('source_queue_id', sourceQueueId)
+    .eq('status', 'pending');
+
+  return data || [];
+}
+
 async function getTaxonomyData() {
   const supabase = createServiceRoleClient();
 
@@ -147,12 +159,14 @@ export default async function ReviewDetailPage({
   const { id } = await params;
   const { view, status } = await searchParams;
   const backUrl = `/review?${new URLSearchParams({ ...(status && { status }), ...(view && { view }) }).toString()}`;
-  const [item, lookups, { taxonomyConfig, taxonomyData }, currentPrompts] = await Promise.all([
-    getQueueItem(id),
-    getLookupTables(),
-    getTaxonomyData(),
-    getCurrentPrompts(),
-  ]);
+  const [item, lookups, { taxonomyConfig, taxonomyData }, currentPrompts, proposedEntities] =
+    await Promise.all([
+      getQueueItem(id),
+      getLookupTables(),
+      getTaxonomyData(),
+      getCurrentPrompts(),
+      getProposedEntities(id),
+    ]);
 
   if (!item) {
     notFound();
@@ -175,23 +189,38 @@ export default async function ReviewDetailPage({
     label: string;
   }[] = [];
 
+  // Build set of already-proposed entities to filter out
+  const proposedSet = new Set(
+    proposedEntities.map((p) => `${p.entity_type}:${p.name.toLowerCase()}`),
+  );
+
+  const isAlreadyProposed = (entityType: string, name: string) => {
+    return proposedSet.has(`${entityType}:${name.toLowerCase()}`);
+  };
+
   for (const name of (payload.organization_names as string[]) || []) {
-    if (!lookups.organizations.has(name.toLowerCase())) {
+    if (
+      !lookups.organizations.has(name.toLowerCase()) &&
+      !isAlreadyProposed('bfsi_organization', name)
+    ) {
       unknownEntities.push({ entityType: 'bfsi_organization', name, label: 'Organization' });
     }
   }
   for (const name of (payload.vendor_names as string[]) || []) {
-    if (!lookups.vendors.has(name.toLowerCase())) {
+    if (!lookups.vendors.has(name.toLowerCase()) && !isAlreadyProposed('ag_vendor', name)) {
       unknownEntities.push({ entityType: 'ag_vendor', name, label: 'Vendor' });
     }
   }
   for (const code of (payload.regulator_codes as string[]) || []) {
-    if (!lookups.regulators.has(code.toLowerCase())) {
+    if (!lookups.regulators.has(code.toLowerCase()) && !isAlreadyProposed('regulator', code)) {
       unknownEntities.push({ entityType: 'regulator', name: code, label: 'Regulator' });
     }
   }
   for (const code of (payload.standard_setter_codes as string[]) || []) {
-    if (!lookups.standardSetters.has(code.toLowerCase())) {
+    if (
+      !lookups.standardSetters.has(code.toLowerCase()) &&
+      !isAlreadyProposed('standard_setter', code)
+    ) {
       unknownEntities.push({ entityType: 'standard_setter', name: code, label: 'Standard Setter' });
     }
   }
