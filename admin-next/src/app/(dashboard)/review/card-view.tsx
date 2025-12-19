@@ -137,19 +137,55 @@ function ItemCard({
             <p className="mt-2 text-sm text-neutral-300 line-clamp-2">{summary.short}</p>
           )}
 
-          {/* Minimal tags when collapsed */}
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            {payload.audiences?.[0] && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/20">
-                {payload.audiences[0]}
-              </span>
-            )}
-            {payload.geographies?.[0] && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-500/10 text-teal-300 ring-1 ring-inset ring-teal-500/20">
-                {payload.geographies[0]}
-              </span>
-            )}
-          </div>
+          {/* Minimal tags when collapsed - audience + geography + count */}
+          {(() => {
+            const audiences = (payload.audiences as string[]) || [];
+            const geographies = (payload.geographies as string[]) || [];
+            const topics = (payload.topics as string[]) || [];
+            const industries = (payload.industries as string[]) || [];
+            const regulators = (payload.regulator_codes as string[]) || [];
+            const regulations = (payload.regulation_codes as string[]) || [];
+            const obligations = (payload.obligation_codes as string[]) || [];
+            const processes = (payload.process_codes as string[]) || [];
+
+            // Extra tags = everything except first audience and first geography
+            const extraTagCount =
+              Math.max(0, audiences.length - 1) +
+              Math.max(0, geographies.length - 1) +
+              industries.length +
+              topics.length +
+              regulators.length +
+              regulations.length +
+              obligations.length +
+              processes.length;
+
+            return (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {audiences[0] && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/20">
+                    {audiences[0]}
+                  </span>
+                )}
+                {geographies[0] && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-500/10 text-teal-300 ring-1 ring-inset ring-teal-500/20">
+                    {geographies[0]}
+                  </span>
+                )}
+                {extraTagCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggle();
+                    }}
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-700/50 text-neutral-400 ring-1 ring-inset ring-neutral-600/30 hover:bg-neutral-600/50 hover:text-neutral-300 transition-colors"
+                  >
+                    +{extraTagCount} more
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </>
       )}
 

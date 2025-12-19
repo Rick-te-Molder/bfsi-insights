@@ -241,75 +241,67 @@ export default async function ReviewDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content - Left 2 columns */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Summaries */}
+          {/* Thumbnail - mimics published site layout */}
+          {(() => {
+            const thumbnailUrl =
+              (payload.thumbnail_url as string) ||
+              (typeof payload.thumbnail_path === 'string' ? payload.thumbnail_path : undefined);
+            return (
+              <div
+                className="relative w-full rounded-md border border-neutral-800 bg-neutral-800/40"
+                style={{ aspectRatio: '16 / 9', overflow: 'hidden' }}
+              >
+                {thumbnailUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={thumbnailUrl}
+                    alt={`${payload.source_name || 'Source'} preview`}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <svg
+                      className="h-16 w-16 text-neutral-700"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.5"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Long Summary Only - mimics published site */}
           <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6">
-            <h2 className="text-lg font-semibold mb-4">AI Summaries</h2>
-
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-neutral-400">
-                    Short (100-150 chars)
-                  </span>
-                  <span
-                    className={`text-xs ${
-                      summary.short && summary.short.length >= 100 && summary.short.length <= 150
-                        ? 'text-emerald-400'
-                        : 'text-amber-400'
-                    }`}
-                  >
-                    {summary.short?.length || 0} chars
-                  </span>
-                </div>
-                <p className="text-neutral-200 bg-neutral-800/50 rounded-lg p-3">
-                  {summary.short || 'No short summary'}
-                </p>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-neutral-400">
-                    Medium (200-300 chars)
-                  </span>
-                  <span
-                    className={`text-xs ${
-                      summary.medium && summary.medium.length >= 200 && summary.medium.length <= 300
-                        ? 'text-emerald-400'
-                        : 'text-amber-400'
-                    }`}
-                  >
-                    {summary.medium?.length || 0} chars
-                  </span>
-                </div>
-                <p className="text-neutral-200 bg-neutral-800/50 rounded-lg p-3">
-                  {summary.medium || 'No medium summary'}
-                </p>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-neutral-400">Long (400-600 chars)</span>
-                  <span
-                    className={`text-xs ${
-                      summary.long && summary.long.length >= 400 && summary.long.length <= 600
-                        ? 'text-emerald-400'
-                        : 'text-amber-400'
-                    }`}
-                  >
-                    {summary.long?.length || 0} chars
-                  </span>
-                </div>
-                <div className="text-neutral-200 bg-neutral-800/50 rounded-lg p-3">
-                  {summary.long ? (
-                    <MarkdownRenderer
-                      content={summary.long}
-                      className="prose prose-invert prose-sm max-w-none prose-headings:text-neutral-200 prose-headings:font-semibold prose-headings:text-sm prose-p:my-1 prose-ul:my-1 prose-li:my-0"
-                    />
-                  ) : (
-                    <p>No long summary</p>
-                  )}
-                </div>
-              </div>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-lg font-semibold">AI Summary</h2>
+              <span
+                className={`text-xs ${
+                  summary.long && summary.long.length >= 400 && summary.long.length <= 600
+                    ? 'text-emerald-400'
+                    : 'text-amber-400'
+                }`}
+              >
+                {summary.long?.length || 0} chars
+              </span>
+            </div>
+            <div className="text-neutral-200 bg-neutral-800/50 rounded-lg p-3">
+              {summary.long ? (
+                <MarkdownRenderer
+                  content={summary.long}
+                  className="prose prose-invert prose-sm max-w-none prose-headings:text-neutral-200 prose-headings:font-semibold prose-headings:text-sm prose-p:my-1 prose-ul:my-1 prose-li:my-0"
+                />
+              ) : (
+                <p className="text-neutral-500 italic">No summary available</p>
+              )}
             </div>
           </div>
 
