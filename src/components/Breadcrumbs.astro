@@ -12,7 +12,10 @@ const { segments } = Astro.props;
 ---
 
 <!-- Desktop Breadcrumbs -->
-<nav aria-label="Breadcrumb" class="hidden sm:block mb-6 text-sm text-neutral-400">
+<nav
+  aria-label="Breadcrumb"
+  class="hidden sm:block mb-6 text-sm text-neutral-500 dark:text-neutral-400"
+>
   <ol class="flex items-center space-x-2">
     {
       segments.map((segment, idx) => {
@@ -21,7 +24,7 @@ const { segments } = Astro.props;
           <li class="flex items-center">
             {idx > 0 && (
               <svg
-                class="w-4 h-4 mx-2 text-neutral-600"
+                class="w-4 h-4 mx-2 text-neutral-400 dark:text-neutral-600"
                 fill="currentColor"
                 viewBox="0 0 20 20"
                 aria-hidden="true"
@@ -34,13 +37,16 @@ const { segments } = Astro.props;
               </svg>
             )}
             {isLast ? (
-              <span class="text-neutral-200 font-medium truncate max-w-md" aria-current="page">
+              <span
+                class="text-neutral-800 dark:text-neutral-200 font-medium truncate max-w-md"
+                aria-current="page"
+              >
                 {segment.label}
               </span>
             ) : (
               <a
                 href={segment.href}
-                class="hover:text-neutral-200 hover:underline transition-colors"
+                class="hover:text-neutral-800 dark:hover:text-neutral-200 hover:underline transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 rounded"
               >
                 {segment.label}
               </a>
@@ -53,12 +59,12 @@ const { segments } = Astro.props;
 </nav>
 
 <!-- Mobile Back Link -->
-<nav aria-label="Breadcrumb" class="sm:hidden mb-6">
+<nav aria-label="Breadcrumb" class="sm:hidden mb-6 text-neutral-600 dark:text-neutral-400">
   {
     segments.length > 1 && (
       <a
         href={segments[segments.length - 2]?.href || '/'}
-        class="inline-flex items-center gap-2 text-sm text-neutral-400 hover:text-neutral-200 transition-colors"
+        class="inline-flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 rounded"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
