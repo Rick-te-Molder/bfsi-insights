@@ -53,7 +53,7 @@ export async function runGoldenEval(agentName, agentFn, options = {}) {
     .from('prompt_version')
     .select('version')
     .eq('agent_name', agentName)
-    .eq('is_current', true)
+    .eq('stage', 'PRD')
     .single();
 
   // Create eval run
@@ -146,7 +146,7 @@ export async function runLLMJudgeEval(agentName, agentFn, inputs, options = {}) 
     .from('prompt_version')
     .select('version')
     .eq('agent_name', agentName)
-    .eq('is_current', true)
+    .eq('stage', 'PRD')
     .single();
 
   // Create eval run

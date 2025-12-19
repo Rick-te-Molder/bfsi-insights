@@ -16,7 +16,7 @@ export default function PromptsPage() {
     if (!manifest) return null;
 
     const currentPromptNames = new Set(
-      prompts.filter((p) => p.is_current).map((p) => p.agent_name),
+      prompts.filter((p) => p.stage === 'PRD').map((p) => p.agent_name),
     );
 
     const requiredPrompts = manifest.required_prompts.filter((p) => p.required);

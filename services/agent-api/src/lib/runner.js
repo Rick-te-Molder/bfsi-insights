@@ -118,7 +118,7 @@ export class AgentRunner {
       .from('prompt_version')
       .select('*')
       .eq('agent_name', this.agentName)
-      .eq('is_current', true)
+      .eq('stage', 'PRD')
       .single();
 
     if (promptError || !data) {

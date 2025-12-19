@@ -10,7 +10,6 @@ interface PromptVersion {
   id: string;
   agent_name: string;
   version: string;
-  is_current: boolean;
   stage: string;
 }
 
@@ -67,10 +66,7 @@ function HeadToHeadContent() {
     setLoading(true);
 
     const [promptsRes, itemsRes, statusRes] = await Promise.all([
-      supabase
-        .from('prompt_version')
-        .select('id, agent_name, version, is_current, stage')
-        .order('agent_name'),
+      supabase.from('prompt_version').select('id, agent_name, version, stage').order('agent_name'),
       supabase
         .from('ingestion_queue')
         .select('id, url, payload, discovered_at, status_code')
@@ -215,7 +211,7 @@ function HeadToHeadContent() {
               <option value="">Select version...</option>
               {agentPrompts.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.version} ({p.stage}) {p.is_current ? '★' : ''}
+                  {p.version} ({p.stage}) {p.stage === 'PRD' ? '★' : ''}
                 </option>
               ))}
             </select>
@@ -231,7 +227,7 @@ function HeadToHeadContent() {
               <option value="">Select version...</option>
               {agentPrompts.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.version} ({p.stage}) {p.is_current ? '★' : ''}
+                  {p.version} ({p.stage}) {p.stage === 'PRD' ? '★' : ''}
                 </option>
               ))}
             </select>

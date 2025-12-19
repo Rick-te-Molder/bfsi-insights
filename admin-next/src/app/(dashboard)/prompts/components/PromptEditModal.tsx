@@ -39,7 +39,6 @@ export function PromptEditModal({ prompt, mode, onClose, onSave }: PromptEditMod
         notes: notes || null,
         model_id: prompt.model_id,
         stage: 'DEV',
-        is_current: false,
       });
 
       if (error) {

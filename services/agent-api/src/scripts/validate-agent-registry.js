@@ -97,9 +97,9 @@ async function main() {
 
   const { data: rows, error } = await supabase
     .from('prompt_version')
-    .select('agent_name, version, is_current')
+    .select('agent_name, version, stage')
     .in('agent_name', requiredAgentNames)
-    .eq('is_current', true);
+    .eq('stage', 'PRD');
 
   if (error) {
     console.error(`CRITICAL: Failed to query prompt_version: ${error.message}`);
