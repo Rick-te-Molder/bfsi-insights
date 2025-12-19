@@ -2,28 +2,64 @@
 
 ## Overview
 
-As a prompt engineer, I need to edit draft prompts in-place and manage version progression through DEV → TST → PROD stages, so that I can iterate quickly on drafts while maintaining immutable production versions.
+As a prompt engineer, I need to edit draft prompts in-place and manage version progression through DEV → TST → PRD → RET stages, so that I can iterate quickly on drafts while maintaining immutable production versions and preserving production history.
 
 ## Core Principles
 
 1. **Drafts are mutable** - DEV and TST versions can be edited in-place
-2. **Production is immutable** - PROD versions are read-only
-3. **Forward-only progression** - Versions move DEV → TST → PROD (no demotion)
+2. **Production is immutable** - PRD and RET versions are read-only
+3. **Forward-only progression** - Versions move DEV → TST → PRD → RET (no demotion)
 4. **Version increment only when needed** - Creating a new version is explicit
+5. **One PRD per agent** - Only one version can be in PRD stage at a time (the current production version)
+6. **History preserved** - When a new version is promoted to PRD, the old PRD becomes RET (retired)
+
+## Stage Lifecycle
+
+```
+DEV → TST → PRD → RET
+ ↓     ↓     ↓     ↓
+Edit  Edit  View  View (Historical)
+```
+
+### Stage Definitions
+
+| Stage   | Meaning                 | Editable | Count per Agent | Notes                                    |
+| ------- | ----------------------- | -------- | --------------- | ---------------------------------------- |
+| **DEV** | Draft in development    | ✅       | Multiple        | Can be deleted if not in use             |
+| **TST** | Testing                 | ✅       | Multiple        | Cannot be deleted (committed to testing) |
+| **PRD** | **Current** production  | ❌       | **One only**    | Active version used by agents            |
+| **RET** | Retired (ex-production) | ❌       | Multiple        | Historical production versions           |
+
+### Key Insight: No `is_current` Flag Needed
+
+The `stage` field alone determines current status:
+
+- `stage = 'PRD'` means this version is current (only one per agent)
+- `stage = 'RET'` means this version was current but has been replaced
+- No need for separate `is_current` boolean flag
+
+### Metadata Tracking
+
+Each version tracks:
+
+- `deployed_at` - When promoted to PRD (timestamp)
+- `retired_at` - When replaced by newer PRD (timestamp)
+- `stage` - Current lifecycle stage
 
 ## Button States
 
-| Stage | EDIT | TEST | PROMOTE    | CREATE NEW | DELETE            |
-| ----- | ---- | ---- | ---------- | ---------- | ----------------- |
-| DEV   | ✅   | ✅   | ✅ To TST  | ✅         | ✅ If not current |
-| TST   | ✅   | ✅   | ✅ To PROD | ✅         | ❌                |
-| PROD  | ❌   | ✅   | ❌         | ✅         | ❌                |
+| Stage | EDIT | TEST | PROMOTE   | CREATE NEW | DELETE |
+| ----- | ---- | ---- | --------- | ---------- | ------ |
+| DEV   | ✅   | ✅   | ✅ To TST | ✅         | ✅     |
+| TST   | ✅   | ✅   | ✅ To PRD | ✅         | ❌     |
+| PRD   | ❌   | ✅   | ❌        | ✅         | ❌     |
+| RET   | ❌   | ✅   | ❌        | ✅         | ❌     |
 
 ## User Scenarios
 
 ### Scenario 1: Iterating on a DEV draft
 
-**Context:** v2.3 is current in DEV, v2.2 is in PROD
+**Context:** v2.3 is in DEV, v2.2 is in PRD
 
 **Actions:**
 
@@ -39,7 +75,7 @@ As a prompt engineer, I need to edit draft prompts in-place and manage version p
 
 ### Scenario 2: Testing in TST stage
 
-**Context:** v2.3 is in TST, v2.2 is in PROD
+**Context:** v2.3 is in TST, v2.2 is in PRD
 
 **Actions:**
 
@@ -47,37 +83,41 @@ As a prompt engineer, I need to edit draft prompts in-place and manage version p
 - Find minor issue
 - Click **EDIT** → Fix issue in-place in v2.3
 - Click **TEST** → Verify fix
-- Click **PROMOTE TO PROD** → Deploy v2.3 to production
+- Click **PROMOTE TO PRD** → Deploy v2.3 to production
 
-**Outcome:** v2.3 becomes PROD, v2.2 remains as historical PROD version
+**Outcome:**
+
+- v2.3 becomes PRD (stage = 'PRD', deployed_at = NOW())
+- v2.2 becomes RET (stage = 'RET', retired_at = NOW())
+- Only v2.3 is now in PRD stage
 
 ---
 
-### Scenario 3: Creating a new version from PROD
+### Scenario 3: Creating a new version from PRD
 
-**Context:** v2.3 is in PROD, need to make changes
+**Context:** v2.3 is in PRD, need to make changes
 
 **Actions:**
 
-- View v2.3 (PROD version)
-- **EDIT** button is greyed out
+- View v2.3 (PRD version)
+- **EDIT** button is greyed out (cannot edit production)
 - Click **CREATE NEW VERSION** → Creates v2.4 as DEV draft with v2.3 content
 - Opens v2.4 in edit mode
 - Make changes to v2.4
 
-**Outcome:** v2.4 created as DEV draft, v2.3 remains unchanged in PROD
+**Outcome:** v2.4 created as DEV draft, v2.3 remains unchanged in PRD
 
 ---
 
 ### Scenario 4: Multiple drafts exist
 
-**Context:** v2.3 in TST, v2.4 in DEV, v2.2 in PROD
+**Context:** v2.3 in TST, v2.4 in DEV, v2.2 in PRD
 
 **Actions:**
 
 - Can edit v2.4 (DEV) independently
 - Can edit v2.3 (TST) independently
-- Can promote v2.3 to PROD (becomes v2.3 PROD)
+- Can promote v2.3 to PRD → v2.2 becomes RET, v2.3 becomes PRD
 - Can promote v2.4 to TST (becomes v2.4 TST)
 - Can delete v2.4 if not needed
 
@@ -87,18 +127,39 @@ As a prompt engineer, I need to edit draft prompts in-place and manage version p
 
 ### Scenario 5: Hotfix needed in production
 
-**Context:** v2.3 is in PROD, critical bug found
+**Context:** v2.3 is in PRD, critical bug found
 
 **Actions:**
 
-- View v2.3 (PROD)
+- View v2.3 (PRD)
 - Click **CREATE NEW VERSION** → Creates v2.4 as DEV draft
 - Click **EDIT** on v2.4 → Make hotfix
 - Click **PROMOTE TO TST** → Fast-track to TST
 - Click **TEST** → Verify fix
-- Click **PROMOTE TO PROD** → Deploy v2.4
+- Click **PROMOTE TO PRD** → Deploy v2.4
 
-**Outcome:** Hotfix deployed as v2.4, v2.3 remains in history
+**Outcome:**
+
+- v2.4 deployed as PRD (stage = 'PRD')
+- v2.3 retired (stage = 'RET', retired_at = NOW())
+- Production history preserved
+
+---
+
+### Scenario 6: Viewing production history
+
+**Context:** v2.4 is in PRD, v2.3 and v2.2 are in RET
+
+**Actions:**
+
+- View v2.3 (RET version)
+- See metadata: "Production: Dec 1, 2025 → Dec 15, 2025 (14 days)"
+- See: "Replaced by: v2.4"
+- **EDIT** button is greyed out (historical version)
+- Can **CREATE NEW VERSION** from v2.3 if needed to rollback
+- Can **TEST** v2.3 to verify old behavior
+
+**Outcome:** Full audit trail of production history with timestamps
 
 ---
 
@@ -107,7 +168,7 @@ As a prompt engineer, I need to edit draft prompts in-place and manage version p
 ### EDIT Button
 
 - **Enabled:** DEV and TST stages
-- **Disabled:** PROD stage (greyed out with tooltip: "Cannot edit production versions")
+- **Disabled:** PRD and RET stages (greyed out with tooltip: "Cannot edit production versions")
 - **Action:** Opens inline editor, saves changes to current version (no version increment)
 
 ### TEST Button
@@ -118,9 +179,12 @@ As a prompt engineer, I need to edit draft prompts in-place and manage version p
 ### PROMOTE Button
 
 - **DEV stage:** "Promote to TST" - Moves version to TST stage
-- **TST stage:** "Promote to PROD" - Deploys version to production
-- **PROD stage:** Hidden (no further promotion)
-- **Action:** Changes stage, marks version as current for that stage
+- **TST stage:** "Promote to PRD" - Deploys version to production
+  - Sets new version: stage = 'PRD', deployed_at = NOW()
+  - Sets old PRD: stage = 'RET', retired_at = NOW()
+- **PRD stage:** Hidden (no further promotion)
+- **RET stage:** Hidden (historical version)
+- **Action:** Changes stage and updates timestamps
 
 ### CREATE NEW VERSION Button
 
@@ -134,16 +198,17 @@ As a prompt engineer, I need to edit draft prompts in-place and manage version p
 
 ### DELETE Button
 
-- **Enabled:** DEV stage only, and only if not the current DEV version
-- **Disabled:** TST and PROD stages
+- **Enabled:** DEV stage only
+- **Disabled:** TST, PRD, and RET stages
 - **Action:** Permanently removes the draft version
+- **Note:** Cannot delete versions that have progressed beyond DEV
 
 ---
 
 ## Edge Cases
 
-**Q: What if I'm editing v2.3 in DEV and someone promotes v2.2 to PROD?**
-A: No conflict. v2.3 continues as DEV draft, v2.2 is now PROD.
+**Q: What if I'm editing v2.3 in DEV and someone promotes v2.2 to PRD?**
+A: No conflict. v2.3 continues as DEV draft, v2.2 is now PRD.
 
 **Q: Can I have v2.3 in TST and v2.4 in DEV at the same time?**
 A: Yes. Each stage can have one current version. They progress independently.
@@ -151,16 +216,31 @@ A: Yes. Each stage can have one current version. They progress independently.
 **Q: What if I want to abandon v2.4 and go back to v2.3?**
 A: Delete v2.4 (if in DEV), then edit v2.3 instead. No demotion needed.
 
-**Q: Can I edit a PROD version to fix a typo?**
+**Q: Can I edit a PRD version to fix a typo?**
 A: No. Must create new version, make fix, and promote through stages.
+
+**Q: What happens to old production versions?**
+A: When a new version is promoted to PRD, the old PRD automatically becomes RET (retired). This preserves production history.
+
+**Q: Can I see when a version was in production?**
+A: Yes. RET versions show deployed_at and retired_at timestamps, so you can see exactly when each version was live.
+
+**Q: Can I rollback to a retired version?**
+A: Not directly. But you can create a new version from any RET version, then promote it through DEV → TST → PRD.
+
+**Q: Why not just use is_current flag?**
+A: The stage field alone is sufficient. PRD = current, RET = was current. Simpler and prevents inconsistencies.
 
 ---
 
 ## Success Criteria
 
 - ✅ Can edit DEV/TST drafts in-place without version increment
-- ✅ Cannot edit PROD versions (immutable)
+- ✅ Cannot edit PRD or RET versions (immutable)
 - ✅ Can create new version from any existing version
-- ✅ Clear visual indication of stage (DEV/TST/PROD)
+- ✅ Clear visual indication of stage (DEV/TST/PRD/RET)
 - ✅ Can delete unused DEV drafts
-- ✅ Version history preserved (all PROD versions remain)
+- ✅ Only one PRD version per agent at a time
+- ✅ Production history preserved (all RET versions with timestamps)
+- ✅ Can audit when each version was in production
+- ✅ No is_current flag needed (stage alone determines status)
