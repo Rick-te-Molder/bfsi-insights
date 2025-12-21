@@ -50,11 +50,11 @@ router.post('/head-to-head', async (req, res) => {
       return res.status(400).json({ error: `Unknown agent: ${agent_name}` });
     }
 
-    // Run agent with version A prompt
-    const outputA = await agentFn(item, { promptOverride: versionA });
+    // Run agent with version A prompt (skip enrichment_meta updates)
+    const outputA = await agentFn(item, { promptOverride: versionA, skipEnrichmentMeta: true });
 
-    // Run agent with version B prompt
-    const outputB = await agentFn(item, { promptOverride: versionB });
+    // Run agent with version B prompt (skip enrichment_meta updates)
+    const outputB = await agentFn(item, { promptOverride: versionB, skipEnrichmentMeta: true });
 
     let winner = null;
     let reasoning = null;
