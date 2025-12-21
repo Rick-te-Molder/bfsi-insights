@@ -253,6 +253,11 @@ URL: ${url}`;
       const usage = completion.usage;
       const { validCodes, behaviorTypes } = taxonomies;
 
+      // Debug logging for topic_codes
+      console.log('🔍 [tagger] Raw LLM topic_codes:', JSON.stringify(result.topic_codes));
+      console.log('🔍 [tagger] topic_codes type:', typeof result.topic_codes);
+      console.log('🔍 [tagger] topic_codes isArray:', Array.isArray(result.topic_codes));
+
       // Dynamic validation based on behavior_type from taxonomy_config
       // GUARDRAIL: Validate against taxonomy list (reject LLM hallucinations)
       // EXPANDABLE: Pass through as-is (LLM can propose new entries)
