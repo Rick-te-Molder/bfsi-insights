@@ -264,6 +264,7 @@ URL: ${url}`;
       console.log('🔍 [tagger] Raw LLM topic_codes:', JSON.stringify(result.topic_codes));
       console.log('🔍 [tagger] topic_codes type:', typeof result.topic_codes);
       console.log('🔍 [tagger] topic_codes isArray:', Array.isArray(result.topic_codes));
+      console.log('🔍 [tagger] validCodes.topics:', Array.from(validCodes.topics));
 
       // Dynamic validation based on behavior_type from taxonomy_config
       // GUARDRAIL: Validate against taxonomy list (reject LLM hallucinations)
