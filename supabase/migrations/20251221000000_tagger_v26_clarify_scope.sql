@@ -7,12 +7,8 @@
 -- is in scope, even if it doesn't explicitly mention banks.
 -- ============================================================================
 
--- Retire current PRD version
-UPDATE prompt_version
-SET stage = 'RET', retired_at = NOW()
-WHERE agent_name = 'tagger' AND stage = 'PRD';
-
 -- Insert new version with clarified scope
+-- Note: Do NOT retire the old PRD here - let the promotion process handle it
 INSERT INTO prompt_version (agent_name, version, prompt_text, model_id, max_tokens, stage, notes)
 VALUES (
   'tagger',
