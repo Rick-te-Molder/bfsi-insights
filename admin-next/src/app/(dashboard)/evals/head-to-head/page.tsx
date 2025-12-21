@@ -90,7 +90,9 @@ function HeadToHeadContent() {
   }, [loadData]);
 
   const agents = [...new Set(prompts.map((p) => p.agent_name))];
-  const agentPrompts = prompts.filter((p) => p.agent_name === selectedAgent);
+  const agentPrompts = prompts
+    .filter((p) => p.agent_name === selectedAgent)
+    .sort((a, b) => a.version.localeCompare(b.version));
 
   // Helper to get source from URL if not in payload
   const getSource = (item: QueueItem): string => {
