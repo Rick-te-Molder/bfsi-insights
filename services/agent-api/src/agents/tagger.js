@@ -264,6 +264,7 @@ URL: ${url}`;
       console.log('🔍 [tagger] Raw LLM topic_codes:', JSON.stringify(result.topic_codes));
       console.log('🔍 [tagger] topic_codes type:', typeof result.topic_codes);
       console.log('🔍 [tagger] topic_codes isArray:', Array.isArray(result.topic_codes));
+      console.log('🔍 [tagger] validCodes.topics:', Array.from(validCodes.topics));
 
       // Dynamic validation based on behavior_type from taxonomy_config
       // GUARDRAIL: Validate against taxonomy list (reject LLM hallucinations)
@@ -289,10 +290,17 @@ URL: ${url}`;
       );
       const exclusiveIndustries = enforceIndustryMutualExclusivity(validatedIndustries);
 
+      // Debug topic validation
+      const rawTopics = result.topic_codes;
+      const validatedTopics = conditionalValidate(rawTopics, validCodes.topics, 'topic', 'topic');
+      console.log('🔍 [tagger] Before validation:', JSON.stringify(rawTopics));
+      console.log('🔍 [tagger] After validation:', JSON.stringify(validatedTopics));
+      console.log('🔍 [tagger] validCodes.topics size:', validCodes.topics?.size || 0);
+
       const validatedResult = {
         ...result,
         industry_codes: exclusiveIndustries,
-        topic_codes: conditionalValidate(result.topic_codes, validCodes.topics, 'topic', 'topic'),
+        topic_codes: validatedTopics,
         geography_codes: conditionalValidate(
           result.geography_codes,
           validCodes.geographies,
