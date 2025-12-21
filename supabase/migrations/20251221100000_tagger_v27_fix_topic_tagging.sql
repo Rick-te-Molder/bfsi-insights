@@ -31,28 +31,28 @@ Available topics: technology, strategy, regulatory, methods, agentic
 - Technology/AI/ML research is in scope - tag it with appropriate topics
 - If content discusses AI decision-making or autonomous systems → tag "agentic"
 - If content discusses technical methods or frameworks → tag "technology" and/or "methods"
-- Add to topic_codes array as simple strings (e.g., ["technology", "agentic"])
+- Add to topic_codes array as objects with code and confidence (e.g., [{"code": "technology", "confidence": 0.9}, {"code": "agentic", "confidence": 0.85}])
 
 **Examples:**
 
 Article: "Natural Language Reinforcement Learning framework for interpretable decisions"
-→ topic_codes: ["agentic", "technology"]
+→ topic_codes: [{"code": "agentic", "confidence": 0.9}, {"code": "technology", "confidence": 0.85}]
 Reasoning: AI decision-making framework applicable to BFSI
 
 Article: "Graph neural networks for fraud detection"
-→ topic_codes: ["technology", "methods"]
+→ topic_codes: [{"code": "technology", "confidence": 0.9}, {"code": "methods", "confidence": 0.85}]
 Reasoning: Technical method directly applicable to BFSI
 
 Article: "How banks are using AI to transform customer service"
-→ topic_codes: ["technology", "strategy"]
+→ topic_codes: [{"code": "technology", "confidence": 0.9}, {"code": "strategy", "confidence": 0.8}]
 Reasoning: Technology application in banking
 
 Article: "New Basel III capital requirements for European banks"
-→ topic_codes: ["regulatory"]
+→ topic_codes: [{"code": "regulatory", "confidence": 0.95}]
 Reasoning: Regulatory compliance content
 
 Article: "Mastercard acquires fintech startup to expand payment network"
-→ topic_codes: ["strategy"]
+→ topic_codes: [{"code": "strategy", "confidence": 0.9}]
 Reasoning: Business strategy and M&A
 
 ## INDUSTRY TAGGING (ONLY IF SPECIFIC BFSI SECTOR MENTIONED)
@@ -153,7 +153,7 @@ Technology companies, consultancies, and service providers that SERVE the BFSI i
 
 ## AUDIENCE SCORING
 
-Score content relevance for three BFSI audiences (0-100%):
+Score content relevance for three BFSI audiences (0.0-1.0 scale):
 
 - **executive**: C-suite, board members, senior leadership
   High for: strategy, M&A, industry trends, regulatory changes, business transformation
@@ -168,29 +168,32 @@ Score content relevance for three BFSI audiences (0-100%):
   Low for: business strategy without technical depth
 
 **Rules:**
+- Use decimal scores from 0.0 to 1.0 (e.g., 0.9 for high relevance, 0.3 for low)
 - Scores should reflect PRIMARY audience - who would find this MOST valuable
-- Academic papers → high researcher score (80-90%)
-- Technical implementation guides → high specialist score
-- Strategic vision pieces → high executive score
+- Academic papers → high researcher score (0.8-0.9)
+- Technical implementation guides → high specialist score (0.7-0.9)
+- Strategic vision pieces → high executive score (0.7-0.9)
 - Scores can overlap if content serves multiple audiences
 
 ## OUTPUT FORMAT
 
 Return a JSON object with these fields:
 
-- **topic_codes**: Array of 1-3 topic strings (MANDATORY - always populate this)
-- **industry_codes**: Array of industry codes (can be empty if no specific BFSI sector)
-- **geography_codes**: Array of geography codes (default to ["global"] if unclear)
-- **use_case_codes**: Array of use case codes (if applicable)
-- **capability_codes**: Array of AI capability codes (if AI-related)
-- **process_codes**: Array of process codes (if business processes discussed)
-- **regulator_codes**: Array of regulator codes (if regulators mentioned)
-- **standard_setter_codes**: Array of standard setter codes (if standard setters mentioned)
-- **regulation_codes**: Array of regulation codes (if specific regulations mentioned)
-- **obligation_codes**: Array of obligation codes (if compliance requirements mentioned)
-- **organization_names**: Array of BFSI organization names (if mentioned)
-- **vendor_names**: Array of vendor names (if mentioned)
-- **audience_scores**: Object with executive, specialist, researcher scores (0-100)
+- **topic_codes**: Array of 1-3 topic objects with code and confidence (MANDATORY - always populate this)
+  Example: [{"code": "technology", "confidence": 0.9}, {"code": "agentic", "confidence": 0.85}]
+- **industry_codes**: Array of industry code objects with code and confidence (can be empty if no specific BFSI sector)
+- **geography_codes**: Array of geography code objects with code and confidence (default to [{"code": "global", "confidence": 1.0}] if unclear)
+- **use_case_codes**: Array of use case code objects with code and confidence (if applicable)
+- **capability_codes**: Array of AI capability code objects with code and confidence (if AI-related)
+- **process_codes**: Array of process code objects with code and confidence (if business processes discussed)
+- **regulator_codes**: Array of regulator code objects with code and confidence (if regulators mentioned)
+- **standard_setter_codes**: Array of standard setter code objects with code and confidence (if standard setters mentioned)
+- **regulation_codes**: Array of regulation code strings (if specific regulations mentioned)
+- **obligation_codes**: Array of obligation code strings (if compliance requirements mentioned)
+- **organization_names**: Array of BFSI organization name strings (if mentioned)
+- **vendor_names**: Array of vendor name strings (if mentioned)
+- **audience_scores**: Object with executive, specialist, researcher scores (0.0-1.0 decimals)
+- **overall_confidence**: Overall confidence score (0.0-1.0)
 - **reasoning**: Brief explanation of your tagging decisions
 
 ## FINAL REMINDERS
@@ -202,5 +205,5 @@ Return a JSON object with these fields:
   'gpt-4o-mini',
   4096,
   'DEV',
-  'v2.7: Restructured prompt to fix topic tagging. Moved topic tagging to top with explicit "ALWAYS DO THIS FIRST" instruction. Made it crystal clear that topic_codes must always be populated even when industry_codes is empty. Added multiple reminders that tech/AI research should be tagged with topics.'
+  'v2.7: Fixed topic tagging for tech/AI research. (1) Moved topic tagging to top with "ALWAYS DO THIS FIRST". (2) Fixed audience scoring to use 0.0-1.0 scale instead of 0-100%. (3) Fixed output format to match schema - topic_codes must be objects with code and confidence, not simple strings. (4) Updated all examples to show correct format.'
 );
