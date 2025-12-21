@@ -290,10 +290,17 @@ URL: ${url}`;
       );
       const exclusiveIndustries = enforceIndustryMutualExclusivity(validatedIndustries);
 
+      // Debug topic validation
+      const rawTopics = result.topic_codes;
+      const validatedTopics = conditionalValidate(rawTopics, validCodes.topics, 'topic', 'topic');
+      console.log('🔍 [tagger] Before validation:', JSON.stringify(rawTopics));
+      console.log('🔍 [tagger] After validation:', JSON.stringify(validatedTopics));
+      console.log('🔍 [tagger] validCodes.topics size:', validCodes.topics?.size || 0);
+
       const validatedResult = {
         ...result,
         industry_codes: exclusiveIndustries,
-        topic_codes: conditionalValidate(result.topic_codes, validCodes.topics, 'topic', 'topic'),
+        topic_codes: validatedTopics,
         geography_codes: conditionalValidate(
           result.geography_codes,
           validCodes.geographies,
