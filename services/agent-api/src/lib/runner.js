@@ -220,7 +220,8 @@ export class AgentRunner {
         }
 
         // Write enrichment_meta to queue item payload for version tracking
-        if (context.queueId) {
+        // Skip if this is a head-to-head comparison (skipEnrichmentMeta flag)
+        if (context.queueId && !context.skipEnrichmentMeta) {
           await this.writeEnrichmentMeta(context.queueId, promptConfig, result.usage?.model);
         }
       }
