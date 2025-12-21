@@ -19,7 +19,7 @@ export function usePrompts() {
       .from('prompt_version')
       .select('*')
       .order('agent_name')
-      .order('created_at', { ascending: false });
+      .order('version', { ascending: false });
 
     if (result.error) {
       console.warn('prompt_version failed, trying prompt_versions:', result.error.message);
@@ -27,7 +27,7 @@ export function usePrompts() {
         .from('prompt_versions')
         .select('*')
         .order('agent_name')
-        .order('created_at', { ascending: false });
+        .order('version', { ascending: false });
     }
 
     if (result.error) {
