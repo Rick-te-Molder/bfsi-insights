@@ -33,9 +33,9 @@ export default function AgentDetailPage() {
     if (error) {
       console.error('Error loading prompts:', error);
     } else {
-      // Sort: most recent first (by created_at)
+      // Sort by version descending (alphabetical)
       const sorted = (data || []).sort((a, b) => {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return b.version.localeCompare(a.version);
       });
       setPrompts(sorted);
       const current = sorted.find((p) => p.stage === 'PRD');
