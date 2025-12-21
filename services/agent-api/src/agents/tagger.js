@@ -96,8 +96,15 @@ const TaggingSchema = z.object({
 function validateCodes(taggedItems, validSet, categoryName) {
   if (!taggedItems || !Array.isArray(taggedItems)) return [];
 
+  // Filter out null/undefined values first
+  const nonNullItems = taggedItems.filter((item) => item != null);
+  if (nonNullItems.length === 0) {
+    console.warn(`   ⚠️ All ${categoryName} codes were null/undefined`);
+    return [];
+  }
+
   const validated = [];
-  for (const item of taggedItems) {
+  for (const item of nonNullItems) {
     const code = typeof item === 'string' ? item : item.code;
     if (validSet.has(code)) {
       validated.push(item);
