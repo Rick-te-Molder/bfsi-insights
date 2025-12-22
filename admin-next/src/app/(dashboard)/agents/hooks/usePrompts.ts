@@ -64,7 +64,10 @@ export function usePrompts() {
   // Add utility agents (keep in sync with utility-versions.js)
   const utilityAgents = ['thumbnail-generator'];
 
-  const agents = [...Object.keys(promptsByAgent), ...utilityAgents].filter(
+  // Add orchestrator agents
+  const orchestratorAgents = ['enricher', 'improver'];
+
+  const agents = [...Object.keys(promptsByAgent), ...utilityAgents, ...orchestratorAgents].filter(
     (agent, index, self) => self.indexOf(agent) === index,
   );
 

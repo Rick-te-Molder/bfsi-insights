@@ -55,9 +55,14 @@ export function AgentTable({ agents, promptsByAgent, onEdit, onTest }: AgentTabl
           const currentPrompt = agentPrompts.find((p) => p.stage === 'PRD');
           const historyCount = agentPrompts.length - (currentPrompt ? 1 : 0);
 
-          // Check if this is a utility agent
-          const isUtilityAgent = !agentPrompts.length && agentName === 'thumbnail-generator';
+          // Check agent type
+          const utilityAgents = ['thumbnail-generator'];
+          const orchestratorAgents = ['enricher', 'improver'];
+          const isUtilityAgent = !agentPrompts.length && utilityAgents.includes(agentName);
+          const isOrchestratorAgent =
+            !agentPrompts.length && orchestratorAgents.includes(agentName);
           const utilityVersion = isUtilityAgent ? '1.0.0' : null;
+          const orchestratorVersion = isOrchestratorAgent ? '2.0.0' : null;
 
           return (
             <tr
@@ -74,13 +79,26 @@ export function AgentTable({ agents, promptsByAgent, onEdit, onTest }: AgentTabl
                       Utility
                     </span>
                   )}
+                  {isOrchestratorAgent && (
+                    <span className="text-xs text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">
+                      Orchestrator
+                    </span>
+                  )}
                 </div>
               </td>
               <td className="px-4 py-3 text-neutral-300">
-                {utilityVersion ? `v${utilityVersion}` : currentPrompt?.version || '-'}
+                {utilityVersion
+                  ? `v${utilityVersion}`
+                  : orchestratorVersion
+                    ? `v${orchestratorVersion}`
+                    : currentPrompt?.version || '-'}
               </td>
               <td className="px-4 py-3 text-neutral-400 text-sm font-mono">
-                {isUtilityAgent ? 'pdf2image/playwright' : currentPrompt?.model_id || '-'}
+                {isUtilityAgent
+                  ? 'pdf2image/playwright'
+                  : isOrchestratorAgent
+                    ? 'pipeline'
+                    : currentPrompt?.model_id || '-'}
               </td>
               <td className="px-4 py-3 text-neutral-400 text-sm">
                 {currentPrompt ? new Date(currentPrompt.created_at).toLocaleDateString() : '-'}
@@ -94,7 +112,7 @@ export function AgentTable({ agents, promptsByAgent, onEdit, onTest }: AgentTabl
                   : '-'}
               </td>
               <td className="px-4 py-3">
-                {isUtilityAgent ? (
+                {isUtilityAgent || isOrchestratorAgent ? (
                   <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-xs">
                     ✅ Active
                   </span>
