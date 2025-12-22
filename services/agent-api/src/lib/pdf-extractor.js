@@ -14,6 +14,7 @@ import { Buffer } from 'node:buffer';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 // Path from services/agent-api/src/lib/ to scripts/utilities/
+// Go up 4 levels: src/lib -> src -> agent-api -> services -> project-root
 const PDF_EXTRACTOR_PATH = join(__dirname, '../../../../scripts/utilities/extract-pdf.py');
 
 // Supabase client for storage
@@ -118,6 +119,8 @@ async function extractPdfText(url) {
   return new Promise((resolve, reject) => {
     // Use absolute path to python3 to avoid PATH security issues
     const pythonPath = process.env.PYTHON_PATH || '/usr/bin/python3';
+    console.log(`   🐍 Python path: ${pythonPath}`);
+    console.log(`   📄 Script path: ${PDF_EXTRACTOR_PATH}`);
     const python = spawn(pythonPath, [PDF_EXTRACTOR_PATH, url]);
     let stdout = '';
     let stderr = '';
