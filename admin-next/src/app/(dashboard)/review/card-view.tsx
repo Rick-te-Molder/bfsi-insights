@@ -66,7 +66,7 @@ function ItemCard({
         {/* Meta - matches live site format */}
         <div className="mt-1 text-sm text-neutral-200">
           <span className="text-neutral-400">Published</span>{' '}
-          {formatDate(payload.date_published) || 'Unknown'}
+          {formatDate(payload.published_at as string) || 'Unknown'}
           {payload.source_name && <span> · {payload.source_name}</span>}
         </div>
 
