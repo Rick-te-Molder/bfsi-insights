@@ -88,3 +88,20 @@ export async function getCurrentPrompts() {
 
   return (data || []) as { id: string; version: string; agent_name: string }[];
 }
+
+export async function getUtilityVersions() {
+  // Fetch from API endpoint that mirrors agent-api's utility-versions.js
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/utility-versions`,
+    {
+      cache: 'no-store',
+    },
+  );
+
+  if (!response.ok) {
+    console.warn('Failed to fetch utility versions');
+    return [];
+  }
+
+  return (await response.json()) as { agent_name: string; version: string }[];
+}

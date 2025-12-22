@@ -10,6 +10,9 @@ interface EnrichmentMeta {
   prompt_version?: string;
   llm_model?: string;
   processed_at?: string;
+  agent_type?: 'utility' | 'llm';
+  implementation_version?: string;
+  method?: string;
 }
 
 interface CurrentPrompt {
@@ -18,9 +21,15 @@ interface CurrentPrompt {
   agent_name: string;
 }
 
+interface UtilityVersion {
+  agent_name: string;
+  version: string;
+}
+
 interface EnrichmentPanelProps {
   item: QueueItem;
   currentPrompts: CurrentPrompt[];
+  utilityVersions?: UtilityVersion[];
 }
 
 const STEP_CONFIG = [
@@ -44,7 +53,11 @@ function hasStepOutput(payload: QueueItem['payload'], stepKey: string): boolean 
   }
 }
 
-export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) {
+export function EnrichmentPanel({
+  item,
+  currentPrompts,
+  utilityVersions = [],
+}: EnrichmentPanelProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const router = useRouter();
@@ -55,8 +68,20 @@ export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) 
   const getCurrentPrompt = (agentName: string) =>
     currentPrompts.find((p) => p.agent_name === agentName);
 
+  const getCurrentUtilityVersion = (agentName: string) =>
+    utilityVersions.find((v) => v.agent_name === agentName);
+
   const isUpToDate = (stepKey: string, agentName: string) => {
     const meta = enrichmentMeta[stepKey];
+
+    // Utility agents: compare implementation versions
+    if (meta?.agent_type === 'utility') {
+      const currentVersion = getCurrentUtilityVersion(agentName);
+      if (!currentVersion || !meta.implementation_version) return false;
+      return meta.implementation_version === currentVersion.version;
+    }
+
+    // LLM agents: compare prompt versions
     const current = getCurrentPrompt(agentName);
     if (!meta?.prompt_version_id || !current) return false;
     return meta.prompt_version_id === current.id;
@@ -227,7 +252,20 @@ export function EnrichmentPanel({ item, currentPrompts }: EnrichmentPanelProps) 
                   )}
                 </div>
                 <div className="text-xs text-neutral-500 truncate">
-                  {hasMetaRun ? (
+                  {meta?.agent_type === 'utility' ? (
+                    <>
+                      <span className="text-neutral-400">v{meta.implementation_version}</span>
+                      {!upToDate &&
+                        (() => {
+                          const currentUtilVersion = getCurrentUtilityVersion(agent);
+                          return currentUtilVersion ? (
+                            <span className="text-amber-400"> → v{currentUtilVersion.version}</span>
+                          ) : null;
+                        })()}
+                      <span className="text-neutral-600"> · {meta.method}</span>
+                      <span className="text-neutral-600"> · {formatDate(meta.processed_at)}</span>
+                    </>
+                  ) : hasMetaRun ? (
                     <>
                       {meta.prompt_version}
                       {!upToDate && current && (

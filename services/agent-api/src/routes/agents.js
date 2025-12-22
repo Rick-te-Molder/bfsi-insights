@@ -8,6 +8,7 @@ import { runThumbnailer } from '../agents/thumbnailer.js';
 import { runDiscovery } from '../agents/discoverer.js';
 import { processQueue, enrichItem } from '../agents/enricher.js';
 import { STATUS, loadStatusCodes } from '../lib/status-codes.js';
+import { getUtilityVersion } from '../lib/utility-versions.js';
 import {
   analyzeMissedDiscovery,
   analyzeAllPendingMisses,
@@ -232,9 +233,9 @@ router.post('/run/thumbnail', async (req, res) => {
             enrichment_meta: {
               ...(updatedItem?.payload?.enrichment_meta || {}),
               thumbnail: {
-                prompt_version_id: null,
-                prompt_version: 'v1.0',
-                llm_model: 'none',
+                agent_type: 'utility',
+                implementation_version: getUtilityVersion('thumbnail-generator'),
+                method: result.pdfPath ? 'pdf2image' : 'playwright',
                 processed_at: new Date().toISOString(),
               },
             },

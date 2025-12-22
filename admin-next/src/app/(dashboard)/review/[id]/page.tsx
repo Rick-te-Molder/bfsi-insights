@@ -10,7 +10,12 @@ import { PipelineTimeline } from './pipeline-timeline';
 import { TagDisplay } from '@/components/tags';
 import type { ValidationLookups } from '@/components/tags';
 import { getLookupTables, getProposedEntities, calculateUnknownEntities } from './entity-utils';
-import { getQueueItem, getTaxonomyData, getCurrentPrompts } from './data-loaders';
+import {
+  getQueueItem,
+  getTaxonomyData,
+  getCurrentPrompts,
+  getUtilityVersions,
+} from './data-loaders';
 
 export default async function ReviewDetailPage({
   params,
@@ -22,14 +27,21 @@ export default async function ReviewDetailPage({
   const { id } = await params;
   const { view, status } = await searchParams;
   const backUrl = `/review?${new URLSearchParams({ ...(status && { status }), ...(view && { view }) }).toString()}`;
-  const [item, lookups, { taxonomyConfig, taxonomyData }, currentPrompts, proposedEntities] =
-    await Promise.all([
-      getQueueItem(id),
-      getLookupTables(),
-      getTaxonomyData(),
-      getCurrentPrompts(),
-      getProposedEntities(id),
-    ]);
+  const [
+    item,
+    lookups,
+    { taxonomyConfig, taxonomyData },
+    currentPrompts,
+    utilityVersions,
+    proposedEntities,
+  ] = await Promise.all([
+    getQueueItem(id),
+    getLookupTables(),
+    getTaxonomyData(),
+    getCurrentPrompts(),
+    getUtilityVersions(),
+    getProposedEntities(id),
+  ]);
 
   if (!item) {
     notFound();
@@ -257,7 +269,11 @@ export default async function ReviewDetailPage({
           <ReviewActions item={item} />
 
           {/* Enrichment Panel with version tracking */}
-          <EnrichmentPanel item={item} currentPrompts={currentPrompts} />
+          <EnrichmentPanel
+            item={item}
+            currentPrompts={currentPrompts}
+            utilityVersions={utilityVersions}
+          />
 
           {/* Pipeline History */}
           <PipelineTimeline queueId={item.id} currentRunId={item.current_run_id} />
