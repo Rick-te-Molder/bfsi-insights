@@ -17,7 +17,7 @@ const navItems: NavItem[] = [
   { href: '/review', label: 'Items', icon: '📋' },
   { href: '/proposals', label: 'Entities', icon: '📥' },
   { href: '/sources', label: 'Sources', icon: '📡' },
-  { href: '/prompts', label: 'Prompts', icon: '💬' },
+  { href: '/agents', label: 'Agents', icon: '🤖' },
   {
     href: '/evals',
     label: 'Evals',
