@@ -43,12 +43,22 @@ async function stepFetch(queueItem) {
     description: content.description,
     textContent: content.textContent,
     published_at: content.date || null,
+    // PDF-specific fields
+    isPdf: content.isPdf || false,
+    pdfMetadata: content.pdfMetadata || null,
   };
 
-  await updateStatus(queueItem.id, STATUS.TO_SUMMARIZE, {
+  // Store raw_ref at queue item level (not in payload)
+  const updateData = {
     payload,
     fetched_at: new Date().toISOString(),
-  });
+  };
+
+  if (content.raw_ref) {
+    updateData.raw_ref = content.raw_ref;
+  }
+
+  await updateStatus(queueItem.id, STATUS.TO_SUMMARIZE, updateData);
   return payload;
 }
 
