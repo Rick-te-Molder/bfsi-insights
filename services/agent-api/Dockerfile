@@ -5,13 +5,15 @@ FROM mcr.microsoft.com/playwright:v1.57.0-noble
 WORKDIR /app
 
 # Install Python dependencies for PDF rendering
+# Force rebuild: 2025-12-23
 RUN apt-get update && apt-get install -y \
+    poppler-utils \
+    python3 \
     python3-pip \
     python3-venv \
-    poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --break-system-packages --no-cache-dir pdf2image Pillow
+RUN pip3 install --break-system-packages pdf2image Pillow
 
 # Copy package files
 COPY package*.json ./
