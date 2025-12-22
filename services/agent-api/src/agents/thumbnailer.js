@@ -157,7 +157,7 @@ export async function runThumbnailer(queueItem) {
 
       // PDFs - download, store, and render first page as thumbnail
       if (isPdfUrl(targetUrl)) {
-        console.log(`   📄 Processing PDF: ${targetUrl}`);
+        console.log(`   📄 Detected PDF URL, calling processPdf: ${targetUrl}`);
         return await processPdf(
           targetUrl,
           queueId,
