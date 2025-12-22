@@ -4,6 +4,7 @@
  */
 
 import { chromium } from 'playwright';
+import { isPdfUrl, fetchPdfContent } from './pdf-extractor.js';
 
 // Domains that require Playwright (bot protection or JavaScript-rendered content)
 const PLAYWRIGHT_DOMAINS = [
@@ -371,9 +372,15 @@ async function fetchWithRetries(url, retries, parseResult) {
 /**
  * Fetch content from URL with retry logic
  * Returns parsed HTML with title, description, date, textContent
+ * Handles both HTML and PDF content
  */
 export async function fetchContent(url, options = {}) {
   const { retries = 3, parseResult = true } = options;
+
+  // Check if URL is a PDF
+  if (isPdfUrl(url)) {
+    return fetchPdfContent(url);
+  }
 
   if (requiresPlaywright(url)) {
     return fetchProtectedContent(url, parseResult);
