@@ -5,11 +5,8 @@
 -- Solution: Update tagger prompt to use 'risk' instead of 'methods'
 -- ============================================================================
 
--- Mark v2.8 as not current
-UPDATE prompt_version 
-SET stage = 'RET'
-WHERE agent_name = 'tagger' AND version = 'tagger-v2.8';
-
+-- v2.8 is in PRD, so v2.9 will be created in DEV for testing
+-- User will promote v2.9 to TST/PRD when ready, which will retire v2.8
 -- Insert new version v2.9 with 'risk' instead of 'methods'
 INSERT INTO prompt_version (agent_name, version, prompt_text, model_id, max_tokens, stage, notes)
 VALUES (
