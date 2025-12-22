@@ -2,6 +2,8 @@ import { Buffer } from 'node:buffer';
 import { AgentRunner } from '../lib/runner.js';
 import { chromium } from 'playwright';
 import { isPdfUrl } from '../lib/url-utils.js';
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
+import { createCanvas } from 'canvas';
 
 const runner = new AgentRunner('thumbnailer');
 
@@ -58,28 +60,31 @@ async function processPdf(
     throw err;
   }
 
-  // Step 3: Render first page using Playwright with the stored PDF URL
+  // Step 3: Render first page using PDF.js
   const renderStepId = await startStep('pdf_render', { viewport: config.viewport });
-  let browser;
   try {
-    console.log(`   🎨 Rendering PDF first page from: ${pdfPublicUrl}`);
+    console.log(`   🎨 Rendering PDF first page with PDF.js...`);
 
-    browser = await chromium.launch({
-      headless: true,
-      args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
-    });
+    // Load PDF document from buffer
+    const loadingTask = getDocument({ data: pdfBuffer });
+    const pdfDoc = await loadingTask.promise;
 
-    const context = await browser.newContext({
-      viewport: config.viewport,
-      deviceScaleFactor: 1,
-    });
-    const page = await context.newPage();
+    // Get first page
+    const page = await pdfDoc.getPage(1);
+    const viewport = page.getViewport({ scale: 2.0 }); // 2x scale for better quality
 
-    // Navigate to the stored PDF's public URL (not a data URL)
-    await page.goto(pdfPublicUrl, { waitUntil: 'networkidle', timeout: 30000 });
-    await new Promise((r) => setTimeout(r, 3000)); // Wait for PDF to render
+    // Create canvas
+    const canvas = createCanvas(viewport.width, viewport.height);
+    const context = canvas.getContext('2d');
 
-    const screenshotBuffer = await page.screenshot({ type: 'jpeg', quality: 80 });
+    // Render PDF page to canvas
+    await page.render({
+      canvasContext: context,
+      viewport: viewport,
+    }).promise;
+
+    // Convert canvas to JPEG buffer
+    const screenshotBuffer = canvas.toBuffer('image/jpeg', { quality: 0.8 });
     await finishStepSuccess(renderStepId, { size: screenshotBuffer.length });
     console.log(`   ✅ Rendered PDF first page`);
 
@@ -109,8 +114,6 @@ async function processPdf(
   } catch (err) {
     await finishStepError(renderStepId, err.message);
     throw err;
-  } finally {
-    if (browser) await browser.close();
   }
 }
 
