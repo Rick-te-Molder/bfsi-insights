@@ -4,6 +4,14 @@ FROM mcr.microsoft.com/playwright:v1.57.0-noble
 
 WORKDIR /app
 
+# Install Python dependencies for PDF rendering
+RUN apt-get update && apt-get install -y \
+    python3-pip \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install --no-cache-dir pdf2image Pillow
+
 # Copy package files
 COPY package*.json ./
 

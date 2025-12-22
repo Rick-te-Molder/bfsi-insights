@@ -2,8 +2,16 @@ import { Buffer } from 'node:buffer';
 import { AgentRunner } from '../lib/runner.js';
 import { chromium } from 'playwright';
 import { isPdfUrl } from '../lib/url-utils.js';
-import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { createCanvas } from 'canvas';
+import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { writeFile, unlink, readFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import process from 'node:process';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const PDF_RENDERER_PATH = join(__dirname, '../../scripts/render-pdf.py');
 
 const runner = new AgentRunner('thumbnailer');
 
@@ -60,33 +68,68 @@ async function processPdf(
     throw err;
   }
 
-  // Step 3: Render first page using PDF.js
+  // Step 3: Render first page using Python script
   const renderStepId = await startStep('pdf_render', { viewport: config.viewport });
+  const tempPdfPath = join(tmpdir(), `${queueId}.pdf`);
+  const tempImagePath = join(tmpdir(), `${queueId}.jpg`);
+
   try {
-    console.log(`   🎨 Rendering PDF first page with PDF.js...`);
+    console.log(`   🎨 Rendering PDF first page with Python script...`);
 
-    // Load PDF document from buffer
-    const loadingTask = getDocument({ data: pdfBuffer });
-    const pdfDoc = await loadingTask.promise;
+    // Write PDF buffer to temp file
+    await writeFile(tempPdfPath, pdfBuffer);
 
-    // Get first page
-    const page = await pdfDoc.getPage(1);
-    const viewport = page.getViewport({ scale: 2.0 }); // 2x scale for better quality
+    // Call Python script to render PDF
+    const pythonPath = process.env.PYTHON_PATH || '/usr/bin/python3';
+    const result = await new Promise((resolve, reject) => {
+      const python = spawn(pythonPath, [PDF_RENDERER_PATH, tempPdfPath, tempImagePath]);
+      let stdout = '';
+      let stderr = '';
 
-    // Create canvas
-    const canvas = createCanvas(viewport.width, viewport.height);
-    const context = canvas.getContext('2d');
+      python.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
 
-    // Render PDF page to canvas
-    await page.render({
-      canvasContext: context,
-      viewport: viewport,
-    }).promise;
+      python.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
 
-    // Convert canvas to JPEG buffer
-    const screenshotBuffer = canvas.toBuffer('image/jpeg', { quality: 0.8 });
-    await finishStepSuccess(renderStepId, { size: screenshotBuffer.length });
-    console.log(`   ✅ Rendered PDF first page`);
+      python.on('close', (code) => {
+        if (code !== 0) {
+          reject(new Error(`PDF rendering failed: ${stderr}`));
+          return;
+        }
+
+        try {
+          const result = JSON.parse(stdout);
+          if (!result.success) {
+            reject(new Error(result.message || 'PDF rendering failed'));
+            return;
+          }
+          resolve(result);
+        } catch (e) {
+          reject(new Error(`Failed to parse PDF rendering result: ${e.message}`));
+        }
+      });
+
+      python.on('error', (err) => {
+        reject(new Error(`Failed to spawn Python process: ${err.message}`));
+      });
+    });
+
+    // Read rendered image
+    const screenshotBuffer = await readFile(tempImagePath);
+
+    // Clean up temp files
+    await unlink(tempPdfPath).catch(() => {});
+    await unlink(tempImagePath).catch(() => {});
+
+    await finishStepSuccess(renderStepId, {
+      size: screenshotBuffer.length,
+      width: result.width,
+      height: result.height,
+    });
+    console.log(`   ✅ Rendered PDF first page: ${result.width}x${result.height}`);
 
     // Step 4: Upload thumbnail
     const thumbnailPath = `thumbnails/${queueId}.jpg`;
