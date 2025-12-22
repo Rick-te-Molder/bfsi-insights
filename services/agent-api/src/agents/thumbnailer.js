@@ -148,17 +148,10 @@ export async function runThumbnailer(queueItem) {
       // Bad data - reject items with invalid URL schemes (not http/https)
       const hasValidScheme = lowerUrl.startsWith('http://') || lowerUrl.startsWith('https://');
       if (!hasValidScheme) {
-        console.log(
-          `   ❌ Rejecting item with invalid URL scheme: ${targetUrl.substring(0, 30)}...`,
+        console.log(`   ❌ Invalid URL scheme: ${targetUrl.substring(0, 30)}...`);
+        throw new Error(
+          `Invalid URL scheme: only http/https supported (got: ${targetUrl.substring(0, 50)})`,
         );
-        await supabase
-          .from('ingestion_queue')
-          .update({
-            status_code: 540,
-            rejection_reason: `Invalid URL scheme: only http/https supported (got: ${targetUrl.substring(0, 50)})`,
-          })
-          .eq('id', queueId);
-        return { bucket: null, path: null, publicUrl: null, rejected: true };
       }
 
       // PDFs - download, store, and render first page as thumbnail

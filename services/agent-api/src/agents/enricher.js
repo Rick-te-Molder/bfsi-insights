@@ -165,6 +165,16 @@ async function stepThumbnail(queueId, payload) {
       thumbnail_url: result.publicUrl,
     };
   } catch (error) {
+    // Fatal errors: invalid URL scheme - reject the item
+    if (error.message.includes('Invalid URL scheme')) {
+      console.log(`   ❌ Fatal error: ${error.message}`);
+      await updateStatus(queueId, STATUS.REJECTED, {
+        rejection_reason: error.message,
+      });
+      throw error; // Re-throw to stop enrichment pipeline
+    }
+
+    // Non-fatal errors: log and continue without thumbnail
     console.log(`   ⚠️ Thumbnail failed: ${error.message} (continuing without)`);
     return payload;
   }
