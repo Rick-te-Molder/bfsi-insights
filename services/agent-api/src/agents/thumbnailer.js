@@ -39,6 +39,7 @@ async function processPdf(
   // Step 2: Store PDF in Supabase Storage
   const pdfPath = `pdfs/${queueId}.pdf`;
   const storeStepId = await startStep('pdf_store', { path: pdfPath });
+  let pdfPublicUrl;
   try {
     const { error: uploadError } = await supabase.storage.from(bucket).upload(pdfPath, pdfBuffer, {
       contentType: 'application/pdf',
@@ -47,8 +48,9 @@ async function processPdf(
     if (uploadError) throw new Error(`PDF upload failed: ${uploadError.message}`);
 
     const {
-      data: { publicUrl: pdfPublicUrl },
+      data: { publicUrl },
     } = supabase.storage.from(bucket).getPublicUrl(pdfPath);
+    pdfPublicUrl = publicUrl;
     await finishStepSuccess(storeStepId, { path: pdfPath, publicUrl: pdfPublicUrl });
     console.log(`   ✅ Stored PDF: ${pdfPath}`);
   } catch (err) {
@@ -56,10 +58,12 @@ async function processPdf(
     throw err;
   }
 
-  // Step 3: Render first page using Playwright's PDF viewer
+  // Step 3: Render first page using Playwright with the stored PDF URL
   const renderStepId = await startStep('pdf_render', { viewport: config.viewport });
   let browser;
   try {
+    console.log(`   🎨 Rendering PDF first page from: ${pdfPublicUrl}`);
+
     browser = await chromium.launch({
       headless: true,
       args: ['--disable-blink-features=AutomationControlled', '--no-sandbox'],
@@ -71,12 +75,8 @@ async function processPdf(
     });
     const page = await context.newPage();
 
-    // Create a data URL from the PDF buffer for local rendering
-    const pdfBase64 = pdfBuffer.toString('base64');
-    const pdfDataUrl = `data:application/pdf;base64,${pdfBase64}`;
-
-    // Use Chrome's built-in PDF viewer
-    await page.goto(pdfDataUrl, { waitUntil: 'networkidle', timeout: 30000 });
+    // Navigate to the stored PDF's public URL (not a data URL)
+    await page.goto(pdfPublicUrl, { waitUntil: 'networkidle', timeout: 30000 });
     await new Promise((r) => setTimeout(r, 3000)); // Wait for PDF to render
 
     const screenshotBuffer = await page.screenshot({ type: 'jpeg', quality: 80 });
