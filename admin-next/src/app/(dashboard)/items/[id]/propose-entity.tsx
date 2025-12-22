@@ -30,7 +30,7 @@ export function ProposeEntityButton({
     setLoading(true);
 
     try {
-      const res = await fetch('/api/proposals', {
+      const res = await fetch('/api/entities', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

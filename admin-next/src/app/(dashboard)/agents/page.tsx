@@ -50,13 +50,13 @@ export default function PromptsPage() {
       <header className="mb-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-white">Prompt Engineering</h1>
+            <h1 className="text-2xl font-bold text-white">Agent Management</h1>
             <p className="mt-1 text-sm text-neutral-400">
-              View, edit, and version LLM prompts for each agent
+              Manage all agents: LLM, Utility, and Orchestrator agents
             </p>
           </div>
           <div className="text-sm text-neutral-400">
-            {agents.length} agents • {prompts.length} total versions
+            {agents.length} agents • {prompts.length} prompt versions
           </div>
         </div>
 

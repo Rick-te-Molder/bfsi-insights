@@ -51,25 +51,54 @@ export function AgentTable({ agents, promptsByAgent, onEdit, onTest }: AgentTabl
       </thead>
       <tbody className="divide-y divide-neutral-800">
         {agents.map((agentName) => {
-          const agentPrompts = promptsByAgent[agentName];
+          const agentPrompts = promptsByAgent[agentName] || [];
           const currentPrompt = agentPrompts.find((p) => p.stage === 'PRD');
           const historyCount = agentPrompts.length - (currentPrompt ? 1 : 0);
+
+          // Check agent type
+          const utilityAgents = ['thumbnail-generator'];
+          const orchestratorAgents = ['enricher', 'improver'];
+          const isUtilityAgent = !agentPrompts.length && utilityAgents.includes(agentName);
+          const isOrchestratorAgent =
+            !agentPrompts.length && orchestratorAgents.includes(agentName);
+          const utilityVersion = isUtilityAgent ? '1.0.0' : null;
+          const orchestratorVersion = isOrchestratorAgent ? '2.0.0' : null;
 
           return (
             <tr
               key={agentName}
               className="hover:bg-neutral-800/50 cursor-pointer"
-              onClick={() => router.push(`/prompts/${encodeURIComponent(agentName)}`)}
+              onClick={() => router.push(`/agents/${encodeURIComponent(agentName)}`)}
             >
               <td className="px-4 py-3">
                 <div className="flex items-center gap-2">
                   <span>{getAgentIcon(agentName)}</span>
                   <span className="font-medium text-white">{agentName}</span>
+                  {isUtilityAgent && (
+                    <span className="text-xs text-neutral-500 bg-neutral-800 px-1.5 py-0.5 rounded">
+                      Utility
+                    </span>
+                  )}
+                  {isOrchestratorAgent && (
+                    <span className="text-xs text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">
+                      Orchestrator
+                    </span>
+                  )}
                 </div>
               </td>
-              <td className="px-4 py-3 text-neutral-300">{currentPrompt?.version || '-'}</td>
+              <td className="px-4 py-3 text-neutral-300">
+                {utilityVersion
+                  ? `v${utilityVersion}`
+                  : orchestratorVersion
+                    ? `v${orchestratorVersion}`
+                    : currentPrompt?.version || '-'}
+              </td>
               <td className="px-4 py-3 text-neutral-400 text-sm font-mono">
-                {currentPrompt?.model_id || '-'}
+                {isUtilityAgent
+                  ? 'pdf2image/playwright'
+                  : isOrchestratorAgent
+                    ? 'pipeline'
+                    : currentPrompt?.model_id || '-'}
               </td>
               <td className="px-4 py-3 text-neutral-400 text-sm">
                 {currentPrompt ? new Date(currentPrompt.created_at).toLocaleDateString() : '-'}
@@ -83,7 +112,11 @@ export function AgentTable({ agents, promptsByAgent, onEdit, onTest }: AgentTabl
                   : '-'}
               </td>
               <td className="px-4 py-3">
-                {currentPrompt ? (
+                {isUtilityAgent || isOrchestratorAgent ? (
+                  <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-xs">
+                    ✅ Active
+                  </span>
+                ) : currentPrompt ? (
                   <div className="flex items-center gap-2">
                     <span className="rounded-full bg-emerald-500/20 text-emerald-300 px-2 py-0.5 text-xs">
                       ✅ Active

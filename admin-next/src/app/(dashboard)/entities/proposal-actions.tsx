@@ -21,7 +21,7 @@ export function ProposalActions({
     setLoading('approve');
 
     try {
-      const res = await fetch(`/api/proposals/${proposalId}/approve`, {
+      const res = await fetch(`/api/entities/${proposalId}/approve`, {
         method: 'POST',
       });
 
@@ -44,7 +44,7 @@ export function ProposalActions({
     setLoading('reject');
 
     try {
-      const res = await fetch(`/api/proposals/${proposalId}/reject`, {
+      const res = await fetch(`/api/entities/${proposalId}/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes }),

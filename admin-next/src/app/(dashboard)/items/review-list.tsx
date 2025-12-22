@@ -253,7 +253,7 @@ export function ReviewList({
 
               {/* Item Content */}
               <Link
-                href={`/review/${item.id}`}
+                href={`/items/${item.id}`}
                 className="flex-1 p-4 pl-0 hover:bg-neutral-800/50 transition-colors"
               >
                 <div className="flex items-start justify-between gap-4">

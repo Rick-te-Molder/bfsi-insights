@@ -18,7 +18,7 @@ export function SearchBar() {
       } else {
         params.delete('search');
       }
-      router.push(`/review?${params.toString()}`);
+      router.push(`/items?${params.toString()}`);
     },
     [query, router, searchParams],
   );
@@ -27,7 +27,7 @@ export function SearchBar() {
     setQuery('');
     const params = new URLSearchParams(searchParams.toString());
     params.delete('search');
-    router.push(`/review?${params.toString()}`);
+    router.push(`/items?${params.toString()}`);
   }, [router, searchParams]);
 
   return (

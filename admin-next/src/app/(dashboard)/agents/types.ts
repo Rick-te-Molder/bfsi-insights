@@ -1,5 +1,7 @@
 import type { PromptVersion } from '@/types/database';
 
+export type AgentType = 'llm' | 'utility' | 'orchestrator';
+
 export interface ManifestAgent {
   name: string;
   file: string;
@@ -9,6 +11,21 @@ export interface ManifestAgent {
   tables: string[];
   model?: string;
   owner: string;
+}
+
+export interface UnifiedAgent {
+  name: string;
+  type: AgentType;
+  description: string;
+  currentVersion: string;
+  lastRun?: string;
+  status: 'active' | 'deprecated';
+  // For LLM agents
+  promptVersion?: PromptVersion;
+  model?: string;
+  // For utility agents
+  implementationVersion?: string;
+  method?: string;
 }
 
 export interface RequiredPrompt {

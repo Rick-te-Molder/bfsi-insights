@@ -126,7 +126,7 @@ export function DetailPanel({
         case 'Enter':
           e.preventDefault();
           // Open full detail page
-          router.push(`/review/${itemId}`);
+          router.push(`/items/${itemId}`);
           break;
       }
     };
@@ -243,7 +243,7 @@ export function DetailPanel({
           </button>
           <div className="flex-1" />
           <a
-            href={`/review/${itemId}`}
+            href={`/items/${itemId}`}
             className="px-2 py-1 text-xs rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700"
             title="Full page (Enter)"
           >

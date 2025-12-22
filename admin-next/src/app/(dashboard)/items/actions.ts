@@ -164,7 +164,7 @@ export async function approveQueueItemAction(queueId: string, editedTitle?: stri
     return { success: false as const, error: updateError.message };
   }
 
-  revalidatePath('/review');
+  revalidatePath('/items');
   revalidatePath('/published');
   return { success: true as const, publicationId: pubData.id };
 }
@@ -229,7 +229,7 @@ export async function bulkReenrichAction(
       }).catch((err) => console.error('Background process-queue failed:', err));
     }
 
-    revalidatePath('/review');
+    revalidatePath('/items');
     return { success: true, queued: ids.length };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -263,7 +263,7 @@ export async function bulkRejectAction(ids: string[], reason: string) {
       .eq('id', item.id);
   }
 
-  revalidatePath('/review');
+  revalidatePath('/items');
   return { success: true, count: ids.length };
 }
 
@@ -385,7 +385,7 @@ export async function bulkApproveAction(ids: string[]) {
       .eq('id', item.id);
   }
 
-  revalidatePath('/review');
+  revalidatePath('/items');
   revalidatePath('/published');
   return { success: true, count: ids.length };
 }
@@ -399,6 +399,6 @@ export async function deleteItemAction(id: string) {
     return { success: false, error: error.message };
   }
 
-  revalidatePath('/review');
+  revalidatePath('/items');
   return { success: true };
 }

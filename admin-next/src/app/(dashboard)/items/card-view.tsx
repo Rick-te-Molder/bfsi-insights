@@ -38,7 +38,7 @@ function ItemCard({
     payload.thumbnail_url ||
     (typeof payload.thumbnail_path === 'string' ? payload.thumbnail_path : undefined);
 
-  const detailUrl = `/review/${item.id}?view=card&status=${status}`;
+  const detailUrl = `/items/${item.id}?view=card&status=${status}`;
 
   return (
     <li className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition-all hover:border-neutral-700 hover:ring-neutral-700 hover:bg-neutral-900 relative">
