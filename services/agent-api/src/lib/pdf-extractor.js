@@ -13,7 +13,8 @@ import { Buffer } from 'node:buffer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const PDF_EXTRACTOR_PATH = join(__dirname, '../../../scripts/utilities/extract-pdf.py');
+// Path from services/agent-api/src/lib/ to scripts/utilities/
+const PDF_EXTRACTOR_PATH = join(__dirname, '../../../../scripts/utilities/extract-pdf.py');
 
 // Supabase client for storage
 const supabase = createClient(
@@ -36,7 +37,18 @@ export function isPdfUrl(url) {
   try {
     const urlObj = new URL(url);
     const pathname = urlObj.pathname.toLowerCase();
-    return pathname.endsWith('.pdf') || urlObj.searchParams.has('pdf');
+    const hostname = urlObj.hostname.toLowerCase();
+
+    // Check for .pdf extension
+    if (pathname.endsWith('.pdf')) return true;
+
+    // Check for pdf query parameter
+    if (urlObj.searchParams.has('pdf')) return true;
+
+    // Check for arXiv PDF URLs (arxiv.org/pdf/...)
+    if (hostname.includes('arxiv.org') && pathname.includes('/pdf/')) return true;
+
+    return false;
   } catch {
     return false;
   }
