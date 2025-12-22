@@ -3,6 +3,7 @@ import { AgentRunner } from '../lib/runner.js';
 import { chromium } from 'playwright';
 import { isPdfUrl } from '../lib/pdf-extractor.js';
 
+// Force cache bust - PDF detection fix
 const runner = new AgentRunner('thumbnailer');
 
 // Process PDF: download, store, and render first page as thumbnail using Playwright
@@ -145,6 +146,7 @@ export async function runThumbnailer(queueItem) {
 
       // Handle URLs that can't be screenshotted
       const lowerUrl = targetUrl.toLowerCase();
+      console.log(`   🔍 Checking URL: ${targetUrl}`);
 
       // Bad data - reject items with invalid URL schemes (not http/https)
       const hasValidScheme = lowerUrl.startsWith('http://') || lowerUrl.startsWith('https://');
@@ -156,7 +158,10 @@ export async function runThumbnailer(queueItem) {
       }
 
       // PDFs - download, store, and render first page as thumbnail
-      if (isPdfUrl(targetUrl)) {
+      console.log(`   🔍 Calling isPdfUrl for: ${targetUrl}`);
+      const isPdf = isPdfUrl(targetUrl);
+      console.log(`   🔍 isPdfUrl result: ${isPdf}`);
+      if (isPdf) {
         console.log(`   📄 Detected PDF URL, calling processPdf: ${targetUrl}`);
         return await processPdf(
           targetUrl,
