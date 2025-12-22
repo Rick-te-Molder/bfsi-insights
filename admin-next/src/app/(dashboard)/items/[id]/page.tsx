@@ -26,7 +26,7 @@ export default async function ReviewDetailPage({
 }) {
   const { id } = await params;
   const { view, status } = await searchParams;
-  const backUrl = `/review?${new URLSearchParams({ ...(status && { status }), ...(view && { view }) }).toString()}`;
+  const backUrl = `/items?${new URLSearchParams({ ...(status && { status }), ...(view && { view }) }).toString()}`;
   const [
     item,
     lookups,

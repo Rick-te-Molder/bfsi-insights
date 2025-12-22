@@ -478,10 +478,10 @@ export default function MissedDiscoveryPage() {
                 {status === 'submitting' ? 'Submitting...' : 'Report Missed Article'}
               </button>
               <Link
-                href="/review"
+                href="/items"
                 className="rounded-lg border border-neutral-700 px-6 py-3 font-medium text-neutral-300 hover:bg-neutral-800"
               >
-                Go to Review Queue
+                Go to Items Queue
               </Link>
             </div>
           </form>

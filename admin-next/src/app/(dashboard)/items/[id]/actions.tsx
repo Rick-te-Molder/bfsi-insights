@@ -34,7 +34,7 @@ export function ReviewActions({ item }: { item: QueueItem }) {
         throw new Error(result.error);
       }
 
-      router.push('/review');
+      router.push('/items');
       router.refresh();
     } catch (err) {
       alert(`Failed to approve: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -63,7 +63,7 @@ export function ReviewActions({ item }: { item: QueueItem }) {
 
       if (error) throw error;
 
-      router.push('/review');
+      router.push('/items');
       router.refresh();
     } catch (err) {
       alert(`Failed to reject: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -103,7 +103,7 @@ export function ReviewActions({ item }: { item: QueueItem }) {
 
       if (error) throw error;
 
-      router.push('/review');
+      router.push('/items');
       router.refresh();
     } catch (err) {
       alert(

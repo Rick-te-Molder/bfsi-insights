@@ -141,7 +141,7 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {failedLast24h > 0 && (
               <Link
-                href="/review?status=failed"
+                href="/items?status=failed"
                 className="flex items-center gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-4 hover:bg-red-500/15 transition-colors"
               >
                 <span className="text-2xl">⚠️</span>
@@ -190,7 +190,7 @@ export default async function DashboardPage() {
                   </p>
                 </div>
                 <a
-                  href={`/review/${item.id}`}
+                  href={`/items/${item.id}`}
                   className="ml-4 text-xs text-sky-400 hover:text-sky-300"
                 >
                   View

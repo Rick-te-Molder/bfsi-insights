@@ -324,7 +324,7 @@ export default async function ReviewPage({
     Object.entries(merged).forEach(([key, value]) => {
       if (value && value !== 'card') searchParams.set(key, value); // card is default
     });
-    return `/review?${searchParams.toString()}`;
+    return `/items?${searchParams.toString()}`;
   };
 
   return (
@@ -332,7 +332,7 @@ export default async function ReviewPage({
       {/* Header */}
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <Link href="/review" className="group">
+          <Link href="/items" className="group">
             <h1 className="text-xl md:text-2xl font-bold group-hover:text-sky-400 transition-colors">
               Items
             </h1>
@@ -418,7 +418,7 @@ export default async function ReviewPage({
         {/* Clear Filters */}
         {(source || timeWindow) && (
           <Link
-            href={`/review?status=${status}`}
+            href={`/items?status=${status}`}
             className="text-xs text-red-400 hover:text-red-300"
           >
             Clear filters

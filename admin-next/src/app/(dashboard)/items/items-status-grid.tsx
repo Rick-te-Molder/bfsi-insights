@@ -108,7 +108,7 @@ function buildFilterUrl(status: string, source: string, time: string, view: stri
   if (source) params.set('source', source);
   if (time) params.set('time', time);
   if (view && view !== 'split') params.set('view', view);
-  return `/review?${params.toString()}`;
+  return `/items?${params.toString()}`;
 }
 
 export function ItemsStatusGrid({
