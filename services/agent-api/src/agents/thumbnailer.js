@@ -1,9 +1,8 @@
 import { Buffer } from 'node:buffer';
 import { AgentRunner } from '../lib/runner.js';
 import { chromium } from 'playwright';
-import { isPdfUrl } from '../lib/pdf-extractor.js';
+import { isPdfUrl } from '../lib/url-utils.js';
 
-// Force cache bust - PDF detection fix
 const runner = new AgentRunner('thumbnailer');
 
 // Process PDF: download, store, and render first page as thumbnail using Playwright
