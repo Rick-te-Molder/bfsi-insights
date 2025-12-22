@@ -104,7 +104,9 @@ async function storePdf(pdfBuffer) {
  */
 async function extractPdfText(url) {
   return new Promise((resolve, reject) => {
-    const python = spawn('python3', [PDF_EXTRACTOR_PATH, url]);
+    // Use absolute path to python3 to avoid PATH security issues
+    const pythonPath = process.env.PYTHON_PATH || '/usr/bin/python3';
+    const python = spawn(pythonPath, [PDF_EXTRACTOR_PATH, url]);
     let stdout = '';
     let stderr = '';
 
