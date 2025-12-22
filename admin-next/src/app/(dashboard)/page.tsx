@@ -155,7 +155,7 @@ export default async function DashboardPage() {
             )}
             {pendingProposals > 0 && (
               <Link
-                href="/proposals"
+                href="/entities"
                 className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 hover:bg-amber-500/15 transition-colors"
               >
                 <span className="text-2xl">📥</span>
