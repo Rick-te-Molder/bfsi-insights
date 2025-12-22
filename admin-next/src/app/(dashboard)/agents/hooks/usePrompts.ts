@@ -61,7 +61,12 @@ export function usePrompts() {
     return acc;
   }, {} as PromptsByAgent);
 
-  const agents = Object.keys(promptsByAgent);
+  // Add utility agents (keep in sync with utility-versions.js)
+  const utilityAgents = ['thumbnail-generator'];
+
+  const agents = [...Object.keys(promptsByAgent), ...utilityAgents].filter(
+    (agent, index, self) => self.indexOf(agent) === index,
+  );
 
   async function rollbackToVersion(prompt: PromptVersion): Promise<boolean> {
     if (!confirm(`Make "${prompt.version}" the current version for ${prompt.agent_name}?`)) {
