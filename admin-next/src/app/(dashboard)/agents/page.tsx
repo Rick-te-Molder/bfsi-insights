@@ -8,7 +8,7 @@ import { AgentTable, CoverageStats, PromptEditModal, PromptPlayground } from './
 
 type AgentFilter = 'all' | AgentType;
 
-export default function PromptsPage() {
+export default function AgentsPage() {
   const { prompts, promptsByAgent, agents, manifest, loading, reload } = usePrompts();
 
   const [editingPrompt, setEditingPrompt] = useState<PromptVersion | null>(null);
