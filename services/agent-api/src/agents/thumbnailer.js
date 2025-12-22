@@ -1,6 +1,7 @@
 import { Buffer } from 'node:buffer';
 import { AgentRunner } from '../lib/runner.js';
 import { chromium } from 'playwright';
+import { isPdfUrl } from '../lib/pdf-extractor.js';
 
 const runner = new AgentRunner('thumbnailer');
 
@@ -155,7 +156,7 @@ export async function runThumbnailer(queueItem) {
       }
 
       // PDFs - download, store, and render first page as thumbnail
-      if (lowerUrl.endsWith('.pdf') || lowerUrl.includes('.pdf?')) {
+      if (isPdfUrl(targetUrl)) {
         console.log(`   📄 Processing PDF: ${targetUrl}`);
         return await processPdf(
           targetUrl,
