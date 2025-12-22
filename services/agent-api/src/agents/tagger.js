@@ -225,7 +225,7 @@ export async function runTagger(queueItem, options = {}) {
       let systemPrompt = promptTemplate;
       for (const [key, value] of Object.entries(contextData)) {
         const placeholder = `{{${key}}}`;
-        systemPrompt = systemPrompt.replace(new RegExp(placeholder, 'g'), value || '');
+        systemPrompt = systemPrompt.replaceAll(placeholder, value || '');
       }
 
       // User content is just the article data
