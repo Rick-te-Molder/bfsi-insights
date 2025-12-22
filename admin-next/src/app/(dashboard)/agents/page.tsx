@@ -76,7 +76,7 @@ export default function PromptsPage() {
           <div>
             <h1 className="text-2xl font-bold text-white">Agent Management</h1>
             <p className="mt-1 text-sm text-neutral-400">
-              Manage all agents: LLM, Utility, and Orchestrator agents
+              Manage all agents: LLM, Utility, and Orchestrator
             </p>
           </div>
           <div className="text-sm text-neutral-400">
