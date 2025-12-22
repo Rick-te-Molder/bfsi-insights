@@ -229,6 +229,15 @@ router.post('/run/thumbnail', async (req, res) => {
             thumbnail_url: result.publicUrl,
             thumbnail: result.publicUrl,
             thumbnail_generated_at: new Date().toISOString(),
+            enrichment_meta: {
+              ...(updatedItem?.payload?.enrichment_meta || {}),
+              thumbnail: {
+                prompt_version_id: null,
+                prompt_version: 'v1.0',
+                llm_model: 'none',
+                processed_at: new Date().toISOString(),
+              },
+            },
           },
         })
         .eq('id', item.id);
