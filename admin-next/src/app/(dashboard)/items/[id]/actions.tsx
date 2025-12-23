@@ -190,21 +190,20 @@ export function ReviewActions({ item }: { item: QueueItem }) {
 
       console.log('Updated payload:', updatedPayload);
 
-      // Update with new date
-      const { data, error } = await supabase
+      // Update with new date (no .select() to avoid RLS issues)
+      const { error } = await supabase
         .from('ingestion_queue')
         .update({
           payload: updatedPayload,
         })
-        .eq('id', item.id)
-        .select();
+        .eq('id', item.id);
 
       if (error) {
         console.error('Update error:', error);
         throw error;
       }
 
-      console.log('Update success:', data);
+      console.log('Update completed successfully');
 
       // Verify the update by fetching the item again
       const { data: verifyData } = await supabase
