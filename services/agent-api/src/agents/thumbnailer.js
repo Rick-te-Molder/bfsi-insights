@@ -102,7 +102,10 @@ async function processPdf(
 
       python.on('close', (code) => {
         if (code !== 0) {
-          reject(new Error(`PDF rendering failed: ${stderr}`));
+          console.error(`   ❌ Python script exited with code ${code}`);
+          console.error(`   📤 stdout: ${stdout}`);
+          console.error(`   📤 stderr: ${stderr}`);
+          reject(new Error(`PDF rendering failed (exit code ${code}): ${stderr || stdout}`));
           return;
         }
 
