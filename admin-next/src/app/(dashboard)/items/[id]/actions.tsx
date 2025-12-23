@@ -8,6 +8,7 @@ import { approveQueueItemAction } from '../actions';
 import type { QueueItem } from '@bfsi/types';
 
 const STATUS_CODE = {
+  ENRICHED: 240,
   PENDING_REVIEW: 300,
   APPROVED: 330,
   FAILED: 500,
@@ -17,6 +18,7 @@ const STATUS_CODE = {
 export function ReviewActions({ item }: { item: QueueItem }) {
   const [loading, setLoading] = useState<string | null>(null);
   const [title, setTitle] = useState((item.payload?.title as string) || '');
+  const [publishedDate, setPublishedDate] = useState((item.payload?.published as string) || '');
   const router = useRouter();
   const supabase = createClient();
 
@@ -113,6 +115,58 @@ export function ReviewActions({ item }: { item: QueueItem }) {
     }
   };
 
+  const handleMoveToReview = async () => {
+    setLoading('move-to-review');
+
+    try {
+      const { error } = await supabase
+        .from('ingestion_queue')
+        .update({ status_code: STATUS_CODE.PENDING_REVIEW })
+        .eq('id', item.id);
+
+      if (error) throw error;
+
+      router.refresh();
+    } catch (err) {
+      alert(`Failed to move to review: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setLoading(null);
+    }
+  };
+
+  const handleUpdatePublishedDate = async () => {
+    if (!publishedDate) {
+      alert('Please enter a publication date');
+      return;
+    }
+
+    setLoading('update-date');
+
+    try {
+      const { data: currentItem } = await supabase
+        .from('ingestion_queue')
+        .select('payload')
+        .eq('id', item.id)
+        .single();
+
+      const { error } = await supabase
+        .from('ingestion_queue')
+        .update({
+          payload: {
+            ...currentItem?.payload,
+            published: publishedDate,
+          },
+        })
+        .eq('id', item.id);
+
+      if (error) throw error;
+
+      router.refresh();
+    } catch (err) {
+      alert(`Failed to update date: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      setLoading(null);
+    }
+  };
+
   const isEditable = [
     STATUS_CODE.PENDING_REVIEW,
     STATUS_CODE.FAILED,
@@ -138,7 +192,44 @@ export function ReviewActions({ item }: { item: QueueItem }) {
         </div>
       )}
 
+      {/* Publication Date Editor */}
+      {[
+        STATUS_CODE.ENRICHED,
+        STATUS_CODE.PENDING_REVIEW,
+        STATUS_CODE.FAILED,
+        STATUS_CODE.REJECTED,
+      ].includes(item.status_code) && (
+        <div className="mb-4">
+          <label className="block text-sm text-neutral-400 mb-1">Publication Date</label>
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={publishedDate}
+              onChange={(e) => setPublishedDate(e.target.value)}
+              className="flex-1 rounded-lg border border-neutral-700 bg-neutral-800 px-3 py-2 text-sm text-white focus:border-sky-500 focus:outline-none"
+            />
+            <button
+              onClick={handleUpdatePublishedDate}
+              disabled={loading !== null || !publishedDate}
+              className="px-3 py-2 rounded-lg bg-neutral-700 text-sm font-medium text-white hover:bg-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading === 'update-date' ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-2">
+        {item.status_code === STATUS_CODE.ENRICHED && (
+          <button
+            onClick={handleMoveToReview}
+            disabled={loading !== null}
+            className="w-full rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading === 'move-to-review' ? 'Moving...' : '→ Move to Review Queue'}
+          </button>
+        )}
+
         {item.status_code === STATUS_CODE.PENDING_REVIEW && (
           <>
             <button
