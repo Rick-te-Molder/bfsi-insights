@@ -18,7 +18,7 @@ const STATUS_CODE = {
 export function ReviewActions({ item }: { item: QueueItem }) {
   const [loading, setLoading] = useState<string | null>(null);
   const [title, setTitle] = useState((item.payload?.title as string) || '');
-  const [publishedDate, setPublishedDate] = useState((item.payload?.published as string) || '');
+  const [publishedDate, setPublishedDate] = useState((item.payload?.published_at as string) || '');
   const router = useRouter();
   const supabase = createClient();
 
@@ -153,7 +153,7 @@ export function ReviewActions({ item }: { item: QueueItem }) {
         .update({
           payload: {
             ...currentItem?.payload,
-            published: publishedDate,
+            published_at: publishedDate,
           },
         })
         .eq('id', item.id);
