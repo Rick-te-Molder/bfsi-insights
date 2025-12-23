@@ -79,10 +79,16 @@ async function processPdf(
     // Write PDF buffer to temp file
     await writeFile(tempPdfPath, pdfBuffer);
 
-    // Call Python script to render PDF
+    // Call Python script to render PDF with target dimensions
     const pythonPath = process.env.PYTHON_PATH || '/usr/bin/python3';
     const result = await new Promise((resolve, reject) => {
-      const python = spawn(pythonPath, [PDF_RENDERER_PATH, tempPdfPath, tempImagePath]);
+      const python = spawn(pythonPath, [
+        PDF_RENDERER_PATH,
+        tempPdfPath,
+        tempImagePath,
+        config.viewport.width.toString(),
+        config.viewport.height.toString(),
+      ]);
       let stdout = '';
       let stderr = '';
 
