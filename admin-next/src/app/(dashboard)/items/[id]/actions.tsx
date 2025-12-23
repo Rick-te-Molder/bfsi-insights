@@ -195,11 +195,11 @@ export function ReviewActions({ item }: { item: QueueItem }) {
       console.log('Updated payload:', updatedPayload);
       console.log('Updated published_at:', updatedPayload.published_at);
 
-      // Update with new date (no .select() to avoid RLS issues)
+      // Try direct JSONB replacement
       const { error } = await supabase
         .from('ingestion_queue')
         .update({
-          payload: updatedPayload,
+          payload: JSON.stringify(updatedPayload),
         })
         .eq('id', item.id);
 
