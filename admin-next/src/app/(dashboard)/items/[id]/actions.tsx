@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { approveQueueItemAction, updatePublishedDateAction } from '../actions';
+import { approveQueueItemAction, updatePublishedDateAction, moveToReviewAction } from '../actions';
 import type { QueueItem } from '@bfsi/types';
 
 const STATUS_CODE = {
@@ -134,23 +134,16 @@ export function ReviewActions({ item }: { item: QueueItem }) {
     setLoading('move-to-review');
 
     try {
-      const { data, error } = await supabase
-        .from('ingestion_queue')
-        .update({ status_code: STATUS_CODE.PENDING_REVIEW })
-        .eq('id', item.id)
-        .select();
+      // Use server action with service role to bypass RLS
+      const result = await moveToReviewAction(item.id);
 
-      if (error) {
-        console.error('Move to review error:', error);
-        throw error;
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
-      console.log('Move to review success:', data);
-      // Navigate to items list and back to force refresh
-      router.push('/items');
-      setTimeout(() => {
-        router.push(`/items/${item.id}`);
-      }, 100);
+      console.log('Move to review completed successfully');
+      // Reload page to show updated status
+      window.location.href = `/items/${item.id}`;
     } catch (err) {
       console.error('Move to review failed:', err);
       alert(`Failed to move to review: ${err instanceof Error ? err.message : 'Unknown error'}`);

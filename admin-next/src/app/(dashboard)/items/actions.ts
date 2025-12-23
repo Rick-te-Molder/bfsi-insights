@@ -39,6 +39,23 @@ export async function updatePublishedDateAction(itemId: string, publishedDate: s
   return { success: true as const };
 }
 
+export async function moveToReviewAction(itemId: string) {
+  const supabase = createServiceRoleClient();
+
+  // Update status to PENDING_REVIEW (300) with service role to bypass RLS
+  const { error } = await supabase
+    .from('ingestion_queue')
+    .update({ status_code: 300 })
+    .eq('id', itemId);
+
+  if (error) {
+    return { success: false as const, error: error.message };
+  }
+
+  revalidatePath(`/items/${itemId}`);
+  return { success: true as const };
+}
+
 // Get current user ID from session
 async function getCurrentUserId(): Promise<string | null> {
   try {
