@@ -3,6 +3,42 @@
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
+export async function updatePublishedDateAction(itemId: string, publishedDate: string) {
+  const supabase = createServiceRoleClient();
+
+  // Fetch current payload
+  const { data: currentItem, error: fetchError } = await supabase
+    .from('ingestion_queue')
+    .select('payload')
+    .eq('id', itemId)
+    .single();
+
+  if (fetchError || !currentItem) {
+    return { success: false as const, error: fetchError?.message || 'Failed to fetch item' };
+  }
+
+  const currentPayload = (currentItem.payload || {}) as Record<string, unknown>;
+  const updatedPayload = {
+    ...currentPayload,
+    published_at: publishedDate,
+  };
+
+  // Update with service role to bypass RLS
+  const { error: updateError } = await supabase
+    .from('ingestion_queue')
+    .update({
+      payload: updatedPayload,
+    })
+    .eq('id', itemId);
+
+  if (updateError) {
+    return { success: false as const, error: updateError.message };
+  }
+
+  revalidatePath(`/items/${itemId}`);
+  return { success: true as const };
+}
+
 // Get current user ID from session
 async function getCurrentUserId(): Promise<string | null> {
   try {

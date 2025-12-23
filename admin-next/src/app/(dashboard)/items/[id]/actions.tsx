@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { approveQueueItemAction } from '../actions';
+import { approveQueueItemAction, updatePublishedDateAction } from '../actions';
 import type { QueueItem } from '@bfsi/types';
 
 const STATUS_CODE = {
@@ -169,59 +169,25 @@ export function ReviewActions({ item }: { item: QueueItem }) {
     try {
       console.log('Saving publication date:', publishedDate);
 
-      // Fetch current item
-      const { data: currentItem, error: fetchError } = await supabase
-        .from('ingestion_queue')
-        .select('payload')
-        .eq('id', item.id)
-        .single();
+      // Use server action with service role to bypass RLS
+      const result = await updatePublishedDateAction(item.id, publishedDate);
 
-      if (fetchError) {
-        console.error('Fetch error:', fetchError);
-        throw fetchError;
-      }
-
-      console.log('Current item payload:', currentItem?.payload);
-      console.log('Type of payload:', typeof currentItem?.payload);
-
-      // Ensure we're working with an object
-      const currentPayload = (currentItem?.payload || {}) as Record<string, unknown>;
-
-      const updatedPayload = {
-        ...currentPayload,
-        published_at: publishedDate,
-      };
-
-      console.log('Updated payload:', updatedPayload);
-      console.log('Updated published_at:', updatedPayload.published_at);
-
-      // Try direct JSONB replacement
-      const { error } = await supabase
-        .from('ingestion_queue')
-        .update({
-          payload: JSON.stringify(updatedPayload),
-        })
-        .eq('id', item.id);
-
-      if (error) {
-        console.error('Update error:', error);
-        throw error;
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
       console.log('Update completed successfully');
 
-      // Verify the update by fetching the item again
+      // Verify the update
       const { data: verifyData } = await supabase
         .from('ingestion_queue')
         .select('payload')
         .eq('id', item.id)
         .single();
 
-      console.log('Verification - payload after update:', verifyData?.payload);
       console.log('Verification - published_at:', verifyData?.payload?.published_at);
-      console.log('Reloading page...');
 
-      // Force hard reload to show updated data
+      // Reload page to show updated data
       window.location.href = `/items/${item.id}`;
     } catch (err) {
       console.error('Save date failed:', err);
