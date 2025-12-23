@@ -131,9 +131,11 @@ export function ReviewActions({ item }: { item: QueueItem }) {
       }
 
       console.log('Move to review success:', data);
-      console.log('About to reload page...');
-      // Force a hard refresh to update status and show approve/reject buttons
-      window.location.reload();
+      // Navigate to items list and back to force refresh
+      router.push('/items');
+      setTimeout(() => {
+        router.push(`/items/${item.id}`);
+      }, 100);
     } catch (err) {
       console.error('Move to review failed:', err);
       alert(`Failed to move to review: ${err instanceof Error ? err.message : 'Unknown error'}`);
