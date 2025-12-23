@@ -205,6 +205,16 @@ export function ReviewActions({ item }: { item: QueueItem }) {
       }
 
       console.log('Update success:', data);
+
+      // Verify the update by fetching the item again
+      const { data: verifyData } = await supabase
+        .from('ingestion_queue')
+        .select('payload')
+        .eq('id', item.id)
+        .single();
+
+      console.log('Verification - payload after update:', verifyData?.payload);
+      console.log('Verification - published_at:', verifyData?.payload?.published_at);
       console.log('Reloading page...');
 
       // Force hard reload to show updated data
