@@ -1,5 +1,6 @@
 {
   "git": {
     "deploymentEnabled": true
-  }
+  },
+  "buildCommand": "rm -rf .next && npm run build"
 }
