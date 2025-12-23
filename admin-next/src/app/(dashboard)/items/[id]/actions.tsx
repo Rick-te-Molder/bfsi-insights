@@ -8,6 +8,7 @@ import { approveQueueItemAction } from '../actions';
 import type { QueueItem } from '@bfsi/types';
 
 const STATUS_CODE = {
+  ENRICHED: 240,
   PENDING_REVIEW: 300,
   APPROVED: 330,
   FAILED: 500,
@@ -75,24 +76,20 @@ export function ReviewActions({ item }: { item: QueueItem }) {
     setLoading('reenrich');
 
     try {
-      // Cancel old pipeline_run and create new one with trigger='re-enrich'
-      await supabase
-        .from('pipeline_run')
-        .update({ status: 'cancelled', completed_at: new Date().toISOString() })
-        .eq('queue_id', item.id)
-        .eq('status', 'running');
-
-      const { data: newRun } = await supabase
-        .from('pipeline_run')
+      // Create a new agent_run for this item
+      const { data: newRun, error: runError } = await supabase
+        .from('agent_run')
         .insert({
           queue_id: item.id,
-          trigger: 're-enrich',
-          status: 'running',
-          created_by: 'system',
+          agent_name: 'enricher',
+          status: 'pending',
         })
-        .select('id')
+        .select()
         .single();
 
+      if (runError) throw runError;
+
+      // Update queue item to PENDING_ENRICHMENT and link to new run
       const { error } = await supabase
         .from('ingestion_queue')
         .update({
@@ -103,12 +100,29 @@ export function ReviewActions({ item }: { item: QueueItem }) {
 
       if (error) throw error;
 
-      router.push('/items');
       router.refresh();
     } catch (err) {
       alert(
         `Failed to queue for re-enrichment: ${err instanceof Error ? err.message : 'Unknown error'}`,
       );
+      setLoading(null);
+    }
+  };
+
+  const handleMoveToReview = async () => {
+    setLoading('move-to-review');
+
+    try {
+      const { error } = await supabase
+        .from('ingestion_queue')
+        .update({ status_code: STATUS_CODE.PENDING_REVIEW })
+        .eq('id', item.id);
+
+      if (error) throw error;
+
+      router.refresh();
+    } catch (err) {
+      alert(`Failed to move to review: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setLoading(null);
     }
   };
@@ -139,6 +153,16 @@ export function ReviewActions({ item }: { item: QueueItem }) {
       )}
 
       <div className="space-y-2">
+        {item.status_code === STATUS_CODE.ENRICHED && (
+          <button
+            onClick={handleMoveToReview}
+            disabled={loading !== null}
+            className="w-full rounded-lg bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading === 'move-to-review' ? 'Moving...' : '→ Move to Review Queue'}
+          </button>
+        )}
+
         {item.status_code === STATUS_CODE.PENDING_REVIEW && (
           <>
             <button
