@@ -170,7 +170,8 @@ export function ReviewActions({ item }: { item: QueueItem }) {
 
       if (error) throw error;
 
-      // Navigate to items list and back to force refresh
+      // Wait for DB to commit, then navigate to force refresh
+      await new Promise((resolve) => setTimeout(resolve, 200));
       router.push('/items');
       setTimeout(() => {
         router.push(`/items/${item.id}`);
