@@ -79,10 +79,16 @@ async function processPdf(
     // Write PDF buffer to temp file
     await writeFile(tempPdfPath, pdfBuffer);
 
-    // Call Python script to render PDF
+    // Call Python script to render PDF with target dimensions
     const pythonPath = process.env.PYTHON_PATH || '/usr/bin/python3';
     const result = await new Promise((resolve, reject) => {
-      const python = spawn(pythonPath, [PDF_RENDERER_PATH, tempPdfPath, tempImagePath]);
+      const python = spawn(pythonPath, [
+        PDF_RENDERER_PATH,
+        tempPdfPath,
+        tempImagePath,
+        config.viewport.width.toString(),
+        config.viewport.height.toString(),
+      ]);
       let stdout = '';
       let stderr = '';
 
@@ -96,7 +102,10 @@ async function processPdf(
 
       python.on('close', (code) => {
         if (code !== 0) {
-          reject(new Error(`PDF rendering failed: ${stderr}`));
+          console.error(`   ❌ Python script exited with code ${code}`);
+          console.error(`   📤 stdout: ${stdout}`);
+          console.error(`   📤 stderr: ${stderr}`);
+          reject(new Error(`PDF rendering failed (exit code ${code}): ${stderr || stdout}`));
           return;
         }
 
