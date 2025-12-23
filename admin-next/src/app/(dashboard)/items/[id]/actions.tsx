@@ -168,11 +168,18 @@ export function ReviewActions({ item }: { item: QueueItem }) {
 
     try {
       console.log('Saving publication date:', publishedDate);
-      const { data: currentItem } = await supabase
+
+      // Fetch current item
+      const { data: currentItem, error: fetchError } = await supabase
         .from('ingestion_queue')
         .select('payload')
         .eq('id', item.id)
         .single();
+
+      if (fetchError) {
+        console.error('Fetch error:', fetchError);
+        throw fetchError;
+      }
 
       console.log('Current item payload:', currentItem?.payload);
 
@@ -183,6 +190,7 @@ export function ReviewActions({ item }: { item: QueueItem }) {
 
       console.log('Updated payload:', updatedPayload);
 
+      // Update with new date
       const { data, error } = await supabase
         .from('ingestion_queue')
         .update({
@@ -197,16 +205,14 @@ export function ReviewActions({ item }: { item: QueueItem }) {
       }
 
       console.log('Update success:', data);
+      console.log('Navigating to refresh...');
 
-      // Wait for DB to commit, then navigate to force refresh
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      router.push('/items');
-      setTimeout(() => {
-        router.push(`/items/${item.id}`);
-      }, 100);
+      // Navigate to force refresh
+      router.push(`/items/${item.id}?t=${Date.now()}`);
     } catch (err) {
       console.error('Save date failed:', err);
       alert(`Failed to update date: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
       setLoading(null);
     }
   };
