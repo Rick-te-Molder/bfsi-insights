@@ -3,14 +3,17 @@
 import { useState, useMemo } from 'react';
 import type { PromptVersion } from '@/types/database';
 import { usePrompts } from './hooks';
-import type { CoverageStats as CoverageStatsType } from './types';
+import type { CoverageStats as CoverageStatsType, AgentType } from './types';
 import { AgentTable, CoverageStats, PromptEditModal, PromptPlayground } from './components';
 
-export default function PromptsPage() {
+type AgentFilter = 'all' | AgentType;
+
+export default function AgentsPage() {
   const { prompts, promptsByAgent, agents, manifest, loading, reload } = usePrompts();
 
   const [editingPrompt, setEditingPrompt] = useState<PromptVersion | null>(null);
   const [testingPrompt, setTestingPrompt] = useState<PromptVersion | null>(null);
+  const [agentFilter, setAgentFilter] = useState<AgentFilter>('all');
 
   const coverageStats: CoverageStatsType | null = useMemo(() => {
     if (!manifest) return null;
@@ -36,6 +39,27 @@ export default function PromptsPage() {
           : 100,
     };
   }, [manifest, prompts]);
+
+  // Filter agents by type
+  const filteredAgents = useMemo(() => {
+    if (agentFilter === 'all') return agents;
+
+    const utilityAgents = ['thumbnail-generator'];
+    const orchestratorAgents = ['enricher', 'improver'];
+
+    return agents.filter((agentName) => {
+      const hasPrompts = promptsByAgent[agentName]?.length > 0;
+
+      if (agentFilter === 'llm') {
+        return hasPrompts;
+      } else if (agentFilter === 'utility') {
+        return utilityAgents.includes(agentName);
+      } else if (agentFilter === 'orchestrator') {
+        return orchestratorAgents.includes(agentName);
+      }
+      return true;
+    });
+  }, [agents, agentFilter, promptsByAgent]);
 
   if (loading) {
     return (
@@ -63,10 +87,54 @@ export default function PromptsPage() {
         {coverageStats && <CoverageStats stats={coverageStats} />}
       </header>
 
+      {/* Agent Type Filter Tabs */}
+      <div className="mb-4 flex gap-2">
+        <button
+          onClick={() => setAgentFilter('all')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            agentFilter === 'all'
+              ? 'bg-sky-500 text-white'
+              : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+          }`}
+        >
+          All ({agents.length})
+        </button>
+        <button
+          onClick={() => setAgentFilter('llm')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            agentFilter === 'llm'
+              ? 'bg-sky-500 text-white'
+              : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+          }`}
+        >
+          LLM ({agents.filter((a) => promptsByAgent[a]?.length > 0).length})
+        </button>
+        <button
+          onClick={() => setAgentFilter('utility')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            agentFilter === 'utility'
+              ? 'bg-sky-500 text-white'
+              : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+          }`}
+        >
+          Utility (1)
+        </button>
+        <button
+          onClick={() => setAgentFilter('orchestrator')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            agentFilter === 'orchestrator'
+              ? 'bg-sky-500 text-white'
+              : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+          }`}
+        >
+          Orchestrator (2)
+        </button>
+      </div>
+
       <div className="rounded-xl border border-neutral-800 overflow-hidden">
         <div className="overflow-auto">
           <AgentTable
-            agents={agents}
+            agents={filteredAgents}
             promptsByAgent={promptsByAgent}
             onEdit={setEditingPrompt}
             onTest={setTestingPrompt}
