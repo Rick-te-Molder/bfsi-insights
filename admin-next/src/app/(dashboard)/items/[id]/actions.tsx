@@ -131,7 +131,7 @@ export function ReviewActions({ item }: { item: QueueItem }) {
       }
 
       console.log('Move to review success:', data);
-      setLoading(null);
+      console.log('About to reload page...');
       // Force a hard refresh to update status and show approve/reject buttons
       window.location.reload();
     } catch (err) {
