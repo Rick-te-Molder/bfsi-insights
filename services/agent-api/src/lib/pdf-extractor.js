@@ -10,7 +10,6 @@ import { createClient } from '@supabase/supabase-js';
 import process from 'node:process';
 import crypto from 'node:crypto';
 import { Buffer } from 'node:buffer';
-import { isPdfUrl as isPdfUrlUtil } from './url-utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -36,7 +35,7 @@ const FETCH_HEADERS = {
  * Check if URL points to a PDF file
  * Re-exported from url-utils for backward compatibility
  */
-export { isPdfUrlUtil as isPdfUrl };
+export { isPdfUrl } from './url-utils.js';
 
 /**
  * Download PDF and return as Buffer

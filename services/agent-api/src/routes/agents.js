@@ -231,7 +231,7 @@ router.post('/run/thumbnail', async (req, res) => {
             thumbnail: result.publicUrl,
             thumbnail_generated_at: new Date().toISOString(),
             enrichment_meta: {
-              ...(updatedItem?.payload?.enrichment_meta || {}),
+              ...updatedItem?.payload?.enrichment_meta,
               thumbnail: {
                 agent_type: 'utility',
                 implementation_version: getUtilityVersion('thumbnail-generator'),
