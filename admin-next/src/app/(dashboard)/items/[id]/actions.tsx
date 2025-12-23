@@ -170,9 +170,11 @@ export function ReviewActions({ item }: { item: QueueItem }) {
 
       if (error) throw error;
 
-      setLoading(null);
-      // Force a hard refresh to update all server components
-      window.location.reload();
+      // Navigate to items list and back to force refresh
+      router.push('/items');
+      setTimeout(() => {
+        router.push(`/items/${item.id}`);
+      }, 100);
     } catch (err) {
       alert(`Failed to update date: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setLoading(null);
