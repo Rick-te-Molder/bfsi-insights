@@ -18,7 +18,12 @@ const STATUS_CODE = {
 export function ReviewActions({ item }: { item: QueueItem }) {
   const [loading, setLoading] = useState<string | null>(null);
   const [title, setTitle] = useState((item.payload?.title as string) || '');
-  const [publishedDate, setPublishedDate] = useState((item.payload?.published_at as string) || '');
+
+  // Convert stored date to YYYY-MM-DD format for date input
+  const initialDate = item.payload?.published_at as string;
+  const formattedInitialDate = initialDate ? new Date(initialDate).toISOString().split('T')[0] : '';
+  const [publishedDate, setPublishedDate] = useState(formattedInitialDate);
+
   const router = useRouter();
   const supabase = createClient();
 
@@ -152,23 +157,36 @@ export function ReviewActions({ item }: { item: QueueItem }) {
     setLoading('update-date');
 
     try {
+      console.log('Saving publication date:', publishedDate);
       const { data: currentItem } = await supabase
         .from('ingestion_queue')
         .select('payload')
         .eq('id', item.id)
         .single();
 
-      const { error } = await supabase
+      console.log('Current item payload:', currentItem?.payload);
+
+      const updatedPayload = {
+        ...currentItem?.payload,
+        published_at: publishedDate,
+      };
+
+      console.log('Updated payload:', updatedPayload);
+
+      const { data, error } = await supabase
         .from('ingestion_queue')
         .update({
-          payload: {
-            ...currentItem?.payload,
-            published_at: publishedDate,
-          },
+          payload: updatedPayload,
         })
-        .eq('id', item.id);
+        .eq('id', item.id)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
+
+      console.log('Update success:', data);
 
       // Wait for DB to commit, then navigate to force refresh
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -177,6 +195,7 @@ export function ReviewActions({ item }: { item: QueueItem }) {
         router.push(`/items/${item.id}`);
       }, 100);
     } catch (err) {
+      console.error('Save date failed:', err);
       alert(`Failed to update date: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setLoading(null);
     }
