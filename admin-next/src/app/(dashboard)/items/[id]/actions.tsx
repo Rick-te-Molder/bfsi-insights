@@ -205,14 +205,14 @@ export function ReviewActions({ item }: { item: QueueItem }) {
       }
 
       console.log('Update success:', data);
-      console.log('Navigating to refresh...');
+      console.log('Refreshing page...');
 
-      // Navigate to force refresh
-      router.push(`/items/${item.id}?t=${Date.now()}`);
+      // Refresh the current page to show updated data
+      router.refresh();
+      setLoading(null);
     } catch (err) {
       console.error('Save date failed:', err);
       alert(`Failed to update date: ${err instanceof Error ? err.message : 'Unknown error'}`);
-    } finally {
       setLoading(null);
     }
   };
