@@ -182,13 +182,18 @@ export function ReviewActions({ item }: { item: QueueItem }) {
       }
 
       console.log('Current item payload:', currentItem?.payload);
+      console.log('Type of payload:', typeof currentItem?.payload);
+
+      // Ensure we're working with an object
+      const currentPayload = (currentItem?.payload || {}) as Record<string, unknown>;
 
       const updatedPayload = {
-        ...currentItem?.payload,
+        ...currentPayload,
         published_at: publishedDate,
       };
 
       console.log('Updated payload:', updatedPayload);
+      console.log('Updated published_at:', updatedPayload.published_at);
 
       // Update with new date (no .select() to avoid RLS issues)
       const { error } = await supabase
