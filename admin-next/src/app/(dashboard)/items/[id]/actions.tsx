@@ -205,11 +205,10 @@ export function ReviewActions({ item }: { item: QueueItem }) {
       }
 
       console.log('Update success:', data);
-      console.log('Refreshing page...');
+      console.log('Reloading page...');
 
-      // Refresh the current page to show updated data
-      router.refresh();
-      setLoading(null);
+      // Force hard reload to show updated data
+      window.location.href = `/items/${item.id}`;
     } catch (err) {
       console.error('Save date failed:', err);
       alert(`Failed to update date: ${err instanceof Error ? err.message : 'Unknown error'}`);
