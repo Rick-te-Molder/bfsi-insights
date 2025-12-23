@@ -126,7 +126,9 @@ export function ReviewActions({ item }: { item: QueueItem }) {
 
       if (error) throw error;
 
-      router.refresh();
+      setLoading(null);
+      // Force a hard refresh to update status and show approve/reject buttons
+      window.location.reload();
     } catch (err) {
       alert(`Failed to move to review: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setLoading(null);
