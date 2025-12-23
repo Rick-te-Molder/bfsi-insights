@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -18,14 +18,24 @@ const STATUS_CODE = {
 export function ReviewActions({ item }: { item: QueueItem }) {
   const [loading, setLoading] = useState<string | null>(null);
   const [title, setTitle] = useState((item.payload?.title as string) || '');
-
-  // Convert stored date to YYYY-MM-DD format for date input
-  const initialDate = item.payload?.published_at as string;
-  const formattedInitialDate = initialDate ? new Date(initialDate).toISOString().split('T')[0] : '';
-  const [publishedDate, setPublishedDate] = useState(formattedInitialDate);
+  const [publishedDate, setPublishedDate] = useState('');
 
   const router = useRouter();
   const supabase = createClient();
+
+  // Format date on client side to avoid hydration mismatch
+  useEffect(() => {
+    const initialDate = item.payload?.published_at as string;
+    if (initialDate) {
+      try {
+        const formatted = new Date(initialDate).toISOString().split('T')[0];
+        setPublishedDate(formatted);
+      } catch (e) {
+        console.error('Error formatting date:', e);
+        setPublishedDate('');
+      }
+    }
+  }, [item.payload?.published_at]);
 
   const handleApprove = async () => {
     if (!title.trim()) {
