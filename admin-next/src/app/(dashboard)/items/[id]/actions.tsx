@@ -119,17 +119,23 @@ export function ReviewActions({ item }: { item: QueueItem }) {
     setLoading('move-to-review');
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('ingestion_queue')
         .update({ status_code: STATUS_CODE.PENDING_REVIEW })
-        .eq('id', item.id);
+        .eq('id', item.id)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Move to review error:', error);
+        throw error;
+      }
 
+      console.log('Move to review success:', data);
       setLoading(null);
       // Force a hard refresh to update status and show approve/reject buttons
       window.location.reload();
     } catch (err) {
+      console.error('Move to review failed:', err);
       alert(`Failed to move to review: ${err instanceof Error ? err.message : 'Unknown error'}`);
       setLoading(null);
     }
