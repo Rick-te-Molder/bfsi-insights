@@ -352,37 +352,86 @@ export async function bulkApproveAction(ids: string[]) {
       buildPublicStorageUrl(thumbnailBucket, thumbnailPath) ??
       null;
 
-    // Insert publication
-    const { data: pubData, error: pubError } = await supabase
+    // Check if publication already exists
+    const { data: existingPub } = await supabase
       .from('kb_publication')
-      .insert({
-        slug: `${slug}-${Date.now()}`,
-        title,
-        source_url: item.url,
-        source_name:
-          (payload.source_name || payload.source || payload.source_slug) &&
-          (payload.source_name || payload.source || payload.source_slug) !== 'manual'
-            ? payload.source_name || payload.source || payload.source_slug
-            : sourceDomain,
-        source_domain: sourceDomain,
-        date_published: payload.published_at || new Date().toISOString(),
-        summary_short: summary.short || '',
-        summary_medium: summary.medium || '',
-        summary_long: summary.long || '',
-        thumbnail: thumbnailUrl,
-        thumbnail_bucket: thumbnailBucket,
-        thumbnail_path: thumbnailPath,
-        status: 'published',
-      })
       .select('id')
+      .eq('source_url', item.url)
       .single();
 
-    if (pubError || !pubData) {
-      console.error('Failed to insert publication:', pubError);
-      return { success: false, error: `Failed to publish: ${pubError?.message}` };
-    }
+    let publicationId: string;
 
-    const publicationId = pubData.id;
+    if (existingPub) {
+      // Update existing publication
+      const { error: updateError } = await supabase
+        .from('kb_publication')
+        .update({
+          title,
+          date_published: payload.published_at || new Date().toISOString(),
+          summary_short: summary.short || '',
+          summary_medium: summary.medium || '',
+          summary_long: summary.long || '',
+          thumbnail: thumbnailUrl,
+          thumbnail_bucket: thumbnailBucket,
+          thumbnail_path: thumbnailPath,
+          last_edited: new Date().toISOString(),
+        })
+        .eq('id', existingPub.id);
+
+      if (updateError) {
+        console.error('Failed to update publication:', updateError);
+        return { success: false, error: `Failed to update: ${updateError.message}` };
+      }
+
+      publicationId = existingPub.id;
+
+      // Delete existing taxonomy tags before re-inserting
+      const { data: taxonomyConfigs } = await supabase
+        .from('taxonomy_config')
+        .select('junction_table')
+        .eq('is_active', true)
+        .not('junction_table', 'is', null);
+
+      if (taxonomyConfigs) {
+        for (const config of taxonomyConfigs) {
+          if (config.junction_table) {
+            await supabase.from(config.junction_table).delete().eq('publication_id', publicationId);
+          }
+        }
+      }
+    } else {
+      // Insert new publication
+      const { data: pubData, error: pubError } = await supabase
+        .from('kb_publication')
+        .insert({
+          slug: `${slug}-${Date.now()}`,
+          title,
+          source_url: item.url,
+          source_name:
+            (payload.source_name || payload.source || payload.source_slug) &&
+            (payload.source_name || payload.source || payload.source_slug) !== 'manual'
+              ? payload.source_name || payload.source || payload.source_slug
+              : sourceDomain,
+          source_domain: sourceDomain,
+          date_published: payload.published_at || new Date().toISOString(),
+          summary_short: summary.short || '',
+          summary_medium: summary.medium || '',
+          summary_long: summary.long || '',
+          thumbnail: thumbnailUrl,
+          thumbnail_bucket: thumbnailBucket,
+          thumbnail_path: thumbnailPath,
+          status: 'published',
+        })
+        .select('id')
+        .single();
+
+      if (pubError || !pubData) {
+        console.error('Failed to insert publication:', pubError);
+        return { success: false, error: `Failed to publish: ${pubError?.message}` };
+      }
+
+      publicationId = pubData.id;
+    }
 
     // Insert taxonomy tags dynamically based on taxonomy_config
     const { data: taxonomyConfigs } = await supabase
