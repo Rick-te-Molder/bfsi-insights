@@ -122,30 +122,80 @@ export async function approveQueueItemAction(queueId: string, editedTitle?: stri
     buildPublicStorageUrl(thumbnailBucket, thumbnailPath) ??
     null;
 
-  // Insert publication
-  const { data: pubData, error: pubError } = await supabase
+  // Check if publication already exists
+  const { data: existingPub } = await supabase
     .from('kb_publication')
-    .insert({
-      slug: `${slug}-${Date.now()}`,
-      title,
-      source_url: item.url,
-      source_name:
-        sourceFromPayload && sourceFromPayload !== 'manual' ? sourceFromPayload : sourceDomain,
-      source_domain: sourceDomain,
-      date_published: (payload.published_at as string) || new Date().toISOString(),
-      summary_short: (summary.short as string) || '',
-      summary_medium: (summary.medium as string) || '',
-      summary_long: (summary.long as string) || '',
-      thumbnail: thumbnailUrl,
-      thumbnail_bucket: thumbnailBucket,
-      thumbnail_path: thumbnailPath,
-      status: 'published',
-    })
     .select('id')
+    .eq('source_url', item.url)
     .single();
 
-  if (pubError || !pubData) {
-    return { success: false as const, error: pubError?.message || 'Failed to publish' };
+  let publicationId: string;
+
+  if (existingPub) {
+    // Update existing publication
+    const { error: updateError } = await supabase
+      .from('kb_publication')
+      .update({
+        title,
+        date_published: (payload.published_at as string) || new Date().toISOString(),
+        summary_short: (summary.short as string) || '',
+        summary_medium: (summary.medium as string) || '',
+        summary_long: (summary.long as string) || '',
+        thumbnail: thumbnailUrl,
+        thumbnail_bucket: thumbnailBucket,
+        thumbnail_path: thumbnailPath,
+        last_edited: new Date().toISOString(),
+      })
+      .eq('id', existingPub.id);
+
+    if (updateError) {
+      return { success: false as const, error: updateError.message };
+    }
+
+    publicationId = existingPub.id;
+
+    // Delete existing taxonomy tags before re-inserting
+    const { data: taxonomyConfigs } = await supabase
+      .from('taxonomy_config')
+      .select('junction_table')
+      .eq('is_active', true)
+      .not('junction_table', 'is', null);
+
+    if (taxonomyConfigs) {
+      for (const config of taxonomyConfigs) {
+        if (config.junction_table) {
+          await supabase.from(config.junction_table).delete().eq('publication_id', publicationId);
+        }
+      }
+    }
+  } else {
+    // Insert new publication
+    const { data: pubData, error: pubError } = await supabase
+      .from('kb_publication')
+      .insert({
+        slug: `${slug}-${Date.now()}`,
+        title,
+        source_url: item.url,
+        source_name:
+          sourceFromPayload && sourceFromPayload !== 'manual' ? sourceFromPayload : sourceDomain,
+        source_domain: sourceDomain,
+        date_published: (payload.published_at as string) || new Date().toISOString(),
+        summary_short: (summary.short as string) || '',
+        summary_medium: (summary.medium as string) || '',
+        summary_long: (summary.long as string) || '',
+        thumbnail: thumbnailUrl,
+        thumbnail_bucket: thumbnailBucket,
+        thumbnail_path: thumbnailPath,
+        status: 'published',
+      })
+      .select('id')
+      .single();
+
+    if (pubError || !pubData) {
+      return { success: false as const, error: pubError?.message || 'Failed to publish' };
+    }
+
+    publicationId = pubData.id;
   }
 
   // Insert taxonomy tags dynamically based on taxonomy_config
@@ -171,7 +221,7 @@ export async function approveQueueItemAction(queueId: string, editedTitle?: stri
         if (entries.length > 0) {
           const { error: insertError } = await supabase.from(config.junction_table).insert(
             entries.map(([code, score]) => ({
-              publication_id: pubData.id,
+              publication_id: publicationId,
               [config.junction_code_column as string]: code,
               score,
             })),
@@ -190,7 +240,7 @@ export async function approveQueueItemAction(queueId: string, editedTitle?: stri
 
     const { error: insertError } = await supabase.from(config.junction_table).insert(
       codes.map((code: string) => ({
-        publication_id: pubData.id,
+        publication_id: publicationId,
         [config.junction_code_column as string]: code,
       })),
     );
@@ -219,7 +269,7 @@ export async function approveQueueItemAction(queueId: string, editedTitle?: stri
 
   revalidatePath('/items');
   revalidatePath('/published');
-  return { success: true as const, publicationId: pubData.id };
+  return { success: true as const, publicationId };
 }
 
 export async function bulkReenrichAction(
