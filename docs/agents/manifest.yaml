@@ -58,11 +58,11 @@ agents:
   # ENRICHMENT PIPELINE
   # =============================================================================
 
-  - name: enricher
-    file: services/agent-api/src/agents/enricher.js
+  - name: orchestrator
+    file: services/agent-api/src/agents/orchestrator.js
     type: orchestrator
     description: >
-      Full enrichment pipeline for a single queue item.
+      Main orchestrator for the enrichment pipeline (status 200-300).
       Orchestrates: fetch → screener → summarizer → tagger → thumbnailer
     prompt_versions: []  # Orchestrator only
     tables: []

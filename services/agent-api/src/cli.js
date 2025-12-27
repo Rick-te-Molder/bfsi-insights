@@ -21,7 +21,7 @@ import { runRelevanceFilter } from './agents/screener.js';
 import { runSummarizer } from './agents/summarizer.js';
 import { runTagger } from './agents/tagger.js';
 import { runThumbnailer } from './agents/thumbnailer.js';
-import { processQueue } from './agents/enricher.js';
+import { processQueue } from './agents/orchestrator.js';
 import { runGoldenEval, runLLMJudgeEval, getEvalHistory } from './lib/evals.js';
 import { fetchContent } from './lib/content-fetcher.js';
 import { STATUS, loadStatusCodes } from './lib/status-codes.js';

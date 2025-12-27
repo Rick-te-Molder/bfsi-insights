@@ -5,7 +5,7 @@
 
 ## Architecture Principle
 
-**ONLY the enricher (orchestrator) should:**
+**ONLY the orchestrator should:**
 
 - Start agent runs
 - Update `ingestion_queue.status_code`
@@ -47,7 +47,7 @@ await supabase
 **Fix Required:**
 
 - Thumbnailer should throw an error
-- Enricher catches error and updates status
+- Orchestrator catches error and updates status
 - Maintains single point of control
 
 ### 2. Other Agents - Status Check
@@ -59,7 +59,7 @@ await supabase
 ## Current Flow (Correct)
 
 ```
-enricher.js (orchestrator)
+orchestrator.js
   ├─> stepFetch() → updateStatus(TO_SUMMARIZE)
   ├─> stepFilter() → updateStatus(TO_SUMMARIZE or IRRELEVANT)
   ├─> stepSummarize() → runSummarizer() → updateStatus(TO_TAG)
@@ -70,7 +70,7 @@ enricher.js (orchestrator)
 ## Violation Flow (Incorrect)
 
 ```
-enricher.js
+orchestrator.js
   └─> stepThumbnail() → runThumbnailer()
         └─> [VIOLATION] thumbnailer updates status_code directly
 ```
@@ -97,7 +97,7 @@ throw new Error(
 );
 ```
 
-### Enricher Handles Error
+### Orchestrator Handles Error
 
 ```javascript
 async function stepThumbnail(queueId, payload) {
@@ -130,7 +130,7 @@ async function stepThumbnail(queueId, payload) {
 
 ## Benefits of Fix
 
-1. **Single Point of Control:** Only enricher updates status
+1. **Single Point of Control:** Only orchestrator updates status
 2. **Proper Error Handling:** Orchestrator decides how to handle errors
 3. **Agent Run Tracking:** All status changes tracked in agent_run table
 4. **Testability:** Agents are pure functions (input → output)
@@ -139,14 +139,14 @@ async function stepThumbnail(queueId, payload) {
 ## Action Items
 
 - [ ] Fix thumbnailer to throw errors instead of updating status
-- [ ] Update enricher to handle thumbnailer errors appropriately
+- [ ] Update orchestrator to handle thumbnailer errors appropriately
 - [ ] Audit all agents for similar violations
 - [ ] Add linting rule to prevent direct status updates in agents
 - [ ] Update agent development guidelines
 
 ## Related Files
 
-- `services/agent-api/src/agents/enricher.js` - Orchestrator
+- `services/agent-api/src/agents/orchestrator.js` - Orchestrator
 - `services/agent-api/src/agents/thumbnailer.js` - Violation found
 - `services/agent-api/src/agents/summarizer.js` - Clean
 - `services/agent-api/src/agents/tagger.js` - Clean
