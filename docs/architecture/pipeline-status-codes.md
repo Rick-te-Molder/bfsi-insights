@@ -59,12 +59,11 @@ Each processing step has three states:
 
 ### 300s - Review
 
-| Code | Name             | Description                |
-| ---- | ---------------- | -------------------------- |
-| 300  | `pending_review` | Awaiting curator           |
-| 310  | `in_review`      | Curator opened item        |
-| 320  | `editing`        | Curator making changes     |
-| 330  | `approved`       | Approved, ready to publish |
+| Code | Name             | Description            |
+| ---- | ---------------- | ---------------------- |
+| 300  | `pending_review` | Awaiting curator       |
+| 310  | `in_review`      | Curator opened item    |
+| 320  | `editing`        | Curator making changes |
 
 ### 400s - Published
 
@@ -101,7 +100,7 @@ Enrichment Flow (configurable order):
 200 → 210 → 211 → 212 → 220 → 221 → 222 → 230 → 231 → 232 → 240 → 300
 
 Review Flow:
-300 → 310 → 320 → 330 → 400
+300 → 310 → 320 → 400
         ↓
        540 (rejected)
 
@@ -195,7 +194,7 @@ UPDATE ingestion_queue SET status_code = CASE status
   WHEN 'queued' THEN 200
   WHEN 'processing' THEN 211
   WHEN 'enriched' THEN 300
-  WHEN 'approved' THEN 330
+  WHEN 'approved' THEN 400
   WHEN 'rejected' THEN 540
   WHEN 'failed' THEN 500
   ELSE 200
@@ -234,12 +233,11 @@ ORDER BY avg_duration_ms DESC;
 
 ## Agent Updates Required
 
-| Agent         | Current      | New Flow               |
-| ------------- | ------------ | ---------------------- |
-| discover      | -            | 100 → 122              |
-| enrich (main) | `processing` | Orchestrates 200 → 240 |
-| summarize     | -            | 210 → 212              |
-| tag           | -            | 220 → 222              |
-| thumbnail     | -            | 230 → 232              |
-| review UI     | -            | 300 → 330              |
-| publish       | -            | 330 → 400              |
+| Agent               | Current      | New Flow               |
+| ------------------- | ------------ | ---------------------- |
+| discover            | -            | 100 → 122              |
+| orchestrator (main) | `processing` | Orchestrates 200 → 300 |
+| summarize           | -            | 210 → 212              |
+| tag                 | -            | 220 → 222              |
+| thumbnail           | -            | 230 → 232              |
+| review UI           | -            | 300 → 400 (on approve) |

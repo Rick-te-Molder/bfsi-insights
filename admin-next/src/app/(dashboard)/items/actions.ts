@@ -256,7 +256,7 @@ export async function approveQueueItemAction(queueId: string, editedTitle?: stri
   const { error: updateError } = await supabase
     .from('ingestion_queue')
     .update({
-      status_code: 330,
+      status_code: 400,
       payload: newPayload,
       reviewed_by: reviewedBy,
       reviewed_at: new Date().toISOString(),
@@ -530,7 +530,7 @@ export async function bulkApproveAction(ids: string[]) {
     await supabase
       .from('ingestion_queue')
       .update({
-        status_code: 330,
+        status_code: 400,
         reviewed_by: reviewedBy,
         reviewed_at: new Date().toISOString(),
       })
