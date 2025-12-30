@@ -38,10 +38,22 @@ function ItemCard({
     payload.thumbnail_url ||
     (typeof payload.thumbnail_path === 'string' ? payload.thumbnail_path : undefined);
 
-  // Get source name from multiple possible fields
-  const sourceName = (payload.source_name || payload.source || payload.source_slug) as
+  // Get source name from multiple possible fields, fallback to extracting from URL
+  const sourceFromPayload = (payload.source_name || payload.source || payload.source_slug) as
     | string
     | undefined;
+
+  // Extract domain from URL as fallback
+  const extractDomain = (url: string): string => {
+    try {
+      const hostname = new URL(url).hostname;
+      return hostname.replace(/^www\./, '');
+    } catch {
+      return '';
+    }
+  };
+
+  const sourceName = sourceFromPayload || extractDomain(item.url);
 
   const detailUrl = `/items/${item.id}?view=card&status=${status}`;
 
