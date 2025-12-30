@@ -89,23 +89,32 @@ function ItemCard({
 
             {/* All Tags when expanded - with colored backgrounds like live site */}
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {(payload.audiences as string[])?.map((a: string) => (
-                <span
-                  key={a}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/20"
-                >
-                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                  {a}
-                </span>
-              ))}
-              {(payload.geographies as string[])?.map((g: string) => (
+              {/* Audiences from audience_scores object */}
+              {payload.audience_scores &&
+                Object.entries(payload.audience_scores as Record<string, number>)
+                  .filter(([, score]) => score >= 0.5)
+                  .map(([code]) => (
+                    <span
+                      key={code}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-300 ring-1 ring-inset ring-amber-500/20"
+                    >
+                      <svg
+                        className="h-3 w-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        />
+                      </svg>
+                      {code}
+                    </span>
+                  ))}
+              {(payload.geography_codes as string[])?.map((g: string) => (
                 <span
                   key={g}
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-500/10 text-teal-300 ring-1 ring-inset ring-teal-500/20"
@@ -121,7 +130,7 @@ function ItemCard({
                   {g}
                 </span>
               ))}
-              {(payload.industries as string[])?.map((i: string) => (
+              {(payload.industry_codes as string[])?.map((i: string) => (
                 <span
                   key={i}
                   className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-300 ring-1 ring-inset ring-blue-500/20"
@@ -129,7 +138,7 @@ function ItemCard({
                   {i}
                 </span>
               ))}
-              {(payload.topics as string[])?.map((t: string) => (
+              {(payload.topic_codes as string[])?.map((t: string) => (
                 <span
                   key={t}
                   className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-violet-500/10 text-violet-300 ring-1 ring-inset ring-violet-500/20"
@@ -205,10 +214,14 @@ function ItemCard({
 
             {/* Minimal tags when collapsed - audience + geography + count */}
             {(() => {
-              const audiences = (payload.audiences as string[]) || [];
-              const geographies = (payload.geographies as string[]) || [];
-              const topics = (payload.topics as string[]) || [];
-              const industries = (payload.industries as string[]) || [];
+              // Extract audiences from audience_scores object
+              const audienceScores = (payload.audience_scores as Record<string, number>) || {};
+              const audiences = Object.entries(audienceScores)
+                .filter(([, score]) => score >= 0.5)
+                .map(([code]) => code);
+              const geographies = (payload.geography_codes as string[]) || [];
+              const topics = (payload.topic_codes as string[]) || [];
+              const industries = (payload.industry_codes as string[]) || [];
               const regulators = (payload.regulator_codes as string[]) || [];
               const regulations = (payload.regulation_codes as string[]) || [];
               const obligations = (payload.obligation_codes as string[]) || [];
