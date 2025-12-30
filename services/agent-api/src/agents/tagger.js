@@ -3,8 +3,116 @@ import { z } from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { loadVendors } from '../lib/vendor-loader.js';
 import { loadTaxonomies } from '../lib/taxonomy-loader.js';
+import { getSupabase } from '../lib/supabase.js';
 
 const runner = new AgentRunner('tagger');
+
+// Cache for audiences and schema
+let cachedAudiences = null;
+let cachedTaggingSchema = null;
+
+/**
+ * Load audiences from kb_audience table
+ * KB-207: Single source of truth - load from DB, not hardcoded
+ */
+async function getAudiences() {
+  if (cachedAudiences) return cachedAudiences;
+
+  const { data, error } = await getSupabase()
+    .from('kb_audience')
+    .select('code, name, description')
+    .order('sort_order');
+
+  if (error || !data || data.length === 0) {
+    throw new Error(
+      'CRITICAL: No audiences found in kb_audience table. ' +
+        'Run migrations to seed audience data. ' +
+        `DB error: ${error?.message || 'No data returned'}`,
+    );
+  }
+
+  cachedAudiences = data;
+  return cachedAudiences;
+}
+
+/**
+ * Build Zod schema dynamically based on audiences from database
+ * KB-207: Schema reflects current audience definitions, not hardcoded
+ */
+async function getTaggingSchema() {
+  if (cachedTaggingSchema) return cachedTaggingSchema;
+
+  const audiences = await getAudiences();
+
+  // Build audience_scores object schema dynamically
+  const audienceScoresShape = {};
+  for (const audience of audiences) {
+    audienceScoresShape[audience.code] = z
+      .number()
+      .min(0)
+      .max(1)
+      .describe(`Relevance for ${audience.name}: ${audience.description}`);
+  }
+
+  cachedTaggingSchema = z.object({
+    // Core BFSI taxonomy - now supports multiple with confidence
+    industry_codes: z
+      .array(TaggedCode)
+      .describe(
+        'BFSI industry codes with confidence (include L1 parent and L2 sub-category if applicable)',
+      ),
+    topic_codes: z
+      .array(TaggedCode)
+      .describe('Topic codes with confidence (include L1 parent and L2 sub-topic if applicable)'),
+
+    // Geography with confidence
+    geography_codes: z
+      .array(TaggedCode)
+      .describe('Geography codes with confidence (e.g., "global", "eu", "uk", "us")'),
+
+    // AI/Agentic taxonomy with confidence
+    use_case_codes: z
+      .array(TaggedCode)
+      .describe('AI use case codes with confidence (empty array if not AI-related)'),
+    capability_codes: z
+      .array(TaggedCode)
+      .describe('AI capability codes with confidence (empty array if not AI-related)'),
+
+    // Regulatory taxonomy with confidence
+    regulator_codes: z
+      .array(TaggedCode)
+      .describe('Regulator codes with confidence (empty array if not regulatory)'),
+    regulation_codes: z
+      .array(z.string())
+      .describe('Regulation codes if specific regulations mentioned (empty array if none)'),
+
+    // Process taxonomy with confidence (hierarchical L1/L2/L3)
+    process_codes: z
+      .array(TaggedCode)
+      .describe('BFSI process codes with confidence - include parent codes for hierarchy'),
+
+    // Expandable entities (names, not codes)
+    organization_names: z
+      .array(z.string())
+      .describe('BFSI organizations mentioned (banks, insurers, asset managers)'),
+    vendor_names: z.array(z.string()).describe('AI/tech vendors mentioned'),
+
+    // Audience relevance scores - dynamically built from kb_audience table
+    audience_scores: z
+      .object(audienceScoresShape)
+      .describe('Relevance scores (0-1) per audience type'),
+
+    // Overall metadata
+    overall_confidence: z
+      .number()
+      .min(0)
+      .max(1)
+      .describe('Overall confidence in classification 0-1'),
+    reasoning: z.string().describe('Brief explanation of classification choices'),
+  });
+
+  return cachedTaggingSchema;
+}
 
 /**
  * Tagged item with confidence score
@@ -12,81 +120,6 @@ const runner = new AgentRunner('tagger');
 const TaggedCode = z.object({
   code: z.string().describe('The taxonomy code'),
   confidence: z.number().min(0).max(1).describe('Confidence score 0-1 for this specific tag'),
-});
-
-/**
- * Tagging Schema - Comprehensive taxonomy classification with granular confidence
- *
- * GUARDRAILS (pick from list):
- * - industry_codes, topic_codes, geography_codes
- * - use_case_codes, capability_codes
- * - regulator_codes, regulation_codes
- * - process_codes (BFSI business processes)
- *
- * EXPANDABLE (extract names, may create new entries):
- * - organization_names, vendor_names
- *
- * Each tag includes individual confidence scores for granular extraction.
- */
-const TaggingSchema = z.object({
-  // Core BFSI taxonomy - now supports multiple with confidence
-  industry_codes: z
-    .array(TaggedCode)
-    .describe(
-      'BFSI industry codes with confidence (include L1 parent and L2 sub-category if applicable)',
-    ),
-  topic_codes: z
-    .array(TaggedCode)
-    .describe('Topic codes with confidence (include L1 parent and L2 sub-topic if applicable)'),
-
-  // Geography with confidence
-  geography_codes: z
-    .array(TaggedCode)
-    .describe('Geography codes with confidence (e.g., "global", "eu", "uk", "us")'),
-
-  // AI/Agentic taxonomy with confidence
-  use_case_codes: z
-    .array(TaggedCode)
-    .describe('AI use case codes with confidence (empty array if not AI-related)'),
-  capability_codes: z
-    .array(TaggedCode)
-    .describe('AI capability codes with confidence (empty array if not AI-related)'),
-
-  // Regulatory taxonomy with confidence
-  regulator_codes: z
-    .array(TaggedCode)
-    .describe('Regulator codes with confidence (empty array if not regulatory)'),
-  regulation_codes: z
-    .array(z.string())
-    .describe('Regulation codes if specific regulations mentioned (empty array if none)'),
-
-  // Process taxonomy with confidence (hierarchical L1/L2/L3)
-  process_codes: z
-    .array(TaggedCode)
-    .describe('BFSI process codes with confidence - include parent codes for hierarchy'),
-
-  // Expandable entities (names, not codes)
-  organization_names: z
-    .array(z.string())
-    .describe('BFSI organizations mentioned (banks, insurers, asset managers)'),
-  vendor_names: z.array(z.string()).describe('AI/tech vendors mentioned'),
-
-  // Audience relevance scores - fixed keys for OpenAI structured output compatibility
-  audience_scores: z
-    .object({
-      executive: z.number().min(0).max(1).describe('Relevance for C-suite and strategy leaders'),
-      specialist: z
-        .number()
-        .min(0)
-        .max(1)
-        .describe('Relevance for domain specialists and practitioners'),
-      researcher: z.number().min(0).max(1).describe('Relevance for analysts and researchers'),
-    })
-    .describe('Relevance scores (0-1) per audience type'),
-
-  // Overall metadata
-  overall_confidence: z.number().min(0).max(1).describe('Overall confidence in classification 0-1'),
-  reasoning: z.string().describe('Brief explanation of classification choices'),
 });
 
 /**
@@ -244,6 +277,9 @@ URL: ${url}`;
         `🔍 [tagger] Prompt debug: Kee in system=${hasKeeInSystemPrompt}, Kee in user=${hasKeeInUserContent}`,
       );
       console.log(`🔍 [tagger] System prompt length: ${systemPrompt?.length || 0} chars`);
+
+      // Load dynamic schema based on current audiences in database
+      const TaggingSchema = await getTaggingSchema();
 
       const completion = await llm.parseStructured({
         model: modelId,
