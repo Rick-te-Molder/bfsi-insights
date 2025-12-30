@@ -41,6 +41,19 @@ export default [
       'no-console': 'off',
     },
   },
+  // Agent API backend (Node.js)
+  {
+    files: ['services/agent-api/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+      sourceType: 'module',
+    },
+    rules: {
+      'no-console': 'off',
+    },
+  },
   // Ignore generated/build output, types, and archived scripts
   {
     ignores: ['dist/**', 'node_modules/**', '.astro/**', '**/*.d.ts', 'scripts/_archive/**'],
