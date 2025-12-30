@@ -21,6 +21,20 @@ function formatDate(iso?: string | null) {
   });
 }
 
+// Helper to extract code from either string or {code, confidence} object
+// Handles both old tag format (objects) and new format (strings)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractCode(item: any): string | null {
+  if (!item) return null;
+  return typeof item === 'string' ? item : item.code || null;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractCodes(arr: any[] | null | undefined): string[] {
+  if (!arr || !Array.isArray(arr)) return [];
+  return arr.map(extractCode).filter((code): code is string => code !== null);
+}
+
 function ItemCard({
   item,
   isExpanded,
@@ -126,7 +140,8 @@ function ItemCard({
                       {code}
                     </span>
                   ))}
-              {(payload.geography_codes as string[])?.map((g: string) => (
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {extractCodes(payload.geography_codes as any[]).map((g: string) => (
                 <span
                   key={g}
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-500/10 text-teal-300 ring-1 ring-inset ring-teal-500/20"
@@ -142,7 +157,8 @@ function ItemCard({
                   {g}
                 </span>
               ))}
-              {(payload.industry_codes as string[])?.map((i: string) => (
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {extractCodes(payload.industry_codes as any[]).map((i: string) => (
                 <span
                   key={i}
                   className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/10 text-blue-300 ring-1 ring-inset ring-blue-500/20"
@@ -150,7 +166,8 @@ function ItemCard({
                   {i}
                 </span>
               ))}
-              {(payload.topic_codes as string[])?.map((t: string) => (
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {extractCodes(payload.topic_codes as any[]).map((t: string) => (
                 <span
                   key={t}
                   className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-violet-500/10 text-violet-300 ring-1 ring-inset ring-violet-500/20"
@@ -158,7 +175,8 @@ function ItemCard({
                   {t}
                 </span>
               ))}
-              {(payload.regulator_codes as string[])?.map((r: string) => (
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {extractCodes(payload.regulator_codes as any[]).map((r: string) => (
                 <span
                   key={r}
                   className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-300 ring-1 ring-inset ring-rose-500/20"
@@ -166,15 +184,17 @@ function ItemCard({
                   {r}
                 </span>
               ))}
-              {(payload.regulation_codes as string[])?.map((r: string) => (
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {extractCodes(payload.regulation_codes as any[]).map((reg: string) => (
                 <span
-                  key={r}
+                  key={reg}
                   className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-500/10 text-orange-300 ring-1 ring-inset ring-orange-500/20"
                 >
-                  {r}
+                  {reg}
                 </span>
               ))}
-              {(payload.process_codes as string[])?.map((p: string) => (
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+              {extractCodes(payload.process_codes as any[]).map((p: string) => (
                 <span
                   key={p}
                   className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-cyan-500/10 text-cyan-300 ring-1 ring-inset ring-cyan-500/20"
@@ -227,17 +247,29 @@ function ItemCard({
             {/* Minimal tags when collapsed - audience + geography + count */}
             {(() => {
               // Extract audiences from audience_scores object
-              const audienceScores = (payload.audience_scores as Record<string, number>) || {};
-              const audiences = Object.entries(audienceScores)
-                .filter(([, score]) => score >= 0.5)
-                .map(([code]) => code);
-              const geographies = (payload.geography_codes as string[]) || [];
-              const topics = (payload.topic_codes as string[]) || [];
-              const industries = (payload.industry_codes as string[]) || [];
-              const regulators = (payload.regulator_codes as string[]) || [];
-              const regulations = (payload.regulation_codes as string[]) || [];
-              const obligations = (payload.obligation_codes as string[]) || [];
-              const processes = (payload.process_codes as string[]) || [];
+              const audienceScores = payload.audience_scores as
+                | Record<string, number>
+                | null
+                | undefined;
+              const audiences = audienceScores
+                ? Object.entries(audienceScores)
+                    .filter(([, score]) => score >= 0.5)
+                    .map(([code]) => code)
+                : [];
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const geographies = extractCodes(payload.geography_codes as any[]);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const topics = extractCodes(payload.topic_codes as any[]);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const industries = extractCodes(payload.industry_codes as any[]);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const regulators = extractCodes(payload.regulator_codes as any[]);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const regulations = extractCodes(payload.regulation_codes as any[]);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const obligations = extractCodes(payload.obligation_codes as any[]);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const processes = extractCodes(payload.process_codes as any[]);
 
               const totalTags =
                 audiences.length +
