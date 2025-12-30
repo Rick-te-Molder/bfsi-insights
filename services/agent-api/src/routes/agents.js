@@ -6,7 +6,7 @@ import { runSummarizer } from '../agents/summarizer.js';
 import { runTagger } from '../agents/tagger.js';
 import { runThumbnailer } from '../agents/thumbnailer.js';
 import { runDiscovery } from '../agents/discoverer.js';
-import { processQueue, enrichItem } from '../agents/enricher.js';
+import { processQueue, enrichItem } from '../agents/orchestrator.js';
 import { STATUS, loadStatusCodes } from '../lib/status-codes.js';
 import { getUtilityVersion } from '../lib/utility-versions.js';
 import {

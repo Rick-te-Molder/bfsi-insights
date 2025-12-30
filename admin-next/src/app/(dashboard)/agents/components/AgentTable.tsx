@@ -57,7 +57,7 @@ export function AgentTable({ agents, promptsByAgent, onEdit, onTest }: AgentTabl
 
           // Check agent type
           const utilityAgents = ['thumbnail-generator'];
-          const orchestratorAgents = ['enricher', 'improver'];
+          const orchestratorAgents = ['orchestrator', 'improver'];
           const isUtilityAgent = !agentPrompts.length && utilityAgents.includes(agentName);
           const isOrchestratorAgent =
             !agentPrompts.length && orchestratorAgents.includes(agentName);

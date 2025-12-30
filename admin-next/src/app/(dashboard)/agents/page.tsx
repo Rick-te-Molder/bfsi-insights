@@ -45,7 +45,7 @@ export default function AgentsPage() {
     if (agentFilter === 'all') return agents;
 
     const utilityAgents = ['thumbnail-generator'];
-    const orchestratorAgents = ['enricher', 'improver'];
+    const orchestratorAgents = ['orchestrator', 'improver'];
 
     return agents.filter((agentName) => {
       const hasPrompts = promptsByAgent[agentName]?.length > 0;
