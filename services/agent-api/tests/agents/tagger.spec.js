@@ -43,14 +43,33 @@ vi.mock('@supabase/supabase-js', () => ({
           ],
           bfsi_topic: [{ code: 'ai-strategy', name: 'AI Strategy', level: 1, parent_code: null }],
           kb_geography: [{ code: 'global', name: 'Global', level: 1, parent_code: null }],
+          kb_audience: [
+            { code: 'executive', name: 'Executives', description: 'C-level and senior leadership' },
+            {
+              code: 'functional_specialist',
+              name: 'Functional Specialists',
+              description: 'Product managers, specialists',
+            },
+            { code: 'engineer', name: 'Engineers', description: 'Developers, architects' },
+            { code: 'researcher', name: 'Researchers', description: 'Academics, analysts' },
+          ],
         };
         const data = mockData[tableName] || [];
 
-        // Build chainable mock that supports .eq().not().order() patterns
+        // Build chainable mock that supports .eq().not().order().single() patterns
         const createChainable = (currentData) => ({
           eq: vi.fn(() => createChainable(currentData)),
           not: vi.fn(() => createChainable(currentData)),
           order: vi.fn(() => createChainable(currentData)),
+          single: vi.fn(() => ({
+            data: currentData[0] || null,
+            error: currentData.length === 0 ? { message: 'No rows found' } : null,
+            then: (resolve) =>
+              resolve({
+                data: currentData[0] || null,
+                error: currentData.length === 0 ? { message: 'No rows found' } : null,
+              }),
+          })),
           data: currentData,
           error: null,
           then: (resolve) => resolve({ data: currentData, error: null }),
@@ -82,6 +101,12 @@ vi.mock('../../src/lib/runner.js', () => ({
           process_codes: [],
           organization_names: ['JPMorgan'],
           vendor_names: ['OpenAI'],
+          audience_scores: {
+            executive: 0.7,
+            functional_specialist: 0.5,
+            engineer: 0.9,
+            researcher: 0.6,
+          },
           overall_confidence: 0.92,
           reasoning: 'Test reasoning with granular confidence',
         };
