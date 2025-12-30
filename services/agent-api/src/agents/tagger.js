@@ -3,9 +3,18 @@ import { z } from 'zod';
 import { zodResponseFormat } from 'openai/helpers/zod';
 import { loadVendors } from '../lib/vendor-loader.js';
 import { loadTaxonomies } from '../lib/taxonomy-loader.js';
-import { getSupabase } from '../lib/supabase.js';
+import { createClient } from '@supabase/supabase-js';
 
 const runner = new AgentRunner('tagger');
+
+// Lazy initialization to avoid crash on import when env vars aren't set
+let supabase = null;
+function getSupabase() {
+  if (!supabase) {
+    supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  }
+  return supabase;
+}
 
 // Cache for audiences and schema
 let cachedAudiences = null;
