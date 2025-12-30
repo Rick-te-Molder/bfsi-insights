@@ -207,33 +207,20 @@ export async function runTagger(queueItem, options = {}) {
       const { llm } = tools;
 
       // Extract domain TLD for geography hints
+      // KB-207: Load TLD mappings from kb_geography table, not hardcoded
       const url = payload.url || '';
       const domainMatch = url.match(/\.([a-z]{2,3})(?:\/|$)/i);
       const tld = domainMatch ? domainMatch[1].toLowerCase() : '';
-      const countryTldHint = [
-        'nl',
-        'de',
-        'fr',
-        'uk',
-        'us',
-        'ca',
-        'au',
-        'sg',
-        'hk',
-        'jp',
-        'ch',
-        'ie',
-        'in',
-        'ae',
-        'sa',
-        'qa',
-        'kw',
-        'bh',
-        'om',
-        'br',
-        'cn',
-      ].includes(tld)
-        ? `\nNOTE: Source domain ends in .${tld} - this strongly suggests ${tld.toUpperCase()} as a primary geography.`
+
+      // Check if TLD matches any geography's tld_hint
+      const { data: geoWithTld } = await getSupabase()
+        .from('kb_geography')
+        .select('code, name, tld_hint')
+        .eq('tld_hint', tld)
+        .single();
+
+      const countryTldHint = geoWithTld
+        ? `\nNOTE: Source domain ends in .${tld} - this strongly suggests ${geoWithTld.code.toUpperCase()} (${geoWithTld.name}) as a primary geography.`
         : '';
 
       // Build context data to inject into database prompt
