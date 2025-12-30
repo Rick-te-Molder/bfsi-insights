@@ -38,6 +38,11 @@ function ItemCard({
     payload.thumbnail_url ||
     (typeof payload.thumbnail_path === 'string' ? payload.thumbnail_path : undefined);
 
+  // Get source name from multiple possible fields
+  const sourceName = (payload.source_name || payload.source || payload.source_slug) as
+    | string
+    | undefined;
+
   const detailUrl = `/items/${item.id}?view=card&status=${status}`;
 
   return (
@@ -67,7 +72,7 @@ function ItemCard({
         <div className="mt-1 text-sm text-neutral-200">
           <span className="text-neutral-400">Published</span>{' '}
           {formatDate(payload.published_at as string) || 'Unknown'}
-          {payload.source_name && <span> · {payload.source_name}</span>}
+          {sourceName && <span> · {sourceName}</span>}
         </div>
 
         {/* Content area - shows thumbnail OR expanded content */}
@@ -168,7 +173,7 @@ function ItemCard({
               {thumbnailUrl ? (
                 <Image
                   src={thumbnailUrl}
-                  alt={payload.source_name || 'Preview'}
+                  alt={sourceName || 'Preview'}
                   fill
                   className="object-cover"
                   sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
@@ -208,6 +213,25 @@ function ItemCard({
               const regulations = (payload.regulation_codes as string[]) || [];
               const obligations = (payload.obligation_codes as string[]) || [];
               const processes = (payload.process_codes as string[]) || [];
+
+              const totalTags =
+                audiences.length +
+                geographies.length +
+                topics.length +
+                industries.length +
+                regulators.length +
+                regulations.length +
+                obligations.length +
+                processes.length;
+
+              // If no tags at all, show a message
+              if (totalTags === 0) {
+                return (
+                  <div className="mt-2 text-xs text-neutral-500 italic">
+                    No tags available - may need re-enrichment
+                  </div>
+                );
+              }
 
               // Extra tags = everything except first audience and first geography
               const extraTagCount =
