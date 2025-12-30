@@ -47,6 +47,36 @@ export async function updatePublishedDateAction(itemId: string, publishedDate: s
 export async function moveToReviewAction(itemId: string) {
   const supabase = createServiceRoleClient();
 
+  // Fetch item to validate enrichment is complete
+  const { data: item, error: fetchError } = await supabase
+    .from('ingestion_queue')
+    .select('payload, status_code')
+    .eq('id', itemId)
+    .single();
+
+  if (fetchError || !item) {
+    return { success: false as const, error: fetchError?.message || 'Failed to fetch item' };
+  }
+
+  const payload = item.payload || {};
+
+  // Validate that tagging has been completed
+  const hasAudiences = payload.audience_scores && Object.keys(payload.audience_scores).length > 0;
+  const hasGeographies =
+    Array.isArray(payload.geography_codes) && payload.geography_codes.length > 0;
+  const hasIndustries = Array.isArray(payload.industry_codes) && payload.industry_codes.length > 0;
+  const hasTopics = Array.isArray(payload.topic_codes) && payload.topic_codes.length > 0;
+
+  const hasAnyTags = hasAudiences || hasGeographies || hasIndustries || hasTopics;
+
+  if (!hasAnyTags) {
+    return {
+      success: false as const,
+      error:
+        'Item has not been tagged yet. Please run enrichment first or move to status 220 (to_tag) instead.',
+    };
+  }
+
   // Update status to PENDING_REVIEW (300) with service role to bypass RLS
   const { error } = await supabase
     .from('ingestion_queue')
