@@ -311,6 +311,9 @@ ALTER TABLE kb_category ADD CONSTRAINT kb_category_code_unique UNIQUE (code);
 -- PART 7: Add id uuid to kb_channel, rename slug to code
 -- ============================================================================
 
+-- Drop FK constraint from kb_source first
+ALTER TABLE kb_source DROP CONSTRAINT IF EXISTS kb_source_channel_slug_fkey;
+
 -- Add id column
 ALTER TABLE kb_channel ADD COLUMN id uuid DEFAULT gen_random_uuid();
 
@@ -324,7 +327,6 @@ ALTER TABLE kb_channel RENAME COLUMN slug TO code;
 ALTER TABLE kb_channel ADD CONSTRAINT kb_channel_code_unique UNIQUE (code);
 
 -- Update FK in kb_source table (channel_slug -> channel_code)
-ALTER TABLE kb_source DROP CONSTRAINT IF EXISTS kb_source_channel_slug_fkey;
 ALTER TABLE kb_source RENAME COLUMN channel_slug TO channel_code;
 ALTER TABLE kb_source ADD CONSTRAINT kb_source_channel_code_fkey 
   FOREIGN KEY (channel_code) REFERENCES kb_channel(code);
