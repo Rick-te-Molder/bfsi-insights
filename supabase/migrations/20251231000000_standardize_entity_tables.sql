@@ -1,12 +1,23 @@
--- Standardize all entity tables to use:
--- 1. id (uuid) as primary key
--- 2. slug (text, unique) as stable identifier
--- 3. name (text) as display name
-
+-- Standardize all tables to use consistent schema patterns:
+-- 
+-- ENTITY TABLES (regulator, vendor, org, standard_setter):
+--   - id: uuid (PK)
+--   - slug: text (UNIQUE, human-friendly identifier)
+--   - name: text (display name)
+--
+-- TAXONOMY/DOMAIN TABLES (process, industry, topic, geography, etc):
+--   - id: uuid (PK)
+--   - code: text (UNIQUE, structured identifier)
+--   - name: text (display name)
+--
 -- This migration handles:
--- - Add slug to bfsi_organization and ag_vendor
--- - Convert regulator.id and standard_setter.id from bigint to uuid
--- - Update all foreign key references
+-- 1. Add slug to bfsi_organization and ag_vendor (entity tables)
+-- 2. Convert regulator.id and standard_setter.id from bigint to uuid
+-- 3. Add id uuid to kb_category and kb_channel, rename slug to code
+-- 4. Rename bfsi_topic to kb_topic (topic is not BFSI-specific)
+-- 5. Convert regulation.id from integer to uuid
+-- 6. Convert ag_use_case.id from bigint to uuid
+-- 7. Update all FK references
 
 BEGIN;
 
@@ -271,5 +282,130 @@ BEGIN
   );
 END;
 $$;
+
+-- ============================================================================
+-- PART 6: Add id uuid to kb_category, rename slug to code
+-- ============================================================================
+
+-- Add id column
+ALTER TABLE kb_category ADD COLUMN id uuid DEFAULT gen_random_uuid();
+
+-- Make id NOT NULL and set as primary key
+ALTER TABLE kb_category ALTER COLUMN id SET NOT NULL;
+ALTER TABLE kb_category DROP CONSTRAINT kb_category_pkey;
+ALTER TABLE kb_category ADD PRIMARY KEY (id);
+
+-- Rename slug to code and make it UNIQUE instead of PK
+ALTER TABLE kb_category RENAME COLUMN slug TO code;
+ALTER TABLE kb_category ADD CONSTRAINT kb_category_code_unique UNIQUE (code);
+
+-- ============================================================================
+-- PART 7: Add id uuid to kb_channel, rename slug to code
+-- ============================================================================
+
+-- Add id column
+ALTER TABLE kb_channel ADD COLUMN id uuid DEFAULT gen_random_uuid();
+
+-- Make id NOT NULL and set as primary key
+ALTER TABLE kb_channel ALTER COLUMN id SET NOT NULL;
+ALTER TABLE kb_channel DROP CONSTRAINT kb_channel_pkey;
+ALTER TABLE kb_channel ADD PRIMARY KEY (id);
+
+-- Rename slug to code and make it UNIQUE instead of PK
+ALTER TABLE kb_channel RENAME COLUMN slug TO code;
+ALTER TABLE kb_channel ADD CONSTRAINT kb_channel_code_unique UNIQUE (code);
+
+-- Update FK in kb_source table (channel_slug -> channel_code)
+ALTER TABLE kb_source DROP CONSTRAINT IF EXISTS kb_source_channel_slug_fkey;
+ALTER TABLE kb_source RENAME COLUMN channel_slug TO channel_code;
+ALTER TABLE kb_source ADD CONSTRAINT kb_source_channel_code_fkey 
+  FOREIGN KEY (channel_code) REFERENCES kb_channel(code);
+
+-- ============================================================================
+-- PART 8: Rename bfsi_topic to kb_topic
+-- ============================================================================
+
+ALTER TABLE bfsi_topic RENAME TO kb_topic;
+
+-- Update junction table name
+ALTER TABLE kb_publication_bfsi_topic RENAME TO kb_publication_kb_topic;
+
+-- Update FK constraint names for clarity
+ALTER TABLE kb_publication_kb_topic DROP CONSTRAINT IF EXISTS kb_publication_bfsi_topic_publication_id_fkey;
+ALTER TABLE kb_publication_kb_topic ADD CONSTRAINT kb_publication_kb_topic_publication_id_fkey 
+  FOREIGN KEY (publication_id) REFERENCES kb_publication(id) ON DELETE CASCADE;
+
+-- Rename topic_code column references in other tables if needed
+-- (Most tables already use topic_code which is fine)
+
+-- ============================================================================
+-- PART 9: Convert regulation.id from integer to uuid
+-- ============================================================================
+
+-- Note: regulation has no FK references to it, so this is simpler
+
+-- Add new uuid column
+ALTER TABLE regulation ADD COLUMN id_new uuid DEFAULT gen_random_uuid();
+
+-- Make it NOT NULL
+ALTER TABLE regulation ALTER COLUMN id_new SET NOT NULL;
+
+-- Drop old PK and column
+ALTER TABLE regulation DROP CONSTRAINT regulation_pkey;
+ALTER TABLE regulation DROP COLUMN id;
+
+-- Rename new column
+ALTER TABLE regulation RENAME COLUMN id_new TO id;
+
+-- Add new PK
+ALTER TABLE regulation ADD PRIMARY KEY (id);
+
+-- ============================================================================
+-- PART 10: Convert ag_use_case.id from bigint to uuid
+-- ============================================================================
+
+-- Create temporary mapping table
+CREATE TEMP TABLE ag_use_case_id_mapping (
+  old_id bigint PRIMARY KEY,
+  new_id uuid DEFAULT gen_random_uuid()
+);
+
+-- Populate mapping
+INSERT INTO ag_use_case_id_mapping (old_id)
+SELECT id FROM ag_use_case;
+
+-- Add new uuid column to ag_use_case
+ALTER TABLE ag_use_case ADD COLUMN id_new uuid;
+
+-- Populate new IDs from mapping
+UPDATE ag_use_case uc
+SET id_new = m.new_id
+FROM ag_use_case_id_mapping m
+WHERE uc.id = m.old_id;
+
+-- Update FK in ag_use_case_capability
+ALTER TABLE ag_use_case_capability ADD COLUMN use_case_id_new uuid;
+
+UPDATE ag_use_case_capability ucc
+SET use_case_id_new = m.new_id
+FROM ag_use_case_id_mapping m
+WHERE ucc.use_case_id = m.old_id;
+
+-- Drop old FK constraint
+ALTER TABLE ag_use_case_capability DROP CONSTRAINT IF EXISTS ag_use_case_capability_use_case_id_fkey;
+
+-- Drop old columns
+ALTER TABLE ag_use_case_capability DROP COLUMN use_case_id;
+ALTER TABLE ag_use_case DROP CONSTRAINT ag_use_case_pkey;
+ALTER TABLE ag_use_case DROP COLUMN id;
+
+-- Rename new columns
+ALTER TABLE ag_use_case RENAME COLUMN id_new TO id;
+ALTER TABLE ag_use_case_capability RENAME COLUMN use_case_id_new TO use_case_id;
+
+-- Add new PK and FK
+ALTER TABLE ag_use_case ADD PRIMARY KEY (id);
+ALTER TABLE ag_use_case_capability ADD CONSTRAINT ag_use_case_capability_use_case_id_fkey 
+  FOREIGN KEY (use_case_id) REFERENCES ag_use_case(id);
 
 COMMIT;
