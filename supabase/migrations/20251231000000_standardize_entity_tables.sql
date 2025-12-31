@@ -22,6 +22,13 @@
 BEGIN;
 
 -- ============================================================================
+-- PART 0: Drop dependent views (will recreate at end)
+-- ============================================================================
+
+DROP VIEW IF EXISTS regulation_pretty CASCADE;
+DROP VIEW IF EXISTS regulation_obligations_pretty CASCADE;
+
+-- ============================================================================
 -- PART 1: Add slug to bfsi_organization
 -- ============================================================================
 
@@ -407,5 +414,46 @@ ALTER TABLE ag_use_case_capability RENAME COLUMN use_case_id_new TO use_case_id;
 ALTER TABLE ag_use_case ADD PRIMARY KEY (id);
 ALTER TABLE ag_use_case_capability ADD CONSTRAINT ag_use_case_capability_use_case_id_fkey 
   FOREIGN KEY (use_case_id) REFERENCES ag_use_case(id);
+
+-- ============================================================================
+-- PART 11: Recreate views with updated schema
+-- ============================================================================
+
+CREATE OR REPLACE VIEW regulation_obligations_pretty AS
+SELECT 
+  r.id,
+  r.code,
+  r.title,
+  (jsonb_array_elements(r.obligations) ->> 'text') AS obligation,
+  r.domain,
+  rg.name AS regulator_name
+FROM regulation r
+LEFT JOIN regulator rg ON rg.id = r.regulator_id;
+
+CREATE OR REPLACE VIEW regulation_pretty AS
+SELECT 
+  r.id,
+  r.code,
+  r.title,
+  r.instrument_type,
+  r.jurisdiction,
+  rg.name AS regulator_name,
+  r.scope_goals,
+  r.status,
+  r.effective_from,
+  r.effective_to,
+  r.obligations,
+  r.deadlines,
+  r.sources,
+  r.notes,
+  r.created_at,
+  r.updated_at,
+  r.regulator_id,
+  rg.slug AS regulator_slug,
+  rg.website_url AS regulator_website_url,
+  rg.jurisdiction AS regulator_jurisdiction,
+  r.domain
+FROM regulation r
+LEFT JOIN regulator rg ON rg.id = r.regulator_id;
 
 COMMIT;
