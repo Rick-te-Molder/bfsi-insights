@@ -360,8 +360,13 @@ ALTER TABLE regulation ADD COLUMN id_new uuid DEFAULT gen_random_uuid();
 -- Make it NOT NULL
 ALTER TABLE regulation ALTER COLUMN id_new SET NOT NULL;
 
--- Drop old PK and column
-ALTER TABLE regulation DROP CONSTRAINT regulation_pkey;
+-- Drop old PK constraint (named bfsi_regulation_pkey)
+ALTER TABLE regulation DROP CONSTRAINT bfsi_regulation_pkey;
+
+-- Drop the IDENTITY sequence
+DROP SEQUENCE IF EXISTS bfsi_regulation_id_seq CASCADE;
+
+-- Drop old column
 ALTER TABLE regulation DROP COLUMN id;
 
 -- Rename new column
