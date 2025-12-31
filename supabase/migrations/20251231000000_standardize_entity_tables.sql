@@ -363,10 +363,7 @@ ALTER TABLE regulation ALTER COLUMN id_new SET NOT NULL;
 -- Drop old PK constraint (named bfsi_regulation_pkey)
 ALTER TABLE regulation DROP CONSTRAINT bfsi_regulation_pkey;
 
--- Drop the IDENTITY sequence
-DROP SEQUENCE IF EXISTS bfsi_regulation_id_seq CASCADE;
-
--- Drop old column
+-- Drop old column (this will also drop the IDENTITY sequence automatically)
 ALTER TABLE regulation DROP COLUMN id;
 
 -- Rename new column
