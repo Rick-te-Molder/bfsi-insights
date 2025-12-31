@@ -27,6 +27,7 @@ BEGIN;
 
 DROP VIEW IF EXISTS regulation_pretty CASCADE;
 DROP VIEW IF EXISTS regulation_obligations_pretty CASCADE;
+DROP VIEW IF EXISTS regulator_pretty CASCADE;
 
 -- ============================================================================
 -- PART 1: Add slug to bfsi_organization
@@ -455,5 +456,14 @@ SELECT
   r.domain
 FROM regulation r
 LEFT JOIN regulator rg ON rg.id = r.regulator_id;
+
+CREATE OR REPLACE VIEW regulator_pretty AS
+SELECT 
+  id,
+  name,
+  slug,
+  jurisdiction,
+  website_url
+FROM regulator;
 
 COMMIT;
