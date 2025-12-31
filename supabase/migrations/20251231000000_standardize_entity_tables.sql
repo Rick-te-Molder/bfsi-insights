@@ -403,12 +403,12 @@ SET use_case_id_new = m.new_id
 FROM ag_use_case_id_mapping m
 WHERE ucc.use_case_id = m.old_id;
 
--- Drop old FK constraint
+-- Drop old FK constraint and PK constraint on ag_use_case_capability
 ALTER TABLE ag_use_case_capability DROP CONSTRAINT IF EXISTS ag_use_case_capability_use_case_id_fkey;
+ALTER TABLE ag_use_case_capability DROP CONSTRAINT IF EXISTS ag_use_case_capability_pkey;
 
--- Drop old columns
+-- Drop old columns (ag_use_case has no named PK constraint, just inline NOT NULL)
 ALTER TABLE ag_use_case_capability DROP COLUMN use_case_id;
-ALTER TABLE ag_use_case DROP CONSTRAINT ag_use_case_pkey;
 ALTER TABLE ag_use_case DROP COLUMN id;
 
 -- Rename new columns
@@ -417,6 +417,7 @@ ALTER TABLE ag_use_case_capability RENAME COLUMN use_case_id_new TO use_case_id;
 
 -- Add new PK and FK
 ALTER TABLE ag_use_case ADD PRIMARY KEY (id);
+ALTER TABLE ag_use_case_capability ADD PRIMARY KEY (use_case_id, capability_id);
 ALTER TABLE ag_use_case_capability ADD CONSTRAINT ag_use_case_capability_use_case_id_fkey 
   FOREIGN KEY (use_case_id) REFERENCES ag_use_case(id);
 
