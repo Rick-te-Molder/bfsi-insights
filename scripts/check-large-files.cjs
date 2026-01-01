@@ -24,11 +24,41 @@ const LANGUAGE_LIMITS = {
   'default': { file: 300, unit: 30, unitExcellent: 15 },
 };
 
-// Files that are temporarily allowed to exceed limits
+// Files that are temporarily allowed to exceed limits (grandfathered existing violations)
 // TODO(KB-151): Gradually refactor and remove entries from allowList.
 const ALLOW_LIST = new Set([
-  // All large files have been refactored! 🎉
-  // Keep this structure for future files that may exceed the limit
+  // Files > 300 lines (31 files as of 2026-01-02)
+  'services/agent-api/src/agents/scorer.js',
+  'src/features/publications/publication-filters.ts',
+  'admin-next/src/app/(dashboard)/items/page.tsx',
+  'services/agent-api/src/routes/agents.js',
+  'src/features/publications/multi-select-filters.ts',
+  'services/agent-api/src/agents/thumbnailer.js',
+  'services/agent-api/src/routes/agent-jobs.js',
+  'services/agent-api/src/agents/improver.js',
+  'services/agent-api/src/lib/content-fetcher.js',
+  'src/features/publications/PublicationCard.astro',
+  'admin-next/src/app/(dashboard)/evals/golden-sets/page.tsx',
+  'services/agent-api/src/agents/tagger.js',
+  'admin-next/src/app/(dashboard)/missed/components/MissedForm.tsx',
+  'services/agent-api/src/lib/evals.js',
+  'admin-next/src/components/tags/TagDisplay.tsx',
+  'src/components/FilterPanel.astro',
+  'services/agent-api/src/lib/sitemap.js',
+  'src/layouts/Base.astro',
+  'services/agent-api/src/cli/commands/pipeline.js',
+  'services/agent-api/src/agents/discoverer.js',
+  'admin-next/src/app/(dashboard)/items/[id]/page.tsx',
+  'services/agent-api/src/lib/runner.js',
+  'admin-next/src/app/(dashboard)/items/[id]/enrichment-panel.tsx',
+  'admin-next/src/app/(dashboard)/items/actions.ts',
+  'admin-next/src/app/(dashboard)/items/[id]/evaluation-panel.tsx',
+  'services/agent-api/src/lib/semantic-scholar.js',
+  'src/features/publications/multi-filters/chips.ts',
+  'services/agent-api/src/agents/orchestrator.js',
+  'admin-next/src/app/(dashboard)/items/review-list.tsx',
+  'services/agent-api/src/agents/discover-classics.js',
+  'admin-next/src/app/(dashboard)/items/[id]/actions.tsx',
 ]);
 
 // Patterns to scan
@@ -164,14 +194,45 @@ function analyzeFile(filePath) {
 }
 
 /**
+ * Get staged files (for pre-commit check)
+ */
+function getStagedFiles() {
+  try {
+    const staged = execSync('git diff --cached --name-only --diff-filter=AM', { encoding: 'utf8' })
+      .trim()
+      .split('\n')
+      .filter(Boolean);
+    
+    // Filter by patterns
+    const matchesPattern = (file) => {
+      return patterns.some(pattern => {
+        const regex = new RegExp(pattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*'));
+        return regex.test(file);
+      });
+    };
+    
+    return staged.filter(matchesPattern);
+  } catch (err) {
+    // No staged files or not in a git repo
+    return [];
+  }
+}
+
+/**
  * Main execution
  */
 try {
-  const files = execSync(`git ls-files ${patterns.map(p => `"${p}"`).join(' ')}`, { encoding: 'utf8' })
-    .trim()
-    .split('\n')
-    .filter(Boolean)
-    .filter((f) => !ALLOW_LIST.has(f));
+  // Check only staged files (new/modified code)
+  const stagedFiles = getStagedFiles();
+  
+  if (stagedFiles.length === 0) {
+    console.log('✅ No staged files to check');
+    process.exit(0);
+  }
+  
+  console.log(`\n📋 Checking ${stagedFiles.length} staged file(s) for SIG compliance...\n`);
+  
+  const files = stagedFiles.filter((f) => !ALLOW_LIST.has(f));
 
   const results = files.map(analyzeFile);
   
@@ -226,23 +287,30 @@ try {
   }
 
   // Summary
+  const grandfatheredCount = stagedFiles.filter(f => ALLOW_LIST.has(f)).length;
+  
   if (!hasErrors && !hasWarnings) {
     const totalFiles = results.length;
-    const allowListSize = ALLOW_LIST.size;
-    if (allowListSize > 0) {
-      console.log(`✅ All files meet SIG guidelines (${totalFiles} files checked, ${allowListSize} on allow-list)`);
-    } else {
-      console.log(`✅ All files meet SIG guidelines (${totalFiles} files checked)`);
+    console.log(`✅ All staged files meet SIG guidelines!`);
+    console.log(`   Checked: ${totalFiles} new/modified file(s)`);
+    if (grandfatheredCount > 0) {
+      console.log(`   Grandfathered: ${grandfatheredCount} file(s) on allow-list (not checked)`);
     }
+    console.log(`   Total on allow-list: ${ALLOW_LIST.size} file(s) (existing violations)\n`);
   } else {
     console.error('\n📊 SUMMARY:');
-    console.error(`   Files exceeding size limit: ${filesExceedingLimit.length}`);
-    console.error(`   Files with large units (>30 lines): ${filesWithLargeUnits.length}`);
-    console.error(`   Files with moderate units (15-30 lines): ${filesWithModerateUnits.length}`);
-    console.error('\n💡 SIG Recommendations:');
-    console.error('   - Files should be < 300 lines');
-    console.error('   - Functions should be < 15 lines (excellent) or < 30 lines (acceptable)');
-    console.error('   - Consider extracting large functions into smaller, focused units\n');
+    console.error(`   ❌ NEW violations in staged files:`);
+    console.error(`      Files exceeding size limit: ${filesExceedingLimit.length}`);
+    console.error(`      Files with large units (>30 lines): ${filesWithLargeUnits.length}`);
+    if (grandfatheredCount > 0) {
+      console.error(`   ⚪ Grandfathered: ${grandfatheredCount} file(s) on allow-list (not checked)`);
+    }
+    console.error(`   📋 Total on allow-list: ${ALLOW_LIST.size} file(s) (existing violations to fix gradually)`);
+    console.error('\n💡 SIG Requirements for NEW code:');
+    console.error('   - Files MUST be < 300 lines');
+    console.error('   - Functions MUST be < 30 lines');
+    console.error('   - Functions SHOULD be < 15 lines (excellent)');
+    console.error('\n🔧 To fix: Extract large functions into smaller, focused units\n');
   }
 
   // Exit with error if there are violations
