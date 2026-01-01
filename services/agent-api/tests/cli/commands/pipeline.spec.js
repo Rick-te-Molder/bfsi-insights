@@ -452,6 +452,88 @@ describe('Pipeline CLI Commands', () => {
       expect(result).toEqual({ processed: 1, success: 0 });
       expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Thumbnail failed'));
     });
+
+    it('should handle items with missing url in payload', async () => {
+      const mockItems = [
+        {
+          id: '1',
+          url: 'https://example.com/article',
+          payload: { title: 'Test Article' },
+        },
+      ];
+
+      mockSupabase.from.mockReturnValue({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            is: vi.fn(() => ({
+              order: vi.fn(() => ({
+                limit: vi.fn(() => ({ data: mockItems, error: null })),
+              })),
+            })),
+          })),
+        })),
+        update: vi.fn(() => ({
+          eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        })),
+      });
+
+      const { runThumbnailer } = await import('../../../src/agents/thumbnailer.js');
+      vi.mocked(runThumbnailer).mockResolvedValue({
+        publicUrl: 'https://storage.example.com/thumb.jpg',
+        bucket: 'thumbnails',
+        path: 'thumb.jpg',
+      });
+
+      const result = await runThumbnailCmd({ limit: 10 });
+
+      expect(result).toEqual({ processed: 1, success: 1 });
+      expect(mockItems[0].payload.url).toBe('https://example.com/article');
+    });
+  });
+
+  describe('runEnrichCmd', () => {
+    beforeEach(() => {
+      // Setup mocks for all pipeline commands
+      mockSupabase.from.mockReturnValue({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(() => ({ data: [], error: null })),
+            })),
+            is: vi.fn(() => ({
+              order: vi.fn(() => ({
+                limit: vi.fn(() => ({ data: [], error: null })),
+              })),
+            })),
+          })),
+        })),
+      });
+    });
+
+    it('should run full enrichment pipeline', async () => {
+      const { runEnrichCmd } = await import('../../../src/cli/commands/pipeline.js');
+
+      await runEnrichCmd({ limit: 5 });
+
+      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Full Enrichment Pipeline'));
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('Step 1/4: Relevance Filter'),
+      );
+      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Step 2/4: Summarize'));
+      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Step 3/4: Tag'));
+      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Step 4/4: Thumbnail'));
+      expect(console.log).toHaveBeenCalledWith(
+        expect.stringContaining('Full enrichment pipeline complete'),
+      );
+    });
+
+    it('should use default limit of 20', async () => {
+      const { runEnrichCmd } = await import('../../../src/cli/commands/pipeline.js');
+
+      await runEnrichCmd({});
+
+      expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Full Enrichment Pipeline'));
+    });
   });
 
   describe('runProcessQueueCmd', () => {
