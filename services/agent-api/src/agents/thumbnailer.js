@@ -15,21 +15,9 @@ const PDF_RENDERER_PATH = join(__dirname, '../../scripts/render-pdf.py');
 
 const runner = new AgentRunner('thumbnailer');
 
-// Process PDF: download, store, and render first page as thumbnail using Playwright
-async function processPdf(
-  pdfUrl,
-  queueId,
-  supabase,
-  config,
-  startStep,
-  finishStepSuccess,
-  finishStepError,
-) {
-  const bucket = 'asset';
-
-  // Step 1: Download PDF
+// Helper: Download PDF from URL
+async function downloadPdf(pdfUrl, startStep, finishStepSuccess, finishStepError) {
   const downloadStepId = await startStep('pdf_download', { url: pdfUrl });
-  let pdfBuffer;
   try {
     console.log(`   📥 Downloading PDF: ${pdfUrl}`);
     const response = await fetch(pdfUrl, {
@@ -38,18 +26,28 @@ async function processPdf(
       },
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    pdfBuffer = Buffer.from(await response.arrayBuffer());
+    const pdfBuffer = Buffer.from(await response.arrayBuffer());
     await finishStepSuccess(downloadStepId, { size: pdfBuffer.length });
     console.log(`   ✅ Downloaded PDF: ${(pdfBuffer.length / 1024).toFixed(0)}KB`);
+    return pdfBuffer;
   } catch (err) {
     await finishStepError(downloadStepId, err.message);
     throw err;
   }
+}
 
-  // Step 2: Store PDF in Supabase Storage
+// Helper: Store PDF in Supabase Storage
+async function storePdf(
+  pdfBuffer,
+  queueId,
+  bucket,
+  supabase,
+  startStep,
+  finishStepSuccess,
+  finishStepError,
+) {
   const pdfPath = `pdfs/${queueId}.pdf`;
   const storeStepId = await startStep('pdf_store', { path: pdfPath });
-  let pdfPublicUrl;
   try {
     const { error: uploadError } = await supabase.storage.from(bucket).upload(pdfPath, pdfBuffer, {
       contentType: 'application/pdf',
@@ -60,26 +58,23 @@ async function processPdf(
     const {
       data: { publicUrl },
     } = supabase.storage.from(bucket).getPublicUrl(pdfPath);
-    pdfPublicUrl = publicUrl;
-    await finishStepSuccess(storeStepId, { path: pdfPath, publicUrl: pdfPublicUrl });
+    await finishStepSuccess(storeStepId, { path: pdfPath, publicUrl });
     console.log(`   ✅ Stored PDF: ${pdfPath}`);
+    return { pdfPath, publicUrl };
   } catch (err) {
     await finishStepError(storeStepId, err.message);
     throw err;
   }
+}
 
-  // Step 3: Render first page using Python script
-  const renderStepId = await startStep('pdf_render', { viewport: config.viewport });
+// Helper: Render PDF using Python script
+async function renderPdfFirstPage(pdfBuffer, queueId, config) {
   const tempPdfPath = join(tmpdir(), `${queueId}.pdf`);
   const tempImagePath = join(tmpdir(), `${queueId}.jpg`);
 
   try {
-    console.log(`   🎨 Rendering PDF first page with Python script...`);
-
-    // Write PDF buffer to temp file
     await writeFile(tempPdfPath, pdfBuffer);
 
-    // Call Python script to render PDF with target dimensions
     const pythonPath = process.env.PYTHON_PATH || '/usr/bin/python3';
     const result = await new Promise((resolve, reject) => {
       const python = spawn(pythonPath, [
@@ -95,7 +90,6 @@ async function processPdf(
       python.stdout.on('data', (data) => {
         stdout += data.toString();
       });
-
       python.stderr.on('data', (data) => {
         stderr += data.toString();
       });
@@ -126,45 +120,229 @@ async function processPdf(
       });
     });
 
-    // Read rendered image
     const screenshotBuffer = await readFile(tempImagePath);
-
-    // Clean up temp files
     await unlink(tempPdfPath).catch(() => {});
     await unlink(tempImagePath).catch(() => {});
 
+    return { screenshotBuffer, result };
+  } catch (err) {
+    await unlink(tempPdfPath).catch(() => {});
+    await unlink(tempImagePath).catch(() => {});
+    throw err;
+  }
+}
+
+// Helper: Upload thumbnail to storage
+async function uploadThumbnail(
+  screenshotBuffer,
+  queueId,
+  bucket,
+  supabase,
+  startStep,
+  finishStepSuccess,
+  finishStepError,
+) {
+  const thumbnailPath = `thumbnails/${queueId}.jpg`;
+  const uploadStepId = await startStep('thumbnail_upload', { path: thumbnailPath });
+  try {
+    const { error: thumbError } = await supabase.storage
+      .from(bucket)
+      .upload(thumbnailPath, screenshotBuffer, {
+        contentType: 'image/jpeg',
+        upsert: true,
+      });
+    if (thumbError) throw new Error(`Thumbnail upload failed: ${thumbError.message}`);
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(bucket).getPublicUrl(thumbnailPath);
+    await finishStepSuccess(uploadStepId, { path: thumbnailPath, publicUrl });
+    console.log(`   ✅ Thumbnail uploaded: ${publicUrl}`);
+    return { thumbnailPath, publicUrl };
+  } catch (err) {
+    await finishStepError(uploadStepId, err.message);
+    throw err;
+  }
+}
+
+// Process PDF: download, store, and render first page as thumbnail
+async function processPdf(
+  pdfUrl,
+  queueId,
+  supabase,
+  config,
+  startStep,
+  finishStepSuccess,
+  finishStepError,
+) {
+  const bucket = 'asset';
+
+  // Step 1: Download PDF
+  const pdfBuffer = await downloadPdf(pdfUrl, startStep, finishStepSuccess, finishStepError);
+
+  // Step 2: Store PDF
+  const { pdfPath } = await storePdf(
+    pdfBuffer,
+    queueId,
+    bucket,
+    supabase,
+    startStep,
+    finishStepSuccess,
+    finishStepError,
+  );
+
+  // Step 3: Render first page
+  const renderStepId = await startStep('pdf_render', { viewport: config.viewport });
+  let screenshotBuffer, renderResult;
+  try {
+    console.log(`   🎨 Rendering PDF first page with Python script...`);
+    const rendered = await renderPdfFirstPage(pdfBuffer, queueId, config);
+    screenshotBuffer = rendered.screenshotBuffer;
+    renderResult = rendered.result;
     await finishStepSuccess(renderStepId, {
       size: screenshotBuffer.length,
-      width: result.width,
-      height: result.height,
+      width: renderResult.width,
+      height: renderResult.height,
     });
-    console.log(`   ✅ Rendered PDF first page: ${result.width}x${result.height}`);
-
-    // Step 4: Upload thumbnail
-    const thumbnailPath = `thumbnails/${queueId}.jpg`;
-    const uploadStepId = await startStep('thumbnail_upload', { path: thumbnailPath });
-    try {
-      const { error: thumbError } = await supabase.storage
-        .from(bucket)
-        .upload(thumbnailPath, screenshotBuffer, {
-          contentType: 'image/jpeg',
-          upsert: true,
-        });
-      if (thumbError) throw new Error(`Thumbnail upload failed: ${thumbError.message}`);
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from(bucket).getPublicUrl(thumbnailPath);
-      await finishStepSuccess(uploadStepId, { path: thumbnailPath, publicUrl });
-      console.log(`   ✅ Thumbnail uploaded: ${publicUrl}`);
-
-      return { bucket, path: thumbnailPath, publicUrl, pdfPath };
-    } catch (err) {
-      await finishStepError(uploadStepId, err.message);
-      throw err;
-    }
+    console.log(`   ✅ Rendered PDF first page: ${renderResult.width}x${renderResult.height}`);
   } catch (err) {
     await finishStepError(renderStepId, err.message);
+    throw err;
+  }
+
+  // Step 4: Upload thumbnail
+  const { thumbnailPath, publicUrl } = await uploadThumbnail(
+    screenshotBuffer,
+    queueId,
+    bucket,
+    supabase,
+    startStep,
+    finishStepSuccess,
+    finishStepError,
+  );
+
+  return { bucket, path: thumbnailPath, publicUrl, pdfPath };
+}
+
+// Helper: Validate URL scheme
+function validateUrlScheme(targetUrl) {
+  const lowerUrl = targetUrl.toLowerCase();
+  const hasValidScheme = lowerUrl.startsWith('http://') || lowerUrl.startsWith('https://');
+  if (!hasValidScheme) {
+    console.log(`   ❌ Invalid URL scheme: ${targetUrl.substring(0, 30)}...`);
+    throw new Error(
+      `Invalid URL scheme: only http/https supported (got: ${targetUrl.substring(0, 50)})`,
+    );
+  }
+}
+
+// Helper: Launch browser
+async function launchBrowser(targetUrl, startStep, finishStepSuccess, finishStepError) {
+  const browserStepId = await startStep('browser_launch', { url: targetUrl });
+  try {
+    const browser = await chromium.launch({
+      headless: true,
+      args: [
+        '--disable-blink-features=AutomationControlled',
+        '--disable-web-security',
+        '--no-sandbox',
+      ],
+    });
+    await finishStepSuccess(browserStepId, { status: 'launched' });
+    return browser;
+  } catch (err) {
+    await finishStepError(browserStepId, err.message);
+    throw err;
+  }
+}
+
+// Helper: Load page and prepare for screenshot
+async function loadAndPreparePage(
+  page,
+  targetUrl,
+  config,
+  startStep,
+  finishStepSuccess,
+  finishStepError,
+) {
+  const loadStepId = await startStep('page_load', { url: targetUrl });
+  try {
+    console.log(`   📥 Loading page: ${targetUrl}`);
+    await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: config.timeout });
+    await finishStepSuccess(loadStepId, { status: 'loaded' });
+  } catch (err) {
+    await finishStepError(loadStepId, err.message);
+    throw err;
+  }
+
+  // Trigger lazy loading and wait for rendering
+  await new Promise((r) => setTimeout(r, 2000));
+  await page.evaluate(() => window.scrollTo(0, 300));
+
+  console.log(`   ⏳ Waiting ${config.wait}ms for rendering...`);
+  await new Promise((r) => setTimeout(r, config.wait));
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await new Promise((r) => setTimeout(r, 1000));
+
+  // Inject CSS to hide cookie banners
+  await page.addStyleTag({
+    content: `
+      [class*="cookie"], [id*="cookie"], [class*="consent"], [id*="consent"],
+      [class*="gdpr"], [id*="gdpr"], [aria-label*="cookie"], [aria-label*="consent"],
+      .onetrust-pc-dark-filter, #onetrust-consent-sdk, .osano-cm-window, .cc-window,
+      .cookie-banner, [class*="CookieBanner"], [id*="CookieBanner"],
+      #CybotCookiebotDialog
+      { display: none !important; visibility: hidden !important; opacity: 0 !important; }
+    `,
+  });
+  await new Promise((r) => setTimeout(r, 500));
+}
+
+// Helper: Capture screenshot
+async function captureScreenshot(page, startStep, finishStepSuccess, finishStepError) {
+  const screenshotStepId = await startStep('screenshot', { quality: 80 });
+  try {
+    const screenshotBuffer = await page.screenshot({ type: 'jpeg', quality: 80 });
+    await finishStepSuccess(screenshotStepId, { size: screenshotBuffer.length });
+    return screenshotBuffer;
+  } catch (err) {
+    await finishStepError(screenshotStepId, err.message);
+    throw err;
+  }
+}
+
+// Helper: Upload screenshot to storage
+async function uploadScreenshot(
+  screenshotBuffer,
+  queueId,
+  supabase,
+  startStep,
+  finishStepSuccess,
+  finishStepError,
+) {
+  const uploadStepId = await startStep('storage_upload', { bucket: 'asset' });
+  const bucket = 'asset';
+  const fileName = `thumbnails/${queueId}.jpg`;
+
+  try {
+    const { error: uploadError } = await supabase.storage
+      .from(bucket)
+      .upload(fileName, screenshotBuffer, {
+        contentType: 'image/jpeg',
+        upsert: true,
+      });
+
+    if (uploadError) throw new Error(`Storage Upload Failed: ${uploadError.message}`);
+
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(bucket).getPublicUrl(fileName);
+    await finishStepSuccess(uploadStepId, { path: fileName, publicUrl });
+    console.log(`   ✅ Thumbnail uploaded: ${publicUrl}`);
+    return { bucket, path: fileName, publicUrl };
+  } catch (err) {
+    await finishStepError(uploadStepId, err.message);
     throw err;
   }
 }
@@ -179,6 +357,7 @@ export async function runThumbnailer(queueItem) {
       const { payload, queueId } = context;
       const { supabase, startStep, finishStepSuccess, finishStepError } = tools;
 
+      // Parse config
       let config = {
         viewport: { width: 1200, height: 675 },
         timeout: 45000,
@@ -193,25 +372,16 @@ export async function runThumbnailer(queueItem) {
 
       console.log(`📸 Generating thumbnail for: ${payload.title}`);
 
+      // Validate URL
       const targetUrl = payload.url || payload.source_url;
       if (!targetUrl) {
         throw new Error('No URL provided in payload (expected payload.url or payload.source_url)');
       }
 
-      // Handle URLs that can't be screenshotted
-      const lowerUrl = targetUrl.toLowerCase();
       console.log(`   🔍 Checking URL: ${targetUrl}`);
+      validateUrlScheme(targetUrl);
 
-      // Bad data - reject items with invalid URL schemes (not http/https)
-      const hasValidScheme = lowerUrl.startsWith('http://') || lowerUrl.startsWith('https://');
-      if (!hasValidScheme) {
-        console.log(`   ❌ Invalid URL scheme: ${targetUrl.substring(0, 30)}...`);
-        throw new Error(
-          `Invalid URL scheme: only http/https supported (got: ${targetUrl.substring(0, 50)})`,
-        );
-      }
-
-      // PDFs - download, store, and render first page as thumbnail
+      // Handle PDFs separately
       console.log(`   🔍 Calling isPdfUrl for: ${targetUrl}`);
       const isPdf = isPdfUrl(targetUrl);
       console.log(`   🔍 isPdfUrl result: ${isPdf}`);
@@ -228,23 +398,8 @@ export async function runThumbnailer(queueItem) {
         );
       }
 
-      // Step 1: Launch browser
-      const browserStepId = await startStep('browser_launch', { url: targetUrl });
-      let browser;
-      try {
-        browser = await chromium.launch({
-          headless: true,
-          args: [
-            '--disable-blink-features=AutomationControlled',
-            '--disable-web-security',
-            '--no-sandbox',
-          ],
-        });
-        await finishStepSuccess(browserStepId, { status: 'launched' });
-      } catch (err) {
-        await finishStepError(browserStepId, err.message);
-        throw err;
-      }
+      // Process web page screenshot
+      const browser = await launchBrowser(targetUrl, startStep, finishStepSuccess, finishStepError);
 
       try {
         const browserContext = await browser.newContext({
@@ -256,82 +411,28 @@ export async function runThumbnailer(queueItem) {
 
         const page = await browserContext.newPage();
 
-        // Step 2: Load page
-        const loadStepId = await startStep('page_load', { url: targetUrl });
-        try {
-          console.log(`   📥 Loading page: ${targetUrl}`);
-          await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: config.timeout });
-          await finishStepSuccess(loadStepId, { status: 'loaded' });
-        } catch (err) {
-          await finishStepError(loadStepId, err.message);
-          throw err;
-        }
-
-        // Trigger lazy loading and wait for rendering
-        await new Promise((r) => setTimeout(r, 2000));
-        await page.evaluate(() => window.scrollTo(0, 300));
-
-        console.log(`   ⏳ Waiting ${config.wait}ms for rendering...`);
-        await new Promise((r) => setTimeout(r, config.wait));
-
-        await page.evaluate(() => window.scrollTo(0, 0));
-        await new Promise((r) => setTimeout(r, 1000));
-
-        // Inject CSS to hide cookie banners
-        await page.addStyleTag({
-          content: `
-            [class*="cookie"], [id*="cookie"], [class*="consent"], [id*="consent"],
-            [class*="gdpr"], [id*="gdpr"], [aria-label*="cookie"], [aria-label*="consent"],
-            .onetrust-pc-dark-filter, #onetrust-consent-sdk, .osano-cm-window, .cc-window,
-            .cookie-banner, [class*="CookieBanner"], [id*="CookieBanner"],
-            #CybotCookiebotDialog
-            { display: none !important; visibility: hidden !important; opacity: 0 !important; }
-          `,
-        });
-        await new Promise((r) => setTimeout(r, 500));
-
-        // Step 3: Capture screenshot
-        const screenshotStepId = await startStep('screenshot', { quality: 80 });
-        let screenshotBuffer;
-        try {
-          screenshotBuffer = await page.screenshot({ type: 'jpeg', quality: 80 });
-          await finishStepSuccess(screenshotStepId, { size: screenshotBuffer.length });
-        } catch (err) {
-          await finishStepError(screenshotStepId, err.message);
-          throw err;
-        }
-
-        // Step 4: Upload to storage
-        const uploadStepId = await startStep('storage_upload', { bucket: 'asset' });
-        const bucket = 'asset';
-        const fileName = `thumbnails/${queueId}.jpg`;
-
-        try {
-          const { error: uploadError } = await supabase.storage
-            .from(bucket)
-            .upload(fileName, screenshotBuffer, {
-              contentType: 'image/jpeg',
-              upsert: true,
-            });
-
-          if (uploadError) throw new Error(`Storage Upload Failed: ${uploadError.message}`);
-
-          const {
-            data: { publicUrl },
-          } = supabase.storage.from(bucket).getPublicUrl(fileName);
-
-          await finishStepSuccess(uploadStepId, { path: fileName, publicUrl });
-
-          console.log(`   ✅ Thumbnail uploaded: ${publicUrl}`);
-          return {
-            bucket,
-            path: fileName,
-            publicUrl,
-          };
-        } catch (err) {
-          await finishStepError(uploadStepId, err.message);
-          throw err;
-        }
+        await loadAndPreparePage(
+          page,
+          targetUrl,
+          config,
+          startStep,
+          finishStepSuccess,
+          finishStepError,
+        );
+        const screenshotBuffer = await captureScreenshot(
+          page,
+          startStep,
+          finishStepSuccess,
+          finishStepError,
+        );
+        return await uploadScreenshot(
+          screenshotBuffer,
+          queueId,
+          supabase,
+          startStep,
+          finishStepSuccess,
+          finishStepError,
+        );
       } finally {
         await browser.close();
       }
