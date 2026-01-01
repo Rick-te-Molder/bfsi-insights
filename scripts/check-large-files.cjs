@@ -1,4 +1,3 @@
-/* global process */
 /**
  * SIG-compliant code size checker
  * Checks both file size and unit (function/method) size based on SIG maintainability guidelines
