@@ -2,3 +2,6 @@ npx lint-staged
 
 # Check for large files (warning only, does not block commit)
 node scripts/check-large-files.cjs || echo "⚠️  Consider refactoring large files before merging."
+
+# Check if schema.md needs updating after migration changes
+node scripts/check-schema-sync.cjs
