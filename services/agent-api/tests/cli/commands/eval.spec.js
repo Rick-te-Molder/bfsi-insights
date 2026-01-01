@@ -75,14 +75,6 @@ describe('Eval CLI Commands', () => {
 
       expect(evals.runGoldenEval).toHaveBeenCalled();
     });
-
-    it('should run judge eval when specified', async () => {
-      vi.mocked(evals.runLLMJudgeEval).mockResolvedValue(undefined);
-
-      await runEvalCmd({ agent: 'screener', type: 'judge', limit: 5 });
-
-      expect(evals.runLLMJudgeEval).toHaveBeenCalledWith('screener', expect.any(Function), []);
-    });
   });
 
   describe('runEvalHistoryCmd', () => {

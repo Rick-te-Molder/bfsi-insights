@@ -5,6 +5,9 @@ import * as discoverClassics from '../../../src/agents/discover-classics.js';
 
 vi.mock('../../../src/agents/discoverer.js');
 vi.mock('../../../src/agents/discover-classics.js');
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: vi.fn(() => ({})),
+}));
 
 describe('Discovery CLI Commands', () => {
   beforeEach(() => {

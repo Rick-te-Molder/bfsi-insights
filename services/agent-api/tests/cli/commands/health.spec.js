@@ -1,35 +1,37 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { runQueueHealthCmd } from '../../../src/cli/commands/health.js';
 import * as utils from '../../../src/cli/utils.js';
+import { createClient } from '@supabase/supabase-js';
 
 vi.mock('../../../src/cli/utils.js');
-
-const mockSupabase = {
-  rpc: vi.fn(),
-  from: vi.fn(() => ({
-    select: vi.fn(() => ({
-      lt: vi.fn(() => ({
-        order: vi.fn(() => ({ data: [] })),
-      })),
-      not: vi.fn(() => ({
-        gte: vi.fn(() => ({
-          order: vi.fn(() => ({ data: [] })),
-        })),
-      })),
-    })),
-  })),
-};
-
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => mockSupabase),
-}));
+vi.mock('@supabase/supabase-js');
 
 describe('Health CLI Command', () => {
+  let mockSupabase;
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.mocked(utils.getStatusIcon).mockReturnValue('✓');
     vi.mocked(utils.printPendingBreakdown).mockImplementation(() => {});
+
+    mockSupabase = {
+      rpc: vi.fn().mockResolvedValue({ data: [] }),
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          lt: vi.fn(() => ({
+            order: vi.fn(() => ({ data: [] })),
+          })),
+          not: vi.fn(() => ({
+            gte: vi.fn(() => ({
+              order: vi.fn(() => ({ data: [] })),
+            })),
+          })),
+        })),
+      })),
+    };
+
+    vi.mocked(createClient).mockReturnValue(mockSupabase);
   });
 
   describe('runQueueHealthCmd', () => {

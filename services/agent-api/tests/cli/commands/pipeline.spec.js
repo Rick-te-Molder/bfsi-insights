@@ -10,6 +10,7 @@ import {
 import * as contentFetcher from '../../../src/lib/content-fetcher.js';
 import * as orchestrator from '../../../src/agents/orchestrator.js';
 import * as statusCodes from '../../../src/lib/status-codes.js';
+import { createClient } from '@supabase/supabase-js';
 
 vi.mock('../../../src/lib/content-fetcher.js');
 vi.mock('../../../src/agents/screener.js');
@@ -18,43 +19,44 @@ vi.mock('../../../src/agents/tagger.js');
 vi.mock('../../../src/agents/thumbnailer.js');
 vi.mock('../../../src/agents/orchestrator.js');
 vi.mock('../../../src/lib/status-codes.js');
-
-const mockSupabase = {
-  from: vi.fn(() => ({
-    select: vi.fn(() => ({
-      eq: vi.fn(() => ({
-        is: vi.fn(() => ({
-          order: vi.fn(() => ({
-            limit: vi.fn(() => ({ data: [], error: null })),
-          })),
-        })),
-        order: vi.fn(() => ({
-          limit: vi.fn(() => ({ data: [], error: null })),
-        })),
-        limit: vi.fn(() => ({ data: [], error: null })),
-      })),
-      order: vi.fn(() => ({
-        limit: vi.fn(() => ({ data: [], error: null })),
-      })),
-      limit: vi.fn(() => ({ data: [], error: null })),
-    })),
-    update: vi.fn(() => ({
-      eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
-    })),
-  })),
-};
-
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => mockSupabase),
-}));
+vi.mock('@supabase/supabase-js');
 
 describe('Pipeline CLI Commands', () => {
+  let mockSupabase;
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.mocked(statusCodes.loadStatusCodes).mockResolvedValue(undefined);
     vi.mocked(statusCodes.STATUS).mockReturnValue({ FETCHED: 100, FILTERED: 200 });
+
+    mockSupabase = {
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            is: vi.fn(() => ({
+              order: vi.fn(() => ({
+                limit: vi.fn(() => ({ data: [], error: null })),
+              })),
+            })),
+            order: vi.fn(() => ({
+              limit: vi.fn(() => ({ data: [], error: null })),
+            })),
+            limit: vi.fn(() => ({ data: [], error: null })),
+          })),
+          order: vi.fn(() => ({
+            limit: vi.fn(() => ({ data: [], error: null })),
+          })),
+          limit: vi.fn(() => ({ data: [], error: null })),
+        })),
+        update: vi.fn(() => ({
+          eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        })),
+      })),
+    };
+
+    vi.mocked(createClient).mockReturnValue(mockSupabase);
   });
 
   describe('runFetchCmd', () => {
