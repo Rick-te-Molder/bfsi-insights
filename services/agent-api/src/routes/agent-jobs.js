@@ -18,6 +18,7 @@ import {
   handleItemFailure,
 } from '../lib/pipeline-tracking.js';
 import { WIP_LIMITS, getCurrentWIP } from '../lib/wip-limits.js';
+import { validateTransition } from '../lib/state-machine.js';
 
 const router = express.Router();
 const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
@@ -67,11 +68,18 @@ async function processItem(item, agent, jobId, index, config) {
     payload_keys: Object.keys(item.payload || {}),
   });
 
+  // Validate transition to working state
+  const workingStatus = config.workingStatusCode();
+  try {
+    validateTransition(item.status_code, workingStatus);
+  } catch (err) {
+    console.error(`   ❌ Invalid transition for ${agent} ${item.id}:`, err.message);
+    await failStepRun(stepRunId, err);
+    throw err;
+  }
+
   // Set status to "working" while processing
-  await supabase
-    .from('ingestion_queue')
-    .update({ status_code: config.workingStatusCode() })
-    .eq('id', item.id);
+  await supabase.from('ingestion_queue').update({ status_code: workingStatus }).eq('id', item.id);
 
   // Run agent with timeout
   const result = await withTimeout(config.runner(item), TIMEOUT_MS);
@@ -83,8 +91,18 @@ async function processItem(item, agent, jobId, index, config) {
     return { success: true, stepRunId };
   }
 
-  // Update queue item
+  // Update queue item with validation
   const nextStatus = config.nextStatusCode(item);
+
+  // Validate transition to next state
+  try {
+    validateTransition(workingStatus, nextStatus);
+  } catch (err) {
+    console.error(`   ❌ Invalid transition for ${agent} ${item.id}:`, err.message);
+    await failStepRun(stepRunId, err);
+    throw err;
+  }
+
   const { error: updateError } = await supabase
     .from('ingestion_queue')
     .update({
