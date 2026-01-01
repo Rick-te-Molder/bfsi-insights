@@ -24,8 +24,14 @@ const LANGUAGE_LIMITS = {
   'default': { file: 300, unit: 30, unitExcellent: 15 },
 };
 
-// Files that are temporarily allowed to exceed limits (grandfathered existing violations)
+// Files that are temporarily allowed to exceed FILE SIZE limits (grandfathered existing violations)
 // TODO(KB-151): Gradually refactor and remove entries from allowList.
+// 
+// NOTE: This only grandfathers FILE SIZE (>300 lines), not UNIT SIZE (functions >30 lines).
+// ~117 additional files have large units but are under 300 lines - these are NOT grandfathered.
+// If you modify a file with large units, you may need to refactor those units to pass the check.
+// This creates incentive to refactor as you go.
+//
 const ALLOW_LIST = new Set([
   // Files > 300 lines (31 files as of 2026-01-02)
   'services/agent-api/src/agents/scorer.js',
@@ -310,6 +316,12 @@ try {
     console.error('   - Files MUST be < 300 lines');
     console.error('   - Functions MUST be < 30 lines');
     console.error('   - Functions SHOULD be < 15 lines (excellent)');
+    console.error('\n⚠️  Grandfathering Policy:');
+    console.error('   - Only FILE SIZE (>300 lines) is grandfathered (31 files)');
+    console.error('   - UNIT SIZE (functions >30 lines) is NOT grandfathered');
+    console.error('   - ~117 files have large units but are <300 lines');
+    console.error('   - Modifying these files may require refactoring large functions');
+    console.error('   - This creates incentive to refactor as you go');
     console.error('\n🔧 To fix: Extract large functions into smaller, focused units\n');
   }
 
