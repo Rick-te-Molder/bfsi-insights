@@ -165,6 +165,60 @@ describe('Pipeline CLI Commands', () => {
 
       expect(result).toEqual({ processed: 0 });
     });
+
+    it('should filter items and mark as relevant or irrelevant', async () => {
+      const mockItems = [
+        { id: '1', payload: { title: 'Relevant Article' } },
+        { id: '2', payload: { title: 'Irrelevant Article' } },
+      ];
+
+      mockSupabase.from.mockReturnValue({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(() => ({ data: mockItems, error: null })),
+            })),
+          })),
+        })),
+        update: vi.fn(() => ({
+          eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        })),
+      });
+
+      const { runRelevanceFilter } = await import('../../../src/agents/screener.js');
+      vi.mocked(runRelevanceFilter)
+        .mockResolvedValueOnce({ relevant: true })
+        .mockResolvedValueOnce({ relevant: false, reason: 'Not relevant' });
+
+      const result = await runFilterCmd({ limit: 10 });
+
+      expect(result).toEqual({ processed: 2, filtered: 1, rejected: 1 });
+    });
+
+    it('should handle filter errors gracefully', async () => {
+      const mockItems = [{ id: '1', payload: { title: 'Test' } }];
+
+      mockSupabase.from.mockReturnValue({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(() => ({ data: mockItems, error: null })),
+            })),
+          })),
+        })),
+        update: vi.fn(() => ({
+          eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        })),
+      });
+
+      const { runRelevanceFilter } = await import('../../../src/agents/screener.js');
+      vi.mocked(runRelevanceFilter).mockRejectedValue(new Error('Filter failed'));
+
+      const result = await runFilterCmd({ limit: 10 });
+
+      expect(result).toEqual({ processed: 1, filtered: 0, rejected: 0 });
+      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Filter failed'));
+    });
   });
 
   describe('runSummarizeCmd', () => {
@@ -184,6 +238,64 @@ describe('Pipeline CLI Commands', () => {
 
       expect(result).toEqual({ processed: 0 });
     });
+
+    it('should summarize items successfully', async () => {
+      const mockItems = [
+        { id: '1', payload: { title: 'Article 1' } },
+        { id: '2', payload: { title: 'Article 2' } },
+      ];
+
+      mockSupabase.from.mockReturnValue({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(() => ({ data: mockItems, error: null })),
+            })),
+          })),
+        })),
+        update: vi.fn(() => ({
+          eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        })),
+      });
+
+      const { runSummarizer } = await import('../../../src/agents/summarizer.js');
+      vi.mocked(runSummarizer).mockResolvedValue({
+        title: 'Summarized Title',
+        summary: 'Summary text',
+        published_at: '2024-01-01',
+        author: 'Author',
+        authors: ['Author'],
+      });
+
+      const result = await runSummarizeCmd({ limit: 10 });
+
+      expect(result).toEqual({ processed: 2, success: 2 });
+    });
+
+    it('should handle summarize errors gracefully', async () => {
+      const mockItems = [{ id: '1', payload: { title: 'Test' } }];
+
+      mockSupabase.from.mockReturnValue({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(() => ({ data: mockItems, error: null })),
+            })),
+          })),
+        })),
+        update: vi.fn(() => ({
+          eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        })),
+      });
+
+      const { runSummarizer } = await import('../../../src/agents/summarizer.js');
+      vi.mocked(runSummarizer).mockRejectedValue(new Error('Summarize failed'));
+
+      const result = await runSummarizeCmd({ limit: 10 });
+
+      expect(result).toEqual({ processed: 1, success: 0 });
+      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Summarize failed'));
+    });
   });
 
   describe('runTagCmd', () => {
@@ -202,6 +314,62 @@ describe('Pipeline CLI Commands', () => {
       const result = await runTagCmd({ limit: 10 });
 
       expect(result).toEqual({ processed: 0 });
+    });
+
+    it('should tag items successfully', async () => {
+      const mockItems = [
+        { id: '1', payload: { title: 'Article 1' } },
+        { id: '2', payload: { title: 'Article 2' } },
+      ];
+
+      mockSupabase.from.mockReturnValue({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(() => ({ data: mockItems, error: null })),
+            })),
+          })),
+        })),
+        update: vi.fn(() => ({
+          eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        })),
+      });
+
+      const { runTagger } = await import('../../../src/agents/tagger.js');
+      vi.mocked(runTagger).mockResolvedValue({
+        topics: ['AI'],
+        industries: ['Finance'],
+        geographies: ['US'],
+      });
+
+      const result = await runTagCmd({ limit: 10 });
+
+      expect(result).toEqual({ processed: 2, success: 2 });
+    });
+
+    it('should handle tag errors gracefully', async () => {
+      const mockItems = [{ id: '1', payload: { title: 'Test' } }];
+
+      mockSupabase.from.mockReturnValue({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(() => ({ data: mockItems, error: null })),
+            })),
+          })),
+        })),
+        update: vi.fn(() => ({
+          eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        })),
+      });
+
+      const { runTagger } = await import('../../../src/agents/tagger.js');
+      vi.mocked(runTagger).mockRejectedValue(new Error('Tag failed'));
+
+      const result = await runTagCmd({ limit: 10 });
+
+      expect(result).toEqual({ processed: 1, success: 0 });
+      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Tag failed'));
     });
   });
 
@@ -223,6 +391,66 @@ describe('Pipeline CLI Commands', () => {
       const result = await runThumbnailCmd({ limit: 10 });
 
       expect(result).toEqual({ processed: 0 });
+    });
+
+    it('should generate thumbnails successfully', async () => {
+      const mockItems = [
+        { id: '1', payload: { title: 'Article 1', url: 'https://example.com' } },
+        { id: '2', payload: { title: 'Article 2', url: 'https://example.com' } },
+      ];
+
+      mockSupabase.from.mockReturnValue({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            is: vi.fn(() => ({
+              order: vi.fn(() => ({
+                limit: vi.fn(() => ({ data: mockItems, error: null })),
+              })),
+            })),
+          })),
+        })),
+        update: vi.fn(() => ({
+          eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        })),
+      });
+
+      const { runThumbnailer } = await import('../../../src/agents/thumbnailer.js');
+      vi.mocked(runThumbnailer).mockResolvedValue({
+        publicUrl: 'https://storage.example.com/thumb.jpg',
+        bucket: 'thumbnails',
+        path: 'thumb.jpg',
+      });
+
+      const result = await runThumbnailCmd({ limit: 10 });
+
+      expect(result).toEqual({ processed: 2, success: 2 });
+    });
+
+    it('should handle thumbnail errors gracefully', async () => {
+      const mockItems = [{ id: '1', payload: { title: 'Test', url: 'https://example.com' } }];
+
+      mockSupabase.from.mockReturnValue({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            is: vi.fn(() => ({
+              order: vi.fn(() => ({
+                limit: vi.fn(() => ({ data: mockItems, error: null })),
+              })),
+            })),
+          })),
+        })),
+        update: vi.fn(() => ({
+          eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
+        })),
+      });
+
+      const { runThumbnailer } = await import('../../../src/agents/thumbnailer.js');
+      vi.mocked(runThumbnailer).mockRejectedValue(new Error('Thumbnail failed'));
+
+      const result = await runThumbnailCmd({ limit: 10 });
+
+      expect(result).toEqual({ processed: 1, success: 0 });
+      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Thumbnail failed'));
     });
   });
 
