@@ -25,82 +25,119 @@ import {
   hideSpinner,
 } from './filters/ui';
 
-export default function initPublicationFilters() {
+interface DOMElements {
+  list: HTMLElement;
+  empty: HTMLElement | null;
+  clearBtn: HTMLElement | null;
+  countEl: HTMLElement | null;
+  qEl: HTMLInputElement | null;
+  mobileSearchEl: HTMLInputElement | null;
+  chipsEl: HTMLElement | null;
+  badgeEl: HTMLElement | null;
+  loadMoreBtn: HTMLButtonElement | null;
+  paginationCount: HTMLElement | null;
+  paginationContainer: HTMLElement | null;
+  searchSpinner: HTMLElement | null;
+  mobileSearchSpinner: HTMLElement | null;
+  searchSuggestions: HTMLElement | null;
+  mobileSearchSuggestions: HTMLElement | null;
+  searchHistory: HTMLElement | null;
+  mobileSearchHistory: HTMLElement | null;
+}
+
+interface FilterElement {
+  key: string;
+  el: HTMLSelectElement;
+}
+
+interface FilterState {
+  filters: FilterElement[];
+  data: ReturnType<typeof indexData>;
+  currentPage: number;
+  FuseCtor: any;
+}
+
+function getDOMElements(): DOMElements | null {
   const list = document.getElementById('list');
-  const empty = document.getElementById('empty');
-  const clearBtn = document.getElementById('clear-filters');
-  const countEl = document.getElementById('count');
-  const qEl = document.getElementById('q') as HTMLInputElement | null;
-  const mobileSearchEl = document.getElementById('m-q-sticky') as HTMLInputElement | null;
-  const chipsEl = document.getElementById('chips');
-  const badgeEl = document.getElementById('filter-count');
-  const loadMoreBtn = document.getElementById('load-more-btn') as HTMLButtonElement | null;
-  const paginationCount = document.getElementById('pagination-count');
-  const paginationContainer = document.getElementById('pagination-container');
-  const searchSpinner = document.getElementById('search-spinner');
-  const mobileSearchSpinner = document.getElementById('mobile-search-spinner');
-  const searchSuggestions = document.getElementById('search-suggestions');
-  const mobileSearchSuggestions = document.getElementById('mobile-search-suggestions');
-  const searchHistory = document.getElementById('search-history');
-  const mobileSearchHistory = document.getElementById('mobile-search-history');
+  if (!list) return null;
 
-  if (!list) return;
+  return {
+    list,
+    empty: document.getElementById('empty'),
+    clearBtn: document.getElementById('clear-filters'),
+    countEl: document.getElementById('count'),
+    qEl: document.getElementById('q') as HTMLInputElement | null,
+    mobileSearchEl: document.getElementById('m-q-sticky') as HTMLInputElement | null,
+    chipsEl: document.getElementById('chips'),
+    badgeEl: document.getElementById('filter-count'),
+    loadMoreBtn: document.getElementById('load-more-btn') as HTMLButtonElement | null,
+    paginationCount: document.getElementById('pagination-count'),
+    paginationContainer: document.getElementById('pagination-container'),
+    searchSpinner: document.getElementById('search-spinner'),
+    mobileSearchSpinner: document.getElementById('mobile-search-spinner'),
+    searchSuggestions: document.getElementById('search-suggestions'),
+    mobileSearchSuggestions: document.getElementById('mobile-search-suggestions'),
+    searchHistory: document.getElementById('search-history'),
+    mobileSearchHistory: document.getElementById('mobile-search-history'),
+  };
+}
 
+function getFilterElements(): FilterElement[] {
   const filterElements = Array.from(
     document.querySelectorAll<HTMLSelectElement>('select[id^="f-"]'),
   );
-  const filters = filterElements.map((el) => ({ key: el.id.replace(/^f-/, ''), el }));
+  return filterElements.map((el) => ({ key: el.id.replace(/^f-/, ''), el }));
+}
 
-  if (filters.length === 0) {
-    console.warn('No filters found in DOM');
-    return;
+async function loadFuse() {
+  try {
+    const mod = await import('fuse.js');
+    return (mod as any)?.default || null;
+  } catch {
+    return null;
   }
+}
 
-  let currentPage = 1;
-  const data = indexData(list, filters);
+function createApplyFunction(
+  state: FilterState,
+  dom: DOMElements,
+): (vals?: FilterValues, resetPage?: boolean) => number {
+  return (vals = getVals(state.filters, dom.qEl, dom.mobileSearchEl), resetPage = false) => {
+    if (resetPage) state.currentPage = 1;
 
-  let FuseCtor: any = null;
-  (async () => {
-    try {
-      const mod = await import('fuse.js');
-      FuseCtor = (mod as any)?.default || null;
-    } catch {
-      // optional
-    }
-  })();
+    const { visible, total } = applyFilters(
+      state.data,
+      state.filters,
+      vals,
+      state.currentPage,
+      state.FuseCtor,
+    );
 
-  function apply(
-    vals: FilterValues = getVals(filters, qEl, mobileSearchEl),
-    resetPage = false,
-  ): number {
-    if (resetPage) currentPage = 1;
+    if (dom.empty) dom.empty.classList.toggle('hidden', total !== 0);
+    if (dom.countEl && dom.list)
+      dom.countEl.textContent = `Showing ${visible} of ${dom.list.children.length}`;
 
-    const { visible, total } = applyFilters(data, filters, vals, currentPage, FuseCtor);
-
-    if (empty) empty.classList.toggle('hidden', total !== 0);
-    if (countEl && list) countEl.textContent = `Showing ${visible} of ${list.children.length}`;
-
-    updatePaginationUI(visible, total, loadMoreBtn, paginationCount, paginationContainer);
-    updateQuery(vals, currentPage);
+    updatePaginationUI(
+      visible,
+      total,
+      dom.loadMoreBtn,
+      dom.paginationCount,
+      dom.paginationContainer,
+    );
+    updateQuery(vals, state.currentPage);
 
     return visible;
-  }
+  };
+}
 
-  const { vals: initVals, page: initPage } = readFromQuery(filters);
-  currentPage = initPage;
-  setVals(initVals, filters, qEl, mobileSearchEl);
-  apply(initVals);
-  renderChipsSummary(initVals, chipsEl, badgeEl, (key) => {
-    const current = getVals(filters, qEl, mobileSearchEl);
-    current[key] = '';
-    setVals(current, filters, qEl, mobileSearchEl);
-    apply(current, true);
-    renderChipsSummary(current, chipsEl, badgeEl, (k) => {});
-  });
-
-  filters.forEach(({ key, el }) => {
+function setupFilterChangeHandlers(
+  state: FilterState,
+  dom: DOMElements,
+  apply: (vals?: FilterValues, resetPage?: boolean) => number,
+) {
+  state.filters.forEach(({ key, el }) => {
     el.addEventListener('change', () => {
-      const vals = getVals(filters, qEl, mobileSearchEl);
+      const vals = getVals(state.filters, dom.qEl, dom.mobileSearchEl);
       saveToStorage(vals);
       if (key === 'role') {
         try {
@@ -108,62 +145,81 @@ export default function initPublicationFilters() {
         } catch {}
       }
       apply(vals, true);
-      renderChipsSummary(vals, chipsEl, badgeEl, (k) => {});
+      renderChipsSummary(vals, dom.chipsEl, dom.badgeEl, () => {});
     });
   });
+}
 
+function setupSearchHandlers(
+  state: FilterState,
+  dom: DOMElements,
+  apply: (vals?: FilterValues, resetPage?: boolean) => number,
+) {
   const debounced = createDebouncer();
 
-  function handleSearchInput(inputEl: HTMLInputElement | null) {
+  const handleSearchInput = (inputEl: HTMLInputElement | null) => {
     if (!inputEl) return;
     debounced(
       () => {
         const query = inputEl.value.trim();
-        syncSearchInputs(query, inputEl, qEl, mobileSearchEl);
+        syncSearchInputs(query, inputEl, dom.qEl, dom.mobileSearchEl);
         if (query.length >= 2) addToSearchHistory(query);
-        const vals = getVals(filters, qEl, mobileSearchEl);
+        const vals = getVals(state.filters, dom.qEl, dom.mobileSearchEl);
         saveToStorage(vals);
         apply(vals, true);
-        renderChipsSummary(vals, chipsEl, badgeEl, (k) => {});
+        renderChipsSummary(vals, dom.chipsEl, dom.badgeEl, () => {});
       },
       true,
-      () => showSpinner(searchSpinner, mobileSearchSpinner),
-      () => hideSpinner(searchSpinner, mobileSearchSpinner),
+      () => showSpinner(dom.searchSpinner, dom.mobileSearchSpinner),
+      () => hideSpinner(dom.searchSpinner, dom.mobileSearchSpinner),
     );
-  }
+  };
 
-  qEl?.addEventListener('input', () => handleSearchInput(qEl));
-  qEl?.addEventListener('focus', () => {
-    showSearchSuggestions(searchSuggestions, searchHistory, renderSearchHistory, (query) => {
-      if (qEl) qEl.value = query;
-      syncSearchInputs(query, qEl, qEl, mobileSearchEl);
-      hideSearchSuggestions(searchSuggestions);
-      handleSearchInput(qEl);
-    });
-  });
-  qEl?.addEventListener('blur', () =>
-    setTimeout(() => hideSearchSuggestions(searchSuggestions), 150),
-  );
-
-  mobileSearchEl?.addEventListener('input', () => handleSearchInput(mobileSearchEl));
-  mobileSearchEl?.addEventListener('focus', () => {
+  // Desktop search
+  dom.qEl?.addEventListener('input', () => handleSearchInput(dom.qEl));
+  dom.qEl?.addEventListener('focus', () => {
     showSearchSuggestions(
-      mobileSearchSuggestions,
-      mobileSearchHistory,
+      dom.searchSuggestions,
+      dom.searchHistory,
       renderSearchHistory,
       (query) => {
-        if (mobileSearchEl) mobileSearchEl.value = query;
-        syncSearchInputs(query, mobileSearchEl, qEl, mobileSearchEl);
-        hideSearchSuggestions(mobileSearchSuggestions);
-        handleSearchInput(mobileSearchEl);
+        if (dom.qEl) dom.qEl.value = query;
+        syncSearchInputs(query, dom.qEl, dom.qEl, dom.mobileSearchEl);
+        hideSearchSuggestions(dom.searchSuggestions);
+        handleSearchInput(dom.qEl);
       },
     );
   });
-  mobileSearchEl?.addEventListener('blur', () =>
-    setTimeout(() => hideSearchSuggestions(mobileSearchSuggestions), 150),
+  dom.qEl?.addEventListener('blur', () =>
+    setTimeout(() => hideSearchSuggestions(dom.searchSuggestions), 150),
   );
 
-  clearBtn?.addEventListener('click', () => {
+  // Mobile search
+  dom.mobileSearchEl?.addEventListener('input', () => handleSearchInput(dom.mobileSearchEl));
+  dom.mobileSearchEl?.addEventListener('focus', () => {
+    showSearchSuggestions(
+      dom.mobileSearchSuggestions,
+      dom.mobileSearchHistory,
+      renderSearchHistory,
+      (query) => {
+        if (dom.mobileSearchEl) dom.mobileSearchEl.value = query;
+        syncSearchInputs(query, dom.mobileSearchEl, dom.qEl, dom.mobileSearchEl);
+        hideSearchSuggestions(dom.mobileSearchSuggestions);
+        handleSearchInput(dom.mobileSearchEl);
+      },
+    );
+  });
+  dom.mobileSearchEl?.addEventListener('blur', () =>
+    setTimeout(() => hideSearchSuggestions(dom.mobileSearchSuggestions), 150),
+  );
+}
+
+function setupClearButton(
+  state: FilterState,
+  dom: DOMElements,
+  apply: (vals?: FilterValues, resetPage?: boolean) => number,
+) {
+  dom.clearBtn?.addEventListener('click', () => {
     const cleared: FilterValues = {
       role: 'all',
       industry: '',
@@ -172,147 +228,171 @@ export default function initPublicationFilters() {
       geography: '',
       q: '',
     };
-    setVals(cleared, filters, qEl, mobileSearchEl);
+    setVals(cleared, state.filters, dom.qEl, dom.mobileSearchEl);
     clearStorage();
-    apply(getVals(filters, qEl, mobileSearchEl), true);
-    renderChipsSummary(getVals(filters, qEl, mobileSearchEl), chipsEl, badgeEl, (k) => {});
+    apply(getVals(state.filters, dom.qEl, dom.mobileSearchEl), true);
+    renderChipsSummary(
+      getVals(state.filters, dom.qEl, dom.mobileSearchEl),
+      dom.chipsEl,
+      dom.badgeEl,
+      () => {},
+    );
   });
+}
 
-  loadMoreBtn?.addEventListener('click', () => {
-    currentPage++;
-    apply(getVals(filters, qEl, mobileSearchEl), false);
-    const visibleItems = Array.from(list.children).filter(
+function setupLoadMoreButton(
+  state: FilterState,
+  dom: DOMElements,
+  apply: (vals?: FilterValues, resetPage?: boolean) => number,
+) {
+  dom.loadMoreBtn?.addEventListener('click', () => {
+    state.currentPage++;
+    apply(getVals(state.filters, dom.qEl, dom.mobileSearchEl), false);
+    const visibleItems = Array.from(dom.list.children).filter(
       (el) => !(el as HTMLElement).classList.contains('hidden'),
     );
-    const firstNewItem = visibleItems[(currentPage - 1) * 30];
+    const firstNewItem = visibleItems[(state.currentPage - 1) * 30];
     if (firstNewItem)
       (firstNewItem as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
+}
 
-  // Mobile sheet handling
+function setupMobileSheet(
+  state: FilterState,
+  dom: DOMElements,
+  apply: (vals?: FilterValues, resetPage?: boolean) => number,
+) {
   const openBtn = document.getElementById('open-sheet');
   const sheet = document.getElementById('filter-sheet');
   const backdrop = document.getElementById('sheet-backdrop');
   const closeBtn = document.getElementById('close-sheet');
   const mobileResultNumber = document.getElementById('m-result-number');
 
-  if (openBtn && sheet) {
-    const desktop = {
-      q: document.getElementById('q') as HTMLInputElement | null,
-      role: document.getElementById('f-role') as HTMLSelectElement | null,
-      industry: document.getElementById('f-industry') as HTMLSelectElement | null,
-      topic: document.getElementById('f-topic') as HTMLSelectElement | null,
-      content_type: document.getElementById('f-content_type') as HTMLSelectElement | null,
-      geography: document.getElementById('f-geography') as HTMLSelectElement | null,
-    };
+  if (!openBtn || !sheet) return;
 
-    const mobile = {
-      q: document.getElementById('m-q') as HTMLInputElement | null,
-      role: document.getElementById('m-f-role') as HTMLSelectElement | null,
-      industry: document.getElementById('m-f-industry') as HTMLSelectElement | null,
-      topic: document.getElementById('m-f-topic') as HTMLSelectElement | null,
-      content_type: document.getElementById('m-f-content_type') as HTMLSelectElement | null,
-      geography: document.getElementById('m-f-geography') as HTMLSelectElement | null,
-    };
+  const desktop = {
+    q: document.getElementById('q') as HTMLInputElement | null,
+    role: document.getElementById('f-role') as HTMLSelectElement | null,
+    industry: document.getElementById('f-industry') as HTMLSelectElement | null,
+    topic: document.getElementById('f-topic') as HTMLSelectElement | null,
+    content_type: document.getElementById('f-content_type') as HTMLSelectElement | null,
+    geography: document.getElementById('f-geography') as HTMLSelectElement | null,
+  };
 
-    const getMobileVals = (): FilterValues => ({
-      role: mobile.role?.value || '',
-      industry: mobile.industry?.value || '',
-      topic: mobile.topic?.value || '',
-      content_type: mobile.content_type?.value || '',
-      geography: mobile.geography?.value || '',
-      q: mobile.q?.value?.trim() || mobileSearchEl?.value?.trim() || '',
-    });
+  const mobile = {
+    q: document.getElementById('m-q') as HTMLInputElement | null,
+    role: document.getElementById('m-f-role') as HTMLSelectElement | null,
+    industry: document.getElementById('m-f-industry') as HTMLSelectElement | null,
+    topic: document.getElementById('m-f-topic') as HTMLSelectElement | null,
+    content_type: document.getElementById('m-f-content_type') as HTMLSelectElement | null,
+    geography: document.getElementById('m-f-geography') as HTMLSelectElement | null,
+  };
 
-    const setDesktopVals = (vals: FilterValues) => {
-      if (desktop.role) desktop.role.value = vals.role || '';
-      if (desktop.industry) desktop.industry.value = vals.industry || '';
-      if (desktop.topic) desktop.topic.value = vals.topic || '';
-      if (desktop.content_type) desktop.content_type.value = vals.content_type || '';
-      if (desktop.geography) desktop.geography.value = vals.geography || '';
-      if (desktop.q) desktop.q.value = vals.q || '';
-    };
+  const getMobileVals = (): FilterValues => ({
+    role: mobile.role?.value || '',
+    industry: mobile.industry?.value || '',
+    topic: mobile.topic?.value || '',
+    content_type: mobile.content_type?.value || '',
+    geography: mobile.geography?.value || '',
+    q: mobile.q?.value?.trim() || dom.mobileSearchEl?.value?.trim() || '',
+  });
 
-    const syncToMobile = () => {
-      const v = getVals(filters, qEl, mobileSearchEl);
-      if (mobile.role) mobile.role.value = v.role || '';
-      if (mobile.industry) mobile.industry.value = v.industry || '';
-      if (mobile.topic) mobile.topic.value = v.topic || '';
-      if (mobile.content_type) mobile.content_type.value = v.content_type || '';
-      if (mobile.geography) mobile.geography.value = v.geography || '';
-      if (mobile.q) mobile.q.value = v.q || '';
-    };
+  const setDesktopVals = (vals: FilterValues) => {
+    if (desktop.role) desktop.role.value = vals.role || '';
+    if (desktop.industry) desktop.industry.value = vals.industry || '';
+    if (desktop.topic) desktop.topic.value = vals.topic || '';
+    if (desktop.content_type) desktop.content_type.value = vals.content_type || '';
+    if (desktop.geography) desktop.geography.value = vals.geography || '';
+    if (desktop.q) desktop.q.value = vals.q || '';
+  };
 
-    const updateMobileResultCount = (count: number) => {
-      if (mobileResultNumber) mobileResultNumber.textContent = String(count);
-    };
+  const syncToMobile = () => {
+    const v = getVals(state.filters, dom.qEl, dom.mobileSearchEl);
+    if (mobile.role) mobile.role.value = v.role || '';
+    if (mobile.industry) mobile.industry.value = v.industry || '';
+    if (mobile.topic) mobile.topic.value = v.topic || '';
+    if (mobile.content_type) mobile.content_type.value = v.content_type || '';
+    if (mobile.geography) mobile.geography.value = v.geography || '';
+    if (mobile.q) mobile.q.value = v.q || '';
+  };
 
-    const applyFromMobile = () => {
-      const vals = getMobileVals();
-      setDesktopVals(vals);
-      setVals(vals, filters, qEl, mobileSearchEl);
-      currentPage = 1;
-      const visibleCount = apply(vals, true);
-      updateMobileResultCount(visibleCount);
-      renderChipsSummary(vals, chipsEl, badgeEl, (k) => {});
-      saveToStorage(vals);
-    };
+  const updateMobileResultCount = (count: number) => {
+    if (mobileResultNumber) mobileResultNumber.textContent = String(count);
+  };
 
-    const openSheet = () => {
-      syncToMobile();
-      const currentCount = Array.from(list.children).filter(
-        (el) => !(el as HTMLElement).classList.contains('hidden'),
-      ).length;
-      updateMobileResultCount(currentCount);
-      sheet.classList.remove('hidden');
-      sheet.setAttribute('aria-hidden', 'false');
-      document.body.style.overflow = 'hidden';
-      mobile.role?.focus();
-    };
+  const applyFromMobile = () => {
+    const vals = getMobileVals();
+    setDesktopVals(vals);
+    setVals(vals, state.filters, dom.qEl, dom.mobileSearchEl);
+    state.currentPage = 1;
+    const visibleCount = apply(vals, true);
+    updateMobileResultCount(visibleCount);
+    renderChipsSummary(vals, dom.chipsEl, dom.badgeEl, () => {});
+    saveToStorage(vals);
+  };
 
-    const closeSheet = () => {
-      sheet.classList.add('hidden');
-      sheet.setAttribute('aria-hidden', 'true');
-      document.body.style.overflow = '';
-      openBtn.focus();
-    };
+  const openSheet = () => {
+    syncToMobile();
+    const currentCount = Array.from(dom.list.children).filter(
+      (el) => !(el as HTMLElement).classList.contains('hidden'),
+    ).length;
+    updateMobileResultCount(currentCount);
+    sheet.classList.remove('hidden');
+    sheet.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    mobile.role?.focus();
+  };
 
-    openBtn.addEventListener('click', openSheet);
-    closeBtn?.addEventListener('click', closeSheet);
-    backdrop?.addEventListener('click', closeSheet);
-    globalThis.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !sheet.classList.contains('hidden')) closeSheet();
-    });
+  const closeSheet = () => {
+    sheet.classList.add('hidden');
+    sheet.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    openBtn.focus();
+  };
 
-    Object.values(mobile).forEach((el) => {
-      if (el instanceof HTMLSelectElement) {
-        el.addEventListener('change', applyFromMobile);
-      } else if (el instanceof HTMLInputElement) {
-        el.addEventListener('input', () => debounced(applyFromMobile, false));
-      }
-    });
+  openBtn.addEventListener('click', openSheet);
+  closeBtn?.addEventListener('click', closeSheet);
+  backdrop?.addEventListener('click', closeSheet);
+  globalThis.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && !sheet.classList.contains('hidden')) closeSheet();
+  });
 
-    document.getElementById('m-clear')?.addEventListener('click', () => {
-      if (mobile.role) mobile.role.value = '';
-      if (mobile.industry) mobile.industry.value = '';
-      if (mobile.topic) mobile.topic.value = '';
-      if (mobile.content_type) mobile.content_type.value = '';
-      if (mobile.geography) mobile.geography.value = '';
-      if (mobile.q) mobile.q.value = '';
-      applyFromMobile();
-    });
+  const debounced = createDebouncer();
+  Object.values(mobile).forEach((el) => {
+    if (el instanceof HTMLSelectElement) {
+      el.addEventListener('change', applyFromMobile);
+    } else if (el instanceof HTMLInputElement) {
+      el.addEventListener('input', () => debounced(applyFromMobile, false));
+    }
+  });
 
-    document.getElementById('m-done')?.addEventListener('click', closeSheet);
-    renderChipsSummary(getVals(filters, qEl, mobileSearchEl), chipsEl, badgeEl, (k) => {});
-  }
+  document.getElementById('m-clear')?.addEventListener('click', () => {
+    if (mobile.role) mobile.role.value = '';
+    if (mobile.industry) mobile.industry.value = '';
+    if (mobile.topic) mobile.topic.value = '';
+    if (mobile.content_type) mobile.content_type.value = '';
+    if (mobile.geography) mobile.geography.value = '';
+    if (mobile.q) mobile.q.value = '';
+    applyFromMobile();
+  });
 
-  // Advanced filters toggle
+  document.getElementById('m-done')?.addEventListener('click', closeSheet);
+  renderChipsSummary(
+    getVals(state.filters, dom.qEl, dom.mobileSearchEl),
+    dom.chipsEl,
+    dom.badgeEl,
+    () => {},
+  );
+}
+
+function setupAdvancedFiltersToggle() {
   const toggleAdvancedBtn = document.getElementById('toggle-advanced-filters');
   const advancedFilters = document.getElementById('advanced-filters');
   const advancedIcon = document.getElementById('advanced-filters-icon');
 
-  function toggleAdvancedFilters() {
-    if (!advancedFilters || !toggleAdvancedBtn || !advancedIcon) return;
+  if (!toggleAdvancedBtn || !advancedFilters || !advancedIcon) return;
+
+  const toggleAdvancedFilters = () => {
     const isExpanded = toggleAdvancedBtn.getAttribute('aria-expanded') === 'true';
     const newState = !isExpanded;
     const buttonText = toggleAdvancedBtn.querySelector('span');
@@ -330,9 +410,10 @@ export default function initPublicationFilters() {
     }
 
     saveAdvancedFiltersState(newState);
-  }
+  };
 
-  if (getAdvancedFiltersState() && advancedFilters && toggleAdvancedBtn && advancedIcon) {
+  // Restore saved state
+  if (getAdvancedFiltersState()) {
     advancedFilters.classList.remove('hidden');
     advancedIcon.classList.add('rotate-90');
     toggleAdvancedBtn.setAttribute('aria-expanded', 'true');
@@ -340,5 +421,51 @@ export default function initPublicationFilters() {
     if (buttonText) buttonText.textContent = 'Fewer filters';
   }
 
-  toggleAdvancedBtn?.addEventListener('click', toggleAdvancedFilters);
+  toggleAdvancedBtn.addEventListener('click', toggleAdvancedFilters);
+}
+
+export default function initPublicationFilters() {
+  const dom = getDOMElements();
+  if (!dom) return;
+
+  const filters = getFilterElements();
+  if (filters.length === 0) {
+    console.warn('No filters found in DOM');
+    return;
+  }
+
+  const state: FilterState = {
+    filters,
+    data: indexData(dom.list, filters),
+    currentPage: 1,
+    FuseCtor: null,
+  };
+
+  // Load Fuse.js asynchronously
+  loadFuse().then((fuse) => {
+    state.FuseCtor = fuse;
+  });
+
+  const apply = createApplyFunction(state, dom);
+
+  // Initialize from URL query params
+  const { vals: initVals, page: initPage } = readFromQuery(filters);
+  state.currentPage = initPage;
+  setVals(initVals, filters, dom.qEl, dom.mobileSearchEl);
+  apply(initVals);
+  renderChipsSummary(initVals, dom.chipsEl, dom.badgeEl, (key) => {
+    const current = getVals(filters, dom.qEl, dom.mobileSearchEl);
+    current[key] = '';
+    setVals(current, filters, dom.qEl, dom.mobileSearchEl);
+    apply(current, true);
+    renderChipsSummary(current, dom.chipsEl, dom.badgeEl, () => {});
+  });
+
+  // Setup all event handlers
+  setupFilterChangeHandlers(state, dom, apply);
+  setupSearchHandlers(state, dom, apply);
+  setupClearButton(state, dom, apply);
+  setupLoadMoreButton(state, dom, apply);
+  setupMobileSheet(state, dom, apply);
+  setupAdvancedFiltersToggle();
 }
