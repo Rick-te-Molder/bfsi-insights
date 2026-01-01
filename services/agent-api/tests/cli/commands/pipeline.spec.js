@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as contentFetcher from '../../../src/lib/content-fetcher.js';
 import * as orchestrator from '../../../src/agents/orchestrator.js';
-import * as statusCodes from '../../../src/lib/status-codes.js';
 
 vi.mock('../../../src/lib/content-fetcher.js');
 vi.mock('../../../src/agents/screener.js');
@@ -9,7 +8,19 @@ vi.mock('../../../src/agents/summarizer.js');
 vi.mock('../../../src/agents/tagger.js');
 vi.mock('../../../src/agents/thumbnailer.js');
 vi.mock('../../../src/agents/orchestrator.js');
-vi.mock('../../../src/lib/status-codes.js');
+
+// Mock STATUS proxy to prevent module-level initialization errors
+vi.mock('../../../src/lib/status-codes.js', () => ({
+  loadStatusCodes: vi.fn(),
+  STATUS: new Proxy(
+    {},
+    {
+      get: () => 100, // Return dummy status code
+    },
+  ),
+  getStatusCode: vi.fn(() => 100),
+  getStatusCodes: vi.fn(() => ({})),
+}));
 
 const { mockSupabase } = vi.hoisted(() => {
   const mockSupabase = {
@@ -57,8 +68,6 @@ describe('Pipeline CLI Commands', () => {
     vi.clearAllMocks();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(statusCodes.loadStatusCodes).mockResolvedValue(undefined);
-    vi.mocked(statusCodes.STATUS).mockReturnValue({ FETCHED: 100, FILTERED: 200 });
   });
 
   describe('runFetchCmd', () => {

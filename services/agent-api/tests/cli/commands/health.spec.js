@@ -113,20 +113,31 @@ describe('Health CLI Command', () => {
       ];
 
       let callCount = 0;
-      mockSupabase.from.mockReturnValue({
-        select: vi.fn(() => ({
-          lt: vi.fn(() => ({
-            order: vi.fn(() => ({ data: [] })),
-          })),
-          not: vi.fn(() => ({
-            gte: vi.fn(() => ({
-              order: vi.fn(() => {
-                callCount++;
-                return callCount === 2 ? { data: mockRecent } : { data: [] };
-              }),
-            })),
-          })),
-        })),
+      mockSupabase.from.mockImplementation((table) => {
+        if (table === 'ingestion_queue') {
+          callCount++;
+          // First call: pending items query (lt)
+          // Second call: recent activity query (not + gte)
+          if (callCount === 1) {
+            return {
+              select: vi.fn(() => ({
+                lt: vi.fn(() => ({
+                  order: vi.fn(() => ({ data: [] })),
+                })),
+              })),
+            };
+          } else {
+            return {
+              select: vi.fn(() => ({
+                not: vi.fn(() => ({
+                  gte: vi.fn(() => ({
+                    order: vi.fn(() => ({ data: mockRecent })),
+                  })),
+                })),
+              })),
+            };
+          }
+        }
       });
 
       await runQueueHealthCmd();
