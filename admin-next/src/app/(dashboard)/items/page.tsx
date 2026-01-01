@@ -5,7 +5,7 @@ import { ReviewList } from './review-list';
 import { SourceFilter } from './source-filter';
 import { MasterDetailView } from './master-detail';
 import { ItemsStatusGrid } from './items-status-grid';
-import { CardView } from './card-view';
+import CardView from './card-view';
 import { SearchBar } from './search-bar';
 import type { TaxonomyConfig, TaxonomyData, TaxonomyItem } from '@/components/tags';
 import type { QueueItem } from '@bfsi/types';
