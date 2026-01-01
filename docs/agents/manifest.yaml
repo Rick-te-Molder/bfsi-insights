@@ -40,7 +40,7 @@ agents:
     tables:
       - kb_source
       - bfsi_industry
-      - bfsi_topic
+      - kb_topic
     owner: system
 
   - name: discover-classics
@@ -103,7 +103,7 @@ agents:
     tables:
       - taxonomy_config
       - bfsi_industry
-      - bfsi_topic
+      - kb_topic
       - bfsi_geography
       - bfsi_regulator
       - bfsi_regulation
@@ -198,6 +198,6 @@ required_tables:
     min_rows: 1
     description: Industry taxonomy codes
     
-  - table: bfsi_topic
+  - table: kb_topic
     min_rows: 1
     description: Topic taxonomy codes
