@@ -3,24 +3,27 @@ import * as utils from '../../../src/cli/utils.js';
 
 vi.mock('../../../src/cli/utils.js');
 
-const mockSupabaseInstance = {
-  rpc: vi.fn().mockResolvedValue({ data: [] }),
-  from: vi.fn(() => ({
-    select: vi.fn(() => ({
-      lt: vi.fn(() => ({
-        order: vi.fn(() => ({ data: [] })),
-      })),
-      not: vi.fn(() => ({
-        gte: vi.fn(() => ({
+const { mockSupabase } = vi.hoisted(() => {
+  const mockSupabase = {
+    rpc: vi.fn().mockResolvedValue({ data: [] }),
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        lt: vi.fn(() => ({
           order: vi.fn(() => ({ data: [] })),
+        })),
+        not: vi.fn(() => ({
+          gte: vi.fn(() => ({
+            order: vi.fn(() => ({ data: [] })),
+          })),
         })),
       })),
     })),
-  })),
-};
+  };
+  return { mockSupabase };
+});
 
 vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => mockSupabaseInstance),
+  createClient: vi.fn(() => mockSupabase),
 }));
 
 import { runQueueHealthCmd } from '../../../src/cli/commands/health.js';
@@ -31,9 +34,6 @@ describe('Health CLI Command', () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.mocked(utils.getStatusIcon).mockReturnValue('✓');
     vi.mocked(utils.printPendingBreakdown).mockImplementation(() => {});
-
-    // Reset mock functions
-    mockSupabaseInstance.rpc.mockResolvedValue({ data: [] });
   });
 
   describe('runQueueHealthCmd', () => {
@@ -43,24 +43,24 @@ describe('Health CLI Command', () => {
         { name: 'enriched', count: 5 },
         { name: 'published', count: 20 },
       ];
-      mockSupabaseInstance.rpc.mockResolvedValue({ data: mockStatusCounts });
+      mockSupabase.rpc.mockResolvedValue({ data: mockStatusCounts });
 
       await runQueueHealthCmd();
 
-      expect(mockSupabaseInstance.rpc).toHaveBeenCalledWith('get_status_code_counts');
+      expect(mockSupabase.rpc).toHaveBeenCalledWith('get_status_code_counts');
       expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Status Overview'));
       expect(utils.getStatusIcon).toHaveBeenCalledTimes(3);
     });
 
     it('should display pending items breakdown', async () => {
-      mockSupabaseInstance.rpc.mockResolvedValue({ data: [] });
+      mockSupabase.rpc.mockResolvedValue({ data: [] });
 
       const mockPending = [
         { discovered_at: '2026-01-01', payload: { title: 'Item 1' } },
         { discovered_at: '2026-01-02', payload: { title: 'Item 2' } },
       ];
 
-      mockSupabaseInstance.from.mockReturnValue({
+      mockSupabase.from.mockReturnValue({
         select: vi.fn(() => ({
           lt: vi.fn(() => ({
             order: vi.fn(() => ({ data: mockPending })),
@@ -82,8 +82,8 @@ describe('Health CLI Command', () => {
     });
 
     it('should display message when no pending items', async () => {
-      mockSupabaseInstance.rpc.mockResolvedValue({ data: [] });
-      mockSupabaseInstance.from.mockReturnValue({
+      mockSupabase.rpc.mockResolvedValue({ data: [] });
+      mockSupabase.from.mockReturnValue({
         select: vi.fn(() => ({
           lt: vi.fn(() => ({
             order: vi.fn(() => ({ data: [] })),
@@ -104,7 +104,7 @@ describe('Health CLI Command', () => {
     });
 
     it('should display 24h activity', async () => {
-      mockSupabaseInstance.rpc.mockResolvedValue({ data: [] });
+      mockSupabase.rpc.mockResolvedValue({ data: [] });
 
       const mockRecent = [
         { status_code: 300, reviewed_at: '2026-01-01T10:00:00Z' },
@@ -113,7 +113,7 @@ describe('Health CLI Command', () => {
       ];
 
       let callCount = 0;
-      mockSupabaseInstance.from.mockReturnValue({
+      mockSupabase.from.mockReturnValue({
         select: vi.fn(() => ({
           lt: vi.fn(() => ({
             order: vi.fn(() => ({ data: [] })),
@@ -142,7 +142,7 @@ describe('Health CLI Command', () => {
         { name: 'empty', count: 0 },
         { name: 'enriched', count: 5 },
       ];
-      mockSupabaseInstance.rpc.mockResolvedValue({ data: mockStatusCounts });
+      mockSupabase.rpc.mockResolvedValue({ data: mockStatusCounts });
 
       await runQueueHealthCmd();
 

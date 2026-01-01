@@ -11,33 +11,36 @@ vi.mock('../../../src/agents/thumbnailer.js');
 vi.mock('../../../src/agents/orchestrator.js');
 vi.mock('../../../src/lib/status-codes.js');
 
-const mockSupabaseInstance = {
-  from: vi.fn(() => ({
-    select: vi.fn(() => ({
-      eq: vi.fn(() => ({
-        is: vi.fn(() => ({
+const { mockSupabase } = vi.hoisted(() => {
+  const mockSupabase = {
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          is: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(() => ({ data: [], error: null })),
+            })),
+          })),
           order: vi.fn(() => ({
             limit: vi.fn(() => ({ data: [], error: null })),
           })),
+          limit: vi.fn(() => ({ data: [], error: null })),
         })),
         order: vi.fn(() => ({
           limit: vi.fn(() => ({ data: [], error: null })),
         })),
         limit: vi.fn(() => ({ data: [], error: null })),
       })),
-      order: vi.fn(() => ({
-        limit: vi.fn(() => ({ data: [], error: null })),
+      update: vi.fn(() => ({
+        eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
       })),
-      limit: vi.fn(() => ({ data: [], error: null })),
     })),
-    update: vi.fn(() => ({
-      eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
-    })),
-  })),
-};
+  };
+  return { mockSupabase };
+});
 
 vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => mockSupabaseInstance),
+  createClient: vi.fn(() => mockSupabase),
 }));
 
 import {
@@ -77,7 +80,7 @@ describe('Pipeline CLI Commands', () => {
         },
       ];
 
-      mockSupabaseInstance.from.mockReturnValue({
+      mockSupabase.from.mockReturnValue({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
             is: vi.fn(() => ({
@@ -113,7 +116,7 @@ describe('Pipeline CLI Commands', () => {
         },
       ];
 
-      mockSupabaseInstance.from.mockReturnValue({
+      mockSupabase.from.mockReturnValue({
         select: vi.fn(() => ({
           eq: vi.fn(() => ({
             is: vi.fn(() => ({
