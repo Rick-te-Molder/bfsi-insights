@@ -1,7 +1,7 @@
 # Database Schema Reference
 
 > **Auto-generated** by `npm run dump:schema`  
-> **Last updated:** 2025-12-14
+> **Last updated:** 2026-01-01
 
 This file is the single source of truth for AI assistants to understand the database structure.
 
@@ -12,51 +12,56 @@ This file is the single source of truth for AI assistants to understand the data
 | `ag_capability`                    | 24   | PK: id             |
 | `ag_use_case`                      | 16   | PK: id             |
 | `ag_use_case_audit`                | 16   | PK: audit_id       |
-| `ag_use_case_capability`           | 203  | PK: use_case_id    |
+| `ag_use_case_capability`           | 203  | PK: capability_id  |
 | `ag_vendor`                        | 81   | PK: id             |
-| `agent_run`                        | 2152 | PK: id             |
+| `agent_jobs`                       | 35   | PK: id             |
+| `agent_run`                        | 3534 | PK: id             |
 | `agent_run_metric`                 | 115  | PK: run_id         |
-| `agent_run_step`                   | 1060 | PK: id             |
-| `agent_run_summary`                | 2152 |                    |
+| `agent_run_step`                   | 3654 | PK: id             |
+| `agent_run_summary`                | 3534 |                    |
 | `app_admins`                       | 1    | PK: user_id        |
+| `audit_log`                        | 2722 | PK: id             |
 | `bfsi_entity_type`                 | 24   | PK: id             |
 | `bfsi_industry`                    | 53   | PK: id             |
 | `bfsi_industry_pretty`             | 53   |                    |
 | `bfsi_organization`                | 8    | PK: id             |
 | `bfsi_process`                     | 237  | PK: id             |
+| `bfsi_process_pretty`              | 142  |                    |
 | `bfsi_process_ref_rules`           | 30   | PK: id             |
 | `bfsi_process_reference`           | 161  | PK: id             |
-| `bfsi_topic`                       | 5    | PK: id             |
 | `classic_papers`                   | 15   | PK: id             |
 | `discovery_metrics`                | 0    | PK: id             |
 | `eval_golden_set`                  | 24   | PK: id             |
 | `eval_result`                      | 0    | PK: id             |
 | `eval_run`                         | 6    | PK: id             |
-| `ingestion_queue`                  | 2699 | PK: id             |
-| `ingestion_queue_with_status`      | 2699 |                    |
-| `ingestion_review_queue`           | 0    |                    |
+| `ingestion_queue`                  | 2704 | PK: id             |
+| `ingestion_queue_archive`          | 0    | PK: id             |
+| `ingestion_queue_with_transitions` | 2704 |                    |
 | `kb_audience`                      | 4    | PK: id             |
-| `kb_category`                      | 9    | PK: slug           |
-| `kb_channel`                       | 7    | PK: slug           |
+| `kb_category`                      | 9    | PK: id             |
+| `kb_channel`                       | 7    | PK: id             |
 | `kb_geography`                     | 30   | PK: id             |
-| `kb_publication`                   | 138  | PK: id             |
+| `kb_publication`                   | 139  | PK: id             |
 | `kb_publication_ag_vendor`         | 0    | PK: publication_id |
 | `kb_publication_bfsi_industry`     | 176  | PK: publication_id |
 | `kb_publication_bfsi_organization` | 0    | PK: publication_id |
 | `kb_publication_bfsi_process`      | 7    | PK: process_code   |
-| `kb_publication_bfsi_topic`        | 122  | PK: publication_id |
+| `kb_publication_kb_topic`          | 121  | PK: publication_id |
 | `kb_publication_obligation`        | 0    | PK: publication_id |
-| `kb_publication_pretty`            | 138  |                    |
+| `kb_publication_pretty`            | 139  |                    |
 | `kb_publication_regulation`        | 0    | PK: publication_id |
 | `kb_publication_regulator`         | 8    | PK: publication_id |
 | `kb_publication_standard`          | 0    | PK: resource_id    |
 | `kb_publication_type`              | 10   | PK: code           |
 | `kb_rejection_pattern`             | 7    | PK: id             |
 | `kb_source`                        | 83   | PK: slug           |
-| `missed_discovery`                 | 1    | PK: id             |
+| `kb_topic`                         | 5    | PK: id             |
+| `missed_discovery`                 | 5    | PK: id             |
 | `obligation`                       | 18   | PK: id             |
 | `obligation_pretty`                | 18   |                    |
-| `pending_entity_proposals`         | 0    |                    |
+| `pending_entity_proposals`         | 2    |                    |
+| `pipeline_run`                     | 92   | PK: id             |
+| `pipeline_step_run`                | 106  | PK: id             |
 | `process_taxonomy_apqc`            | 54   | PK: id             |
 | `process_taxonomy_basel`           | 19   | PK: id             |
 | `process_taxonomy_bian`            | 24   | PK: id             |
@@ -67,35 +72,34 @@ This file is the single source of truth for AI assistants to understand the data
 | `process_taxonomy_naics`           | 0    | PK: id             |
 | `process_taxonomy_sepa`            | 1    | PK: id             |
 | `process_taxonomy_solvencyii`      | 10   | PK: id             |
-| `prompt_ab_test`                   | 0    | PK: id             |
+| `prompt_ab_test`                   | 1    | PK: id             |
 | `prompt_ab_test_item`              | 0    | PK: id             |
-| `prompt_version`                   | 11   | PK: id             |
-| `proposed_entity`                  | 0    | PK: id             |
+| `prompt_version`                   | 21   | PK: id             |
+| `proposed_entity`                  | 2    | PK: id             |
 | `publication_edit_history`         | 0    |                    |
 | `ref_filter_config`                | 8    | PK: column_name    |
 | `regulation`                       | 18   | PK: id             |
-| `regulation_obligations_pretty`    | ?    |                    |
-| `regulation_pretty`                | ?    |                    |
+| `regulation_obligations_pretty`    | 46   |                    |
+| `regulation_pretty`                | 18   |                    |
 | `regulator`                        | 22   | PK: id             |
-| `regulator_pretty`                 | ?    |                    |
-| `rejection_analytics`              | 0    | PK: id             |
-| `rls_status`                       | 69   |                    |
+| `regulator_pretty`                 | 22   |                    |
+| `rejection_analytics`              | 1    | PK: id             |
+| `review_queue_ready`               | 2    |                    |
+| `rls_status`                       | 79   |                    |
+| `seen_urls`                        | 0    | PK: url_norm       |
 | `standard`                         | 0    | PK: id             |
 | `standard_setter`                  | 10   | PK: id             |
+| `state_transitions`                | 65   | PK: id             |
 | `status_history`                   | 2361 | PK: id             |
 | `status_lookup`                    | 30   | PK: code           |
-| `tables_columns`                   | 69   |                    |
+| `system_config`                    | 1    | PK: key            |
+| `tables_columns`                   | 79   |                    |
 | `taxonomy_bian`                    | 60   | PK: id             |
 | `taxonomy_bian_pretty`             | 60   |                    |
 | `taxonomy_config`                  | 12   | PK: id             |
 | `taxonomy_gics`                    | 14   | PK: id             |
 | `taxonomy_nace`                    | 35   | PK: id             |
 | `taxonomy_naics`                   | 20   | PK: id             |
-| `v_queue_daily_stats`              | 0    |                    |
-| `v_queue_health`                   | 4    |                    |
-| `v_queue_pending_by_source`        | 0    |                    |
-| `views`                            | 15   |                    |
-| `writing_rules`                    | 14   | PK: id             |
 
 ---
 
@@ -123,7 +127,6 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column                | Type                     | Nullable | Default       | Constraints            |
 | --------------------- | ------------------------ | -------- | ------------- | ---------------------- |
-| `id`                  | bigint                   | NO       |               | PK                     |
 | `created_at`          | timestamp with time zone | NO       | now()         |                        |
 | `name`                | text                     | NO       |               |                        |
 | `persona`             | text                     | YES      |               |                        |
@@ -142,6 +145,7 @@ This file is the single source of truth for AI assistants to understand the data
 | `rice_score`          | integer                  | YES      |               |                        |
 | `name_ci`             | text                     | YES      |               | UNIQUE                 |
 | `code`                | text                     | NO       |               | UNIQUE                 |
+| `id`                  | uuid                     | NO       |               | PK                     |
 
 ### `ag_use_case_audit`
 
@@ -170,8 +174,6 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column          | Type                     | Nullable | Default          | Constraints           |
 | --------------- | ------------------------ | -------- | ---------------- | --------------------- |
-| `use_case_id`   | bigint                   | NO       |                  | PK                    |
-| `use_case_id`   | bigint                   | NO       |                  | FK → ag_use_case.id   |
 | `capability_id` | bigint                   | NO       |                  | PK                    |
 | `capability_id` | bigint                   | NO       |                  | FK → ag_capability.id |
 | `relation_type` | text                     | NO       | 'required'::text |                       |
@@ -179,6 +181,8 @@ This file is the single source of truth for AI assistants to understand the data
 | `rationale`     | text                     | YES      |                  |                       |
 | `created_at`    | timestamp with time zone | NO       | now()            |                       |
 | `updated_at`    | timestamp with time zone | NO       | now()            |                       |
+| `use_case_id`   | uuid                     | NO       |                  | PK                    |
+| `use_case_id`   | uuid                     | NO       |                  | FK → ag_use_case.id   |
 
 ### `ag_vendor`
 
@@ -208,10 +212,32 @@ This file is the single source of truth for AI assistants to understand the data
 | `name_lc`         | text                     | YES      |                   |             |
 | `name_norm`       | text                     | YES      |                   |             |
 | `category`        | text                     | YES      | 'Other'::text     |             |
+| `slug`            | text                     | NO       |                   | UNIQUE      |
+
+### `agent_jobs`
+
+**Rows:** 35
+
+| Column               | Type                     | Nullable | Default           | Constraints |
+| -------------------- | ------------------------ | -------- | ----------------- | ----------- |
+| `id`                 | uuid                     | NO       | gen_random_uuid() | PK          |
+| `agent_name`         | text                     | NO       |                   |             |
+| `status`             | text                     | NO       | 'pending'::text   |             |
+| `total_items`        | integer                  | NO       | 0                 |             |
+| `processed_items`    | integer                  | NO       | 0                 |             |
+| `success_count`      | integer                  | NO       | 0                 |             |
+| `failed_count`       | integer                  | NO       | 0                 |             |
+| `current_item_id`    | uuid                     | YES      |                   |             |
+| `current_item_title` | text                     | YES      |                   |             |
+| `started_at`         | timestamp with time zone | YES      |                   |             |
+| `completed_at`       | timestamp with time zone | YES      |                   |             |
+| `created_at`         | timestamp with time zone | NO       | now()             |             |
+| `created_by`         | text                     | YES      | 'manual'::text    |             |
+| `error_message`      | text                     | YES      |                   |             |
 
 ### `agent_run`
 
-**Rows:** 2152
+**Rows:** 3534
 
 | Column           | Type                     | Nullable | Default           | Constraints                |
 | ---------------- | ------------------------ | -------- | ----------------- | -------------------------- |
@@ -243,7 +269,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `agent_run_step`
 
-**Rows:** 1060
+**Rows:** 3654
 
 | Column        | Type                     | Nullable | Default           | Constraints       |
 | ------------- | ------------------------ | -------- | ----------------- | ----------------- |
@@ -260,7 +286,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `agent_run_summary`
 
-**Rows:** 2152
+**Rows:** 3534
 
 | Column         | Type                     | Nullable | Default | Constraints |
 | -------------- | ------------------------ | -------- | ------- | ----------- |
@@ -286,6 +312,24 @@ This file is the single source of truth for AI assistants to understand the data
 | `user_id`    | uuid                     | NO       |         | PK             |
 | `created_at` | timestamp with time zone | YES      | now()   |                |
 
+### `audit_log`
+
+**Rows:** 2722
+
+| Column        | Type                     | Nullable | Default           | Constraints    |
+| ------------- | ------------------------ | -------- | ----------------- | -------------- |
+| `id`          | uuid                     | NO       | gen_random_uuid() | PK             |
+| `user_id`     | uuid                     | YES      |                   | FK → null.null |
+| `user_email`  | text                     | YES      |                   |                |
+| `action`      | text                     | NO       |                   |                |
+| `entity_type` | text                     | NO       |                   |                |
+| `entity_id`   | uuid                     | NO       |                   |                |
+| `old_value`   | jsonb                    | YES      |                   |                |
+| `new_value`   | jsonb                    | YES      |                   |                |
+| `ip_address`  | inet                     | YES      |                   |                |
+| `user_agent`  | text                     | YES      |                   |                |
+| `created_at`  | timestamp with time zone | NO       | now()             |                |
+
 ### `bfsi_entity_type`
 
 **Rows:** 24
@@ -310,15 +354,15 @@ This file is the single source of truth for AI assistants to understand the data
 | `code`        | text                     | NO       |                   | UNIQUE                  |
 | `name`        | text                     | NO       |                   |                         |
 | `level`       | integer                  | NO       |                   |                         |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_topic.code    |
+| `parent_code` | text                     | YES      |                   | FK → bfsi_process.code  |
 | `parent_code` | text                     | YES      |                   | FK → bfsi_process.code  |
 | `parent_code` | text                     | YES      |                   | FK → bfsi_industry.code |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_topic.code    |
+| `parent_code` | text                     | YES      |                   | FK → kb_topic.code      |
 | `parent_code` | text                     | YES      |                   | FK → bfsi_process.code  |
 | `parent_code` | text                     | YES      |                   | FK → bfsi_industry.code |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_process.code  |
+| `parent_code` | text                     | YES      |                   | FK → kb_topic.code      |
 | `parent_code` | text                     | YES      |                   | FK → bfsi_industry.code |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_topic.code    |
+| `parent_code` | text                     | YES      |                   | FK → kb_topic.code      |
 | `sort_order`  | integer                  | YES      | 0                 |                         |
 | `description` | text                     | YES      |                   |                         |
 | `created_at`  | timestamp with time zone | YES      | now()             |                         |
@@ -353,12 +397,13 @@ This file is the single source of truth for AI assistants to understand the data
 | Column                    | Type                     | Nullable | Default           | Constraints |
 | ------------------------- | ------------------------ | -------- | ----------------- | ----------- |
 | `id`                      | uuid                     | NO       | gen_random_uuid() | PK          |
-| `organization_name`       | text                     | NO       |                   | UNIQUE      |
+| `name`                    | text                     | NO       |                   | UNIQUE      |
 | `description`             | text                     | YES      |                   |             |
 | `entity_type`             | text                     | YES      |                   |             |
 | `headquarters_country`    | text                     | YES      |                   |             |
 | `involvement_in_payments` | boolean                  | YES      |                   |             |
 | `created_at`              | timestamp with time zone | NO       | now()             |             |
+| `slug`                    | text                     | NO       |                   | UNIQUE      |
 
 ### `bfsi_process`
 
@@ -370,19 +415,35 @@ This file is the single source of truth for AI assistants to understand the data
 | `code`        | text                     | NO       |                   | UNIQUE                  |
 | `name`        | text                     | NO       |                   |                         |
 | `level`       | integer                  | NO       |                   |                         |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_industry.code |
+| `parent_code` | text                     | YES      |                   | FK → bfsi_process.code  |
 | `parent_code` | text                     | YES      |                   | FK → bfsi_process.code  |
 | `parent_code` | text                     | YES      |                   | FK → bfsi_industry.code |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_topic.code    |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_process.code  |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_topic.code    |
+| `parent_code` | text                     | YES      |                   | FK → kb_topic.code      |
+| `parent_code` | text                     | YES      |                   | FK → bfsi_industry.code |
+| `parent_code` | text                     | YES      |                   | FK → kb_topic.code      |
 | `parent_code` | text                     | YES      |                   | FK → bfsi_process.code  |
 | `parent_code` | text                     | YES      |                   | FK → bfsi_industry.code |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_topic.code    |
+| `parent_code` | text                     | YES      |                   | FK → kb_topic.code      |
 | `sort_order`  | integer                  | YES      | 0                 |                         |
 | `description` | text                     | YES      |                   |                         |
 | `created_at`  | timestamp with time zone | YES      | now()             |                         |
 | `updated_at`  | timestamp with time zone | YES      | now()             |                         |
+
+### `bfsi_process_pretty`
+
+**Rows:** 142
+
+| Column             | Type | Nullable | Default | Constraints |
+| ------------------ | ---- | -------- | ------- | ----------- |
+| `l0_code`          | text | YES      |         |             |
+| `l0_domain`        | text | YES      |         |             |
+| `l1_code`          | text | YES      |         |             |
+| `l1_process_group` | text | YES      |         |             |
+| `l2_code`          | text | YES      |         |             |
+| `l2_process`       | text | YES      |         |             |
+| `l3_code`          | text | YES      |         |             |
+| `l3_process_step`  | text | YES      |         |             |
+| `path`             | text | YES      |         |             |
 
 ### `bfsi_process_ref_rules`
 
@@ -407,30 +468,6 @@ This file is the single source of truth for AI assistants to understand the data
 | `scheme`      | text    | NO       |                                   | UNIQUE      |
 | `code`        | text    | NO       |                                   | UNIQUE      |
 | `description` | text    | YES      |                                   |             |
-
-### `bfsi_topic`
-
-**Rows:** 5
-
-| Column        | Type                     | Nullable | Default           | Constraints             |
-| ------------- | ------------------------ | -------- | ----------------- | ----------------------- |
-| `id`          | uuid                     | NO       | gen_random_uuid() | PK                      |
-| `code`        | text                     | NO       |                   | UNIQUE                  |
-| `name`        | text                     | NO       |                   |                         |
-| `level`       | integer                  | NO       |                   |                         |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_topic.code    |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_topic.code    |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_process.code  |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_industry.code |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_topic.code    |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_process.code  |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_industry.code |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_process.code  |
-| `parent_code` | text                     | YES      |                   | FK → bfsi_industry.code |
-| `sort_order`  | integer                  | YES      | 0                 |                         |
-| `description` | text                     | YES      |                   |                         |
-| `created_at`  | timestamp with time zone | YES      | now()             |                         |
-| `updated_at`  | timestamp with time zone | YES      | now()             |                         |
 
 ### `classic_papers`
 
@@ -533,54 +570,69 @@ This file is the single source of truth for AI assistants to understand the data
 | `started_at`             | timestamp with time zone | YES      | now()             |                         |
 | `finished_at`            | timestamp with time zone | YES      |                   |                         |
 | `duration_ms`            | integer                  | YES      |                   |                         |
+| `prompt_version_id`      | uuid                     | YES      |                   | FK → prompt_version.id  |
+| `trigger_type`           | text                     | YES      |                   |                         |
+| `baseline_score`         | numeric                  | YES      |                   |                         |
+| `score_delta`            | numeric                  | YES      |                   |                         |
+| `regression_detected`    | boolean                  | YES      | false             |                         |
 
 ### `ingestion_queue`
 
-**Rows:** 2699
+**Rows:** 2704
 
-| Column                   | Type                     | Nullable | Default            | Constraints |
-| ------------------------ | ------------------------ | -------- | ------------------ | ----------- |
-| `id`                     | uuid                     | NO       | gen_random_uuid()  | PK          |
-| `url`                    | text                     | NO       |                    |             |
-| `url_norm`               | text                     | YES      |                    |             |
-| `content_hash`           | text                     | YES      |                    |             |
-| `status`                 | text                     | YES      | 'pending'::text    |             |
-| `content_type`           | text                     | YES      | 'resource'::text   |             |
-| `payload`                | jsonb                    | NO       |                    |             |
-| `payload_schema_version` | integer                  | NO       | 1                  |             |
-| `raw_ref`                | text                     | YES      |                    |             |
-| `thumb_ref`              | text                     | YES      |                    |             |
-| `etag`                   | text                     | YES      |                    |             |
-| `last_modified`          | timestamp with time zone | YES      |                    |             |
-| `discovered_at`          | timestamp with time zone | YES      | now()              |             |
-| `fetched_at`             | timestamp with time zone | YES      |                    |             |
-| `reviewed_at`            | timestamp with time zone | YES      |                    |             |
-| `reviewer`               | uuid                     | YES      |                    |             |
-| `rejection_reason`       | text                     | YES      |                    |             |
-| `prompt_version`         | text                     | YES      |                    |             |
-| `model_id`               | text                     | YES      |                    |             |
-| `agent_metadata`         | jsonb                    | YES      |                    |             |
-| `stg_id`                 | uuid                     | YES      |                    |             |
-| `approved_at`            | timestamp with time zone | YES      |                    |             |
-| `relevance_score`        | numeric                  | YES      |                    |             |
-| `executive_summary`      | text                     | YES      |                    |             |
-| `skip_reason`            | text                     | YES      |                    |             |
-| `status_code`            | smallint                 | NO       | 200                |             |
-| `entry_type`             | text                     | YES      | 'discovered'::text |             |
+| Column                   | Type                     | Nullable | Default            | Constraints          |
+| ------------------------ | ------------------------ | -------- | ------------------ | -------------------- |
+| `id`                     | uuid                     | NO       | gen_random_uuid()  | PK                   |
+| `url`                    | text                     | NO       |                    |                      |
+| `url_norm`               | text                     | YES      |                    |                      |
+| `content_hash`           | text                     | YES      |                    |                      |
+| `content_type`           | text                     | YES      | 'resource'::text   |                      |
+| `payload`                | jsonb                    | NO       |                    |                      |
+| `payload_schema_version` | integer                  | NO       | 1                  |                      |
+| `raw_ref`                | text                     | YES      |                    |                      |
+| `thumb_ref`              | text                     | YES      |                    |                      |
+| `etag`                   | text                     | YES      |                    |                      |
+| `last_modified`          | timestamp with time zone | YES      |                    |                      |
+| `discovered_at`          | timestamp with time zone | YES      | now()              |                      |
+| `fetched_at`             | timestamp with time zone | YES      |                    |                      |
+| `reviewed_at`            | timestamp with time zone | YES      |                    |                      |
+| `reviewer`               | uuid                     | YES      |                    |                      |
+| `rejection_reason`       | text                     | YES      |                    |                      |
+| `prompt_version`         | text                     | YES      |                    |                      |
+| `model_id`               | text                     | YES      |                    |                      |
+| `agent_metadata`         | jsonb                    | YES      |                    |                      |
+| `stg_id`                 | uuid                     | YES      |                    |                      |
+| `approved_at`            | timestamp with time zone | YES      |                    |                      |
+| `relevance_score`        | numeric                  | YES      |                    |                      |
+| `executive_summary`      | text                     | YES      |                    |                      |
+| `skip_reason`            | text                     | YES      |                    |                      |
+| `status_code`            | smallint                 | NO       | 200                |                      |
+| `entry_type`             | text                     | YES      | 'discovered'::text |                      |
+| `reviewed_by`            | uuid                     | YES      |                    | FK → null.null       |
+| `current_run_id`         | uuid                     | YES      |                    | FK → pipeline_run.id |
+| `failure_count`          | integer                  | YES      | 0                  |                      |
+| `last_failed_step`       | text                     | YES      |                    |                      |
+| `last_error_message`     | text                     | YES      |                    |                      |
+| `last_error_signature`   | text                     | YES      |                    |                      |
+| `last_error_at`          | timestamp with time zone | YES      |                    |                      |
+| `blocker`                | text                     | YES      |                    |                      |
+| `blocker_details`        | jsonb                    | YES      |                    |                      |
 
-### `ingestion_queue_with_status`
+### `ingestion_queue_archive`
 
-**Rows:** 2699
+**Rows:** 0
 
 | Column                   | Type                     | Nullable | Default | Constraints |
 | ------------------------ | ------------------------ | -------- | ------- | ----------- |
-| `id`                     | uuid                     | YES      |         |             |
-| `url`                    | text                     | YES      |         |             |
+| `id`                     | uuid                     | NO       |         | PK          |
+| `url`                    | text                     | NO       |         |             |
 | `url_norm`               | text                     | YES      |         |             |
 | `content_hash`           | text                     | YES      |         |             |
 | `status`                 | text                     | YES      |         |             |
+| `status_code`            | smallint                 | YES      |         |             |
 | `content_type`           | text                     | YES      |         |             |
-| `payload`                | jsonb                    | YES      |         |             |
+| `entry_type`             | text                     | YES      |         |             |
+| `payload`                | jsonb                    | NO       |         |             |
 | `payload_schema_version` | integer                  | YES      |         |             |
 | `raw_ref`                | text                     | YES      |         |             |
 | `thumb_ref`              | text                     | YES      |         |             |
@@ -589,42 +641,60 @@ This file is the single source of truth for AI assistants to understand the data
 | `discovered_at`          | timestamp with time zone | YES      |         |             |
 | `fetched_at`             | timestamp with time zone | YES      |         |             |
 | `reviewed_at`            | timestamp with time zone | YES      |         |             |
+| `approved_at`            | timestamp with time zone | YES      |         |             |
 | `reviewer`               | uuid                     | YES      |         |             |
 | `rejection_reason`       | text                     | YES      |         |             |
 | `prompt_version`         | text                     | YES      |         |             |
 | `model_id`               | text                     | YES      |         |             |
 | `agent_metadata`         | jsonb                    | YES      |         |             |
-| `stg_id`                 | uuid                     | YES      |         |             |
-| `approved_at`            | timestamp with time zone | YES      |         |             |
-| `relevance_score`        | numeric                  | YES      |         |             |
-| `executive_summary`      | text                     | YES      |         |             |
-| `skip_reason`            | text                     | YES      |         |             |
-| `status_code`            | smallint                 | YES      |         |             |
-| `entry_type`             | text                     | YES      |         |             |
-| `status_name`            | text                     | YES      |         |             |
-| `status_category`        | text                     | YES      |         |             |
-| `is_terminal`            | boolean                  | YES      |         |             |
+| `archived_at`            | timestamp with time zone | YES      | now()   |             |
 
-### `ingestion_review_queue`
+### `ingestion_queue_with_transitions`
 
-**Rows:** 0
+**Rows:** 2704
 
-| Column           | Type                     | Nullable | Default | Constraints |
-| ---------------- | ------------------------ | -------- | ------- | ----------- |
-| `id`             | uuid                     | YES      |         |             |
-| `url`            | text                     | YES      |         |             |
-| `content_type`   | text                     | YES      |         |             |
-| `title`          | text                     | YES      |         |             |
-| `authors`        | jsonb                    | YES      |         |             |
-| `published_at`   | text                     | YES      |         |             |
-| `summary`        | jsonb                    | YES      |         |             |
-| `tags`           | jsonb                    | YES      |         |             |
-| `thumb_ref`      | text                     | YES      |         |             |
-| `discovered_at`  | timestamp with time zone | YES      |         |             |
-| `fetched_at`     | timestamp with time zone | YES      |         |             |
-| `status`         | text                     | YES      |         |             |
-| `prompt_version` | text                     | YES      |         |             |
-| `model_id`       | text                     | YES      |         |             |
+| Column                          | Type                     | Nullable | Default | Constraints |
+| ------------------------------- | ------------------------ | -------- | ------- | ----------- |
+| `id`                            | uuid                     | YES      |         |             |
+| `url`                           | text                     | YES      |         |             |
+| `url_norm`                      | text                     | YES      |         |             |
+| `content_hash`                  | text                     | YES      |         |             |
+| `content_type`                  | text                     | YES      |         |             |
+| `payload`                       | jsonb                    | YES      |         |             |
+| `payload_schema_version`        | integer                  | YES      |         |             |
+| `raw_ref`                       | text                     | YES      |         |             |
+| `thumb_ref`                     | text                     | YES      |         |             |
+| `etag`                          | text                     | YES      |         |             |
+| `last_modified`                 | timestamp with time zone | YES      |         |             |
+| `discovered_at`                 | timestamp with time zone | YES      |         |             |
+| `fetched_at`                    | timestamp with time zone | YES      |         |             |
+| `reviewed_at`                   | timestamp with time zone | YES      |         |             |
+| `reviewer`                      | uuid                     | YES      |         |             |
+| `rejection_reason`              | text                     | YES      |         |             |
+| `prompt_version`                | text                     | YES      |         |             |
+| `model_id`                      | text                     | YES      |         |             |
+| `agent_metadata`                | jsonb                    | YES      |         |             |
+| `stg_id`                        | uuid                     | YES      |         |             |
+| `approved_at`                   | timestamp with time zone | YES      |         |             |
+| `relevance_score`               | numeric                  | YES      |         |             |
+| `executive_summary`             | text                     | YES      |         |             |
+| `skip_reason`                   | text                     | YES      |         |             |
+| `status_code`                   | smallint                 | YES      |         |             |
+| `entry_type`                    | text                     | YES      |         |             |
+| `reviewed_by`                   | uuid                     | YES      |         |             |
+| `current_run_id`                | uuid                     | YES      |         |             |
+| `failure_count`                 | integer                  | YES      |         |             |
+| `last_failed_step`              | text                     | YES      |         |             |
+| `last_error_message`            | text                     | YES      |         |             |
+| `last_error_signature`          | text                     | YES      |         |             |
+| `last_error_at`                 | timestamp with time zone | YES      |         |             |
+| `blocker`                       | text                     | YES      |         |             |
+| `blocker_details`               | jsonb                    | YES      |         |             |
+| `status_name`                   | text                     | YES      |         |             |
+| `status_category`               | text                     | YES      |         |             |
+| `is_terminal`                   | boolean                  | YES      |         |             |
+| `valid_next_states`             | ARRAY                    | YES      |         |             |
+| `valid_next_states_with_manual` | ARRAY                    | YES      |         |             |
 
 ### `kb_audience`
 
@@ -645,25 +715,27 @@ This file is the single source of truth for AI assistants to understand the data
 
 **Rows:** 9
 
-| Column        | Type    | Nullable | Default | Constraints |
-| ------------- | ------- | -------- | ------- | ----------- |
-| `slug`        | text    | NO       |         | PK          |
-| `name`        | text    | NO       |         |             |
-| `description` | text    | YES      |         |             |
-| `sort_order`  | integer | YES      | 100     |             |
+| Column        | Type    | Nullable | Default           | Constraints |
+| ------------- | ------- | -------- | ----------------- | ----------- |
+| `code`        | text    | NO       |                   | UNIQUE      |
+| `name`        | text    | NO       |                   |             |
+| `description` | text    | YES      |                   |             |
+| `sort_order`  | integer | YES      | 100               |             |
+| `id`          | uuid    | NO       | gen_random_uuid() | PK          |
 
 ### `kb_channel`
 
 **Rows:** 7
 
-| Column        | Type                     | Nullable | Default | Constraints |
-| ------------- | ------------------------ | -------- | ------- | ----------- |
-| `slug`        | text                     | NO       |         | PK          |
-| `name`        | text                     | NO       |         |             |
-| `description` | text                     | YES      |         |             |
-| `icon`        | text                     | YES      |         |             |
-| `sort_order`  | integer                  | YES      | 100     |             |
-| `created_at`  | timestamp with time zone | YES      | now()   |             |
+| Column        | Type                     | Nullable | Default           | Constraints |
+| ------------- | ------------------------ | -------- | ----------------- | ----------- |
+| `code`        | text                     | NO       |                   | UNIQUE      |
+| `name`        | text                     | NO       |                   |             |
+| `description` | text                     | YES      |                   |             |
+| `icon`        | text                     | YES      |                   |             |
+| `sort_order`  | integer                  | YES      | 100               |             |
+| `created_at`  | timestamp with time zone | YES      | now()             |             |
+| `id`          | uuid                     | NO       | gen_random_uuid() | PK          |
 
 ### `kb_geography`
 
@@ -683,7 +755,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `kb_publication`
 
-**Rows:** 138
+**Rows:** 139
 
 | Column                 | Type                     | Nullable | Default           | Constraints             |
 | ---------------------- | ------------------------ | -------- | ----------------- | ----------------------- |
@@ -720,8 +792,8 @@ This file is the single source of truth for AI assistants to understand the data
 | ---------------- | ------- | -------- | ------- | ---------------------- |
 | `publication_id` | uuid    | NO       |         | PK                     |
 | `publication_id` | uuid    | NO       |         | FK → kb_publication.id |
-| `vendor_id`      | uuid    | NO       |         | PK                     |
 | `vendor_id`      | uuid    | NO       |         | FK → ag_vendor.id      |
+| `vendor_id`      | uuid    | NO       |         | PK                     |
 | `rank`           | integer | YES      | 0       |                        |
 
 ### `kb_publication_bfsi_industry`
@@ -743,8 +815,8 @@ This file is the single source of truth for AI assistants to understand the data
 | ----------------- | ------- | -------- | ------- | ------------------------- |
 | `publication_id`  | uuid    | NO       |         | PK                        |
 | `publication_id`  | uuid    | NO       |         | FK → kb_publication.id    |
-| `organization_id` | uuid    | NO       |         | PK                        |
 | `organization_id` | uuid    | NO       |         | FK → bfsi_organization.id |
+| `organization_id` | uuid    | NO       |         | PK                        |
 | `rank`            | integer | YES      | 0       |                           |
 
 ### `kb_publication_bfsi_process`
@@ -753,21 +825,21 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column           | Type                     | Nullable | Default | Constraints            |
 | ---------------- | ------------------------ | -------- | ------- | ---------------------- |
-| `process_code`   | text                     | NO       |         | PK                     |
 | `process_code`   | text                     | NO       |         | FK → bfsi_process.code |
+| `process_code`   | text                     | NO       |         | PK                     |
 | `rank`           | integer                  | YES      | 0       |                        |
 | `confidence`     | numeric                  | YES      |         |                        |
 | `created_at`     | timestamp with time zone | YES      | now()   |                        |
 | `publication_id` | uuid                     | NO       |         | PK                     |
 
-### `kb_publication_bfsi_topic`
+### `kb_publication_kb_topic`
 
-**Rows:** 122
+**Rows:** 121
 
 | Column           | Type    | Nullable | Default | Constraints            |
 | ---------------- | ------- | -------- | ------- | ---------------------- |
-| `publication_id` | uuid    | NO       |         | FK → kb_publication.id |
 | `publication_id` | uuid    | NO       |         | PK                     |
+| `publication_id` | uuid    | NO       |         | FK → kb_publication.id |
 | `topic_code`     | text    | NO       |         | PK                     |
 | `rank`           | integer | YES      | 0       |                        |
 
@@ -779,12 +851,12 @@ This file is the single source of truth for AI assistants to understand the data
 | ----------------- | ---- | -------- | ------- | ---------------------- |
 | `publication_id`  | uuid | NO       |         | PK                     |
 | `publication_id`  | uuid | NO       |         | FK → kb_publication.id |
-| `obligation_code` | text | NO       |         | FK → obligation.code   |
 | `obligation_code` | text | NO       |         | PK                     |
+| `obligation_code` | text | NO       |         | FK → obligation.code   |
 
 ### `kb_publication_pretty`
 
-**Rows:** 138
+**Rows:** 139
 
 | Column             | Type                     | Nullable | Default | Constraints |
 | ------------------ | ------------------------ | -------- | ------- | ----------- |
@@ -823,8 +895,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column            | Type | Nullable | Default | Constraints            |
 | ----------------- | ---- | -------- | ------- | ---------------------- |
-| `publication_id`  | uuid | NO       |         | PK                     |
 | `publication_id`  | uuid | NO       |         | FK → kb_publication.id |
+| `publication_id`  | uuid | NO       |         | PK                     |
 | `regulation_code` | text | NO       |         | PK                     |
 
 ### `kb_publication_regulator`
@@ -833,8 +905,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column           | Type | Nullable | Default | Constraints            |
 | ---------------- | ---- | -------- | ------- | ---------------------- |
-| `publication_id` | uuid | NO       |         | FK → kb_publication.id |
 | `publication_id` | uuid | NO       |         | PK                     |
+| `publication_id` | uuid | NO       |         | FK → kb_publication.id |
 | `regulator_code` | text | NO       |         | PK                     |
 
 ### `kb_publication_standard`
@@ -902,48 +974,73 @@ This file is the single source of truth for AI assistants to understand the data
 | `scraper_config`        | jsonb                    | YES      |                   |                       |
 | `sitemap_url`           | text                     | YES      |                   |                       |
 | `premium_config`        | jsonb                    | YES      |                   |                       |
-| `channel_slug`          | text                     | YES      |                   | FK → kb_channel.slug  |
+| `channel_code`          | text                     | YES      |                   | FK → kb_channel.code  |
 | `disabled_reason`       | text                     | YES      |                   |                       |
 | `primary_audience`      | text                     | YES      |                   | FK → kb_audience.code |
 | `id`                    | uuid                     | NO       | gen_random_uuid() | UNIQUE                |
 
+### `kb_topic`
+
+**Rows:** 5
+
+| Column        | Type                     | Nullable | Default           | Constraints             |
+| ------------- | ------------------------ | -------- | ----------------- | ----------------------- |
+| `id`          | uuid                     | NO       | gen_random_uuid() | PK                      |
+| `code`        | text                     | NO       |                   | UNIQUE                  |
+| `name`        | text                     | NO       |                   |                         |
+| `level`       | integer                  | NO       |                   |                         |
+| `parent_code` | text                     | YES      |                   | FK → kb_topic.code      |
+| `parent_code` | text                     | YES      |                   | FK → kb_topic.code      |
+| `parent_code` | text                     | YES      |                   | FK → bfsi_process.code  |
+| `parent_code` | text                     | YES      |                   | FK → bfsi_industry.code |
+| `parent_code` | text                     | YES      |                   | FK → kb_topic.code      |
+| `parent_code` | text                     | YES      |                   | FK → bfsi_process.code  |
+| `parent_code` | text                     | YES      |                   | FK → bfsi_industry.code |
+| `parent_code` | text                     | YES      |                   | FK → bfsi_process.code  |
+| `parent_code` | text                     | YES      |                   | FK → bfsi_industry.code |
+| `sort_order`  | integer                  | YES      | 0                 |                         |
+| `description` | text                     | YES      |                   |                         |
+| `created_at`  | timestamp with time zone | YES      | now()             |                         |
+| `updated_at`  | timestamp with time zone | YES      | now()             |                         |
+
 ### `missed_discovery`
 
-**Rows:** 1
+**Rows:** 5
 
-| Column                    | Type                     | Nullable | Default           | Constraints       |
-| ------------------------- | ------------------------ | -------- | ----------------- | ----------------- |
-| `id`                      | uuid                     | NO       | gen_random_uuid() | PK                |
-| `url`                     | text                     | NO       |                   |                   |
-| `url_norm`                | text                     | NO       |                   |                   |
-| `submitter_name`          | text                     | YES      |                   |                   |
-| `submitter_type`          | text                     | YES      |                   |                   |
-| `submitter_audience`      | text                     | YES      |                   |                   |
-| `submitter_channel`       | text                     | YES      |                   |                   |
-| `submitted_at`            | timestamp with time zone | YES      | now()             |                   |
-| `why_valuable`            | text                     | YES      |                   |                   |
-| `submitter_urgency`       | text                     | YES      |                   |                   |
-| `verbatim_comment`        | text                     | YES      |                   |                   |
-| `suggested_audiences`     | ARRAY                    | YES      |                   |                   |
-| `suggested_topics`        | ARRAY                    | YES      |                   |                   |
-| `suggested_industries`    | ARRAY                    | YES      |                   |                   |
-| `suggested_geographies`   | ARRAY                    | YES      |                   |                   |
-| `source_domain`           | text                     | YES      |                   |                   |
-| `source_type`             | text                     | YES      |                   |                   |
-| `existing_source_slug`    | text                     | YES      |                   |                   |
-| `miss_category`           | text                     | YES      |                   |                   |
-| `miss_details`            | jsonb                    | YES      |                   |                   |
-| `resolution_status`       | text                     | YES      | 'pending'::text   |                   |
-| `resolution_action`       | text                     | YES      |                   |                   |
-| `resolved_at`             | timestamp with time zone | YES      |                   |                   |
-| `resolved_by`             | text                     | YES      |                   |                   |
-| `improvement_suggestions` | jsonb                    | YES      |                   |                   |
-| `contributed_to_source`   | uuid                     | YES      |                   | FK → kb_source.id |
-| `contributed_to_pattern`  | text                     | YES      |                   |                   |
-| `days_late`               | integer                  | YES      |                   |                   |
-| `retroactive_score`       | integer                  | YES      |                   |                   |
-| `created_at`              | timestamp with time zone | YES      | now()             |                   |
-| `updated_at`              | timestamp with time zone | YES      | now()             |                   |
+| Column                    | Type                     | Nullable | Default           | Constraints             |
+| ------------------------- | ------------------------ | -------- | ----------------- | ----------------------- |
+| `id`                      | uuid                     | NO       | gen_random_uuid() | PK                      |
+| `url`                     | text                     | NO       |                   |                         |
+| `url_norm`                | text                     | NO       |                   |                         |
+| `submitter_name`          | text                     | YES      |                   |                         |
+| `submitter_type`          | text                     | YES      |                   |                         |
+| `submitter_audience`      | text                     | YES      |                   |                         |
+| `submitter_channel`       | text                     | YES      |                   |                         |
+| `submitted_at`            | timestamp with time zone | YES      | now()             |                         |
+| `why_valuable`            | text                     | YES      |                   |                         |
+| `submitter_urgency`       | text                     | YES      |                   |                         |
+| `verbatim_comment`        | text                     | YES      |                   |                         |
+| `suggested_audiences`     | ARRAY                    | YES      |                   |                         |
+| `suggested_topics`        | ARRAY                    | YES      |                   |                         |
+| `suggested_industries`    | ARRAY                    | YES      |                   |                         |
+| `suggested_geographies`   | ARRAY                    | YES      |                   |                         |
+| `source_domain`           | text                     | YES      |                   |                         |
+| `source_type`             | text                     | YES      |                   |                         |
+| `existing_source_slug`    | text                     | YES      |                   |                         |
+| `miss_category`           | text                     | YES      |                   |                         |
+| `miss_details`            | jsonb                    | YES      |                   |                         |
+| `resolution_status`       | text                     | YES      | 'pending'::text   |                         |
+| `resolution_action`       | text                     | YES      |                   |                         |
+| `resolved_at`             | timestamp with time zone | YES      |                   |                         |
+| `resolved_by`             | text                     | YES      |                   |                         |
+| `improvement_suggestions` | jsonb                    | YES      |                   |                         |
+| `contributed_to_source`   | uuid                     | YES      |                   | FK → kb_source.id       |
+| `contributed_to_pattern`  | text                     | YES      |                   |                         |
+| `days_late`               | integer                  | YES      |                   |                         |
+| `retroactive_score`       | integer                  | YES      |                   |                         |
+| `created_at`              | timestamp with time zone | YES      | now()             |                         |
+| `updated_at`              | timestamp with time zone | YES      | now()             |                         |
+| `queue_id`                | uuid                     | YES      |                   | FK → ingestion_queue.id |
 
 ### `obligation`
 
@@ -978,7 +1075,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `pending_entity_proposals`
 
-**Rows:** 0
+**Rows:** 2
 
 | Column         | Type                     | Nullable | Default | Constraints |
 | -------------- | ------------------------ | -------- | ------- | ----------- |
@@ -990,6 +1087,39 @@ This file is the single source of truth for AI assistants to understand the data
 | `source_url`   | text                     | YES      |         |             |
 | `created_at`   | timestamp with time zone | YES      |         |             |
 | `source_title` | text                     | YES      |         |             |
+
+### `pipeline_run`
+
+**Rows:** 92
+
+| Column         | Type                     | Nullable | Default           | Constraints             |
+| -------------- | ------------------------ | -------- | ----------------- | ----------------------- |
+| `id`           | uuid                     | NO       | gen_random_uuid() | PK                      |
+| `queue_id`     | uuid                     | NO       |                   | FK → ingestion_queue.id |
+| `trigger`      | text                     | NO       |                   |                         |
+| `status`       | text                     | NO       | 'running'::text   |                         |
+| `started_at`   | timestamp with time zone | NO       | now()             |                         |
+| `completed_at` | timestamp with time zone | YES      |                   |                         |
+| `created_by`   | text                     | YES      |                   |                         |
+
+### `pipeline_step_run`
+
+**Rows:** 106
+
+| Column            | Type                     | Nullable | Default           | Constraints          |
+| ----------------- | ------------------------ | -------- | ----------------- | -------------------- |
+| `id`              | uuid                     | NO       | gen_random_uuid() | PK                   |
+| `run_id`          | uuid                     | NO       |                   | FK → pipeline_run.id |
+| `run_id`          | uuid                     | NO       |                   | UNIQUE               |
+| `step_name`       | text                     | NO       |                   | UNIQUE               |
+| `status`          | text                     | NO       | 'pending'::text   |                      |
+| `attempt`         | integer                  | NO       | 1                 | UNIQUE               |
+| `started_at`      | timestamp with time zone | YES      |                   |                      |
+| `completed_at`    | timestamp with time zone | YES      |                   |                      |
+| `input_snapshot`  | jsonb                    | YES      |                   |                      |
+| `output`          | jsonb                    | YES      |                   |                      |
+| `error_message`   | text                     | YES      |                   |                      |
+| `error_signature` | text                     | YES      |                   |                      |
 
 ### `process_taxonomy_apqc`
 
@@ -1123,7 +1253,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `prompt_ab_test`
 
-**Rows:** 0
+**Rows:** 1
 
 | Column              | Type                     | Nullable | Default           | Constraints |
 | ------------------- | ------------------------ | -------- | ----------------- | ----------- |
@@ -1167,25 +1297,32 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `prompt_version`
 
-**Rows:** 11
+**Rows:** 21
 
-| Column              | Type                     | Nullable | Default           | Constraints |
-| ------------------- | ------------------------ | -------- | ----------------- | ----------- |
-| `version`           | text                     | NO       |                   | UNIQUE      |
-| `prompt_text`       | text                     | YES      |                   |             |
-| `created_at`        | timestamp with time zone | YES      | now()             |             |
-| `rejection_rate`    | numeric                  | YES      |                   |             |
-| `avg_quality_score` | numeric                  | YES      |                   |             |
-| `notes`             | text                     | YES      |                   |             |
-| `agent_name`        | text                     | YES      |                   | UNIQUE      |
-| `stage`             | text                     | YES      |                   |             |
-| `model_id`          | text                     | YES      |                   |             |
-| `is_current`        | boolean                  | YES      | true              |             |
-| `id`                | uuid                     | NO       | gen_random_uuid() | PK          |
+| Column              | Type                     | Nullable | Default           | Constraints      |
+| ------------------- | ------------------------ | -------- | ----------------- | ---------------- |
+| `version`           | text                     | NO       |                   | UNIQUE           |
+| `prompt_text`       | text                     | YES      |                   |                  |
+| `created_at`        | timestamp with time zone | YES      | now()             |                  |
+| `rejection_rate`    | numeric                  | YES      |                   |                  |
+| `avg_quality_score` | numeric                  | YES      |                   |                  |
+| `notes`             | text                     | YES      |                   |                  |
+| `agent_name`        | text                     | YES      |                   | UNIQUE           |
+| `stage`             | text                     | YES      |                   |                  |
+| `model_id`          | text                     | YES      |                   |                  |
+| `id`                | uuid                     | NO       | gen_random_uuid() | PK               |
+| `created_by`        | uuid                     | YES      |                   | FK → null.null   |
+| `last_eval_run_id`  | uuid                     | YES      |                   | FK → eval_run.id |
+| `last_eval_score`   | numeric                  | YES      |                   |                  |
+| `last_eval_status`  | text                     | YES      |                   |                  |
+| `last_eval_at`      | timestamp with time zone | YES      |                   |                  |
+| `max_tokens`        | integer                  | YES      | 4096              |                  |
+| `deployed_at`       | timestamp with time zone | YES      |                   |                  |
+| `retired_at`        | timestamp with time zone | YES      |                   |                  |
 
 ### `proposed_entity`
 
-**Rows:** 0
+**Rows:** 2
 
 | Column            | Type                     | Nullable | Default           | Constraints             |
 | ----------------- | ------------------------ | -------- | ----------------- | ----------------------- |
@@ -1235,46 +1372,46 @@ This file is the single source of truth for AI assistants to understand the data
 
 **Rows:** 18
 
-| Column            | Type                     | Nullable | Default | Constraints       |
-| ----------------- | ------------------------ | -------- | ------- | ----------------- |
-| `id`              | integer                  | NO       |         | PK                |
-| `code`            | text                     | YES      |         | UNIQUE            |
-| `title`           | text                     | NO       |         |                   |
-| `instrument_type` | text                     | YES      |         |                   |
-| `jurisdiction`    | text                     | YES      |         |                   |
-| `scope_goals`     | text                     | YES      |         |                   |
-| `status`          | text                     | YES      |         |                   |
-| `effective_from`  | date                     | YES      |         |                   |
-| `effective_to`    | date                     | YES      |         |                   |
-| `obligations`     | jsonb                    | YES      |         |                   |
-| `deadlines`       | jsonb                    | YES      |         |                   |
-| `sources`         | jsonb                    | YES      |         |                   |
-| `notes`           | text                     | YES      |         |                   |
-| `created_at`      | timestamp with time zone | YES      | now()   |                   |
-| `updated_at`      | timestamp with time zone | YES      | now()   |                   |
-| `regulator_id`    | bigint                   | YES      |         | FK → regulator.id |
-| `domain`          | text                     | YES      |         |                   |
+| Column            | Type                     | Nullable | Default           | Constraints       |
+| ----------------- | ------------------------ | -------- | ----------------- | ----------------- |
+| `code`            | text                     | YES      |                   | UNIQUE            |
+| `title`           | text                     | NO       |                   |                   |
+| `instrument_type` | text                     | YES      |                   |                   |
+| `jurisdiction`    | text                     | YES      |                   |                   |
+| `scope_goals`     | text                     | YES      |                   |                   |
+| `status`          | text                     | YES      |                   |                   |
+| `effective_from`  | date                     | YES      |                   |                   |
+| `effective_to`    | date                     | YES      |                   |                   |
+| `obligations`     | jsonb                    | YES      |                   |                   |
+| `deadlines`       | jsonb                    | YES      |                   |                   |
+| `sources`         | jsonb                    | YES      |                   |                   |
+| `notes`           | text                     | YES      |                   |                   |
+| `created_at`      | timestamp with time zone | YES      | now()             |                   |
+| `updated_at`      | timestamp with time zone | YES      | now()             |                   |
+| `domain`          | text                     | YES      |                   |                   |
+| `regulator_id`    | uuid                     | YES      |                   | FK → regulator.id |
+| `id`              | uuid                     | NO       | gen_random_uuid() | PK                |
 
 ### `regulation_obligations_pretty`
 
-**Rows:** ?
+**Rows:** 46
 
-| Column           | Type    | Nullable | Default | Constraints |
-| ---------------- | ------- | -------- | ------- | ----------- |
-| `id`             | integer | YES      |         |             |
-| `code`           | text    | YES      |         |             |
-| `title`          | text    | YES      |         |             |
-| `obligation`     | text    | YES      |         |             |
-| `domain`         | text    | YES      |         |             |
-| `regulator_name` | text    | YES      |         |             |
+| Column           | Type | Nullable | Default | Constraints |
+| ---------------- | ---- | -------- | ------- | ----------- |
+| `id`             | uuid | YES      |         |             |
+| `code`           | text | YES      |         |             |
+| `title`          | text | YES      |         |             |
+| `obligation`     | text | YES      |         |             |
+| `domain`         | text | YES      |         |             |
+| `regulator_name` | text | YES      |         |             |
 
 ### `regulation_pretty`
 
-**Rows:** ?
+**Rows:** 18
 
 | Column                   | Type                     | Nullable | Default | Constraints |
 | ------------------------ | ------------------------ | -------- | ------- | ----------- |
-| `id`                     | integer                  | YES      |         |             |
+| `id`                     | uuid                     | YES      |         |             |
 | `code`                   | text                     | YES      |         |             |
 | `title`                  | text                     | YES      |         |             |
 | `instrument_type`        | text                     | YES      |         |             |
@@ -1290,7 +1427,7 @@ This file is the single source of truth for AI assistants to understand the data
 | `notes`                  | text                     | YES      |         |             |
 | `created_at`             | timestamp with time zone | YES      |         |             |
 | `updated_at`             | timestamp with time zone | YES      |         |             |
-| `regulator_id`           | bigint                   | YES      |         |             |
+| `regulator_id`           | uuid                     | YES      |         |             |
 | `regulator_slug`         | text                     | YES      |         |             |
 | `regulator_website_url`  | text                     | YES      |         |             |
 | `regulator_jurisdiction` | text                     | YES      |         |             |
@@ -1302,7 +1439,6 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column         | Type                     | Nullable | Default | Constraints |
 | -------------- | ------------------------ | -------- | ------- | ----------- |
-| `id`           | bigint                   | NO       |         | PK          |
 | `name`         | text                     | NO       |         |             |
 | `slug`         | text                     | NO       |         | UNIQUE      |
 | `website_url`  | text                     | YES      |         |             |
@@ -1311,22 +1447,23 @@ This file is the single source of truth for AI assistants to understand the data
 | `created_at`   | timestamp with time zone | NO       | now()   |             |
 | `updated_at`   | timestamp with time zone | NO       | now()   |             |
 | `domain`       | text                     | YES      |         |             |
+| `id`           | uuid                     | NO       |         | PK          |
 
 ### `regulator_pretty`
 
-**Rows:** ?
+**Rows:** 22
 
-| Column         | Type   | Nullable | Default | Constraints |
-| -------------- | ------ | -------- | ------- | ----------- |
-| `id`           | bigint | YES      |         |             |
-| `name`         | text   | YES      |         |             |
-| `slug`         | text   | YES      |         |             |
-| `jurisdiction` | text   | YES      |         |             |
-| `website_url`  | text   | YES      |         |             |
+| Column         | Type | Nullable | Default | Constraints |
+| -------------- | ---- | -------- | ------- | ----------- |
+| `id`           | uuid | YES      |         |             |
+| `name`         | text | YES      |         |             |
+| `slug`         | text | YES      |         |             |
+| `jurisdiction` | text | YES      |         |             |
+| `website_url`  | text | YES      |         |             |
 
 ### `rejection_analytics`
 
-**Rows:** 0
+**Rows:** 1
 
 | Column               | Type                     | Nullable | Default                           | Constraints             |
 | -------------------- | ------------------------ | -------- | --------------------------------- | ----------------------- |
@@ -1340,14 +1477,60 @@ This file is the single source of truth for AI assistants to understand the data
 | `created_at`         | timestamp with time zone | YES      | now()                             |                         |
 | `prompt_version_id`  | uuid                     | YES      |                                   | FK → prompt_version.id  |
 
+### `review_queue_ready`
+
+**Rows:** 2
+
+| Column                   | Type                     | Nullable | Default | Constraints |
+| ------------------------ | ------------------------ | -------- | ------- | ----------- |
+| `id`                     | uuid                     | YES      |         |             |
+| `url`                    | text                     | YES      |         |             |
+| `url_norm`               | text                     | YES      |         |             |
+| `content_hash`           | text                     | YES      |         |             |
+| `content_type`           | text                     | YES      |         |             |
+| `payload`                | jsonb                    | YES      |         |             |
+| `payload_schema_version` | integer                  | YES      |         |             |
+| `raw_ref`                | text                     | YES      |         |             |
+| `thumb_ref`              | text                     | YES      |         |             |
+| `etag`                   | text                     | YES      |         |             |
+| `last_modified`          | timestamp with time zone | YES      |         |             |
+| `discovered_at`          | timestamp with time zone | YES      |         |             |
+| `fetched_at`             | timestamp with time zone | YES      |         |             |
+| `reviewed_at`            | timestamp with time zone | YES      |         |             |
+| `reviewer`               | uuid                     | YES      |         |             |
+| `rejection_reason`       | text                     | YES      |         |             |
+| `prompt_version`         | text                     | YES      |         |             |
+| `model_id`               | text                     | YES      |         |             |
+| `agent_metadata`         | jsonb                    | YES      |         |             |
+| `stg_id`                 | uuid                     | YES      |         |             |
+| `approved_at`            | timestamp with time zone | YES      |         |             |
+| `relevance_score`        | numeric                  | YES      |         |             |
+| `executive_summary`      | text                     | YES      |         |             |
+| `skip_reason`            | text                     | YES      |         |             |
+| `status_code`            | smallint                 | YES      |         |             |
+| `entry_type`             | text                     | YES      |         |             |
+| `reviewed_by`            | uuid                     | YES      |         |             |
+| `current_run_id`         | uuid                     | YES      |         |             |
+
 ### `rls_status`
 
-**Rows:** 69
+**Rows:** 79
 
 | Column        | Type    | Nullable | Default | Constraints |
 | ------------- | ------- | -------- | ------- | ----------- |
 | `table_name`  | name    | YES      |         |             |
 | `rls_enabled` | boolean | YES      |         |             |
+
+### `seen_urls`
+
+**Rows:** 0
+
+| Column              | Type                     | Nullable | Default | Constraints |
+| ------------------- | ------------------------ | -------- | ------- | ----------- |
+| `url_norm`          | text                     | NO       |         | PK          |
+| `first_seen_at`     | timestamp with time zone | YES      | now()   |             |
+| `final_status_code` | smallint                 | YES      |         |             |
+| `archived_at`       | timestamp with time zone | YES      | now()   |             |
 
 ### `standard`
 
@@ -1364,11 +1547,11 @@ This file is the single source of truth for AI assistants to understand the data
 | `last_revised_on`    | date                     | YES      |                |                         |
 | `summary`            | text                     | YES      |                |                         |
 | `source_url`         | text                     | YES      |                |                         |
-| `standard_setter_id` | bigint                   | YES      |                | FK → standard_setter.id |
-| `regulator_id`       | bigint                   | YES      |                | FK → regulator.id       |
 | `created_at`         | timestamp with time zone | NO       | now()          |                         |
 | `updated_at`         | timestamp with time zone | NO       | now()          |                         |
 | `domain`             | text                     | YES      |                |                         |
+| `regulator_id`       | uuid                     | YES      |                | FK → regulator.id       |
+| `standard_setter_id` | uuid                     | YES      |                | FK → standard_setter.id |
 
 ### `standard_setter`
 
@@ -1376,7 +1559,6 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column         | Type                     | Nullable | Default | Constraints |
 | -------------- | ------------------------ | -------- | ------- | ----------- |
-| `id`           | bigint                   | NO       |         | PK          |
 | `name`         | text                     | NO       |         |             |
 | `slug`         | text                     | NO       |         | UNIQUE      |
 | `website_url`  | text                     | YES      |         |             |
@@ -1385,6 +1567,22 @@ This file is the single source of truth for AI assistants to understand the data
 | `created_at`   | timestamp with time zone | NO       | now()   |             |
 | `updated_at`   | timestamp with time zone | NO       | now()   |             |
 | `domain`       | text                     | YES      |         |             |
+| `id`           | uuid                     | NO       |         | PK          |
+
+### `state_transitions`
+
+**Rows:** 65
+
+| Column        | Type                     | Nullable | Default           | Constraints             |
+| ------------- | ------------------------ | -------- | ----------------- | ----------------------- |
+| `id`          | uuid                     | NO       | gen_random_uuid() | PK                      |
+| `from_status` | smallint                 | NO       |                   | UNIQUE                  |
+| `from_status` | smallint                 | NO       |                   | FK → status_lookup.code |
+| `to_status`   | smallint                 | NO       |                   | UNIQUE                  |
+| `to_status`   | smallint                 | NO       |                   | FK → status_lookup.code |
+| `is_manual`   | boolean                  | YES      | false             | UNIQUE                  |
+| `description` | text                     | YES      |                   |                         |
+| `created_at`  | timestamp with time zone | YES      | now()             |                         |
 
 ### `status_history`
 
@@ -1415,9 +1613,21 @@ This file is the single source of truth for AI assistants to understand the data
 | `is_terminal` | boolean  | YES      | false   |             |
 | `sort_order`  | smallint | YES      |         |             |
 
+### `system_config`
+
+**Rows:** 1
+
+| Column        | Type                     | Nullable | Default       | Constraints |
+| ------------- | ------------------------ | -------- | ------------- | ----------- |
+| `key`         | text                     | NO       |               | PK          |
+| `value`       | jsonb                    | NO       | 'true'::jsonb |             |
+| `description` | text                     | YES      |               |             |
+| `updated_at`  | timestamp with time zone | NO       | now()         |             |
+| `updated_by`  | text                     | YES      |               |             |
+
 ### `tables_columns`
 
-**Rows:** 69
+**Rows:** 79
 
 | Column       | Type | Nullable | Default | Constraints |
 | ------------ | ---- | -------- | ------- | ----------- |
@@ -1479,8 +1689,6 @@ This file is the single source of truth for AI assistants to understand the data
 | `display_order`          | integer                  | NO       |                   |             |
 | `behavior_type`          | text                     | NO       |                   |             |
 | `source_table`           | text                     | YES      |                   |             |
-| `source_code_column`     | text                     | YES      | 'code'::text      |             |
-| `source_name_column`     | text                     | YES      | 'name'::text      |             |
 | `is_hierarchical`        | boolean                  | YES      | false             |             |
 | `parent_code_column`     | text                     | YES      |                   |             |
 | `junction_table`         | text                     | YES      |                   |             |
@@ -1527,68 +1735,9 @@ This file is the single source of truth for AI assistants to understand the data
 
 **Rows:** 20
 
-| Column        | Type                     | Nullable | Default           | Constraints |
-| ------------- | ------------------------ | -------- | ----------------- | ----------- |
-| `id`          | uuid                     | NO       | gen_random_uuid() | PK          |
-| `original_id` | integer                  | YES      |                   | UNIQUE      |
-| `code`        | text                     | YES      |                   |             |
-| `description` | text                     | YES      |                   |             |
-| `created_at`  | timestamp with time zone | YES      | now()             |             |
-
-### `v_queue_daily_stats`
-
-**Rows:** 0
-
-| Column        | Type   | Nullable | Default | Constraints |
-| ------------- | ------ | -------- | ------- | ----------- |
-| `review_date` | date   | YES      |         |             |
-| `status`      | text   | YES      |         |             |
-| `count`       | bigint | YES      |         |             |
-
-### `v_queue_health`
-
-**Rows:** 4
-
-| Column       | Type                     | Nullable | Default | Constraints |
-| ------------ | ------------------------ | -------- | ------- | ----------- |
-| `status`     | text                     | YES      |         |             |
-| `age_bucket` | text                     | YES      |         |             |
-| `count`      | bigint                   | YES      |         |             |
-| `oldest`     | timestamp with time zone | YES      |         |             |
-| `newest`     | timestamp with time zone | YES      |         |             |
-
-### `v_queue_pending_by_source`
-
-**Rows:** 0
-
-| Column           | Type                     | Nullable | Default | Constraints |
-| ---------------- | ------------------------ | -------- | ------- | ----------- |
-| `source`         | text                     | YES      |         |             |
-| `pending_count`  | bigint                   | YES      |         |             |
-| `oldest_pending` | timestamp with time zone | YES      |         |             |
-| `avg_age_days`   | numeric                  | YES      |         |             |
-
-### `views`
-
-**Rows:** 15
-
-| Column            | Type              | Nullable | Default | Constraints |
-| ----------------- | ----------------- | -------- | ------- | ----------- |
-| `table_name`      | name              | YES      |         |             |
-| `view_definition` | character varying | YES      |         |             |
-
-### `writing_rules`
-
-**Rows:** 14
-
-| Column       | Type                     | Nullable | Default           | Constraints |
-| ------------ | ------------------------ | -------- | ----------------- | ----------- |
-| `id`         | uuid                     | NO       | gen_random_uuid() | PK          |
-| `category`   | text                     | NO       |                   |             |
-| `rule_name`  | text                     | NO       |                   |             |
-| `rule_text`  | text                     | NO       |                   |             |
-| `examples`   | text                     | YES      |                   |             |
-| `priority`   | integer                  | YES      | 50                |             |
-| `is_active`  | boolean                  | YES      | true              |             |
-| `created_at` | timestamp with time zone | YES      | now()             |             |
-| `updated_at` | timestamp with time zone | YES      | now()             |             |
+| Column        | Type    | Nullable | Default           | Constraints |
+| ------------- | ------- | -------- | ----------------- | ----------- |
+| `id`          | uuid    | NO       | gen_random_uuid() | PK          |
+| `original_id` | integer | YES      |                   | UNIQUE      |
+| `code`        | text    | YES      |                   |             |
+| `description` | text    | YES      |                   |             |
