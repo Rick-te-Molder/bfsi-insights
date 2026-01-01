@@ -155,6 +155,33 @@ describe('Health CLI Command', () => {
       ];
       mockSupabase.rpc.mockResolvedValue({ data: mockStatusCounts });
 
+      // Mock both queries: pending items (.lt) and recent activity (.not)
+      let callCount = 0;
+      mockSupabase.from.mockImplementation(() => {
+        callCount++;
+        if (callCount === 1) {
+          // First call: pending items query
+          return {
+            select: vi.fn(() => ({
+              lt: vi.fn(() => ({
+                order: vi.fn(() => ({ data: [] })),
+              })),
+            })),
+          };
+        } else {
+          // Second call: recent activity query
+          return {
+            select: vi.fn(() => ({
+              not: vi.fn(() => ({
+                gte: vi.fn(() => ({
+                  order: vi.fn(() => ({ data: [] })),
+                })),
+              })),
+            })),
+          };
+        }
+      });
+
       await runQueueHealthCmd();
 
       expect(utils.getStatusIcon).toHaveBeenCalledTimes(2);

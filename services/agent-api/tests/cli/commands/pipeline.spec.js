@@ -150,33 +150,79 @@ describe('Pipeline CLI Commands', () => {
 
   describe('runFilterCmd', () => {
     it('should return early if no items to filter', async () => {
+      // Mock the query chain: .select().eq().order().limit()
+      mockSupabase.from.mockReturnValue({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(() => ({ data: [], error: null })),
+            })),
+          })),
+        })),
+      });
+
       const result = await runFilterCmd({ limit: 10 });
 
-      expect(result).toEqual({ processed: 0, relevant: 0, rejected: 0 });
+      expect(result).toEqual({ processed: 0 });
     });
   });
 
   describe('runSummarizeCmd', () => {
     it('should return early if no items to summarize', async () => {
+      // Mock the query chain: .select().eq().order().limit()
+      mockSupabase.from.mockReturnValue({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(() => ({ data: [], error: null })),
+            })),
+          })),
+        })),
+      });
+
       const result = await runSummarizeCmd({ limit: 10 });
 
-      expect(result).toEqual({ processed: 0, summarized: 0, failed: 0 });
+      expect(result).toEqual({ processed: 0 });
     });
   });
 
   describe('runTagCmd', () => {
     it('should return early if no items to tag', async () => {
+      // Mock the query chain: .select().eq().order().limit()
+      mockSupabase.from.mockReturnValue({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn(() => ({
+              limit: vi.fn(() => ({ data: [], error: null })),
+            })),
+          })),
+        })),
+      });
+
       const result = await runTagCmd({ limit: 10 });
 
-      expect(result).toEqual({ processed: 0, tagged: 0, failed: 0 });
+      expect(result).toEqual({ processed: 0 });
     });
   });
 
   describe('runThumbnailCmd', () => {
     it('should return early if no items need thumbnails', async () => {
+      // Mock the query chain: .select().eq().is().order().limit()
+      mockSupabase.from.mockReturnValue({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            is: vi.fn(() => ({
+              order: vi.fn(() => ({
+                limit: vi.fn(() => ({ data: [], error: null })),
+              })),
+            })),
+          })),
+        })),
+      });
+
       const result = await runThumbnailCmd({ limit: 10 });
 
-      expect(result).toEqual({ processed: 0, captured: 0, failed: 0 });
+      expect(result).toEqual({ processed: 0 });
     });
   });
 
@@ -188,16 +234,16 @@ describe('Pipeline CLI Commands', () => {
         failed: 1,
       });
 
-      const result = await runProcessQueueCmd({ limit: 10, 'dry-run': true });
+      const result = await runProcessQueueCmd({ limit: 10, 'no-thumbnail': true });
 
       expect(orchestrator.processQueue).toHaveBeenCalledWith({
         limit: 10,
-        dryRun: true,
+        includeThumbnail: false,
       });
       expect(result).toEqual({ processed: 5, enriched: 4, failed: 1 });
     });
 
-    it('should default limit to 100', async () => {
+    it('should default limit to 10 and includeThumbnail to true', async () => {
       vi.mocked(orchestrator.processQueue).mockResolvedValue({
         processed: 0,
         enriched: 0,
@@ -206,9 +252,10 @@ describe('Pipeline CLI Commands', () => {
 
       await runProcessQueueCmd({});
 
-      expect(orchestrator.processQueue).toHaveBeenCalledWith(
-        expect.objectContaining({ limit: 100 }),
-      );
+      expect(orchestrator.processQueue).toHaveBeenCalledWith({
+        limit: 10,
+        includeThumbnail: true,
+      });
     });
   });
 });
