@@ -2,7 +2,6 @@
  * Remove LLM-generated payment codes from publications
  * These codes don't exist in the bfsi_industry taxonomy
  */
-/* eslint-env node */
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
 

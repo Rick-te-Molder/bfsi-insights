@@ -30,7 +30,7 @@ export default [
   },
   // Node scripts (CI/build utilities)
   {
-    files: ['scripts/**/*.mjs', 'scripts/**/*.js'],
+    files: ['scripts/**/*.mjs', 'scripts/**/*.js', 'scripts/**/*.cjs'],
     languageOptions: {
       globals: {
         ...globals.node,

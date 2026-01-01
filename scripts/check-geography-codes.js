@@ -1,7 +1,6 @@
 /**
  * Check geography codes in database
  */
-/* eslint-env node */
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
 
