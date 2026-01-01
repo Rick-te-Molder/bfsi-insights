@@ -13,16 +13,13 @@ const MAX_LINES = 500;
 // These files are known to exceed the limit and are tracked for refactoring.
 const ALLOW_LIST = new Set([
   // Astro main site
-  'src/pages/publications.astro',
-  'src/features/publications/publication-filters.ts',
-  'src/features/publications/multi-select-filters.ts',
+  'src/features/publications/publication-filters.ts',        // 685 LoC
+  'src/features/publications/multi-select-filters.ts',       // 647 LoC
   // Agent API
-  'services/agent-api/src/cli.js',
+  'services/agent-api/src/cli.js',                           // 711 LoC
   // Admin-next pages (KB-274: tracked for refactoring)
-  'admin-next/src/app/(dashboard)/sources/page.tsx',
-  'admin-next/src/app/(dashboard)/ab-tests/page.tsx',
-  'admin-next/src/app/(dashboard)/missed/page.tsx',
-  'admin-next/src/app/(dashboard)/page.tsx',
+  'admin-next/src/app/(dashboard)/sources/page.tsx',         // 658 LoC
+  'admin-next/src/app/(dashboard)/missed/page.tsx',          // 589 LoC
 ]);
 
 // Use git ls-files to only scan tracked files
