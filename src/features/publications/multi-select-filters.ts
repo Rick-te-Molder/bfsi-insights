@@ -35,37 +35,38 @@ import {
   updateFilterChips,
 } from './multi-filters/chips';
 
-export default function initMultiSelectFilters() {
-  const list = document.getElementById('list');
-  const empty = document.getElementById('empty');
-  const countEl = document.getElementById('count');
-  const qEl = document.getElementById('q') as HTMLInputElement | null;
-  const filterChipsEl = document.getElementById('filter-chips');
-  const searchSpinner = document.getElementById('search-spinner');
-  const loadMoreBtn = document.getElementById('load-more-btn') as HTMLButtonElement | null;
-  const paginationCount = document.getElementById('pagination-count');
-  const paginationContainer = document.getElementById('pagination-container');
-  const loadingSkeleton = document.getElementById('loading-skeleton');
-  const filterPanel = document.getElementById('filter-panel');
-  const panelBackdrop = document.getElementById('panel-backdrop');
-  const closeFilterPanelBtn = document.getElementById('close-panel');
-  const openPanelBtn = document.getElementById('open-filter-panel');
-  const clearAllBtn = document.getElementById('clear-all-filters');
-  const applyFiltersBtn = document.getElementById('apply-filters');
-  const panelCountNumber = document.getElementById('panel-count-number');
-  const fabFilterCount = document.getElementById('fab-filter-count');
-  const fabIcon = document.getElementById('fab-icon');
-  const fabSpinner = document.getElementById('fab-spinner');
-  const sortSelect = document.getElementById('sort-select') as HTMLSelectElement | null;
+// Helper: Get all DOM elements
+function getDOMElements() {
+  return {
+    list: document.getElementById('list'),
+    empty: document.getElementById('empty'),
+    countEl: document.getElementById('count'),
+    qEl: document.getElementById('q') as HTMLInputElement | null,
+    filterChipsEl: document.getElementById('filter-chips'),
+    searchSpinner: document.getElementById('search-spinner'),
+    loadMoreBtn: document.getElementById('load-more-btn') as HTMLButtonElement | null,
+    paginationCount: document.getElementById('pagination-count'),
+    paginationContainer: document.getElementById('pagination-container'),
+    loadingSkeleton: document.getElementById('loading-skeleton'),
+    filterPanel: document.getElementById('filter-panel'),
+    panelBackdrop: document.getElementById('panel-backdrop'),
+    closeFilterPanelBtn: document.getElementById('close-panel'),
+    openPanelBtn: document.getElementById('open-filter-panel'),
+    clearAllBtn: document.getElementById('clear-all-filters'),
+    applyFiltersBtn: document.getElementById('apply-filters'),
+    panelCountNumber: document.getElementById('panel-count-number'),
+    fabFilterCount: document.getElementById('fab-filter-count'),
+    fabIcon: document.getElementById('fab-icon'),
+    fabSpinner: document.getElementById('fab-spinner'),
+    sortSelect: document.getElementById('sort-select') as HTMLSelectElement | null,
+    emptyClearFilters: document.getElementById('empty-clear-filters'),
+    emptyClearSearch: document.getElementById('empty-clear-search'),
+  };
+}
 
-  const PAGE_SIZE = 30;
-
-  if (!list) return;
-
-  let currentPage = 1;
-  let filtersExpanded = false;
-
-  const data: IndexedItem[] = Array.from(list.children).map((node) => {
+// Helper: Index data from list items
+function indexListData(list: HTMLElement): IndexedItem[] {
+  return Array.from(list.children).map((node) => {
     const el = node as HTMLElement;
     const heading = el.querySelector('h3')?.textContent?.trim() || '';
     const linkTitle = el.querySelector('a')?.textContent?.trim() || '';
@@ -88,6 +89,171 @@ export default function initMultiSelectFilters() {
       date_added: el.dataset.date_added || '',
     };
   });
+}
+
+// Helper: Setup filter panel event handlers
+function setupFilterPanelHandlers(
+  elements: ReturnType<typeof getDOMElements>,
+  filterCheckboxes: NodeListOf<HTMLInputElement>,
+  applyFilters: (state: FilterState, query: string, resetPage: boolean) => number,
+  getState: () => { filterState: FilterState; searchQuery: string; sortOrder: string },
+  setState: (
+    updates: Partial<{ filterState: FilterState; searchQuery: string; sortOrder: string }>,
+  ) => void,
+) {
+  const {
+    filterPanel,
+    panelBackdrop,
+    closeFilterPanelBtn,
+    openPanelBtn,
+    clearAllBtn,
+    applyFiltersBtn,
+    panelCountNumber,
+  } = elements;
+
+  openPanelBtn?.addEventListener('click', () => {
+    const state = getState();
+    const tempState = getFilterStateFromCheckboxes(filterCheckboxes);
+    const count = applyFilters(tempState, state.searchQuery, false);
+    openPanel(filterPanel, panelCountNumber, count);
+  });
+
+  closeFilterPanelBtn?.addEventListener('click', () => closePanel(filterPanel));
+  panelBackdrop?.addEventListener('click', () => closePanel(filterPanel));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && filterPanel && !filterPanel.classList.contains('hidden')) {
+      closePanel(filterPanel);
+    }
+  });
+
+  filterCheckboxes.forEach((cb) => {
+    cb.addEventListener('change', () => {
+      const state = getState();
+      const tempState = getFilterStateFromCheckboxes(filterCheckboxes);
+      const count = applyFilters(tempState, state.searchQuery, true);
+      if (panelCountNumber) panelCountNumber.textContent = String(count);
+    });
+  });
+
+  applyFiltersBtn?.addEventListener('click', () => {
+    const state = getState();
+    const newFilterState = getFilterStateFromCheckboxes(filterCheckboxes);
+    setState({ filterState: newFilterState });
+    applyFilters(newFilterState, state.searchQuery, true);
+    saveFilters(newFilterState, state.searchQuery, state.sortOrder);
+    closePanel(filterPanel);
+  });
+
+  clearAllBtn?.addEventListener('click', () => {
+    const state = getState();
+    filterCheckboxes.forEach((cb) => (cb.checked = false));
+    const tempState = getFilterStateFromCheckboxes(filterCheckboxes);
+    const count = applyFilters(tempState, state.searchQuery, true);
+    if (panelCountNumber) panelCountNumber.textContent = String(count);
+  });
+}
+
+// Helper: Setup search and sort handlers
+function setupSearchAndSortHandlers(
+  elements: ReturnType<typeof getDOMElements>,
+  applyFilters: (state: FilterState, query: string, resetPage: boolean) => number,
+  getState: () => { filterState: FilterState; searchQuery: string; sortOrder: string },
+  setState: (
+    updates: Partial<{ filterState: FilterState; searchQuery: string; sortOrder: string }>,
+  ) => void,
+  debounced: (fn: () => void) => void,
+) {
+  const { qEl, sortSelect } = elements;
+
+  qEl?.addEventListener('input', () => {
+    debounced(() => {
+      const state = getState();
+      const newSearchQuery = qEl.value.trim();
+      setState({ searchQuery: newSearchQuery });
+      applyFilters(state.filterState, newSearchQuery, true);
+      saveFilters(state.filterState, newSearchQuery, state.sortOrder);
+    });
+  });
+
+  sortSelect?.addEventListener('change', () => {
+    const state = getState();
+    const newSortOrder = sortSelect.value;
+    setState({ sortOrder: newSortOrder });
+    applyFilters(state.filterState, state.searchQuery, true);
+    updateDateDisplay(newSortOrder);
+    saveFilters(state.filterState, state.searchQuery, newSortOrder);
+  });
+}
+
+// Helper: Setup empty state handlers
+function setupEmptyStateHandlers(
+  elements: ReturnType<typeof getDOMElements>,
+  filterCheckboxes: NodeListOf<HTMLInputElement>,
+  applyFilters: (state: FilterState, query: string, resetPage: boolean) => number,
+  getState: () => { filterState: FilterState; searchQuery: string; sortOrder: string },
+  setState: (
+    updates: Partial<{ filterState: FilterState; searchQuery: string; sortOrder: string }>,
+  ) => void,
+) {
+  const { emptyClearFilters, emptyClearSearch, qEl } = elements;
+
+  emptyClearFilters?.addEventListener('click', () => {
+    const state = getState();
+    filterCheckboxes.forEach((cb) => (cb.checked = false));
+    const newFilterState = initFilterState(filterCheckboxes);
+    setState({ filterState: newFilterState });
+    applyFilters(newFilterState, state.searchQuery, true);
+    saveFilters(newFilterState, state.searchQuery, state.sortOrder);
+  });
+
+  emptyClearSearch?.addEventListener('click', () => {
+    const state = getState();
+    if (qEl) {
+      qEl.value = '';
+      setState({ searchQuery: '' });
+      applyFilters(state.filterState, '', true);
+      saveFilters(state.filterState, '', state.sortOrder);
+    }
+  });
+}
+
+export default function initMultiSelectFilters() {
+  const elements = getDOMElements();
+  const {
+    list,
+    empty,
+    countEl,
+    qEl,
+    filterChipsEl,
+    searchSpinner,
+    loadMoreBtn,
+    paginationCount,
+    paginationContainer,
+    loadingSkeleton,
+    filterPanel,
+    panelBackdrop,
+    closeFilterPanelBtn,
+    openPanelBtn,
+    clearAllBtn,
+    applyFiltersBtn,
+    panelCountNumber,
+    fabFilterCount,
+    fabIcon,
+    fabSpinner,
+    sortSelect,
+    emptyClearFilters,
+    emptyClearSearch,
+  } = elements;
+
+  const PAGE_SIZE = 30;
+
+  if (!list) return;
+
+  let currentPage = 1;
+  let filtersExpanded = false;
+
+  const data = indexListData(list);
 
   const filterCheckboxes = document.querySelectorAll<HTMLInputElement>(
     '#filter-panel input[type="checkbox"]',
@@ -214,90 +380,36 @@ export default function initMultiSelectFilters() {
     return totalMatching;
   }
 
+  // State management helpers
+  const getState = () => ({ filterState, searchQuery, sortOrder });
+  const setState = (
+    updates: Partial<{ filterState: FilterState; searchQuery: string; sortOrder: string }>,
+  ) => {
+    if (updates.filterState !== undefined) filterState = updates.filterState;
+    if (updates.searchQuery !== undefined) searchQuery = updates.searchQuery;
+    if (updates.sortOrder !== undefined) sortOrder = updates.sortOrder;
+  };
+
+  // Initialize UI
   applyFilterStateToCheckboxes(filterState, filterCheckboxes);
   applyFilters(filterState, searchQuery);
   revealList(loadingSkeleton, list);
 
+  // Setup debouncer for search
   const debounced = createDebouncer(
     () => showLoadingState(searchSpinner, fabIcon, fabSpinner, list),
     () => hideLoadingState(searchSpinner, fabIcon, fabSpinner, list),
   );
 
-  openPanelBtn?.addEventListener('click', () => {
-    const tempState = getFilterStateFromCheckboxes(filterCheckboxes);
-    const count = applyFilters(tempState, searchQuery, false);
-    openPanel(filterPanel, panelCountNumber, count);
-  });
+  // Setup all event handlers
+  setupFilterPanelHandlers(elements, filterCheckboxes, applyFilters, getState, setState);
+  setupSearchAndSortHandlers(elements, applyFilters, getState, setState, debounced);
+  setupEmptyStateHandlers(elements, filterCheckboxes, applyFilters, getState, setState);
 
-  closeFilterPanelBtn?.addEventListener('click', () => closePanel(filterPanel));
-  panelBackdrop?.addEventListener('click', () => closePanel(filterPanel));
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && filterPanel && !filterPanel.classList.contains('hidden')) {
-      closePanel(filterPanel);
-    }
-  });
-
-  filterCheckboxes.forEach((cb) => {
-    cb.addEventListener('change', () => {
-      const tempState = getFilterStateFromCheckboxes(filterCheckboxes);
-      const count = applyFilters(tempState, searchQuery, true);
-      if (panelCountNumber) panelCountNumber.textContent = String(count);
-    });
-  });
-
-  applyFiltersBtn?.addEventListener('click', () => {
-    filterState = getFilterStateFromCheckboxes(filterCheckboxes);
-    applyFilters(filterState, searchQuery, true);
-    saveFilters(filterState, searchQuery, sortOrder);
-    closePanel(filterPanel);
-  });
-
-  clearAllBtn?.addEventListener('click', () => {
-    filterCheckboxes.forEach((cb) => (cb.checked = false));
-    const tempState = getFilterStateFromCheckboxes(filterCheckboxes);
-    const count = applyFilters(tempState, searchQuery, true);
-    if (panelCountNumber) panelCountNumber.textContent = String(count);
-  });
-
-  qEl?.addEventListener('input', () => {
-    debounced(() => {
-      searchQuery = qEl.value.trim();
-      applyFilters(filterState, searchQuery, true);
-      saveFilters(filterState, searchQuery, sortOrder);
-    });
-  });
-
+  // Load more button
   loadMoreBtn?.addEventListener('click', () => {
     currentPage++;
     applyFilters(filterState, searchQuery, false);
-  });
-
-  const emptyClearFilters = document.getElementById('empty-clear-filters');
-  const emptyClearSearch = document.getElementById('empty-clear-search');
-
-  emptyClearFilters?.addEventListener('click', () => {
-    filterCheckboxes.forEach((cb) => (cb.checked = false));
-    filterState = {};
-    filterState = initFilterState(filterCheckboxes);
-    applyFilters(filterState, searchQuery, true);
-    saveFilters(filterState, searchQuery, sortOrder);
-  });
-
-  emptyClearSearch?.addEventListener('click', () => {
-    if (qEl) {
-      qEl.value = '';
-      searchQuery = '';
-      applyFilters(filterState, searchQuery, true);
-      saveFilters(filterState, searchQuery, sortOrder);
-    }
-  });
-
-  sortSelect?.addEventListener('change', () => {
-    sortOrder = sortSelect.value;
-    applyFilters(filterState, searchQuery, true);
-    updateDateDisplay(sortOrder);
-    saveFilters(filterState, searchQuery, sortOrder);
   });
 
   updateDateDisplay(sortOrder);
