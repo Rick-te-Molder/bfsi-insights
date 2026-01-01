@@ -99,6 +99,27 @@ export default function initMultiSelectFilters() {
   let searchQuery = loaded.searchQuery;
   let sortOrder = loaded.sortOrder;
 
+  // Helper to create filter state callback
+  const createFilterStateCallback = (s: FilterState) =>
+    applyFilterStateToCheckboxes(s, filterCheckboxes);
+
+  // Helper to create save filters callback
+  const createSaveFiltersCallback = () => saveFilters(filterState, searchQuery, sortOrder);
+
+  // Helper to create init filter state callback
+  const createInitFilterStateCallback = () => (filterState = initFilterState(filterCheckboxes));
+
+  // Helper to create update filter chips callback
+  const createUpdateFilterChipsCallback = (s: FilterState, q: string) =>
+    updateFilterChips(
+      s,
+      q,
+      filterChipsEl,
+      filtersExpanded,
+      () => {},
+      () => {},
+    );
+
   function applyFilters(state: FilterState, query: string, resetPage = false): number {
     if (resetPage) currentPage = 1;
 
@@ -130,6 +151,7 @@ export default function initMultiSelectFilters() {
     if (panelCountNumber) panelCountNumber.textContent = String(totalMatching);
 
     updatePaginationUI(visible, totalMatching, loadMoreBtn, paginationCount, paginationContainer);
+
     const renderAllChipsFn = () =>
       renderAllChips({
         state,
@@ -138,9 +160,9 @@ export default function initMultiSelectFilters() {
         qEl,
         filterState,
         searchQuery,
-        applyFilterStateToCheckboxes: (s) => applyFilterStateToCheckboxes(s, filterCheckboxes),
+        applyFilterStateToCheckboxes: createFilterStateCallback,
         applyFilters,
-        saveFilters: () => saveFilters(filterState, searchQuery, sortOrder),
+        saveFilters: createSaveFiltersCallback,
       });
 
     const createCategoryChipGroupFn = (key: string, values: Set<string>) =>
@@ -149,9 +171,9 @@ export default function initMultiSelectFilters() {
         values,
         filterState,
         searchQuery,
-        applyFilterStateToCheckboxes: (s) => applyFilterStateToCheckboxes(s, filterCheckboxes),
+        applyFilterStateToCheckboxes: createFilterStateCallback,
         applyFilters,
-        saveFilters: () => saveFilters(filterState, searchQuery, sortOrder),
+        saveFilters: createSaveFiltersCallback,
       });
 
     const renderCollapsibleSummaryFn = (
@@ -171,19 +193,11 @@ export default function initMultiSelectFilters() {
         filterCheckboxes,
         filterState,
         searchQuery,
-        initFilterState: () => (filterState = initFilterState(filterCheckboxes)),
-        applyFilterStateToCheckboxes: (s) => applyFilterStateToCheckboxes(s, filterCheckboxes),
+        initFilterState: createInitFilterStateCallback,
+        applyFilterStateToCheckboxes: createFilterStateCallback,
         applyFilters,
-        saveFilters: () => saveFilters(filterState, searchQuery, sortOrder),
-        updateFilterChips: (s, q) =>
-          updateFilterChips(
-            s,
-            q,
-            filterChipsEl,
-            filtersExpanded,
-            () => {},
-            () => {},
-          ),
+        saveFilters: createSaveFiltersCallback,
+        updateFilterChips: createUpdateFilterChipsCallback,
         createCategoryChipGroupFn,
       });
 
