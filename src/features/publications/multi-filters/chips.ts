@@ -99,7 +99,8 @@ export function renderAllChips(config: RenderChipsConfig) {
     filterChipsEl.appendChild(chip);
   }
 
-  const handleRemoveFilter = (key: string, value: string) => {
+  // Reuse the same handler logic for removing filter values
+  const createRemoveHandler = (key: string, value: string) => () => {
     filterState[key].delete(value);
     applyFilterStateToCheckboxes(filterState);
     applyFilters(filterState, searchQuery, true);
@@ -108,7 +109,7 @@ export function renderAllChips(config: RenderChipsConfig) {
 
   for (const [key, values] of Object.entries(state)) {
     values.forEach((value) => {
-      const chip = createChip(`${key}: ${value}`, () => handleRemoveFilter(key, value));
+      const chip = createChip(`${key}: ${value}`, createRemoveHandler(key, value));
       filterChipsEl.appendChild(chip);
     });
   }
@@ -146,9 +147,7 @@ export function renderCollapsibleSummary(config: CollapsibleSummaryConfig) {
     qEl,
     filterCheckboxes,
     filterState,
-    searchQuery,
     initFilterState,
-    applyFilterStateToCheckboxes,
     applyFilters,
     saveFilters,
     updateFilterChips,
