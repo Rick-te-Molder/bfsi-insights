@@ -1,18 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDateTime, getStatusColorByCode, getStatusName } from '@/lib/utils';
 import { TagDisplay } from '@/components/tags';
 import type { TaxonomyConfig, TaxonomyData } from '@/components/tags';
 import type { QueueItem } from '@bfsi/types';
-
-interface Lookups {
-  regulators: string[];
-  standardSetters: string[];
-  organizations: string[];
-  vendors: string[];
-}
+import { useDetailPanelData } from './components/detail-panel/useDetailPanelData';
+import { useKeyboardShortcuts } from './components/detail-panel/useKeyboardShortcuts';
 
 interface DetailPanelProps {
   itemId: string | null;
@@ -35,9 +30,7 @@ export function DetailPanel({
   taxonomyConfig,
   taxonomyData,
 }: DetailPanelProps) {
-  const [item, setItem] = useState<QueueItem | null>(null);
-  const [_lookups, setLookups] = useState<Lookups | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { item, loading } = useDetailPanelData(itemId);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const router = useRouter();
 
@@ -51,99 +44,18 @@ export function DetailPanel({
     [itemId, onAction],
   );
 
-  // Fetch item details
-  useEffect(() => {
-    if (!itemId) {
-      setItem(null);
-      return;
-    }
-
-    setLoading(true);
-    fetch(`/api/queue-item/${itemId}`)
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Failed to fetch item: ${res.status}`);
-        }
-        return res.json();
-      })
-      .then((data) => {
-        if (data.item) {
-          setItem(data.item);
-          setLookups(data.lookups);
-        } else {
-          console.error('API returned no item:', data);
-          setItem(null);
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to fetch item details:', err);
-        setItem(null);
-      })
-      .finally(() => setLoading(false));
-  }, [itemId]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!itemId || actionLoading) return;
-
-      // Ignore if typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-
-      switch (e.key) {
-        case 'ArrowUp':
-        case 'k':
-          e.preventDefault();
-          if (canNavigatePrev) onNavigate('prev');
-          break;
-        case 'ArrowDown':
-        case 'j':
-          e.preventDefault();
-          if (canNavigateNext) onNavigate('next');
-          break;
-        case 'a':
-          if (item?.status_code === 300) {
-            // enriched = pending_review
-            e.preventDefault();
-            handleAction('approve');
-          }
-          break;
-        case 'r':
-          if ([300, 500].includes(item?.status_code || 0)) {
-            // enriched or failed
-            e.preventDefault();
-            handleAction('reject');
-          }
-          break;
-        case 'e':
-          e.preventDefault();
-          handleAction('reenrich');
-          break;
-        case 'Escape':
-          e.preventDefault();
-          onClose();
-          break;
-        case 'Enter':
-          e.preventDefault();
-          // Open full detail page
-          router.push(`/items/${itemId}`);
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [
+  useKeyboardShortcuts({
     itemId,
-    item,
+    actionLoading,
     canNavigatePrev,
     canNavigateNext,
-    actionLoading,
     onNavigate,
     onClose,
-    router,
-    handleAction,
-  ]);
+    onApprove: () => item?.status_code === 300 && handleAction('approve'),
+    onReject: () => [300, 500].includes(item?.status_code || 0) && handleAction('reject'),
+    onReenrich: () => handleAction('reenrich'),
+    onViewFull: () => router.push(`/items/${itemId}`),
+  });
 
   if (!itemId) {
     return (
@@ -175,7 +87,6 @@ export function DetailPanel({
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      {/* Header */}
       <div className="flex-shrink-0 border-b border-neutral-800 p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
@@ -185,16 +96,14 @@ export function DetailPanel({
               >
                 {getStatusName(item.status_code)}
               </span>
-              {payload.source_slug ? (
+              {payload.source_slug && (
                 <span className="text-xs text-neutral-500">{String(payload.source_slug)}</span>
-              ) : null}
+              )}
             </div>
-            {/* Title */}
             <h2 className="text-lg font-semibold text-white line-clamp-2">
               {(payload.title as string) || 'Untitled'}
             </h2>
-            {/* Date */}
-            {payload.published_at ? (
+            {payload.published_at && (
               <p className="text-xs text-neutral-400 mt-1">
                 Published{' '}
                 {new Date(payload.published_at as string).toLocaleDateString('en-GB', {
@@ -203,8 +112,7 @@ export function DetailPanel({
                   day: 'numeric',
                 })}
               </p>
-            ) : null}
-            {/* URL */}
+            )}
             <a
               href={item.url}
               target="_blank"
@@ -223,7 +131,6 @@ export function DetailPanel({
           </button>
         </div>
 
-        {/* Navigation */}
         <div className="flex items-center gap-2 mt-3">
           <button
             onClick={() => onNavigate('prev')}
@@ -252,9 +159,7 @@ export function DetailPanel({
         </div>
       </div>
 
-      {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Actions */}
         <div className="flex flex-wrap gap-2">
           {item.status_code === 300 && (
             <button
@@ -283,7 +188,6 @@ export function DetailPanel({
           </button>
         </div>
 
-        {/* Summary */}
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4">
           <h3 className="text-sm font-semibold text-neutral-400 mb-2">Summary</h3>
           <p className="text-sm text-neutral-200">
@@ -291,7 +195,6 @@ export function DetailPanel({
           </p>
         </div>
 
-        {/* Tags - Dynamic from taxonomy_config (with audience percentages) */}
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4">
           <h3 className="text-sm font-semibold text-neutral-400 mb-3">Classification</h3>
           <TagDisplay
@@ -302,7 +205,6 @@ export function DetailPanel({
           />
         </div>
 
-        {/* Metadata */}
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4">
           <h3 className="text-sm font-semibold text-neutral-400 mb-2">Metadata</h3>
           <dl className="space-y-1 text-xs">
@@ -310,14 +212,14 @@ export function DetailPanel({
               <dt className="text-neutral-500">Discovered</dt>
               <dd className="text-neutral-300">{formatDateTime(item.discovered_at)}</dd>
             </div>
-            {payload.published_at ? (
+            {payload.published_at && (
               <div className="flex justify-between">
                 <dt className="text-neutral-500">Published</dt>
                 <dd className="text-neutral-300">
                   {formatDateTime(payload.published_at as string)}
                 </dd>
               </div>
-            ) : null}
+            )}
             {typeof payload.relevance_confidence === 'number' && (
               <div className="flex justify-between">
                 <dt className="text-neutral-500">AI Confidence</dt>
@@ -338,7 +240,6 @@ export function DetailPanel({
         </div>
       </div>
 
-      {/* Keyboard hints */}
       <div className="flex-shrink-0 border-t border-neutral-800 px-4 py-2">
         <p className="text-[10px] text-neutral-600 text-center">
           ↑↓ navigate • a approve • r reject • e re-enrich • Enter full view • Esc close

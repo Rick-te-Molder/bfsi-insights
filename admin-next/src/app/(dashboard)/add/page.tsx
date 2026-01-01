@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { useAddArticle } from './hooks';
 import { ArticleInput, SubmitterInfo, WhyValuable, MissedItemsList } from './components';
+import { validateForm } from './handlers/validateForm';
+import { submitArticle } from './handlers/submitArticle';
 
 export default function AddArticlePage() {
   const {
@@ -53,177 +55,46 @@ export default function AddArticlePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
-    if (inputMode === 'url' && !url.trim()) {
+    const validation = validateForm({
+      inputMode,
+      url,
+      pdfFile,
+      pdfTitle,
+      submitterName,
+      whyValuable,
+      submitterAudience,
+      submitterChannel,
+      submitterUrgency,
+    });
+
+    if (!validation.valid) {
       setStatus('error');
-      setMessage('Please enter a URL');
-      return;
-    }
-    if (inputMode === 'pdf' && !pdfFile) {
-      setStatus('error');
-      setMessage('Please select a PDF file');
-      return;
-    }
-    if (inputMode === 'pdf' && !pdfTitle.trim()) {
-      setStatus('error');
-      setMessage('Please enter a title for the PDF');
-      return;
-    }
-    if (!submitterName.trim()) {
-      setStatus('error');
-      setMessage('Please enter the submitter name/company');
-      return;
-    }
-    if (!whyValuable.trim()) {
-      setStatus('error');
-      setMessage('Please explain why this article was valuable');
-      return;
-    }
-    if (!submitterAudience) {
-      setStatus('error');
-      setMessage("Please select the submitter's audience/role");
-      return;
-    }
-    if (!submitterChannel) {
-      setStatus('error');
-      setMessage('Please select the channel');
-      return;
-    }
-    if (!submitterUrgency) {
-      setStatus('error');
-      setMessage('Please select the urgency level');
+      setMessage(validation.error!);
       return;
     }
 
-    setStatus('submitting');
-    setMessage('');
-
-    try {
-      let finalUrl = url.trim();
-      let domain = '';
-      let urlNorm = '';
-
-      // Handle PDF upload
-      if (inputMode === 'pdf' && pdfFile) {
-        setStatus('uploading');
-        setUploadProgress(0);
-        const fileId = crypto.randomUUID();
-        const filePath = `pdfs/${fileId}.pdf`;
-        const { error: uploadError } = await supabase.storage
-          .from('asset')
-          .upload(filePath, pdfFile, {
-            contentType: 'application/pdf',
-            upsert: false,
-          });
-        if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
-        setUploadProgress(100);
-        const {
-          data: { publicUrl },
-        } = supabase.storage.from('asset').getPublicUrl(filePath);
-        finalUrl = publicUrl;
-        domain = 'manual-pdf-upload';
-        urlNorm = publicUrl.toLowerCase();
-        setStatus('submitting');
-      } else {
-        const urlObj = new URL(url);
-        urlNorm = (urlObj.origin + urlObj.pathname).toLowerCase();
-        domain = urlObj.hostname.replace(/^www\./, '');
-      }
-
-      if (editingId) {
-        const { error } = await supabase
-          .from('missed_discovery')
-          .update({
-            submitter_name: submitterName.trim() || null,
-            submitter_audience: submitterAudience,
-            submitter_channel: submitterChannel,
-            submitter_urgency: submitterUrgency,
-            why_valuable: whyValuable.trim(),
-            verbatim_comment: verbatimComment.trim() || null,
-            suggested_audiences: suggestedAudiences.length > 0 ? suggestedAudiences : null,
-          })
-          .eq('id', editingId);
-        if (error) throw error;
-        setStatus('success');
-        setMessage('Article updated successfully!');
-        setEditingId(null);
-        loadMissedItems();
-      } else {
-        // Check for duplicates
-        const { data: existing } = await supabase
-          .from('missed_discovery')
-          .select('id')
-          .eq('url_norm', urlNorm)
-          .maybeSingle();
-        if (existing) {
-          setStatus('error');
-          setMessage('This URL has already been reported');
-          return;
-        }
-
-        // KB-277: Insert into ingestion_queue FIRST
-        const isPdf = inputMode === 'pdf';
-        const { data: queueItem, error: queueError } = await supabase
-          .from('ingestion_queue')
-          .insert({
-            url: finalUrl,
-            status_code: isPdf ? 230 : 200,
-            entry_type: 'manual',
-            payload: {
-              manual_add: true,
-              title: isPdf ? pdfTitle.trim() : null,
-              is_pdf: isPdf,
-              submitter: submitterName.trim() || null,
-              why_valuable: whyValuable.trim(),
-              source: existingSource || null,
-            },
-          })
-          .select('id')
-          .single();
-        if (queueError) throw queueError;
-
-        // Link missed_discovery to ingestion_queue
-        const { error } = await supabase.from('missed_discovery').insert({
-          url: finalUrl,
-          url_norm: urlNorm,
-          queue_id: queueItem.id,
-          submitter_name: submitterName.trim() || null,
-          submitter_type: 'client',
-          submitter_audience: submitterAudience,
-          submitter_channel: submitterChannel,
-          submitter_urgency: submitterUrgency,
-          why_valuable: whyValuable.trim(),
-          verbatim_comment: verbatimComment.trim() || null,
-          suggested_audiences: suggestedAudiences.length > 0 ? suggestedAudiences : null,
-          source_domain: domain,
-          existing_source_slug: existingSource,
-        });
-        if (error) console.error('Failed to add to missed_discovery:', error);
-
-        // KB-277: Auto-trigger enrichment
-        try {
-          await fetch('/api/process-manual', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ queueId: queueItem.id }),
-          });
-        } catch (triggerErr) {
-          console.error('Failed to trigger enrichment:', triggerErr);
-        }
-
-        setStatus('success');
-        setMessage(
-          isPdf
-            ? 'PDF uploaded! Processing started - check History tab for progress.'
-            : 'Article submitted! Processing started - check History tab for progress.',
-        );
-      }
-
-      resetForm();
-    } catch (err) {
-      setStatus('error');
-      setMessage(err instanceof Error ? err.message : 'Failed to submit');
-    }
+    await submitArticle({
+      inputMode,
+      url,
+      pdfFile,
+      pdfTitle,
+      submitterName,
+      submitterAudience,
+      submitterChannel,
+      submitterUrgency,
+      whyValuable,
+      verbatimComment,
+      suggestedAudiences,
+      existingSource,
+      editingId,
+      supabase,
+      setStatus,
+      setMessage,
+      setUploadProgress,
+      setEditingId,
+      loadMissedItems,
+      resetForm,
+    });
   };
 
   return (
