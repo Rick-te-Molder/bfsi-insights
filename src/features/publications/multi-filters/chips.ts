@@ -16,15 +16,26 @@ export function createChip(label: string, onRemove: () => void): HTMLElement {
   return chip;
 }
 
-export function createCategoryChipGroup(
-  key: string,
-  values: Set<string>,
-  filterState: FilterState,
-  searchQuery: string,
-  applyFilterStateToCheckboxes: (state: FilterState) => void,
-  applyFilters: (state: FilterState, query: string, resetPage: boolean) => number,
-  saveFilters: () => void,
-): HTMLElement {
+interface ChipGroupConfig {
+  key: string;
+  values: Set<string>;
+  filterState: FilterState;
+  searchQuery: string;
+  applyFilterStateToCheckboxes: (state: FilterState) => void;
+  applyFilters: (state: FilterState, query: string, resetPage: boolean) => number;
+  saveFilters: () => void;
+}
+
+export function createCategoryChipGroup(config: ChipGroupConfig): HTMLElement {
+  const {
+    key,
+    values,
+    filterState,
+    searchQuery,
+    applyFilterStateToCheckboxes,
+    applyFilters,
+    saveFilters,
+  } = config;
   const group = document.createElement('div');
   group.className = 'mb-2';
 
@@ -36,13 +47,15 @@ export function createCategoryChipGroup(
   const chipsWrapper = document.createElement('span');
   chipsWrapper.className = 'inline-flex flex-wrap gap-1.5';
 
+  const handleRemoveValue = (value: string) => {
+    filterState[key].delete(value);
+    applyFilterStateToCheckboxes(filterState);
+    applyFilters(filterState, searchQuery, true);
+    saveFilters();
+  };
+
   values.forEach((value) => {
-    const chip = createChip(value, () => {
-      filterState[key].delete(value);
-      applyFilterStateToCheckboxes(filterState);
-      applyFilters(filterState, searchQuery, true);
-      saveFilters();
-    });
+    const chip = createChip(value, () => handleRemoveValue(value));
     chipsWrapper.appendChild(chip);
   });
 
@@ -50,60 +63,97 @@ export function createCategoryChipGroup(
   return group;
 }
 
-export function renderAllChips(
-  state: FilterState,
-  query: string,
-  filterChipsEl: HTMLElement | null,
-  qEl: HTMLInputElement | null,
-  filterState: FilterState,
-  searchQuery: string,
-  applyFilterStateToCheckboxes: (state: FilterState) => void,
-  applyFilters: (state: FilterState, query: string, resetPage: boolean) => number,
-  saveFilters: () => void,
-) {
+interface RenderChipsConfig {
+  state: FilterState;
+  query: string;
+  filterChipsEl: HTMLElement | null;
+  qEl: HTMLInputElement | null;
+  filterState: FilterState;
+  searchQuery: string;
+  applyFilterStateToCheckboxes: (state: FilterState) => void;
+  applyFilters: (state: FilterState, query: string, resetPage: boolean) => number;
+  saveFilters: () => void;
+}
+
+export function renderAllChips(config: RenderChipsConfig) {
+  const {
+    state,
+    query,
+    filterChipsEl,
+    qEl,
+    filterState,
+    searchQuery,
+    applyFilterStateToCheckboxes,
+    applyFilters,
+    saveFilters,
+  } = config;
   if (!filterChipsEl) return;
 
+  const handleClearSearch = () => {
+    if (qEl) qEl.value = '';
+    applyFilters(filterState, '', true);
+  };
+
   if (query) {
-    const chip = createChip(`search: ${query}`, () => {
-      if (qEl) qEl.value = '';
-      const clearedQuery = '';
-      applyFilters(filterState, clearedQuery, true);
-    });
+    const chip = createChip(`search: ${query}`, handleClearSearch);
     filterChipsEl.appendChild(chip);
   }
 
+  const handleRemoveFilter = (key: string, value: string) => {
+    filterState[key].delete(value);
+    applyFilterStateToCheckboxes(filterState);
+    applyFilters(filterState, searchQuery, true);
+    saveFilters();
+  };
+
   for (const [key, values] of Object.entries(state)) {
     values.forEach((value) => {
-      const chip = createChip(`${key}: ${value}`, () => {
-        filterState[key].delete(value);
-        applyFilterStateToCheckboxes(filterState);
-        applyFilters(filterState, searchQuery, true);
-        saveFilters();
-      });
+      const chip = createChip(`${key}: ${value}`, () => handleRemoveFilter(key, value));
       filterChipsEl.appendChild(chip);
     });
   }
 }
 
-export function renderCollapsibleSummary(
-  state: FilterState,
-  query: string,
-  categoryCounts: Record<string, number>,
-  totalFilters: number,
-  hasSearch: boolean,
-  filtersExpanded: boolean,
-  filterChipsEl: HTMLElement | null,
-  qEl: HTMLInputElement | null,
-  filterCheckboxes: NodeListOf<HTMLInputElement>,
-  filterState: FilterState,
-  searchQuery: string,
-  initFilterState: () => void,
-  applyFilterStateToCheckboxes: (state: FilterState) => void,
-  applyFilters: (state: FilterState, query: string, resetPage: boolean) => number,
-  saveFilters: () => void,
-  updateFilterChips: (state: FilterState, query: string) => void,
-  createCategoryChipGroupFn: (key: string, values: Set<string>) => HTMLElement,
-) {
+interface CollapsibleSummaryConfig {
+  state: FilterState;
+  query: string;
+  categoryCounts: Record<string, number>;
+  totalFilters: number;
+  hasSearch: boolean;
+  filtersExpanded: boolean;
+  filterChipsEl: HTMLElement | null;
+  qEl: HTMLInputElement | null;
+  filterCheckboxes: NodeListOf<HTMLInputElement>;
+  filterState: FilterState;
+  searchQuery: string;
+  initFilterState: () => void;
+  applyFilterStateToCheckboxes: (state: FilterState) => void;
+  applyFilters: (state: FilterState, query: string, resetPage: boolean) => number;
+  saveFilters: () => void;
+  updateFilterChips: (state: FilterState, query: string) => void;
+  createCategoryChipGroupFn: (key: string, values: Set<string>) => HTMLElement;
+}
+
+export function renderCollapsibleSummary(config: CollapsibleSummaryConfig) {
+  const {
+    state,
+    query,
+    categoryCounts,
+    totalFilters,
+    hasSearch,
+    filtersExpanded,
+    filterChipsEl,
+    qEl,
+    filterCheckboxes,
+    filterState,
+    searchQuery,
+    initFilterState,
+    applyFilterStateToCheckboxes,
+    applyFilters,
+    saveFilters,
+    updateFilterChips,
+    createCategoryChipGroupFn,
+  } = config;
   if (!filterChipsEl) return;
 
   const categoryLabels: Record<string, string> = {
@@ -165,15 +215,15 @@ export function renderCollapsibleSummary(
   clearBtn.className =
     'text-xs text-neutral-400 hover:text-neutral-200 underline underline-offset-2 transition-colors';
   clearBtn.textContent = 'Clear all';
-  clearBtn.addEventListener('click', () => {
+  const handleClearAll = () => {
     filterCheckboxes.forEach((cb) => (cb.checked = false));
-    const clearedState = {};
     initFilterState();
     if (qEl) qEl.value = '';
-    const clearedQuery = '';
-    applyFilters(clearedState, clearedQuery, true);
+    applyFilters({}, '', true);
     saveFilters();
-  });
+  };
+
+  clearBtn.addEventListener('click', handleClearAll);
 
   const expandBtn = document.createElement('button');
   expandBtn.className =
@@ -182,10 +232,11 @@ export function renderCollapsibleSummary(
     ? `Collapse <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>`
     : `Expand <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>`;
 
-  expandBtn.addEventListener('click', () => {
-    filtersExpanded = !filtersExpanded;
+  const handleToggleExpand = () => {
     updateFilterChips(state, query);
-  });
+  };
+
+  expandBtn.addEventListener('click', handleToggleExpand);
 
   actions.appendChild(clearBtn);
   actions.appendChild(expandBtn);
@@ -200,15 +251,15 @@ export function renderCollapsibleSummary(
 
     const categories = Object.entries(state).filter(([, values]) => values.size > 0);
 
+    const handleClearSearchExpanded = () => {
+      if (qEl) qEl.value = '';
+      applyFilters(filterState, '', true);
+    };
+
     if (query) {
       const searchGroup = document.createElement('div');
       searchGroup.className = 'mb-2';
-
-      const searchChip = createChip(`search: ${query}`, () => {
-        if (qEl) qEl.value = '';
-        const clearedQuery = '';
-        applyFilters(filterState, clearedQuery, true);
-      });
+      const searchChip = createChip(`search: ${query}`, handleClearSearchExpanded);
       searchGroup.appendChild(searchChip);
       expandedContainer.appendChild(searchGroup);
     }

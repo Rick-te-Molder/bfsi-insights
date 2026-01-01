@@ -130,60 +130,70 @@ export default function initMultiSelectFilters() {
     if (panelCountNumber) panelCountNumber.textContent = String(totalMatching);
 
     updatePaginationUI(visible, totalMatching, loadMoreBtn, paginationCount, paginationContainer);
+    const renderAllChipsFn = () =>
+      renderAllChips({
+        state,
+        query,
+        filterChipsEl,
+        qEl,
+        filterState,
+        searchQuery,
+        applyFilterStateToCheckboxes: (s) => applyFilterStateToCheckboxes(s, filterCheckboxes),
+        applyFilters,
+        saveFilters: () => saveFilters(filterState, searchQuery, sortOrder),
+      });
+
+    const createCategoryChipGroupFn = (key: string, values: Set<string>) =>
+      createCategoryChipGroup({
+        key,
+        values,
+        filterState,
+        searchQuery,
+        applyFilterStateToCheckboxes: (s) => applyFilterStateToCheckboxes(s, filterCheckboxes),
+        applyFilters,
+        saveFilters: () => saveFilters(filterState, searchQuery, sortOrder),
+      });
+
+    const renderCollapsibleSummaryFn = (
+      categoryCounts: Record<string, number>,
+      totalFilters: number,
+      hasSearch: boolean,
+    ) =>
+      renderCollapsibleSummary({
+        state,
+        query,
+        categoryCounts,
+        totalFilters,
+        hasSearch,
+        filtersExpanded,
+        filterChipsEl,
+        qEl,
+        filterCheckboxes,
+        filterState,
+        searchQuery,
+        initFilterState: () => (filterState = initFilterState(filterCheckboxes)),
+        applyFilterStateToCheckboxes: (s) => applyFilterStateToCheckboxes(s, filterCheckboxes),
+        applyFilters,
+        saveFilters: () => saveFilters(filterState, searchQuery, sortOrder),
+        updateFilterChips: (s, q) =>
+          updateFilterChips(
+            s,
+            q,
+            filterChipsEl,
+            filtersExpanded,
+            () => {},
+            () => {},
+          ),
+        createCategoryChipGroupFn,
+      });
+
     updateFilterChips(
       state,
       query,
       filterChipsEl,
       filtersExpanded,
-      () =>
-        renderAllChips(
-          state,
-          query,
-          filterChipsEl,
-          qEl,
-          filterState,
-          searchQuery,
-          (s) => applyFilterStateToCheckboxes(s, filterCheckboxes),
-          applyFilters,
-          () => saveFilters(filterState, searchQuery, sortOrder),
-        ),
-      (categoryCounts, totalFilters, hasSearch) =>
-        renderCollapsibleSummary(
-          state,
-          query,
-          categoryCounts,
-          totalFilters,
-          hasSearch,
-          filtersExpanded,
-          filterChipsEl,
-          qEl,
-          filterCheckboxes,
-          filterState,
-          searchQuery,
-          () => (filterState = initFilterState(filterCheckboxes)),
-          (s) => applyFilterStateToCheckboxes(s, filterCheckboxes),
-          applyFilters,
-          () => saveFilters(filterState, searchQuery, sortOrder),
-          (s, q) =>
-            updateFilterChips(
-              s,
-              q,
-              filterChipsEl,
-              filtersExpanded,
-              () => {},
-              () => {},
-            ),
-          (key, values) =>
-            createCategoryChipGroup(
-              key,
-              values,
-              filterState,
-              searchQuery,
-              (s) => applyFilterStateToCheckboxes(s, filterCheckboxes),
-              applyFilters,
-              () => saveFilters(filterState, searchQuery, sortOrder),
-            ),
-        ),
+      renderAllChipsFn,
+      renderCollapsibleSummaryFn,
     );
     updateFabBadge(state, fabFilterCount);
 
