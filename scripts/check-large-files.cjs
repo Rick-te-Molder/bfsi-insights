@@ -15,8 +15,6 @@ const ALLOW_LIST = new Set([
   // Astro main site
   'src/features/publications/publication-filters.ts',        // 685 LoC
   'src/features/publications/multi-select-filters.ts',       // 647 LoC
-  // Agent API
-  'services/agent-api/src/cli.js',                           // 711 LoC
   // Admin-next pages (KB-274: tracked for refactoring)
   'admin-next/src/app/(dashboard)/sources/page.tsx',         // 658 LoC
   'admin-next/src/app/(dashboard)/missed/page.tsx',          // 589 LoC
