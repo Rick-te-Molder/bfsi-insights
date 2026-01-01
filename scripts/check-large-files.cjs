@@ -24,16 +24,21 @@ const LANGUAGE_LIMITS = {
   'default': { file: 300, unit: 30, unitExcellent: 15 },
 };
 
-// Files that are temporarily allowed to exceed FILE SIZE limits (grandfathered existing violations)
-// TODO(KB-151): Gradually refactor and remove entries from allowList.
+// Files with known violations (for tracking purposes only - NOT used for filtering)
+// TODO(KB-151): Gradually refactor and remove entries from this list.
 // 
-// NOTE: This only grandfathers FILE SIZE (>300 lines), not UNIT SIZE (functions >30 lines).
-// ~117 additional files have large units but are under 300 lines - these are NOT grandfathered.
-// If you modify a file with large units, you may need to refactor those units to pass the check.
-// This creates incentive to refactor as you go.
+// BOY SCOUT RULE: If you touch any file, it MUST meet SIG guidelines before commit.
+// This list is for documentation only - all staged files are checked regardless.
+// 
+// Known violations as of 2026-01-02:
+// - 31 files > 300 lines
+// - ~117 additional files with functions > 30 lines
+// 
+// When you modify a file on this list, you must refactor it to pass checks.
+// Leave the code cleaner than you found it.
 //
 const ALLOW_LIST = new Set([
-  // Files > 300 lines (31 files as of 2026-01-02)
+  // Files > 300 lines (31 files) - must be refactored when touched
   'services/agent-api/src/agents/scorer.js',
   'src/features/publications/publication-filters.ts',
   'admin-next/src/app/(dashboard)/items/page.tsx',
@@ -237,10 +242,11 @@ try {
   }
   
   console.log(`\n📋 Checking ${stagedFiles.length} staged file(s) for SIG compliance...\n`);
+  console.log('🧹 Boy Scout Rule: All touched files must meet SIG guidelines\n');
   
-  const files = stagedFiles.filter((f) => !ALLOW_LIST.has(f));
-
-  const results = files.map(analyzeFile);
+  // Check ALL staged files - no exceptions
+  // If you touch it, you must clean it
+  const results = stagedFiles.map(analyzeFile);
   
   // Separate results by severity
   const filesExceedingLimit = results.filter(r => r.exceedsFileLimit);
@@ -293,35 +299,35 @@ try {
   }
 
   // Summary
-  const grandfatheredCount = stagedFiles.filter(f => ALLOW_LIST.has(f)).length;
+  const knownViolators = stagedFiles.filter(f => ALLOW_LIST.has(f));
   
   if (!hasErrors && !hasWarnings) {
-    const totalFiles = results.length;
     console.log(`✅ All staged files meet SIG guidelines!`);
-    console.log(`   Checked: ${totalFiles} new/modified file(s)`);
-    if (grandfatheredCount > 0) {
-      console.log(`   Grandfathered: ${grandfatheredCount} file(s) on allow-list (not checked)`);
+    console.log(`   Checked: ${results.length} file(s)`);
+    if (knownViolators.length > 0) {
+      console.log(`   🎉 Cleaned up: ${knownViolators.length} file(s) that previously had violations`);
+      console.log(`   Remove from ALLOW_LIST: ${knownViolators.map(f => f).join(', ')}`);
     }
-    console.log(`   Total on allow-list: ${ALLOW_LIST.size} file(s) (existing violations)\n`);
+    console.log(`\n🧹 Boy Scout Rule in action - code left cleaner than found!\n`);
   } else {
     console.error('\n📊 SUMMARY:');
-    console.error(`   ❌ NEW violations in staged files:`);
-    console.error(`      Files exceeding size limit: ${filesExceedingLimit.length}`);
+    console.error(`   ❌ Violations in staged files:`);
+    console.error(`      Files exceeding size limit (>300 lines): ${filesExceedingLimit.length}`);
     console.error(`      Files with large units (>30 lines): ${filesWithLargeUnits.length}`);
-    if (grandfatheredCount > 0) {
-      console.error(`   ⚪ Grandfathered: ${grandfatheredCount} file(s) on allow-list (not checked)`);
+    if (knownViolators.length > 0) {
+      console.error(`\n   📋 ${knownViolators.length} file(s) on known violations list:`);
+      knownViolators.forEach(f => console.error(`      - ${f}`));
+      console.error(`   These files must be refactored before commit (Boy Scout Rule)`);
     }
-    console.error(`   📋 Total on allow-list: ${ALLOW_LIST.size} file(s) (existing violations to fix gradually)`);
-    console.error('\n💡 SIG Requirements for NEW code:');
+    console.error(`\n   � Total known violations: ${ALLOW_LIST.size} file(s) (tracked for cleanup)`);
+    console.error('\n💡 SIG Requirements (enforced for ALL touched files):');
     console.error('   - Files MUST be < 300 lines');
     console.error('   - Functions MUST be < 30 lines');
     console.error('   - Functions SHOULD be < 15 lines (excellent)');
-    console.error('\n⚠️  Grandfathering Policy:');
-    console.error('   - Only FILE SIZE (>300 lines) is grandfathered (31 files)');
-    console.error('   - UNIT SIZE (functions >30 lines) is NOT grandfathered');
-    console.error('   - ~117 files have large units but are <300 lines');
-    console.error('   - Modifying these files may require refactoring large functions');
-    console.error('   - This creates incentive to refactor as you go');
+    console.error('\n🧹 Boy Scout Rule:');
+    console.error('   - If you touch a file, you MUST clean it');
+    console.error('   - No exceptions - even for files with known violations');
+    console.error('   - Leave the code cleaner than you found it');
     console.error('\n🔧 To fix: Extract large functions into smaller, focused units\n');
   }
 
