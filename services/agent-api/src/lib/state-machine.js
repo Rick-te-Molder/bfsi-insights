@@ -249,7 +249,7 @@ export function toMermaidDiagram() {
 
   // Add all normal transitions
   for (const [from, toStates] of Object.entries(normalTransitions)) {
-    const fromCode = parseInt(from);
+    const fromCode = Number.parseInt(from, 10);
     const fromName = getStatusName(fromCode);
 
     if (toStates.length === 0) {
@@ -264,7 +264,7 @@ export function toMermaidDiagram() {
 
   // Add manual transitions (dashed lines)
   for (const [from, toStates] of Object.entries(manualTransitions)) {
-    const fromCode = parseInt(from);
+    const fromCode = Number.parseInt(from, 10);
     const fromName = getStatusName(fromCode);
 
     for (const toCode of toStates) {

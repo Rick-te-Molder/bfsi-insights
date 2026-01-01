@@ -29,7 +29,6 @@ import {
   createDebouncer,
 } from './multi-filters/ui';
 import {
-  createChip,
   createCategoryChipGroup,
   renderAllChips,
   renderCollapsibleSummary,

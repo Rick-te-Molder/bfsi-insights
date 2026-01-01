@@ -1,5 +1,3 @@
-import type { FilterValues } from './types';
-
 const SEARCH_HISTORY_KEY = 'publicationSearchHistory';
 const MAX_SEARCH_HISTORY = 5;
 
@@ -43,7 +41,7 @@ export function renderSearchHistory(
       <button
         type="button"
         class="w-full px-3 py-2 text-left text-sm text-neutral-200 hover:bg-neutral-800 flex items-center gap-2 search-history-item"
-        data-query="${q.replace(/"/g, '&quot;')}"
+        data-query="${q.replaceAll('"', '&quot;')}"
       >
         <svg class="h-3.5 w-3.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>

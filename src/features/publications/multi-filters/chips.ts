@@ -66,8 +66,8 @@ export function renderAllChips(
   if (query) {
     const chip = createChip(`search: ${query}`, () => {
       if (qEl) qEl.value = '';
-      searchQuery = '';
-      applyFilters(filterState, searchQuery, true);
+      const clearedQuery = '';
+      applyFilters(filterState, clearedQuery, true);
     });
     filterChipsEl.appendChild(chip);
   }
@@ -167,11 +167,11 @@ export function renderCollapsibleSummary(
   clearBtn.textContent = 'Clear all';
   clearBtn.addEventListener('click', () => {
     filterCheckboxes.forEach((cb) => (cb.checked = false));
-    filterState = {};
+    const clearedState = {};
     initFilterState();
     if (qEl) qEl.value = '';
-    searchQuery = '';
-    applyFilters(filterState, searchQuery, true);
+    const clearedQuery = '';
+    applyFilters(clearedState, clearedQuery, true);
     saveFilters();
   });
 
@@ -206,8 +206,8 @@ export function renderCollapsibleSummary(
 
       const searchChip = createChip(`search: ${query}`, () => {
         if (qEl) qEl.value = '';
-        searchQuery = '';
-        applyFilters(filterState, searchQuery, true);
+        const clearedQuery = '';
+        applyFilters(filterState, clearedQuery, true);
       });
       searchGroup.appendChild(searchChip);
       expandedContainer.appendChild(searchGroup);
