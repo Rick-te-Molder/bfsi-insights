@@ -1,37 +1,39 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { runQueueHealthCmd } from '../../../src/cli/commands/health.js';
 import * as utils from '../../../src/cli/utils.js';
-import { createClient } from '@supabase/supabase-js';
 
 vi.mock('../../../src/cli/utils.js');
-vi.mock('@supabase/supabase-js');
+
+const mockSupabaseInstance = {
+  rpc: vi.fn().mockResolvedValue({ data: [] }),
+  from: vi.fn(() => ({
+    select: vi.fn(() => ({
+      lt: vi.fn(() => ({
+        order: vi.fn(() => ({ data: [] })),
+      })),
+      not: vi.fn(() => ({
+        gte: vi.fn(() => ({
+          order: vi.fn(() => ({ data: [] })),
+        })),
+      })),
+    })),
+  })),
+};
+
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: vi.fn(() => mockSupabaseInstance),
+}));
+
+import { runQueueHealthCmd } from '../../../src/cli/commands/health.js';
 
 describe('Health CLI Command', () => {
-  let mockSupabase;
-
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.mocked(utils.getStatusIcon).mockReturnValue('✓');
     vi.mocked(utils.printPendingBreakdown).mockImplementation(() => {});
 
-    mockSupabase = {
-      rpc: vi.fn().mockResolvedValue({ data: [] }),
-      from: vi.fn(() => ({
-        select: vi.fn(() => ({
-          lt: vi.fn(() => ({
-            order: vi.fn(() => ({ data: [] })),
-          })),
-          not: vi.fn(() => ({
-            gte: vi.fn(() => ({
-              order: vi.fn(() => ({ data: [] })),
-            })),
-          })),
-        })),
-      })),
-    };
-
-    vi.mocked(createClient).mockReturnValue(mockSupabase);
+    // Reset mock functions
+    mockSupabaseInstance.rpc.mockResolvedValue({ data: [] });
   });
 
   describe('runQueueHealthCmd', () => {
@@ -41,24 +43,24 @@ describe('Health CLI Command', () => {
         { name: 'enriched', count: 5 },
         { name: 'published', count: 20 },
       ];
-      mockSupabase.rpc.mockResolvedValue({ data: mockStatusCounts });
+      mockSupabaseInstance.rpc.mockResolvedValue({ data: mockStatusCounts });
 
       await runQueueHealthCmd();
 
-      expect(mockSupabase.rpc).toHaveBeenCalledWith('get_status_code_counts');
+      expect(mockSupabaseInstance.rpc).toHaveBeenCalledWith('get_status_code_counts');
       expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Status Overview'));
       expect(utils.getStatusIcon).toHaveBeenCalledTimes(3);
     });
 
     it('should display pending items breakdown', async () => {
-      mockSupabase.rpc.mockResolvedValue({ data: [] });
+      mockSupabaseInstance.rpc.mockResolvedValue({ data: [] });
 
       const mockPending = [
         { discovered_at: '2026-01-01', payload: { title: 'Item 1' } },
         { discovered_at: '2026-01-02', payload: { title: 'Item 2' } },
       ];
 
-      mockSupabase.from.mockReturnValue({
+      mockSupabaseInstance.from.mockReturnValue({
         select: vi.fn(() => ({
           lt: vi.fn(() => ({
             order: vi.fn(() => ({ data: mockPending })),
@@ -80,8 +82,8 @@ describe('Health CLI Command', () => {
     });
 
     it('should display message when no pending items', async () => {
-      mockSupabase.rpc.mockResolvedValue({ data: [] });
-      mockSupabase.from.mockReturnValue({
+      mockSupabaseInstance.rpc.mockResolvedValue({ data: [] });
+      mockSupabaseInstance.from.mockReturnValue({
         select: vi.fn(() => ({
           lt: vi.fn(() => ({
             order: vi.fn(() => ({ data: [] })),
@@ -102,7 +104,7 @@ describe('Health CLI Command', () => {
     });
 
     it('should display 24h activity', async () => {
-      mockSupabase.rpc.mockResolvedValue({ data: [] });
+      mockSupabaseInstance.rpc.mockResolvedValue({ data: [] });
 
       const mockRecent = [
         { status_code: 300, reviewed_at: '2026-01-01T10:00:00Z' },
@@ -111,7 +113,7 @@ describe('Health CLI Command', () => {
       ];
 
       let callCount = 0;
-      mockSupabase.from.mockReturnValue({
+      mockSupabaseInstance.from.mockReturnValue({
         select: vi.fn(() => ({
           lt: vi.fn(() => ({
             order: vi.fn(() => ({ data: [] })),
@@ -140,7 +142,7 @@ describe('Health CLI Command', () => {
         { name: 'empty', count: 0 },
         { name: 'enriched', count: 5 },
       ];
-      mockSupabase.rpc.mockResolvedValue({ data: mockStatusCounts });
+      mockSupabaseInstance.rpc.mockResolvedValue({ data: mockStatusCounts });
 
       await runQueueHealthCmd();
 
