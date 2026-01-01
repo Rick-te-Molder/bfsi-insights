@@ -218,64 +218,22 @@ function setupEmptyStateHandlers(
   });
 }
 
-export default function initMultiSelectFilters() {
-  const elements = getDOMElements();
-  const {
-    list,
-    empty,
-    countEl,
-    qEl,
-    filterChipsEl,
-    searchSpinner,
-    loadMoreBtn,
-    paginationCount,
-    paginationContainer,
-    loadingSkeleton,
-    filterPanel,
-    panelBackdrop,
-    closeFilterPanelBtn,
-    openPanelBtn,
-    clearAllBtn,
-    applyFiltersBtn,
-    panelCountNumber,
-    fabFilterCount,
-    fabIcon,
-    fabSpinner,
-    sortSelect,
-    emptyClearFilters,
-    emptyClearSearch,
-  } = elements;
-
-  const PAGE_SIZE = 30;
-
-  if (!list) return;
-
-  let currentPage = 1;
-  let filtersExpanded = false;
-
-  const data = indexListData(list);
-
-  const filterCheckboxes = document.querySelectorAll<HTMLInputElement>(
-    '#filter-panel input[type="checkbox"]',
-  );
-
-  let filterState = initFilterState(filterCheckboxes);
-  const loaded = loadFilters(qEl, sortSelect);
-  filterState = loaded.filterState;
-  let searchQuery = loaded.searchQuery;
-  let sortOrder = loaded.sortOrder;
-
-  // Helper to create filter state callback
+// Helper: Create callback creators
+function createCallbackCreators(
+  filterState: FilterState,
+  searchQuery: string,
+  sortOrder: string,
+  filterCheckboxes: NodeListOf<HTMLInputElement>,
+  filterChipsEl: HTMLElement | null,
+  filtersExpanded: boolean,
+) {
   const createFilterStateCallback = (s: FilterState) =>
     applyFilterStateToCheckboxes(s, filterCheckboxes);
 
-  // Helper to create save filters callback
   const createSaveFiltersCallback = () => saveFilters(filterState, searchQuery, sortOrder);
 
-  // Helper to create init filter state callback
-  const createInitFilterStateCallback = () => (filterState = initFilterState(filterCheckboxes));
+  const createInitFilterStateCallback = () => initFilterState(filterCheckboxes);
 
-  // Helper to create update filter chips callback
   const createUpdateFilterChipsCallback = (s: FilterState, q: string) =>
     updateFilterChips(
       s,
@@ -286,8 +244,42 @@ export default function initMultiSelectFilters() {
       () => {},
     );
 
-  function applyFilters(state: FilterState, query: string, resetPage = false): number {
-    if (resetPage) currentPage = 1;
+  return {
+    createFilterStateCallback,
+    createSaveFiltersCallback,
+    createInitFilterStateCallback,
+    createUpdateFilterChipsCallback,
+  };
+}
+
+// Helper: Create applyFilters function with all dependencies
+function createApplyFiltersFunction(
+  data: IndexedItem[],
+  elements: ReturnType<typeof getDOMElements>,
+  PAGE_SIZE: number,
+  getPageState: () => { currentPage: number; filtersExpanded: boolean },
+  setCurrentPage: (page: number) => void,
+  filterState: FilterState,
+  searchQuery: string,
+  sortOrder: string,
+  filterCheckboxes: NodeListOf<HTMLInputElement>,
+) {
+  const {
+    list,
+    empty,
+    countEl,
+    qEl,
+    filterChipsEl,
+    loadMoreBtn,
+    paginationCount,
+    paginationContainer,
+    panelCountNumber,
+    fabFilterCount,
+  } = elements;
+
+  return function applyFilters(state: FilterState, query: string, resetPage = false): number {
+    if (resetPage) setCurrentPage(1);
+    const { currentPage, filtersExpanded } = getPageState();
 
     let matchingIndices: number[] = [];
     data.forEach((item, index) => {
@@ -318,6 +310,15 @@ export default function initMultiSelectFilters() {
 
     updatePaginationUI(visible, totalMatching, loadMoreBtn, paginationCount, paginationContainer);
 
+    const callbacks = createCallbackCreators(
+      filterState,
+      searchQuery,
+      sortOrder,
+      filterCheckboxes,
+      filterChipsEl,
+      filtersExpanded,
+    );
+
     const renderAllChipsFn = () =>
       renderAllChips({
         state,
@@ -326,9 +327,9 @@ export default function initMultiSelectFilters() {
         qEl,
         filterState,
         searchQuery,
-        applyFilterStateToCheckboxes: createFilterStateCallback,
+        applyFilterStateToCheckboxes: callbacks.createFilterStateCallback,
         applyFilters,
-        saveFilters: createSaveFiltersCallback,
+        saveFilters: callbacks.createSaveFiltersCallback,
       });
 
     const createCategoryChipGroupFn = (key: string, values: Set<string>) =>
@@ -337,9 +338,9 @@ export default function initMultiSelectFilters() {
         values,
         filterState,
         searchQuery,
-        applyFilterStateToCheckboxes: createFilterStateCallback,
+        applyFilterStateToCheckboxes: callbacks.createFilterStateCallback,
         applyFilters,
-        saveFilters: createSaveFiltersCallback,
+        saveFilters: callbacks.createSaveFiltersCallback,
       });
 
     const renderCollapsibleSummaryFn = (
@@ -359,11 +360,11 @@ export default function initMultiSelectFilters() {
         filterCheckboxes,
         filterState,
         searchQuery,
-        initFilterState: createInitFilterStateCallback,
-        applyFilterStateToCheckboxes: createFilterStateCallback,
+        initFilterState: callbacks.createInitFilterStateCallback,
+        applyFilterStateToCheckboxes: callbacks.createFilterStateCallback,
         applyFilters,
-        saveFilters: createSaveFiltersCallback,
-        updateFilterChips: createUpdateFilterChipsCallback,
+        saveFilters: callbacks.createSaveFiltersCallback,
+        updateFilterChips: callbacks.createUpdateFilterChipsCallback,
         createCategoryChipGroupFn,
       });
 
@@ -378,9 +379,44 @@ export default function initMultiSelectFilters() {
     updateFabBadge(state, fabFilterCount);
 
     return totalMatching;
-  }
+  };
+}
 
-  // State management helpers
+export default function initMultiSelectFilters() {
+  const elements = getDOMElements();
+  const {
+    list,
+    loadingSkeleton,
+    loadMoreBtn,
+    searchSpinner,
+    fabIcon,
+    fabSpinner,
+    qEl,
+    sortSelect,
+  } = elements;
+
+  const PAGE_SIZE = 30;
+  if (!list) return;
+
+  // Initialize state
+  let currentPage = 1;
+  let filtersExpanded = false;
+  const data = indexListData(list);
+  const filterCheckboxes = document.querySelectorAll<HTMLInputElement>(
+    '#filter-panel input[type="checkbox"]',
+  );
+
+  let filterState = initFilterState(filterCheckboxes);
+  const loaded = loadFilters(qEl, sortSelect);
+  filterState = loaded.filterState;
+  let searchQuery = loaded.searchQuery;
+  let sortOrder = loaded.sortOrder;
+
+  // State management
+  const getPageState = () => ({ currentPage, filtersExpanded });
+  const setCurrentPage = (page: number) => {
+    currentPage = page;
+  };
   const getState = () => ({ filterState, searchQuery, sortOrder });
   const setState = (
     updates: Partial<{ filterState: FilterState; searchQuery: string; sortOrder: string }>,
@@ -390,18 +426,29 @@ export default function initMultiSelectFilters() {
     if (updates.sortOrder !== undefined) sortOrder = updates.sortOrder;
   };
 
+  // Create applyFilters function
+  const applyFilters = createApplyFiltersFunction(
+    data,
+    elements,
+    PAGE_SIZE,
+    getPageState,
+    setCurrentPage,
+    filterState,
+    searchQuery,
+    sortOrder,
+    filterCheckboxes,
+  );
+
   // Initialize UI
   applyFilterStateToCheckboxes(filterState, filterCheckboxes);
   applyFilters(filterState, searchQuery);
   revealList(loadingSkeleton, list);
 
-  // Setup debouncer for search
+  // Setup debouncer and event handlers
   const debounced = createDebouncer(
     () => showLoadingState(searchSpinner, fabIcon, fabSpinner, list),
     () => hideLoadingState(searchSpinner, fabIcon, fabSpinner, list),
   );
-
-  // Setup all event handlers
   setupFilterPanelHandlers(elements, filterCheckboxes, applyFilters, getState, setState);
   setupSearchAndSortHandlers(elements, applyFilters, getState, setState, debounced);
   setupEmptyStateHandlers(elements, filterCheckboxes, applyFilters, getState, setState);
