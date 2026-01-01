@@ -6,6 +6,14 @@ vi.mock('../../../src/agents/screener.js');
 vi.mock('../../../src/agents/summarizer.js');
 vi.mock('../../../src/agents/tagger.js');
 vi.mock('../../../src/lib/evals.js');
+vi.mock('../../../src/lib/status-codes.js', () => ({
+  STATUS: new Proxy(
+    {},
+    {
+      get: () => 100,
+    },
+  ),
+}));
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({
     from: vi.fn(() => ({
@@ -74,6 +82,26 @@ describe('Eval CLI Commands', () => {
       await runEvalCmd({ agent: 'screener' });
 
       expect(evals.runGoldenEval).toHaveBeenCalled();
+    });
+
+    it('should run judge eval with samples from database', async () => {
+      vi.mocked(evals.runLLMJudgeEval).mockResolvedValue(undefined);
+
+      await runEvalCmd({ agent: 'screener', type: 'judge', limit: 5 });
+
+      expect(evals.runLLMJudgeEval).toHaveBeenCalledWith(
+        'screener',
+        expect.any(Function),
+        expect.any(Array),
+      );
+    });
+
+    it('should handle empty samples for judge eval', async () => {
+      vi.mocked(evals.runLLMJudgeEval).mockResolvedValue(undefined);
+
+      await runEvalCmd({ agent: 'tagger', type: 'judge' });
+
+      expect(evals.runLLMJudgeEval).toHaveBeenCalledWith('tagger', expect.any(Function), []);
     });
   });
 
