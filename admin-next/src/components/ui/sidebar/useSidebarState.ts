@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 
-export function useSidebarState(navItems: any[]) {
+export function useSidebarState(navItems: Array<{ href: string; children?: unknown[] }>) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(() => {

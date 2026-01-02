@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { Source } from '@/types/database';
 import { SourceModal } from './components/SourceModal';
@@ -12,13 +12,7 @@ import type {
   FilterHealth,
   SourceHealth,
 } from './types';
-import {
-  getDiscoveryInfo,
-  getHealthBadge,
-  getCategoryColor,
-  createFormatTimeAgo,
-  calculateStats,
-} from './utils';
+import { getDiscoveryInfo, getHealthBadge, getCategoryColor, calculateStats } from './utils';
 
 export default function SourcesPage() {
   const [sources, setSources] = useState<Source[]>([]);
@@ -100,9 +94,21 @@ export default function SourcesPage() {
   const categories = [...new Set(sources.map((s) => s.category).filter(Boolean))];
   const stats = calculateStats(sources);
 
-  // eslint-disable-next-line react-hooks/purity -- Date.now() is intentionally computed once on mount for relative time display
-  const now = useMemo(() => Date.now(), []);
-  const formatTimeAgo = useCallback(createFormatTimeAgo(now), [now]);
+  const nowRef = useRef<number | null>(null);
+  if (nowRef.current === null) {
+    // eslint-disable-next-line react-hooks/purity -- Date.now() computed once on mount for relative time display
+    nowRef.current = Date.now();
+  }
+  const formatTimeAgo = useCallback((date: string | null) => {
+    if (!date) return 'Never';
+    const diff = nowRef.current! - new Date(date).getTime();
+    const hours = Math.floor(diff / (60 * 60 * 1000));
+    if (hours < 1) return 'Just now';
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return '1 day ago';
+    return `${days} days ago`;
+  }, []);
 
   if (loading) {
     return (

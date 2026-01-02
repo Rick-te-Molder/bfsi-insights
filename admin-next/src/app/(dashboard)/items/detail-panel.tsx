@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { formatDateTime, getStatusColorByCode, getStatusName } from '@/lib/utils';
 import { TagDisplay } from '@/components/tags';
 import type { TaxonomyConfig, TaxonomyData } from '@/components/tags';
-import type { QueueItem } from '@bfsi/types';
+import type { QueueItem as _QueueItem } from '@bfsi/types';
 import { useDetailPanelData } from './components/detail-panel/useDetailPanelData';
 import { useKeyboardShortcuts } from './components/detail-panel/useKeyboardShortcuts';
 
