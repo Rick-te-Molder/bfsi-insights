@@ -178,8 +178,11 @@ export function createErrorSignature(errorMessage) {
  */
 function logFailure(agent, itemId, moveToDLQ, classification, newFailureCount, retryDelay) {
   if (moveToDLQ) {
+    const failureStatus = classification.retryable
+      ? `${newFailureCount} failures`
+      : 'terminal error';
     console.log(
-      `   💀 ${agent} ${itemId} → dead_letter (${classification.retryable ? `${newFailureCount} failures` : 'terminal error'}: ${classification.reason})`,
+      `   💀 ${agent} ${itemId} → dead_letter (${failureStatus}: ${classification.reason})`,
     );
   } else if (retryDelay) {
     console.log(
