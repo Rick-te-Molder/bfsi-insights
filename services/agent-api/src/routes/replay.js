@@ -114,7 +114,7 @@ router.get('/sample', async (req, res) => {
     if (minDate) filters.minDate = minDate;
     if (maxDate) filters.maxDate = maxDate;
 
-    const runIds = await getRandomSample(parseInt(size), filters);
+    const runIds = await getRandomSample(Number.parseInt(size, 10), filters);
 
     res.json({
       success: true,

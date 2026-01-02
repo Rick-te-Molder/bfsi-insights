@@ -236,7 +236,7 @@ function reportTestResults(results) {
   console.log(`   Failed: ${results.failed}`);
   console.log(`   Success rate: ${results.successRate}`);
 
-  const successRate = parseFloat(results.successRate);
+  const successRate = Number.parseFloat(results.successRate);
   const meetsPhase1 = successRate === 100;
 
   console.log(`\n✅ ASMM Phase 1 Criteria:`);

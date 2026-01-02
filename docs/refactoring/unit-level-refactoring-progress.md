@@ -2,7 +2,7 @@
 
 ## Overview
 
-Refactoring the 10 largest functions in the codebase to comply with SIG maintainability guidelines (< 30 lines per function ideal, < 100 lines acceptable).
+Refactoring the 10 largest functions in the codebase to comply with Quality Guidelines (< 15 lines per function ideal, < 30 lines acceptable).
 
 **Branch:** `refactor/kb-151-reduce-unit-sizes`  
 **Started:** 2026-01-01  
@@ -157,9 +157,9 @@ statusAtom.set('submitting'); // Direct state mutation
 | AddArticlePage  | 340       | 217     | 36%       | 2       |
 | **Total**       | **1,404** | **545** | **61%**   | **20**  |
 
-### SIG Compliance
+### Unit-Size Compliance (300/30 size limits)
 
-- **Before:** All functions 280-361 lines (far over SIG's 30-line guideline)
+- **Before:** All functions 280-361 lines (far over the 30-line function size limit)
 - **After:** Main functions 91-217 lines (still over ideal, but much better)
 - **Extracted Modules:** Most < 80 lines, all < 175 lines
 

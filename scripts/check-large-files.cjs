@@ -1,11 +1,11 @@
 /**
- * SIG-compliant code size checker
- * Checks both file size and unit (function/method) size based on SIG maintainability guidelines
+ * Quality Gate code size checker
+ * Checks both file size and unit (function/method) size based on Quality Guidelines
  * 
  * KB-151: Continuously refactor large files and functions
  * 
  * References:
- * - SIG Maintainability Model: https://www.softwareimprovementgroup.com/
+ * - Maintainability model (Software Improvement Group): https://www.softwareimprovementgroup.com/
  * - "Building Maintainable Software" by Joost Visser
  */
 const { execSync } = require('node:child_process');
@@ -13,7 +13,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { findUnits } = require('./lib/unit-detector.cjs');
 
-// SIG-based thresholds per language
+// 300/30 size limits per language
 const LANGUAGE_LIMITS = {
   'js': { file: 300, unit: 30, unitExcellent: 15 },
   'ts': { file: 300, unit: 30, unitExcellent: 15 },
@@ -34,13 +34,20 @@ const TEST_LIMITS = {
   'default': { file: 500, unit: 50, unitExcellent: 30 },
 };
 
+const PARAM_LIMITS = {
+  optimal: 3,
+  warn: 5,
+  block: 6,
+  maxDestructuredKeys: 7,
+};
+
 // Files with known violations (for tracking purposes only - NOT used for filtering)
 // TODO(KB-151): Gradually refactor and remove entries from this list.
 // 
 // NOTE: This allow-list is INFORMATIONAL ONLY; it does NOT affect enforcement.
 // All staged files are checked regardless of whether they're on this list.
 // 
-// BOY SCOUT RULE: If you touch any file, it MUST meet SIG guidelines before commit.
+// BOY SCOUT RULE: If you touch any file, it MUST meet Quality Guidelines before commit.
 // 
 // Known violations as of 2026-01-02:
 // - 31 files > 300 lines
@@ -131,19 +138,35 @@ function analyzeFile(filePath) {
   const limits = getLimits(filePath);
   
   const units = findUnits(content);
+
+  const unitsWithParams = units.map((u) => {
+    const paramCount = Number.isFinite(u.paramCount) ? u.paramCount : 0;
+    const destructuredKeysCount = Number.isFinite(u.destructuredKeysCount) ? u.destructuredKeysCount : 0;
+    const effectiveParamCount = destructuredKeysCount > PARAM_LIMITS.maxDestructuredKeys
+      ? destructuredKeysCount
+      : paramCount;
+    return { ...u, paramCount, destructuredKeysCount, effectiveParamCount };
+  });
   
   // Filter units by severity
-  const largeUnits = units.filter(u => u.length > limits.unit);
-  const moderateUnits = units.filter(u => u.length > limits.unitExcellent && u.length <= limits.unit);
+  const largeUnits = unitsWithParams.filter(u => u.length > limits.unit);
+  const moderateUnits = unitsWithParams.filter(u => u.length > limits.unitExcellent && u.length <= limits.unit);
+
+  const largeParamUnits = unitsWithParams.filter(u => u.effectiveParamCount >= PARAM_LIMITS.block);
+  const moderateParamUnits = unitsWithParams.filter(
+    u => u.effectiveParamCount >= (PARAM_LIMITS.optimal + 1) && u.effectiveParamCount <= PARAM_LIMITS.warn,
+  );
   
   return {
     filePath,
     lineCount,
     limits,
     units: {
-      all: units,
+      all: unitsWithParams,
       large: largeUnits,      // > 30 lines (poor)
       moderate: moderateUnits, // 15-30 lines (good but could be better)
+      largeParams: largeParamUnits,
+      moderateParams: moderateParamUnits,
     },
     exceedsFileLimit: lineCount > limits.file,
   };
@@ -191,8 +214,8 @@ try {
     process.exit(0);
   }
   
-  console.log(`\n📋 Checking ${stagedFiles.length} staged file(s) for SIG compliance...\n`);
-  console.log('🧹 Boy Scout Rule: All touched files must meet SIG guidelines\n');
+  console.log(`\n📋 Checking ${stagedFiles.length} staged file(s) for Quality Gate compliance...\n`);
+  console.log('🧹 Boy Scout Rule: All touched files must meet Quality Guidelines\n');
   
   // Check ALL staged files - no exceptions
   // If you touch it, you must clean it
@@ -202,6 +225,10 @@ try {
   const filesExceedingLimit = results.filter(r => r.exceedsFileLimit);
   const filesWithLargeUnits = results.filter(r => r.units.large.length > 0);
   const filesWithModerateUnits = results.filter(r => r.units.moderate.length > 0 && r.units.large.length === 0);
+  const filesWithLargeParamUnits = results.filter(r => r.units.largeParams.length > 0);
+  const filesWithModerateParamUnits = results.filter(
+    r => r.units.moderateParams.length > 0 && r.units.largeParams.length === 0,
+  );
   
   let hasErrors = false;
   let hasWarnings = false;
@@ -214,6 +241,22 @@ try {
       console.error(`  ❌ ${result.filePath}`);
       console.error(`     ${result.lineCount} lines (limit: ${result.limits.file})`);
       console.error(`     Exceeds by: ${result.lineCount - result.limits.file} lines\n`);
+    }
+  }
+
+  // Report files with too many parameters
+  if (filesWithLargeParamUnits.length > 0) {
+    hasErrors = true;
+    console.error('\n🔴 FILES WITH TOO MANY PARAMETERS (>= 6):\n');
+    for (const result of filesWithLargeParamUnits) {
+      console.error(`  ❌ ${result.filePath}`);
+      for (const unit of result.units.largeParams.sort((a, b) => b.effectiveParamCount - a.effectiveParamCount)) {
+        const label = unit.destructuredKeysCount > PARAM_LIMITS.maxDestructuredKeys
+          ? `${unit.effectiveParamCount} keys`
+          : `${unit.effectiveParamCount} params`;
+        console.error(`     - ${unit.name}(): ${label} (lines ${unit.startLine}-${unit.endLine})`);
+      }
+      console.error('');
     }
   }
 
@@ -250,11 +293,33 @@ try {
     }
   }
 
+  if (filesWithModerateParamUnits.length > 0) {
+    hasWarnings = true;
+    console.warn('\n🟡 FILES WITH MODERATE PARAMETER COUNTS (4-5):\n');
+    console.warn('   These are allowed but should usually be refactored for clarity.\n');
+    for (const result of filesWithModerateParamUnits.slice(0, 10)) { // Limit to top 10
+      console.warn(`  ⚠️  ${result.filePath}`);
+      const topUnits = result.units.moderateParams
+        .sort((a, b) => b.effectiveParamCount - a.effectiveParamCount)
+        .slice(0, 3);
+      for (const unit of topUnits) {
+        const label = unit.destructuredKeysCount > PARAM_LIMITS.maxDestructuredKeys
+          ? `${unit.effectiveParamCount} keys`
+          : `${unit.effectiveParamCount} params`;
+        console.warn(`     - ${unit.name}(): ${label}`);
+      }
+      console.warn('');
+    }
+    if (filesWithModerateParamUnits.length > 10) {
+      console.warn(`  ... and ${filesWithModerateParamUnits.length - 10} more files\n`);
+    }
+  }
+
   // Summary
   const knownViolators = stagedFiles.filter(f => ALLOW_LIST.has(f));
   
   if (!hasErrors && !hasWarnings) {
-    console.log(`✅ All staged files meet SIG guidelines!`);
+    console.log(`✅ All staged files meet Quality Guidelines!`);
     console.log(`   Checked: ${results.length} file(s)`);
     if (knownViolators.length > 0) {
       console.log(`   🎉 Cleaned up: ${knownViolators.length} file(s) that previously had violations`);
@@ -266,16 +331,19 @@ try {
     console.error(`   ❌ Violations in staged files:`);
     console.error(`      Files exceeding size limit: ${filesExceedingLimit.length}`);
     console.error(`      Files with large units: ${filesWithLargeUnits.length}`);
+    console.error(`      Files with too many parameters: ${filesWithLargeParamUnits.length}`);
     if (knownViolators.length > 0) {
       console.error(`\n   📋 ${knownViolators.length} file(s) on known violations list:`);
       knownViolators.forEach(f => console.error(`      - ${f}`));
       console.error(`   These files must be refactored before commit (Boy Scout Rule)`);
     }
     console.error(`\n   📋 Total known violations: ${ALLOW_LIST.size} file(s) (tracked for cleanup)`);
-    console.error('\n💡 SIG Requirements (enforced for ALL touched files):');
+    console.error('\n💡 Quality Gate Requirements (enforced for ALL touched files):');
     console.error('   Source files: <300 lines, functions <30 lines');
     console.error('   Test files: <500 lines, functions <50 lines (relaxed for fixtures/tables)');
     console.error('   Functions SHOULD be <15 lines (excellent) for all files');
+    console.error('   Parameters: <=3 optimal, 4-5 warn, >=6 block');
+    console.error('   Options/context objects: >7 keys treated like too many parameters');
     console.error('\n🧹 Boy Scout Rule:');
     console.error('   - If you touch a file, you MUST clean it');
     console.error('   - No exceptions - even for files with known violations');

@@ -1,144 +1,167 @@
-```
 # BFSI Insights Coding Practices (.windsurfrules)
 
 Project-specific rules for AI assistants (Windsurf/Cursor).
-These rules come from bugs, incidents, and code reviews.
+These rules exist because bugs, incidents, and CI failures happened.
 
 ---
 
-## 0. Meta rules
+## Data Consistency
 
-### 0.1 No claims without evidence (hard rule)
-Do not say “fixed”, “works”, “tests pass”, “coverage improved”, “CI is green”, or similar **unless** you include quoted evidence from:
-- local command output, or
-- CI logs.
-
-If you cannot produce evidence, say exactly what is unverified.
-
-### 0.2 Small diffs only (hard rule)
-One concern per change/commit.
-If multiple concerns exist, split into multiple commits and present them separately.
-
-### 0.3 Verify locally before responding (hard rule)
-For `services/agent-api` test/coverage work, include excerpts from:
-- `npm run test:coverage -w services/agent-api`
-- plus targeted proof for touched files (e.g., `grep` on the coverage table).
-
-For CI workflow edits, paste the literal diff of the workflow change.
-
----
-
-## 1. Git workflow (no PRs, feature branches)
-
-- Never commit directly to `main`.
-- Always work on a feature branch.
-- No Pull Requests (do not create PRs).
-- Branch naming: chosen by the assistant, must be:
-  - short, descriptive, lowercase
-  - `/` and `-` only
-  - examples: `fix/sonar-lcov`, `feat/replay-tests`, `chore/ci-supabase-retry`
-
-### 1.1 Pre-commit checks (required)
-Before every `git commit`, run and confirm:
-1. `git branch --show-current` (must not be `main`)
-2. `git status --porcelain` (only intended changes)
-3. `npm run lint` in `admin-next` (0 errors, 0 warnings)
-4. If you touched SIG-gated files: the pre-commit hook must pass (no bypass)
-
-### 1.2 Commit messages
-- Use conventional commits: `fix:`, `feat:`, `chore:`, `refactor:`, `test:`
-- Add KB references in the body when relevant (optional in subject):
-  - `Refs: KB-202`
-
----
-
-## 2. Data consistency
-
-### 2.1 Pipeline Status Queries (KB-202)
+### Pipeline Status Queries (KB-202)
 - Always use `status_code` (numeric) for pipeline status queries, never `status` (text).
-- Load status codes from `status_lookup` (single source of truth).
+- Load status codes from the `status_lookup` table (single source of truth).
 - Never hardcode status code values; query `status_lookup` at runtime.
-- Docs: `docs/architecture/pipeline-status-codes.md`
 - Reference: `services/agent-api/src/lib/status-codes.js`
+- Docs: `docs/architecture/pipeline-status-codes.md`
 
-### 2.2 Query Pattern Consistency
+### Query Pattern Consistency
 - Dashboard and all UI views must use identical query logic for the same data.
 - No client-side filtering that duplicates or contradicts DB-level filters.
 - When adding a new view of existing data, check how other views query it first.
 
 ---
 
-## 3. TypeScript / React
+## TypeScript / React
 
-### 3.1 Unused variables
+### Unused Variables
 - Prefix intentionally unused variables with `_` (e.g., `status: _status`).
 - Remove truly unused imports/variables rather than prefixing.
 
-### 3.2 React hooks
+### React Hooks
 - Define `useCallback` handlers before `useEffect` hooks that reference them.
 - Include all dependencies in dependency arrays.
-- Use `useMemo` for expensive computations; only disable lint with justification + comment.
+- Use `useMemo` for expensive computations (eslint-disable only with justification).
 
-### 3.3 Component props
+### Component Props
 - Keep prop names consistent across interface and destructuring.
-- Use `propName: _propName` when prop is required but unused locally.
+- Use `propName: _propName` when required but unused locally.
 
 ---
 
-## 4. Linting (KB-204)
+## Linting (KB-204)
 
-### 4.1 Strict policy: zero errors AND zero warnings
+### Strict Policy: Zero Errors AND Zero Warnings
 - Run `npm run lint` in `admin-next` before every commit.
-- Must pass with 0 errors and 0 warnings.
+- Must pass with 0 errors AND 0 warnings.
 
-### 4.2 Exception process
+### Exception Process
 If a warning cannot be fixed:
-1. Stop and ask the user for approval before committing.
-2. Explain: what the warning is, why it cannot be fixed, and the risk.
-3. Only proceed after explicit approval.
-4. If approved, add the smallest-scoped `eslint-disable` plus a comment that explains why.
+1. Stop and ask user for approval before committing.
+2. Explain: warning, why it can’t be fixed, risk.
+3. If approved: add `eslint-disable` with a comment explaining why.
 
 ---
 
-## 5. Prompt engineering (KB-207)
+## Git Workflow (PRs re-enabled)
 
-### 5.1 Agent registry
+### Core rules
+- Never commit directly to `main`.
+- Use feature branches.
+- PRs are required for merging into `main`.
+
+### Branch naming
+- `feat/kb-XXX-desc`
+- `fix/kb-XXX-desc`
+- `improve/kb-XXX-desc`
+- If no KB exists yet, use `feat/misc-desc` / `fix/misc-desc`.
+
+### Commit message
+- Prefer: `fix(KB-XXX): description` / `feat(KB-XXX): description`
+- If no KB: `fix: description` / `feat: description`
+
+### PR discipline
+- One concern per PR (small diffs only).
+- If multiple concerns exist, split into multiple PRs.
+- Keep PRs short-lived; rebase when needed.
+
+---
+
+## CI Strategy: Fast vs Slow
+
+### Fast CI (runs on PRs)
+Fast CI is the gate for merging.
+It must be quick and deterministic.
+
+Fast CI should include:
+- Lint (admin-next, and any other lint jobs you maintain)
+- Unit tests + coverage (especially `services/agent-api`)
+- Build checks (e.g., Next/Astro build)
+- Typecheck (if separate)
+
+Fast CI must NOT include:
+- Supabase CLI jobs that hit network or remote DB
+- Schema doc generation
+- Long-running integration/E2E
+- Heavy scans that are slow/flaky
+
+### Slow CI (runs on main or schedule)
+Slow CI can be:
+- `push` to `main` (post-merge), and/or
+- scheduled (nightly), and/or
+- manual (`workflow_dispatch`)
+
+Slow CI can include:
+- Supabase lint / remote DB checks
+- Schema docs update
+- E2E / Playwright
+- SonarCloud full analysis if it’s slow
+- Any job known to be flaky due to external dependencies
+
+### Rules for changes that touch CI
+- When editing workflows, explicitly state whether the change affects Fast CI, Slow CI, or both.
+- Prefer moving flaky/network-heavy steps to Slow CI rather than “continue-on-error” in Fast CI.
+
+---
+
+## Pre-commit & local verification
+
+### Before every commit
+1. Confirm you are on a feature branch (not `main`).
+2. Run `npm run lint` in `admin-next` (0 errors, 0 warnings).
+
+### For agent-api test/coverage work
+Run and paste relevant excerpts from:
+- `npm run test:coverage -w services/agent-api`
+- plus a targeted grep/coverage proof for the touched files (example: `grep -E "^\s*replay\.js\s+\|"`)
+
+---
+
+## Prompt Engineering (KB-207)
+
+### Agent Registry
 - Every agent must be declared in `docs/agents/manifest.yaml`.
-- Manifest defines required prompts and tables for each agent.
-- CI validates prompt coverage on every run of the relevant workflows.
+- CI validates prompt coverage on every PR.
 
-### 5.2 Prompt changes
+### Prompt Changes
 - Every prompt change requires a migration in `supabase/migrations/`.
-- Use safe update patterns (prefer `INSERT ... ON CONFLICT` where appropriate).
-- Set `is_current = true` for the new version and `false` for the old version.
+- Use `INSERT ... ON CONFLICT` pattern for safe updates when applicable.
+- Set `is_current = true` for new version, `false` for old versions.
 - Include `notes` explaining what changed and why.
 
-### 5.3 Fail-fast
-- Agents must throw if required prompts are missing.
+### Fail-Fast Policy
+- Agents must throw errors if required prompts are missing.
 - No silent fallbacks to hardcoded prompts.
-- Use `throw new Error('CRITICAL: ...')`.
+- Use `throw new Error('CRITICAL: ...')` pattern from KB-206.
 
-### 5.4 Prompt version migrations (KB-258)
-- Always INSERT new rows for prompt versions; never UPDATE existing rows.
+### Prompt Version Migrations (KB-258)
+- Always INSERT new rows for prompt versions, never UPDATE existing rows.
 - Pattern:
   ```sql
-  UPDATE prompt_version
-    SET is_current = false
-    WHERE agent_name = 'X' AND is_current = true;
+  UPDATE prompt_version SET is_current = false
+  WHERE agent_name = 'X' AND is_current = true;
 
   INSERT INTO prompt_version (agent_name, version, prompt_text, is_current, notes)
-    VALUES (...);
+  VALUES (...);
 
 
 ⸻
 
-6. Taxonomy & tags (KB-219)
+Taxonomy & Tags (KB-219)
 
 Use taxonomy_config for dynamic tag insertion
 	•	Never hardcode tag types in approve handlers.
 	•	Always query taxonomy_config for junction mappings.
-
-Pattern:
+	•	Pattern:
 
 const { data: configs } = await supabase
   .from('taxonomy_config')
@@ -154,45 +177,46 @@ for (const config of configs) {
 }
 
 
-⸻
-
-7. Database schema
-
-7.1 Primary keys
-	•	Always use UUID as primary key for new tables.
-	•	Use gen_random_uuid() as default value.
-	•	Text slugs are unique constraints, not primary keys.
-
-7.2 Single source of truth
-	•	Define business concepts (audiences, statuses, etc.) in one table.
-	•	Prompts must reference these tables; do not hardcode definitions.
 
 ⸻
 
-8. Code quality (KB-151)
+Code Quality (KB-151)
 
-8.1 Boy Scout rule
-	•	All touched files must meet SIG guidelines (no exceptions).
-	•	Files: < 300 lines.
-	•	Functions: < 30 lines (should be < 15).
-	•	Pre-commit hook scripts/check-large-files.cjs enforces this for staged files.
-	•	Known violations are tracked in the hook’s ALLOW_LIST; touching those files requires refactor to pass.
-
-8.2 When blocked by size violations
-	1.	Extract helper functions to separate modules.
-	2.	Split large files into multiple focused files.
-	3.	Apply single-responsibility.
-	4.	Name functions for what they do.
+Boy Scout Rule
+	•	All touched files must meet Quality Guidelines (no exceptions).
+	•	Files must be < 300 lines.
+	•	Functions must be < 30 lines (should be < 15).
+	•	Pre-commit hook enforces this: scripts/check-large-files.cjs
+	•	Known violations are tracked in ALLOW_LIST inside that script.
 
 ⸻
 
-9. Required “done” response format
+Hard rules for all changes (no exceptions)
+	1.	No claims without evidence
 
-When you say you are done, use exactly:
+	•	Do not say “fixed”, “works”, “tests pass”, “coverage improved”, “CI is green”, etc.
+unless you include quoted evidence from command output or CI logs.
+	•	If you cannot produce evidence, state exactly what is unverified.
+
+	2.	Small diffs only
+
+	•	One concern per change/commit/PR.
+	•	Split multiple concerns into separate PRs.
+
+	3.	Verify locally before responding
+
+	•	For test/coverage work in services/agent-api, run and paste relevant excerpts:
+	•	npm run test:coverage -w services/agent-api
+	•	and a targeted grep proof for touched files.
+	•	For CI workflow edits, paste the literal unified diff of the workflow change.
+
+⸻
+
+Required response format for “done” messages
 	•	Evidence:
 	•	<paste command output / CI log lines>
 	•	Diff summary:
 	•	<files changed + why>
 	•	Remaining risks / unverified:
 	•	<explicit list, or “none”>
-```
+

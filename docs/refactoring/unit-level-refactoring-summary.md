@@ -150,10 +150,8 @@ statusAtom.set('submitting'); // Direct state mutation
 
 ### 4. Module Size Guidelines
 
-- **Ideal:** < 30 lines per function (SIG excellent)
-- **Acceptable:** < 100 lines per function (SIG good)
-- **Maximum:** < 175 lines (largest extracted module)
-- **Main Orchestrators:** 91-238 lines (down from 339-361)
+- **Ideal:** < 15 lines per function (excellent)
+- **Acceptable:** < 30 lines per function (good)
 
 ## Metrics
 
@@ -171,9 +169,9 @@ statusAtom.set('submitting'); // Direct state mutation
 - **Average:** 55% reduction
 - **Lowest:** HeadToHeadContent (30% reduction)
 
-### SIG Compliance
+### Unit-Size Compliance (300/30 size limits)
 
-- **Before:** All functions 339-361 lines (11x over SIG's 30-line guideline)
+- **Before:** All functions 339-361 lines (11x over the 30-line function size limit)
 - **After:** Main functions 91-238 lines (3-8x over, but much improved)
 - **Extracted Modules:**
   - 18 modules < 80 lines (78%)
@@ -217,7 +215,7 @@ Completed:
 
 All files now < 500 lines. Will be merged separately.
 
-### SIG-Compliant Checker
+### Quality Gate Checker
 
 **File:** `scripts/check-large-files.cjs`
 

@@ -178,8 +178,11 @@ export function createErrorSignature(errorMessage) {
  */
 function logFailure(agent, itemId, moveToDLQ, classification, newFailureCount, retryDelay) {
   if (moveToDLQ) {
+    const failureStatus = classification.retryable
+      ? `${newFailureCount} failures`
+      : 'terminal error';
     console.log(
-      `   💀 ${agent} ${itemId} → dead_letter (${classification.retryable ? `${newFailureCount} failures` : 'terminal error'}: ${classification.reason})`,
+      `   💀 ${agent} ${itemId} → dead_letter (${failureStatus}: ${classification.reason})`,
     );
   } else if (retryDelay) {
     console.log(
@@ -191,7 +194,7 @@ function logFailure(agent, itemId, moveToDLQ, classification, newFailureCount, r
 /**
  * Update item with failure info
  */
-async function updateItemFailure(
+async function updateItemFailure({
   itemId,
   statusCode,
   failureCount,
@@ -200,7 +203,7 @@ async function updateItemFailure(
   errorSignature,
   classification,
   retryDelay,
-) {
+}) {
   await supabase
     .from('ingestion_queue')
     .update({
@@ -238,14 +241,14 @@ export async function handleItemFailure(item, agent, stepName, err, config) {
   const retryDelay = classification.retryable ? getRetryDelay(newFailureCount, err) : null;
 
   logFailure(agent, item.id, moveToDLQ, classification, newFailureCount, retryDelay);
-  await updateItemFailure(
-    item.id,
-    newStatusCode,
-    newFailureCount,
+  await updateItemFailure({
+    itemId: item.id,
+    statusCode: newStatusCode,
+    failureCount: newFailureCount,
     stepName,
     errorMessage,
     errorSignature,
     classification,
     retryDelay,
-  );
+  });
 }

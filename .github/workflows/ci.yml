@@ -22,7 +22,7 @@ jobs:
           node-version: 20
 
       - name: Check for large files (>500 lines)
-        run: node scripts/check-large-files.cjs || echo "⚠️ SIG violations found - see KB-151 for tracking"
+        run: node scripts/check-large-files.cjs || echo "⚠️ Quality Gate violations found - see KB-151 for tracking"
         continue-on-error: true
 
   build:

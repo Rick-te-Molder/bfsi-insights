@@ -1,6 +1,6 @@
 /**
  * Replay Helper Functions
- * Extracted from replay.js to meet SIG guidelines (< 300 lines per file)
+ * Extracted from replay.js to meet Quality Guidelines (< 300 lines per file)
  */
 
 import process from 'node:process';

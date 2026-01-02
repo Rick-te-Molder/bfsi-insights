@@ -455,7 +455,7 @@ describe('Error Classification', () => {
 
 ### What Worked
 
-1. **SIG maintainability guidelines** caught file/function size issues early
+1. **Quality Guidelines** caught file/function size issues early
 2. **Boy Scout rule** forced cleanup of touched files
 3. **Separate commits** for lint config vs. functional fixes kept history clean
 
