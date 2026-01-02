@@ -183,7 +183,7 @@ for (const config of configs) {
 Code Quality (KB-151)
 
 Boy Scout Rule
-	•	All touched files must meet SIG guidelines (no exceptions).
+	•	All touched files must meet Quality Guidelines (no exceptions).
 	•	Files must be < 300 lines.
 	•	Functions must be < 30 lines (should be < 15).
 	•	Pre-commit hook enforces this: scripts/check-large-files.cjs
