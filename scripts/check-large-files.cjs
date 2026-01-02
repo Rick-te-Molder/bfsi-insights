@@ -11,6 +11,7 @@
 const { execSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
+const { findUnits } = require('./lib/unit-detector.cjs');
 
 // SIG-based thresholds per language
 const LANGUAGE_LIMITS = {
@@ -22,6 +23,15 @@ const LANGUAGE_LIMITS = {
   'py': { file: 250, unit: 25, unitExcellent: 15 },
   'java': { file: 300, unit: 30, unitExcellent: 15 },
   'default': { file: 300, unit: 30, unitExcellent: 15 },
+};
+
+// Relaxed limits for test files (allow longer test tables/fixtures)
+const TEST_LIMITS = {
+  'js': { file: 500, unit: 50, unitExcellent: 30 },
+  'ts': { file: 500, unit: 50, unitExcellent: 30 },
+  'tsx': { file: 500, unit: 50, unitExcellent: 30 },
+  'jsx': { file: 500, unit: 50, unitExcellent: 30 },
+  'default': { file: 500, unit: 50, unitExcellent: 30 },
 };
 
 // Files with known violations (for tracking purposes only - NOT used for filtering)
@@ -72,108 +82,41 @@ const ALLOW_LIST = new Set([
   'admin-next/src/app/(dashboard)/items/[id]/actions.tsx',
 ]);
 
-// Patterns to scan
-const patterns = [
-  'src/**/*.ts',
-  'src/**/*.js',
-  'src/**/*.tsx',
-  'src/**/*.jsx',
-  'src/**/*.astro',
-  'services/agent-api/src/**/*.ts',
-  'services/agent-api/src/**/*.js',
-  'admin-next/src/**/*.ts',
-  'admin-next/src/**/*.tsx',
+// Allowed file extensions and path prefixes
+const ALLOWED_EXT = new Set(['.ts', '.js', '.tsx', '.jsx', '.astro']);
+const ALLOWED_PREFIXES = [
+  'src/',
+  'admin-next/src/',
+  'services/agent-api/', // includes src/ and __tests__/
 ];
+
+/**
+ * Normalize path for cross-platform compatibility
+ */
+function normalizePath(p) {
+  return p.replaceAll('\\', '/');
+}
+
+/**
+ * Check if file is a test file
+ */
+function isTestFile(filePath) {
+  const f = normalizePath(filePath);
+  return (
+    f.includes('__tests__/') ||
+    f.includes('.test.') ||
+    f.includes('.spec.') ||
+    f.includes('/tests/')
+  );
+}
 
 /**
  * Get language-specific limits
  */
 function getLimits(filePath) {
   const ext = path.extname(filePath).slice(1);
-  return LANGUAGE_LIMITS[ext] || LANGUAGE_LIMITS.default;
-}
-
-/**
- * Parse file to find function/method boundaries
- * Simple heuristic-based parser for JS/TS
- */
-function findUnits(filePath, content) {
-  const lines = content.split('\n');
-  const units = [];
-  const limits = getLimits(filePath);
-  
-  // Patterns that indicate function/method start
-  const functionPatterns = [
-    /^\s*function\s+(\w+)/,                    // function name()
-    /^\s*const\s+(\w+)\s*=\s*\(/,              // const name = (
-    /^\s*const\s+(\w+)\s*=\s*async\s*\(/,      // const name = async (
-    /^\s*async\s+function\s+(\w+)/,            // async function name()
-    /^\s*(\w+)\s*\([^)]*\)\s*{/,               // name() {
-    /^\s*async\s+(\w+)\s*\([^)]*\)\s*{/,       // async name() {
-    /^\s*export\s+function\s+(\w+)/,           // export function name()
-    /^\s*export\s+async\s+function\s+(\w+)/,   // export async function name()
-    /^\s*export\s+default\s+function\s+(\w+)?/, // export default function
-    /^\s*(public|private|protected)\s+(\w+)\s*\(/,  // class methods
-  ];
-
-  let currentUnit = null;
-  let braceDepth = 0;
-  let inUnit = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-    
-    // Skip empty lines and comments
-    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*')) {
-      continue;
-    }
-
-    // Check if this line starts a function
-    if (!inUnit) {
-      for (const pattern of functionPatterns) {
-        const match = line.match(pattern);
-        if (match) {
-          currentUnit = {
-            name: match[1] || match[2] || 'anonymous',
-            startLine: i + 1,
-            endLine: i + 1,
-          };
-          inUnit = true;
-          braceDepth = 0;
-          break;
-        }
-      }
-    }
-
-    if (inUnit) {
-      // Track brace depth
-      for (const char of line) {
-        if (char === '{') braceDepth++;
-        if (char === '}') braceDepth--;
-      }
-
-      currentUnit.endLine = i + 1;
-
-      // Function ends when braces balance
-      if (braceDepth === 0 && line.includes('}')) {
-        const unitLength = currentUnit.endLine - currentUnit.startLine + 1;
-        
-        // Only report units that exceed the excellent threshold
-        if (unitLength > limits.unitExcellent) {
-          units.push({
-            ...currentUnit,
-            length: unitLength,
-          });
-        }
-        
-        inUnit = false;
-        currentUnit = null;
-      }
-    }
-  }
-
-  return units;
+  const limits = isTestFile(filePath) ? TEST_LIMITS : LANGUAGE_LIMITS;
+  return limits[ext] || limits.default;
 }
 
 /**
@@ -185,7 +128,7 @@ function analyzeFile(filePath) {
   const lineCount = lines.length;
   const limits = getLimits(filePath);
   
-  const units = findUnits(filePath, content);
+  const units = findUnits(content, limits);
   
   // Filter units by severity
   const largeUnits = units.filter(u => u.length > limits.unit);
@@ -205,6 +148,18 @@ function analyzeFile(filePath) {
 }
 
 /**
+ * Check if file matches our criteria (extension + path prefix)
+ */
+function matchesPattern(file) {
+  const f = normalizePath(file);
+  const ext = path.extname(f).toLowerCase();
+  if (!ALLOWED_EXT.has(ext)) return false;
+  // Exclude generated/build folders
+  if (f.includes('dist/') || f.includes('build/') || f.includes('.astro/') || f.includes('node_modules/')) return false;
+  return ALLOWED_PREFIXES.some(prefix => f.startsWith(prefix));
+}
+
+/**
  * Get staged files (for pre-commit check)
  */
 function getStagedFiles() {
@@ -214,14 +169,7 @@ function getStagedFiles() {
       .split('\n')
       .filter(Boolean);
     
-    // Filter by patterns
-    const matchesPattern = (file) => {
-      return patterns.some(pattern => {
-        const regex = new RegExp(pattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*'));
-        return regex.test(file);
-      });
-    };
-    
+    // Filter by extension and path prefix (simpler and more reliable than glob-regex)
     return staged.filter(matchesPattern);
   } catch {
     // No staged files or not in a git repo
@@ -267,12 +215,14 @@ try {
     }
   }
 
-  // Report files with large units (functions > 30 lines)
+  // Report files with large units
   if (filesWithLargeUnits.length > 0) {
     hasErrors = true;
-    console.error('\n🔴 FILES WITH LARGE UNITS (functions/methods > 30 lines):\n');
+    console.error('\n🔴 FILES WITH LARGE UNITS:\n');
     for (const result of filesWithLargeUnits) {
-      console.error(`  ❌ ${result.filePath}`);
+      const isTest = isTestFile(result.filePath);
+      const limit = isTest ? 'test files: >50 lines' : 'source files: >30 lines';
+      console.error(`  ❌ ${result.filePath} (${limit})`);
       for (const unit of result.units.large.sort((a, b) => b.length - a.length)) {
         console.error(`     - ${unit.name}(): ${unit.length} lines (lines ${unit.startLine}-${unit.endLine})`);
       }
@@ -312,18 +262,18 @@ try {
   } else {
     console.error('\n📊 SUMMARY:');
     console.error(`   ❌ Violations in staged files:`);
-    console.error(`      Files exceeding size limit (>300 lines): ${filesExceedingLimit.length}`);
-    console.error(`      Files with large units (>30 lines): ${filesWithLargeUnits.length}`);
+    console.error(`      Files exceeding size limit: ${filesExceedingLimit.length}`);
+    console.error(`      Files with large units: ${filesWithLargeUnits.length}`);
     if (knownViolators.length > 0) {
       console.error(`\n   📋 ${knownViolators.length} file(s) on known violations list:`);
       knownViolators.forEach(f => console.error(`      - ${f}`));
       console.error(`   These files must be refactored before commit (Boy Scout Rule)`);
     }
-    console.error(`\n   � Total known violations: ${ALLOW_LIST.size} file(s) (tracked for cleanup)`);
+    console.error(`\n   📋 Total known violations: ${ALLOW_LIST.size} file(s) (tracked for cleanup)`);
     console.error('\n💡 SIG Requirements (enforced for ALL touched files):');
-    console.error('   - Files MUST be < 300 lines');
-    console.error('   - Functions MUST be < 30 lines');
-    console.error('   - Functions SHOULD be < 15 lines (excellent)');
+    console.error('   Source files: <300 lines, functions <30 lines');
+    console.error('   Test files: <500 lines, functions <50 lines (relaxed for fixtures/tables)');
+    console.error('   Functions SHOULD be <15 lines (excellent) for all files');
     console.error('\n🧹 Boy Scout Rule:');
     console.error('   - If you touch a file, you MUST clean it');
     console.error('   - No exceptions - even for files with known violations');
