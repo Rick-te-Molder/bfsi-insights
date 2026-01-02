@@ -223,7 +223,7 @@ function getStagedFiles() {
     };
     
     return staged.filter(matchesPattern);
-  } catch (err) {
+  } catch {
     // No staged files or not in a git repo
     return [];
   }
