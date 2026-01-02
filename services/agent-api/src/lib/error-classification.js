@@ -71,43 +71,44 @@ function makeClassification(type, retryable, reason, statusCode) {
  */
 
 /**
- * @typedef {(p: ParsedError) => boolean} When
- * @typedef {(p: ParsedError) => ErrorClassification} Then
- * @typedef {{ when: When, then: Then }} Rule
+ * @typedef {(p: ParsedError) => boolean} RuleCondition
+ * @typedef {(p: ParsedError) => ErrorClassification} RuleAction
+ * @typedef {{ condition: RuleCondition, action: RuleAction }} ClassificationRule
  */
 
-/** @type {Rule[]} */
+/** @type {ClassificationRule[]} */
 const RULES = [
   {
-    when: (p) => isRateLimitError(p.statusCode, p.message),
-    then: (p) =>
+    condition: (p) => isRateLimitError(p.statusCode, p.message),
+    action: (p) =>
       makeClassification(ErrorType.RATE_LIMIT, true, 'Rate limit exceeded', p.statusCode),
   },
   {
-    when: (p) => isServerError(p.statusCode),
-    then: (p) =>
+    condition: (p) => isServerError(p.statusCode),
+    action: (p) =>
       makeClassification(ErrorType.RETRYABLE, true, `Server error (${p.statusCode})`, p.statusCode),
   },
   {
-    when: (p) => isTimeoutError(p.errorCode, p.message),
-    then: () => makeClassification(ErrorType.RETRYABLE, true, 'Timeout or connection reset'),
+    condition: (p) => isTimeoutError(p.errorCode, p.message),
+    action: () => makeClassification(ErrorType.RETRYABLE, true, 'Timeout or connection reset'),
   },
   {
-    when: (p) => isNetworkError(p.errorCode, p.message),
-    then: () => makeClassification(ErrorType.RETRYABLE, true, 'Network error'),
+    condition: (p) => isNetworkError(p.errorCode, p.message),
+    action: () => makeClassification(ErrorType.RETRYABLE, true, 'Network error'),
   },
   {
-    when: (p) => isClientError(p.statusCode),
-    then: (p) =>
+    condition: (p) => isClientError(p.statusCode),
+    action: (p) =>
       makeClassification(ErrorType.TERMINAL, false, `Client error (${p.statusCode})`, p.statusCode),
   },
   {
-    when: (p) => isAuthError(p.message),
-    then: () => makeClassification(ErrorType.TERMINAL, false, 'Authentication/authorization error'),
+    condition: (p) => isAuthError(p.message),
+    action: () =>
+      makeClassification(ErrorType.TERMINAL, false, 'Authentication/authorization error'),
   },
   {
-    when: (p) => isValidationError(p.message),
-    then: () => makeClassification(ErrorType.TERMINAL, false, 'Validation error'),
+    condition: (p) => isValidationError(p.message),
+    action: () => makeClassification(ErrorType.TERMINAL, false, 'Validation error'),
   },
 ];
 
@@ -119,7 +120,7 @@ const RULES = [
 export function classifyError(error) {
   const parsed = parseError(error);
   for (const rule of RULES) {
-    if (rule.when(parsed)) return rule.then(parsed);
+    if (rule.condition(parsed)) return rule.action(parsed);
   }
   return makeClassification(
     ErrorType.RETRYABLE,
