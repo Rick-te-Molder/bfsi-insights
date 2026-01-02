@@ -156,4 +156,34 @@ When you encounter a bug or incident:
       await supabase.from(config.junction_table).insert(...);
     }
   }
+  ---
+
+## Code Quality (KB-151)
+
+### Boy Scout Rule: Leave code cleaner than you found it
+- **All touched files must meet SIG guidelines** - no exceptions
+- Files MUST be < 300 lines
+- Functions MUST be < 30 lines (SHOULD be < 15 lines)
+- Pre-commit hook ([scripts/check-large-files.cjs](cci:7://file:///Users/micro/projects/bfsi-insights/scripts/check-large-files.cjs:0:0-0:0)) enforces this strictly
+- 148 files have known violations - must refactor when touched
+- See [docs/architecture/coding-practices.md](cci:7://file:///Users/micro/projects/bfsi-insights/docs/architecture/coding-practices.md:0:0-0:0) for detailed guidance
+
+### When blocked by large file/function violations:
+1. Extract helper functions to separate modules
+2. Split large files into multiple focused files
+3. Use single-responsibility principle
+4. Name functions descriptively for what they do
+5. See coding-practices.md for refactoring examples
+
+### Known Violations (as of 2026-01-02)
+- 31 files > 300 lines
+- ~117 files with functions > 30 lines
+- See `ALLOW_LIST` in [scripts/check-large-files.cjs](cci:7://file:///Users/micro/projects/bfsi-insights/scripts/check-large-files.cjs:0:0-0:0) for tracking
+- These files WILL block commits when modified
+
+### Why
+- Maintainability: Smaller units are easier to understand
+- Testability: Focused functions are easier to test
+- Reusability: Small functions can be reused
+- Code Review: Easier to review small changes
   ```
