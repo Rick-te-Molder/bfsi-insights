@@ -6,7 +6,7 @@
 
 ## Summary
 
-Successfully completed file-level and partial unit-level refactoring to improve code maintainability. Implemented SIG-compliant checker for ongoing quality monitoring.
+Successfully completed file-level and partial unit-level refactoring to improve code maintainability. Implemented a Quality Gate checker for ongoing quality monitoring.
 
 ## Accomplishments
 
@@ -38,7 +38,7 @@ Successfully completed file-level and partial unit-level refactoring to improve 
 
 ### Infrastructure Improvements
 
-1. **SIG-Compliant Checker**
+1. **Quality Gate Checker**
    - Validates both file size (< 300 lines) and unit size (< 30 lines)
    - Integrated into CI/CD pipeline (non-blocking warnings)
    - Integrated into pre-commit hooks
@@ -56,18 +56,18 @@ Successfully completed file-level and partial unit-level refactoring to improve 
 
 ## Known Gaps
 
-### SIG Unit-Size Compliance
+### Unit-Size Compliance (300/30 size limits)
 
-Main functions in refactored components still exceed SIG's 30-line guideline:
+Main functions in refactored components still exceed the 30-line function size limit:
 
-| Component         | Main Function Size | SIG Target | Over |
-| ----------------- | ------------------ | ---------- | ---- |
-| Sidebar           | 73 lines           | < 30       | 2.4x |
-| AgentDetailPage   | 85 lines           | < 30       | 2.8x |
-| ItemCard          | 72 lines           | < 30       | 2.4x |
-| AddArticlePage    | 209 lines          | < 30       | 7x   |
-| HeadToHeadContent | 211 lines          | < 30       | 7x   |
-| DetailPanel       | 228 lines          | < 30       | 7.6x |
+| Component         | Main Function Size | Target | Over |
+| ----------------- | ------------------ | ------ | ---- |
+| Sidebar           | 73 lines           | < 30   | 2.4x |
+| AgentDetailPage   | 85 lines           | < 30   | 2.8x |
+| ItemCard          | 72 lines           | < 30   | 2.4x |
+| AddArticlePage    | 209 lines          | < 30   | 7x   |
+| HeadToHeadContent | 211 lines          | < 30   | 7x   |
+| DetailPanel       | 228 lines          | < 30   | 7.6x |
 
 **Codebase-wide:** 148 files with units > 30 lines
 
@@ -75,7 +75,7 @@ Main functions in refactored components still exceed SIG's 30-line guideline:
 
 - File-level refactoring complete (primary goal achieved)
 - Modular extraction successful with clean architecture
-- SIG checker in place to track ongoing compliance
+- Quality Gate checker in place to track ongoing compliance
 - True unit-size compliance (< 30 lines per function) is a separate epic-level effort
 - Can be addressed incrementally as part of regular development
 
@@ -112,7 +112,7 @@ Main functions in refactored components still exceed SIG's 30-line guideline:
 
 ## Future Work
 
-If pursuing full SIG compliance (< 30 lines per function):
+If pursuing full unit-size compliance (< 30 lines per function):
 
 1. **High Priority** (200+ line functions)
    - AddArticlePage main function
@@ -133,7 +133,7 @@ If pursuing full SIG compliance (< 30 lines per function):
 - `docs/refactoring/unit-level-refactoring-progress.md` - Detailed progress tracking
 - `docs/refactoring/unit-level-refactoring-summary.md` - Comprehensive summary
 - `docs/architecture/pipeline-state-machine.md` - State machine implementation
-- `scripts/check-large-files.cjs` - SIG checker implementation
+- `scripts/check-large-files.cjs` - Quality Gate checker implementation
 
 ## Lessons Learned
 
@@ -149,7 +149,7 @@ If pursuing full SIG compliance (< 30 lines per function):
 3. **Incremental Approach**
    - Better to complete file-level refactoring fully
    - Then tackle unit-level as separate effort
-   - Avoid trying to achieve perfect SIG compliance in one pass
+   - Avoid trying to achieve perfect compliance in one pass
 
 4. **CI Integration**
    - Non-blocking warnings better than blocking errors for aspirational goals
@@ -158,4 +158,4 @@ If pursuing full SIG compliance (< 30 lines per function):
 
 ## Conclusion
 
-KB-151 successfully achieved its primary goal of reducing large files and improving code organization. The codebase is now more maintainable with clear module boundaries and comprehensive quality checks in place. Future work toward full SIG unit-size compliance can proceed incrementally.
+KB-151 successfully achieved its primary goal of reducing large files and improving code organization. The codebase is now more maintainable with clear module boundaries and comprehensive quality checks in place. Future work toward full unit-size compliance can proceed incrementally.

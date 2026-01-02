@@ -68,9 +68,9 @@ The `taxonomy_config` table was created in migration `20251210155649_create_taxo
 
 ### Rule: Boy Scout Rule - Leave code cleaner than you found it
 
-All code that passes through your hands must meet SIG maintainability guidelines.
+All code that passes through your hands must meet Quality Guidelines.
 
-### SIG Guidelines (Enforced on ALL touched files)
+### Quality Guidelines (Enforced on ALL touched files)
 
 **File Size:**
 
@@ -154,7 +154,7 @@ function storeItems(items) {
 
 Pre-commit enforcement implemented in commits:
 
-- `02b3c80` - Initial SIG checker with grandfathering
+- `02b3c80` - Initial Quality Gate checker with grandfathering
 - `5c2253a` - Boy Scout rule enforcement (no exceptions)
 
 ---

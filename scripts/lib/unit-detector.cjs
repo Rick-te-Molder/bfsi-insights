@@ -1,5 +1,5 @@
 /**
- * Unit (function/method) detection for SIG compliance checking
+ * Unit (function/method) detection for Quality Gate checking
  * Uses heuristic-based parsing - not a full parser
  * 
  * Known limitations:

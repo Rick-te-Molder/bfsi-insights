@@ -1,11 +1,11 @@
 /**
- * SIG-compliant code size checker
- * Checks both file size and unit (function/method) size based on SIG maintainability guidelines
+ * Quality Gate code size checker
+ * Checks both file size and unit (function/method) size based on Quality Guidelines
  * 
  * KB-151: Continuously refactor large files and functions
  * 
  * References:
- * - SIG Maintainability Model: https://www.softwareimprovementgroup.com/
+ * - Maintainability model (Software Improvement Group): https://www.softwareimprovementgroup.com/
  * - "Building Maintainable Software" by Joost Visser
  */
 const { execSync } = require('node:child_process');
@@ -13,7 +13,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { findUnits } = require('./lib/unit-detector.cjs');
 
-// SIG-based thresholds per language
+// 300/30 size limits per language
 const LANGUAGE_LIMITS = {
   'js': { file: 300, unit: 30, unitExcellent: 15 },
   'ts': { file: 300, unit: 30, unitExcellent: 15 },
@@ -47,7 +47,7 @@ const PARAM_LIMITS = {
 // NOTE: This allow-list is INFORMATIONAL ONLY; it does NOT affect enforcement.
 // All staged files are checked regardless of whether they're on this list.
 // 
-// BOY SCOUT RULE: If you touch any file, it MUST meet SIG guidelines before commit.
+// BOY SCOUT RULE: If you touch any file, it MUST meet Quality Guidelines before commit.
 // 
 // Known violations as of 2026-01-02:
 // - 31 files > 300 lines
@@ -214,8 +214,8 @@ try {
     process.exit(0);
   }
   
-  console.log(`\n📋 Checking ${stagedFiles.length} staged file(s) for SIG compliance...\n`);
-  console.log('🧹 Boy Scout Rule: All touched files must meet SIG guidelines\n');
+  console.log(`\n📋 Checking ${stagedFiles.length} staged file(s) for Quality Gate compliance...\n`);
+  console.log('🧹 Boy Scout Rule: All touched files must meet Quality Guidelines\n');
   
   // Check ALL staged files - no exceptions
   // If you touch it, you must clean it
@@ -319,7 +319,7 @@ try {
   const knownViolators = stagedFiles.filter(f => ALLOW_LIST.has(f));
   
   if (!hasErrors && !hasWarnings) {
-    console.log(`✅ All staged files meet SIG guidelines!`);
+    console.log(`✅ All staged files meet Quality Guidelines!`);
     console.log(`   Checked: ${results.length} file(s)`);
     if (knownViolators.length > 0) {
       console.log(`   🎉 Cleaned up: ${knownViolators.length} file(s) that previously had violations`);
@@ -338,7 +338,7 @@ try {
       console.error(`   These files must be refactored before commit (Boy Scout Rule)`);
     }
     console.error(`\n   📋 Total known violations: ${ALLOW_LIST.size} file(s) (tracked for cleanup)`);
-    console.error('\n💡 SIG Requirements (enforced for ALL touched files):');
+    console.error('\n💡 Quality Gate Requirements (enforced for ALL touched files):');
     console.error('   Source files: <300 lines, functions <30 lines');
     console.error('   Test files: <500 lines, functions <50 lines (relaxed for fixtures/tables)');
     console.error('   Functions SHOULD be <15 lines (excellent) for all files');
