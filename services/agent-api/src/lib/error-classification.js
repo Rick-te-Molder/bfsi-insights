@@ -12,6 +12,8 @@
  * - Terminal errors: go to DLQ immediately
  */
 
+import { randomInt } from 'node:crypto';
+
 /**
  * Error types
  */
@@ -139,9 +141,9 @@ export function calculateBackoff(attemptNumber, errorType = ErrorType.RETRYABLE)
   // Cap at max
   const capped = Math.min(exponential, config.max);
 
-  // Add jitter: ±20%
-  const jitterAmount = capped * config.jitter;
-  const jitter = (Math.random() * 2 - 1) * jitterAmount;
+  // Add jitter: ±20% using crypto.randomInt for clean security posture
+  const jitterAmount = Math.round(capped * config.jitter);
+  const jitter = randomInt(-jitterAmount, jitterAmount + 1);
 
   return Math.round(capped + jitter);
 }

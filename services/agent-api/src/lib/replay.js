@@ -257,5 +257,5 @@ export async function testReplayCapability(sampleSize = 100) {
   console.log(`   Selected ${runIds.length} completed runs`);
 
   const results = await replayBatch(runIds, { simulate: true, verbose: false });
-  return reportTestResults(results, sampleSize);
+  return reportTestResults(results);
 }
