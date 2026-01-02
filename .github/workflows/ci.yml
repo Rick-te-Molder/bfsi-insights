@@ -92,24 +92,17 @@ jobs:
       - name: Run tests
         run: npm test --if-present
 
-      - name: Install agent-api dependencies
-        run: npm ci
-        working-directory: services/agent-api
-
       - name: Validate prompt registry (agent-api)
-        run: npm run validate:prompts
-        working-directory: services/agent-api
+        run: npm run validate:prompts -w services/agent-api
         env:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
       - name: Run agent-api tests
-        run: npm run test:coverage
-        working-directory: services/agent-api
+        run: npm run test:coverage -w services/agent-api
 
       - name: Smoke test agent-api startup
-        run: timeout 5 npm start || [ $? -eq 124 ]
-        working-directory: services/agent-api
+        run: timeout 5 npm start -w services/agent-api || [ $? -eq 124 ]
         env:
           PORT: 3000
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
