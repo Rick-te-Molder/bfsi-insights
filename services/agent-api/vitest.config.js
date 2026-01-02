@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['tests/**/*.spec.js'],
+    include: ['tests/**/*.spec.js', 'src/**/*.test.js'],
     env: {
       NODE_ENV: 'test',
       SITEMAP_RATE_LIMIT_MS: '5', // Fast rate limiting for tests
