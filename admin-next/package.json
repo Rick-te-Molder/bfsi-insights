@@ -7,7 +7,7 @@
     "prebuild": "cd ../packages/types && npm run build",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint \"src/**/*.{ts,tsx}\""
   },
   "dependencies": {
     "@bfsi/types": "*",

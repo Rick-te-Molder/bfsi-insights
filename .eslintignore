@@ -1,0 +1,17 @@
+# Build artifacts
+**/.next/**
+**/out/**
+**/dist/**
+**/build/**
+**/.turbo/**
+**/.vercel/**
+
+# Test coverage
+**/coverage/**
+**/lcov-report/**
+
+# Dependencies
+**/node_modules/**
+
+# Generated files
+*.min.js

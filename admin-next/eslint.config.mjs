@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     'out/**',
     'build/**',
     'next-env.d.ts',
+    // Additional build/coverage artifacts:
+    'coverage/**',
+    'lcov-report/**',
+    'dist/**',
+    '.turbo/**',
+    '.vercel/**',
   ]),
   // Custom rules
   {

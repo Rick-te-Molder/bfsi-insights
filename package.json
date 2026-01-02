@@ -13,7 +13,7 @@
     "preview": "astro preview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "lint": "eslint .",
+    "lint": "npm run lint --workspaces --if-present && eslint \"src/**/*.{js,ts,astro}\" \"scripts/**/*.{js,mjs,cjs}\"",
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",

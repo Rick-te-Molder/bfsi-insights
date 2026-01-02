@@ -11,6 +11,7 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "validate:prompts": "node src/scripts/validate-agent-registry.js",
+    "lint": "eslint \"src/**/*.js\"",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
