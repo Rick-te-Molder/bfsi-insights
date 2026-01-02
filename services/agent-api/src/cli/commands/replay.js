@@ -16,6 +16,74 @@ import {
   getRandomSample,
 } from '../../lib/replay.js';
 
+function assertRequiredArg(value, flagName) {
+  if (!value) {
+    console.error(`❌ Error: ${flagName} is required`);
+    process.exit(1);
+  }
+}
+
+function logReplayHeader(runId, simulate, verbose) {
+  console.log(`\n🔄 Replaying pipeline run ${runId}`);
+  console.log(`Simulate: ${simulate}`);
+  console.log(`Verbose: ${verbose}\n`);
+}
+
+function logValidationErrors(result) {
+  if (result.validation.errors.length > 0) {
+    console.log(`\n❌ Validation errors:`);
+    result.validation.errors.forEach((err) => console.log(`   - ${err}`));
+  }
+}
+
+function logValidationWarnings(result) {
+  if (result.validation.warnings.length > 0) {
+    console.log(`\n⚠️  Validation warnings:`);
+    result.validation.warnings.forEach((warn) => console.log(`   - ${warn}`));
+  }
+}
+
+function logReplaySuccess(result) {
+  console.log(`\n✅ Replay successful`);
+  console.log(`   Steps replayed: ${result.stepsReplayed}`);
+  console.log(`   State transitions: ${result.stateHistory.length}`);
+  console.log(`   Validation: ${result.validation.isValid ? 'PASS' : 'FAIL'}`);
+  logValidationErrors(result);
+  logValidationWarnings(result);
+}
+
+function logReplayFailure(result) {
+  console.error(`\n❌ Replay failed: ${result.error}`);
+}
+
+function parseRunIdsArg(runIdsStr) {
+  return runIdsStr.split(',').map((id) => id.trim());
+}
+
+function logBatchHeader(runIds, simulate, verbose) {
+  console.log(`\n🔄 Replaying ${runIds.length} pipeline runs`);
+  console.log(`Simulate: ${simulate}`);
+  console.log(`Verbose: ${verbose}\n`);
+}
+
+function logBatchResults(result) {
+  console.log(`\n📊 Batch Replay Results:`);
+  console.log(`   Total: ${result.total}`);
+  console.log(`   Successful: ${result.successful}`);
+  console.log(`   Failed: ${result.failed}`);
+  console.log(`   Success rate: ${result.successRate}`);
+}
+
+function exitWithBatchFailures(result) {
+  if (result.failed > 0) {
+    console.log(`\n❌ Failed runs:`);
+    result.results
+      .filter((r) => !r.success)
+      .forEach((r) => console.log(`   - ${r.runId}: ${r.error}`));
+    process.exit(1);
+  }
+}
+
 /**
  * Test replay capability on random sample
  */
@@ -42,34 +110,15 @@ export async function runReplayCmd(args) {
   const simulate = args.simulate !== 'false'; // Default true
   const verbose = args.verbose === 'true'; // Default false
 
-  if (!runId) {
-    console.error('❌ Error: --run-id is required');
-    process.exit(1);
-  }
-
-  console.log(`\n🔄 Replaying pipeline run ${runId}`);
-  console.log(`Simulate: ${simulate}`);
-  console.log(`Verbose: ${verbose}\n`);
+  assertRequiredArg(runId, '--run-id');
+  logReplayHeader(runId, simulate, verbose);
 
   const result = await replayPipelineRun(runId, { simulate, verbose });
 
   if (result.success) {
-    console.log(`\n✅ Replay successful`);
-    console.log(`   Steps replayed: ${result.stepsReplayed}`);
-    console.log(`   State transitions: ${result.stateHistory.length}`);
-    console.log(`   Validation: ${result.validation.isValid ? 'PASS' : 'FAIL'}`);
-
-    if (result.validation.errors.length > 0) {
-      console.log(`\n❌ Validation errors:`);
-      result.validation.errors.forEach((err) => console.log(`   - ${err}`));
-    }
-
-    if (result.validation.warnings.length > 0) {
-      console.log(`\n⚠️  Validation warnings:`);
-      result.validation.warnings.forEach((warn) => console.log(`   - ${warn}`));
-    }
+    logReplaySuccess(result);
   } else {
-    console.error(`\n❌ Replay failed: ${result.error}`);
+    logReplayFailure(result);
     process.exit(1);
   }
 }
@@ -82,32 +131,14 @@ export async function batchReplayCmd(args) {
   const simulate = args.simulate !== 'false'; // Default true
   const verbose = args.verbose === 'true'; // Default false
 
-  if (!runIdsStr) {
-    console.error('❌ Error: --run-ids is required (comma-separated)');
-    process.exit(1);
-  }
-
-  const runIds = runIdsStr.split(',').map((id) => id.trim());
-
-  console.log(`\n🔄 Replaying ${runIds.length} pipeline runs`);
-  console.log(`Simulate: ${simulate}`);
-  console.log(`Verbose: ${verbose}\n`);
+  assertRequiredArg(runIdsStr, '--run-ids (comma-separated)');
+  const runIds = parseRunIdsArg(runIdsStr);
+  logBatchHeader(runIds, simulate, verbose);
 
   const result = await replayBatch(runIds, { simulate, verbose });
 
-  console.log(`\n📊 Batch Replay Results:`);
-  console.log(`   Total: ${result.total}`);
-  console.log(`   Successful: ${result.successful}`);
-  console.log(`   Failed: ${result.failed}`);
-  console.log(`   Success rate: ${result.successRate}`);
-
-  if (result.failed > 0) {
-    console.log(`\n❌ Failed runs:`);
-    result.results
-      .filter((r) => !r.success)
-      .forEach((r) => console.log(`   - ${r.runId}: ${r.error}`));
-    process.exit(1);
-  }
+  logBatchResults(result);
+  exitWithBatchFailures(result);
 }
 
 /**
