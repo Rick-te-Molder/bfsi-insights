@@ -35,9 +35,6 @@ jobs:
       - name: Run agent-api tests with coverage
         run: npm run test:coverage -w services/agent-api
         continue-on-error: true
-        env:
-          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
       - name: Debug coverage output
         run: |

@@ -3,7 +3,21 @@
  * KB-XXX: Phase 2 Task 1.1 - Test state machine validation
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// Mock Supabase before importing modules that use it
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: vi.fn(() => ({
+    from: vi.fn(),
+  })),
+}));
+
+// Mock status-codes module
+vi.mock('./status-codes.js', () => ({
+  loadStatusCodes: vi.fn(),
+  getStatusCodes: vi.fn(() => ({})),
+}));
+
 import {
   isValidTransition,
   validateTransition,

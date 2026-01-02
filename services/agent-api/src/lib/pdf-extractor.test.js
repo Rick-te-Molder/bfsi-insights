@@ -3,6 +3,19 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// Mock Supabase before importing the module
+vi.mock('@supabase/supabase-js', () => ({
+  createClient: vi.fn(() => ({
+    storage: {
+      from: vi.fn(() => ({
+        upload: vi.fn(),
+        getPublicUrl: vi.fn(),
+      })),
+    },
+  })),
+}));
+
 import { isPdfUrl, fetchPdfContent } from './pdf-extractor.js';
 
 // Mock global fetch for tests
