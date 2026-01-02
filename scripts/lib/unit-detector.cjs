@@ -10,36 +10,33 @@
 
 /**
  * Patterns that indicate function/method start
- * Standardized to capture function name in group 2 where possible
+ * Function name is consistently captured in group 1
  */
 const FUNCTION_PATTERNS = [
   /^\s*function\s+(\w+)/,                    // function name()
-  /^\s*const\s+(\w+)\s*=\s*\(/,              // const name = (
-  /^\s*const\s+(\w+)\s*=\s*async\s*\(/,      // const name = async (
   /^\s*async\s+function\s+(\w+)/,            // async function name()
+  /^\s*export\s+(?:async\s+)?function\s+(\w+)/, // export [async] function name()
+  /^\s*export\s+default\s+function\s*(\w+)?/, // export default function [name]
   /^\s*(\w+)\s*\([^)]*\)\s*{/,               // name() {
   /^\s*async\s+(\w+)\s*\([^)]*\)\s*{/,       // async name() {
-  /^\s*export\s+function\s+(\w+)/,           // export function name()
-  /^\s*export\s+async\s+function\s+(\w+)/,   // export async function name()
-  /^\s*export\s+default\s+function\s+(\w+)?/, // export default function
-  /^\s*(public|private|protected)\s+(\w+)\s*\(/,  // class methods
-  /^\s*(export\s+)?const\s+(\w+)\s*=\s*(async\s*)?\([^)]*\)\s*=>\s*{/, // const name = () => {
-  /^\s*(export\s+)?let\s+(\w+)\s*=\s*(async\s*)?\([^)]*\)\s*=>\s*{/,   // let name = () => {
+  /^\s*(?:public|private|protected)\s+(\w+)\s*\(/, // class methods
+  /^\s*(?:export\s+)?const\s+(\w+)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>\s*{/, // const name = () => {
+  /^\s*(?:export\s+)?let\s+(\w+)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>\s*{/,   // let name = () => {
 ];
 
 /**
  * Parse file to find function/method boundaries
  * @param {string} content - File content
- * @param {Object} limits - Size limits for this file
  * @returns {Array} Array of units with name, startLine, endLine, length
  */
-function findUnits(content, limits) {
+function findUnits(content) {
   const lines = content.split('\n');
   const units = [];
   
   let currentUnit = null;
   let braceDepth = 0;
   let inUnit = false;
+  let sawOpeningBrace = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -55,15 +52,15 @@ function findUnits(content, limits) {
       for (const pattern of FUNCTION_PATTERNS) {
         const match = pattern.exec(line);
         if (match) {
-          // Extract name from capture groups (try group 2, then 1, then 3)
-          const name = match[2] || match[1] || match[3] || 'anonymous';
+          const name = match[1] || 'anonymous';
           currentUnit = {
-            name: name.replace(/^(export|public|private|protected)\s+/, ''),
+            name,
             startLine: i + 1,
             endLine: i + 1,
           };
           inUnit = true;
           braceDepth = 0;
+          sawOpeningBrace = false;
           break;
         }
       }
@@ -72,18 +69,20 @@ function findUnits(content, limits) {
     // Track brace depth to find function end
     // Note: This is a heuristic and can be fooled by braces in strings/templates
     if (inUnit) {
-      for (const char of line) {
-        if (char === '{') braceDepth++;
-        if (char === '}') braceDepth--;
-        
-        if (braceDepth === 0 && char === '}') {
-          currentUnit.endLine = i + 1;
-          currentUnit.length = currentUnit.endLine - currentUnit.startLine + 1;
-          units.push(currentUnit);
-          currentUnit = null;
-          inUnit = false;
-          break;
-        }
+      currentUnit.endLine = i + 1;
+
+      const opens = (line.match(/{/g) || []).length;
+      const closes = (line.match(/}/g) || []).length;
+      if (opens > 0) sawOpeningBrace = true;
+
+      braceDepth += opens;
+      braceDepth -= closes;
+
+      if (sawOpeningBrace && braceDepth === 0) {
+        currentUnit.length = currentUnit.endLine - currentUnit.startLine + 1;
+        units.push(currentUnit);
+        currentUnit = null;
+        inUnit = false;
       }
     }
   }

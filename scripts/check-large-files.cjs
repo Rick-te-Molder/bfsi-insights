@@ -37,8 +37,10 @@ const TEST_LIMITS = {
 // Files with known violations (for tracking purposes only - NOT used for filtering)
 // TODO(KB-151): Gradually refactor and remove entries from this list.
 // 
+// NOTE: This allow-list is INFORMATIONAL ONLY; it does NOT affect enforcement.
+// All staged files are checked regardless of whether they're on this list.
+// 
 // BOY SCOUT RULE: If you touch any file, it MUST meet SIG guidelines before commit.
-// This list is for documentation only - all staged files are checked regardless.
 // 
 // Known violations as of 2026-01-02:
 // - 31 files > 300 lines
@@ -106,7 +108,7 @@ function isTestFile(filePath) {
     f.includes('__tests__/') ||
     f.includes('.test.') ||
     f.includes('.spec.') ||
-    f.includes('/tests/')
+    /\/tests?\//.test(f)
   );
 }
 
@@ -114,7 +116,7 @@ function isTestFile(filePath) {
  * Get language-specific limits
  */
 function getLimits(filePath) {
-  const ext = path.extname(filePath).slice(1);
+  const ext = path.extname(filePath).slice(1).toLowerCase();
   const limits = isTestFile(filePath) ? TEST_LIMITS : LANGUAGE_LIMITS;
   return limits[ext] || limits.default;
 }
@@ -128,7 +130,7 @@ function analyzeFile(filePath) {
   const lineCount = lines.length;
   const limits = getLimits(filePath);
   
-  const units = findUnits(content, limits);
+  const units = findUnits(content);
   
   // Filter units by severity
   const largeUnits = units.filter(u => u.length > limits.unit);
