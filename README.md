@@ -95,14 +95,17 @@ See [`docs/architecture/pipeline-status-codes.md`](docs/architecture/pipeline-st
 
 The pipeline includes run tracking, failure handling, and health monitoring:
 
-| Feature               | Description                                                              |
-| --------------------- | ------------------------------------------------------------------------ |
-| **Run Tracking**      | Each enrichment attempt creates a `pipeline_run` with step-level tracing |
-| **Step Outcomes**     | `pipeline_step_run` records status, duration, errors per step            |
-| **Re-enrich**         | Creates fresh run, cancels old (prevents mixed outputs)                  |
-| **Dead Letter Queue** | Items failing 3+ times on same step → status 599                         |
-| **WIP Limits**        | Backpressure per stage (summarizer: 10, tagger: 20, thumbnailer: 5)      |
-| **Health Dashboard**  | `/pipeline` shows WIP, throughput, stuck items, DLQ count                |
+| Feature                  | Description                                                              |
+| ------------------------ | ------------------------------------------------------------------------ |
+| **Run Tracking**         | Each enrichment attempt creates a `pipeline_run` with step-level tracing |
+| **Step Outcomes**        | `pipeline_step_run` records status, duration, errors per step            |
+| **Re-enrich**            | Creates fresh run, cancels old (prevents mixed outputs)                  |
+| **Error Classification** | Automatic categorization (retryable/terminal/rate_limit)                 |
+| **Exponential Backoff**  | Smart retry with jitter (base=1s, max=60s, 429 gets 10s base)            |
+| **Dead Letter Queue**    | Terminal errors immediate, retryable after 3 failures → status 599       |
+| **Replay Capability**    | Reconstruct pipeline state from event log for audit/debugging            |
+| **WIP Limits**           | Backpressure per stage (summarizer: 10, tagger: 20, thumbnailer: 5)      |
+| **Health Dashboard**     | `/pipeline` shows WIP, throughput, stuck items, DLQ count                |
 
 ```
 pipeline_run (per enrichment attempt)
@@ -121,6 +124,10 @@ node services/agent-api/src/cli.js enrich --limit=20
 
 # Individual agents
 node services/agent-api/src/cli.js summarize|tag|thumbnail --limit=5
+
+# Replay capability (audit/debug)
+npm run cli replay test -- --sample-size 100
+npm run cli replay run -- --run-id <uuid>
 ```
 
 ---
