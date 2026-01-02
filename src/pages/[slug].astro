@@ -24,12 +24,12 @@ export async function getStaticPaths() {
 // ------------------------------------------------------------
 const { slug } = Astro.params;
 if (!slug) {
-  throw new Error('Missing slug param');
+  return new Response(null, { status: 404 });
 }
 
 const item = await getPublicationBySlug(slug);
 if (!item) {
-  throw new Error(`Publication not found for slug: ${slug}`);
+  return new Response(null, { status: 404 });
 }
 
 const title = item.title;
