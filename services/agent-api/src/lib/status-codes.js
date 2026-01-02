@@ -6,7 +6,13 @@
 import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+let supabaseClient = null;
+
+function getSupabaseClient() {
+  if (supabaseClient) return supabaseClient;
+  supabaseClient = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  return supabaseClient;
+}
 
 // Cached status codes (loaded once at startup)
 let statusCache = null;
@@ -19,6 +25,7 @@ let statusCache = null;
 export async function loadStatusCodes() {
   if (statusCache) return statusCache;
 
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase.from('status_lookup').select('code, name').order('code');
 
   if (error) {

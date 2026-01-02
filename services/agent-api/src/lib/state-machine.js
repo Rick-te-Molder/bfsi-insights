@@ -9,8 +9,15 @@
 import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 import { loadStatusCodes, getStatusCodes } from './status-codes.js';
+import { buildMermaidDiagram } from './state-machine.mermaid.js';
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+let supabaseClient = null;
+
+function getSupabaseClient() {
+  if (supabaseClient) return supabaseClient;
+  supabaseClient = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  return supabaseClient;
+}
 
 // Cached state transitions (loaded from database)
 let transitionsCache = null;
@@ -20,12 +27,7 @@ let manualTransitions = {}; // from_status -> [to_status, ...]
 // Working states that should auto-transition on failure
 const WORKING_STATES = [111, 121, 211, 221, 231]; // fetching, scoring, summarizing, tagging, thumbnailing
 
-/**
- * Load state transitions from database
- */
-async function loadStateTransitions() {
-  if (transitionsCache) return transitionsCache;
-
+async function fetchTransitions(supabase) {
   const { data, error } = await supabase
     .from('state_transitions')
     .select('from_status, to_status, is_manual, description')
@@ -36,7 +38,15 @@ async function loadStateTransitions() {
     throw new Error(`Cannot load state transitions: ${error.message}`);
   }
 
-  // Build transition maps
+  return data;
+}
+
+function ensureArray(map, key) {
+  if (!map[key]) map[key] = [];
+  return map[key];
+}
+
+function buildTransitionMaps(data) {
   normalTransitions = {};
   manualTransitions = {};
 
@@ -44,20 +54,25 @@ async function loadStateTransitions() {
     const { from_status, to_status, is_manual } = row;
 
     if (is_manual) {
-      if (!manualTransitions[from_status]) {
-        manualTransitions[from_status] = [];
-      }
-      manualTransitions[from_status].push(to_status);
+      ensureArray(manualTransitions, from_status).push(to_status);
     } else {
-      if (!normalTransitions[from_status]) {
-        normalTransitions[from_status] = [];
-      }
-      normalTransitions[from_status].push(to_status);
+      ensureArray(normalTransitions, from_status).push(to_status);
     }
   }
+}
 
+/**
+ * Load state transitions from database
+ */
+async function loadStateTransitions() {
+  if (transitionsCache) return transitionsCache;
+
+  const supabase = getSupabaseClient();
+
+  const data = await fetchTransitions(supabase);
+  buildTransitionMaps(data);
   transitionsCache = data;
-  console.log(`   🔀 Loaded ${data.length} state transitions from database`);
+  console.log(`   🔀 Loaded ${transitionsCache.length} state transitions from database`);
   return transitionsCache;
 }
 
@@ -240,38 +255,9 @@ export function toMermaidDiagram() {
     return '// Status codes not loaded';
   }
 
-  const getStatusName = (code) => {
-    const name = Object.keys(statusCodes).find((k) => statusCodes[k] === code);
-    return name ? name.toLowerCase() : `status_${code}`;
-  };
-
-  let diagram = 'stateDiagram-v2\n';
-
-  // Add all normal transitions
-  for (const [from, toStates] of Object.entries(normalTransitions)) {
-    const fromCode = Number.parseInt(from, 10);
-    const fromName = getStatusName(fromCode);
-
-    if (toStates.length === 0) {
-      diagram += `    ${fromName} --> [*]\n`;
-    } else {
-      for (const toCode of toStates) {
-        const toName = getStatusName(toCode);
-        diagram += `    ${fromName} --> ${toName}\n`;
-      }
-    }
-  }
-
-  // Add manual transitions (dashed lines)
-  for (const [from, toStates] of Object.entries(manualTransitions)) {
-    const fromCode = Number.parseInt(from, 10);
-    const fromName = getStatusName(fromCode);
-
-    for (const toCode of toStates) {
-      const toName = getStatusName(toCode);
-      diagram += `    ${fromName} -.-> ${toName} : manual\n`;
-    }
-  }
-
-  return diagram;
+  return buildMermaidDiagram({
+    statusCodes,
+    normalTransitions,
+    manualTransitions,
+  });
 }
