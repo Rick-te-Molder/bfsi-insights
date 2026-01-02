@@ -121,7 +121,7 @@ async function main() {
   let md = `# Database Schema Reference
 
 > **Auto-generated** by \`npm run dump:schema\`  
-> **Last updated:** ${new Date().toISOString().split('T')[0]}
+> **Last updated:** ${new Date().toISOString()}
 
 This file is the single source of truth for AI assistants to understand the database structure.
 
