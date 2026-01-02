@@ -33,7 +33,7 @@ function getSupabaseClient() {
 export async function transitionItemStatus(queueId, newStatusCode, options = {}) {
   const { changedBy = 'system:auto', changes = null, isManual = false } = options;
 
-  if (!queueId || typeof newStatusCode !== 'number') {
+  if (!queueId || typeof newStatusCode !== 'number' || Number.isNaN(newStatusCode)) {
     throw new Error('transitionItemStatus: queueId and newStatusCode are required');
   }
 
