@@ -15,12 +15,15 @@
 export function parseError(error) {
   const err = /** @type {AnyErrorLike} */ (error);
   const message = (err?.message || String(error)).toLowerCase();
-  const statusCode =
-    typeof err?.statusCode === 'number'
-      ? err.statusCode
-      : typeof err?.code === 'number'
-        ? err.code
-        : undefined;
+
+  // Extract numeric status code from statusCode or code property
+  let statusCode;
+  if (typeof err?.statusCode === 'number') {
+    statusCode = err.statusCode;
+  } else if (typeof err?.code === 'number') {
+    statusCode = err.code;
+  }
+
   const errorCode = typeof err?.code === 'string' ? err.code : undefined;
   return { message, statusCode, errorCode };
 }

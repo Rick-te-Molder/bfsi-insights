@@ -15,8 +15,7 @@
     "typecheck": "tsc --noEmit --allowJs --checkJs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
-    "postinstall": "npx playwright install chromium --with-deps"
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",

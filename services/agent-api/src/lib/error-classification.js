@@ -203,12 +203,14 @@ export function getRetryDelay(attemptNumber, error) {
 export function formatError(error, classification) {
   // Cast to AnyErrorLike for type-safe property access
   const err = /** @type {AnyErrorLike} */ (error);
-  const statusCode =
-    typeof err?.statusCode === 'number'
-      ? err.statusCode
-      : typeof err?.code === 'number'
-        ? err.code
-        : undefined;
+
+  // Extract numeric status code from statusCode or code property
+  let statusCode;
+  if (typeof err?.statusCode === 'number') {
+    statusCode = err.statusCode;
+  } else if (typeof err?.code === 'number') {
+    statusCode = err.code;
+  }
 
   // Preserve original behavior: code can be string or number
   const code =
