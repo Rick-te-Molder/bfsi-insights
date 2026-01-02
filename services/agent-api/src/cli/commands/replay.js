@@ -88,7 +88,7 @@ function exitWithBatchFailures(result) {
  * Test replay capability on random sample
  */
 export async function testReplayCmd(args) {
-  const sampleSize = parseInt(args['sample-size']) || 100;
+  const sampleSize = Number.parseInt(args['sample-size'], 10) || 100;
 
   console.log(`\n🧪 Testing Replay Capability (ASMM Phase 1 Task 1.3)\n`);
   console.log(`Sample size: ${sampleSize}`);
@@ -145,7 +145,7 @@ export async function batchReplayCmd(args) {
  * Get random sample of run IDs
  */
 export async function sampleReplayCmd(args) {
-  const size = parseInt(args.size) || 100;
+  const size = Number.parseInt(args.size, 10) || 100;
   const status = args.status;
 
   console.log(`\n📋 Getting random sample of ${size} pipeline runs`);
