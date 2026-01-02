@@ -32,13 +32,8 @@ jobs:
         run: npm run test -- --coverage
         continue-on-error: true # Don't fail if some tests fail
 
-      - name: Install agent-api dependencies
-        run: npm ci
-        working-directory: services/agent-api
-
       - name: Run agent-api tests with coverage
-        run: npm run test:coverage
-        working-directory: services/agent-api
+        run: npm run test:coverage -w services/agent-api
         continue-on-error: true
 
       - name: Debug coverage output
