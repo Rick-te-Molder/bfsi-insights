@@ -1,12 +1,13 @@
-name: CI (PR)
+name: CI (Main)
 
 on:
-  pull_request:
+  push:
     branches:
       - main
+  workflow_dispatch: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -24,6 +25,45 @@ jobs:
       - name: Check for large files (>500 lines)
         run: node scripts/check-large-files.cjs || echo "⚠️ SIG violations found - see KB-151 for tracking"
         continue-on-error: true
+
+  supabase-lint:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Supabase CLI (retry)
+        run: |
+          set -euo pipefail
+
+          SUPABASE_CLI_VERSION="1.215.0"
+          url="https://github.com/supabase/cli/releases/download/v${SUPABASE_CLI_VERSION}/supabase_linux_amd64.tar.gz"
+
+          for attempt in 1 2 3; do
+            echo "Installing Supabase CLI (attempt ${attempt}/3)"
+
+            rm -f supabase_linux_amd64.tar.gz supabase
+            curl -fL --retry 5 --retry-all-errors --connect-timeout 20 --max-time 300 "${url}" -o supabase_linux_amd64.tar.gz && \
+              tar -xzf supabase_linux_amd64.tar.gz supabase && \
+              sudo mv supabase /usr/local/bin/supabase && \
+              supabase --version && \
+              break
+
+            sleep $((attempt * 5))
+          done
+
+          command -v supabase >/dev/null 2>&1
+
+      - name: Link Supabase project
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Lint database (remote)
+        run: supabase db lint --linked
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
   build:
     runs-on: ubuntu-latest
