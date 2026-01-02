@@ -5,7 +5,8 @@
   "type": "module",
   "workspaces": [
     "packages/*",
-    "admin-next"
+    "admin-next",
+    "services/*"
   ],
   "scripts": {
     "dev": "astro dev",
@@ -13,9 +14,13 @@
     "preview": "astro preview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "preflight": "npm run lint && npm run typecheck && npm run test:coverage",
+    "typecheck:root": "tsc --noEmit",
+    "typecheck": "npm run typecheck:root && npm run -ws --if-present typecheck",
     "lint": "npm run lint --workspaces --if-present && eslint \"src/**/*.{js,ts,astro}\" \"scripts/**/*.{js,mjs,cjs}\"",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "npm run test:coverage --workspaces --if-present",
     "e2e": "playwright test",
     "check:links": "node scripts/utilities/check-links.mjs",
     "dump:schema": "node scripts/utilities/dump-schema.mjs",

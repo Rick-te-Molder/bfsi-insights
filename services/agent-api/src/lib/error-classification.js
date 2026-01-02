@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Error Classification & Retry Logic (Task 1.4)
  *
@@ -13,6 +14,14 @@
  */
 
 import { randomInt } from 'node:crypto';
+
+/**
+ * @typedef {Object} ErrorClassification
+ * @property {string} type - Error type (retryable, terminal, rate_limit)
+ * @property {boolean} retryable - Whether error is retryable
+ * @property {string} reason - Human-readable reason
+ * @property {number} [statusCode] - HTTP status code if applicable
+ */
 
 /**
  * Error types
@@ -36,6 +45,9 @@ export const BackoffConfig = {
 
 /**
  * Check if error is rate limit
+ * @param {number} code - HTTP status code
+ * @param {string} message - Error message
+ * @returns {boolean}
  */
 function isRateLimitError(code, message) {
   return code === 429 || message.includes('rate limit') || message.includes('too many requests');
@@ -43,6 +55,8 @@ function isRateLimitError(code, message) {
 
 /**
  * Check if error is server error
+ * @param {number} code - HTTP status code
+ * @returns {boolean}
  */
 function isServerError(code) {
   return code >= 500 && code < 600;
@@ -50,6 +64,8 @@ function isServerError(code) {
 
 /**
  * Check if error is timeout
+ * @param {string} message - Error message
+ * @returns {boolean}
  */
 function isTimeoutError(message) {
   return (
@@ -59,6 +75,8 @@ function isTimeoutError(message) {
 
 /**
  * Check if error is network error
+ * @param {string} message - Error message
+ * @returns {boolean}
  */
 function isNetworkError(message) {
   return (
@@ -68,6 +86,8 @@ function isNetworkError(message) {
 
 /**
  * Check if error is client error
+ * @param {number} code - HTTP status code
+ * @returns {boolean}
  */
 function isClientError(code) {
   return code >= 400 && code < 500 && code !== 429;
@@ -75,6 +95,8 @@ function isClientError(code) {
 
 /**
  * Check if error is auth error
+ * @param {string} message - Error message
+ * @returns {boolean}
  */
 function isAuthError(message) {
   return (
@@ -86,6 +108,8 @@ function isAuthError(message) {
 
 /**
  * Check if error is validation error
+ * @param {string} message - Error message
+ * @returns {boolean}
  */
 function isValidationError(message) {
   return (
@@ -95,6 +119,8 @@ function isValidationError(message) {
 
 /**
  * Classify error as retryable or terminal
+ * @param {Error | {message?: string, code?: number, statusCode?: number}} error - Error object
+ * @returns {ErrorClassification}
  */
 export function classifyError(error) {
   const message = error?.message || String(error);
@@ -128,6 +154,9 @@ export function classifyError(error) {
 
 /**
  * Calculate backoff delay with exponential backoff and jitter
+ * @param {number} attemptNumber - Current attempt number (1-indexed)
+ * @param {string} [errorType] - Type of error (retryable, rate_limit, terminal)
+ * @returns {number} Delay in milliseconds
  */
 export function calculateBackoff(attemptNumber, errorType = ErrorType.RETRYABLE) {
   const config = BackoffConfig;
@@ -150,6 +179,9 @@ export function calculateBackoff(attemptNumber, errorType = ErrorType.RETRYABLE)
 
 /**
  * Determine if error should go to DLQ
+ * @param {number} failureCount - Number of failures
+ * @param {ErrorClassification} errorClassification - Error classification result
+ * @returns {boolean}
  */
 export function shouldMoveToDLQ(failureCount, errorClassification) {
   const DLQ_THRESHOLD = 3;
@@ -165,6 +197,9 @@ export function shouldMoveToDLQ(failureCount, errorClassification) {
 
 /**
  * Get retry delay for next attempt
+ * @param {number} attemptNumber - Current attempt number
+ * @param {Error | {message?: string, code?: number, statusCode?: number}} error - Error object
+ * @returns {number | null} Delay in milliseconds, or null if not retryable
  */
 export function getRetryDelay(attemptNumber, error) {
   const classification = classifyError(error);
@@ -178,6 +213,9 @@ export function getRetryDelay(attemptNumber, error) {
 
 /**
  * Format error for logging/storage
+ * @param {Error | {message?: string, code?: number, statusCode?: number}} error - Error object
+ * @param {ErrorClassification} classification - Error classification
+ * @returns {{message: string, code: number | undefined, type: string, retryable: boolean, reason: string}}
  */
 export function formatError(error, classification) {
   return {
