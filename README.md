@@ -67,6 +67,8 @@ Review:     👤 Approve → Published  |  👤 Reject → Rejected
 
 See [`docs/architecture/overview.md`](docs/architecture/overview.md) for detailed diagrams.
 
+Documentation index: [`docs/README.md`](docs/README.md)
+
 ---
 
 ## 3. Agent Pipeline
