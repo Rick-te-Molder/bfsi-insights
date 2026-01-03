@@ -11,7 +11,10 @@
   ],
   "scripts": {
     "dev": "astro dev",
+    "dev:admin": "npm run dev -w apps/admin",
     "build": "astro build",
+    "build:admin": "npm run build -w apps/admin",
+    "build:web": "astro build",
     "preview": "astro preview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
