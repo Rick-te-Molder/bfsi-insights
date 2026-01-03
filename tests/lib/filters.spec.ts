@@ -7,7 +7,7 @@ import {
   filterItems,
   paginateItems,
   countActiveFilters,
-} from '../../src/lib/filters';
+} from '../../site/lib/filters';
 
 describe('getDefaultRole', () => {
   it('returns persona preference if set and not "all"', () => {

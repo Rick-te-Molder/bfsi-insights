@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { linkify } from '../../src/lib/text';
+import { linkify } from '../../site/lib/text';
 
 describe('linkify', () => {
   it('converts URL to anchor tag', () => {
