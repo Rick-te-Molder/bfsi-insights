@@ -10,25 +10,46 @@ const fs = require('fs');
 const path = require('path');
 
 const SCHEMA_FILE = 'docs/data-model/schema.md';
-const MIGRATIONS_DIR = 'supabase/migrations';
+const MIGRATIONS_DIR = 'infra/supabase/migrations';
 
 function getStagedFiles() {
   try {
-    const output = execSync('git diff --cached --name-only', { encoding: 'utf8' });
-    return output.trim().split('\n').filter(Boolean);
+    const output = execSync('git diff --cached --name-status', { encoding: 'utf8' });
+    return output
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => {
+        const parts = line.trim().split(/\s+/);
+        const status = parts[0] ?? '';
+
+        if (status.startsWith('R')) {
+          const from = parts[1] ?? '';
+          const to = parts[2] ?? '';
+          return { status, file: to, from };
+        }
+
+        return { status, file: parts[1] ?? '' };
+      })
+      .filter((entry) => entry.file);
   } catch {
     return [];
   }
 }
 
 function hasMigrationChanges(stagedFiles) {
-  return stagedFiles.some(file => 
-    file.startsWith(MIGRATIONS_DIR) && file.endsWith('.sql')
+  const migrationChanges = stagedFiles.filter(
+    (entry) => entry.file.startsWith(MIGRATIONS_DIR) && entry.file.endsWith('.sql'),
   );
+
+  if (!migrationChanges.length) return false;
+
+  // Ignore pure renames/moves; still enforce schema updates for additions/modifications.
+  return migrationChanges.some((entry) => !entry.status.startsWith('R'));
 }
 
 function isSchemaStaged(stagedFiles) {
-  return stagedFiles.includes(SCHEMA_FILE);
+  return stagedFiles.some((entry) => entry.file === SCHEMA_FILE);
 }
 
 function getSchemaAge() {
@@ -44,7 +65,7 @@ function getSchemaAge() {
 
 function main() {
   const stagedFiles = getStagedFiles();
-  
+
   // Check if migrations are being committed
   if (hasMigrationChanges(stagedFiles)) {
     if (!isSchemaStaged(stagedFiles)) {
@@ -54,7 +75,7 @@ function main() {
       process.exit(1);
     }
   }
-  
+
   // Warn if schema is very old (> 7 days)
   const schemaAge = getSchemaAge();
   if (schemaAge > 7) {

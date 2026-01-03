@@ -108,11 +108,13 @@ jobs:
           command -v supabase >/dev/null 2>&1
 
       - name: Link Supabase project
+        working-directory: infra/supabase
         run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Lint database (remote)
+        working-directory: infra/supabase
         run: supabase db lint --linked
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

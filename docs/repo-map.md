@@ -24,12 +24,12 @@ Deployment roots:
 
 ## Where "truth" lives
 
-| Concern                 | Source of truth        |
-| ----------------------- | ---------------------- |
-| Database schema         | `supabase/migrations/` |
-| Supabase Edge Functions | `supabase/functions/`  |
-| CI workflows            | `.github/workflows/`   |
-| Docs index              | `docs/README.md`       |
+| Concern                 | Source of truth              |
+| ----------------------- | ---------------------------- |
+| Database schema         | `infra/supabase/migrations/` |
+| Supabase Edge Functions | `infra/supabase/functions/`  |
+| CI workflows            | `.github/workflows/`         |
+| Docs index              | `docs/README.md`             |
 
 ## Shared code
 
