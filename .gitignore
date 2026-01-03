@@ -24,17 +24,16 @@ pnpm-debug.log*
 .idea/
 .lighthouseci/
 reports/
-dist/
-.astro/
 
 # Test artifacts
 playwright-report/
 test-results/
 .playwright/
 coverage/
-.env
-summaries-review.json
 summaries-review.json
 public/thumbs/
-.vercel
 .env*.local
+
+**/.next/
+**/out/
+.vercel/
