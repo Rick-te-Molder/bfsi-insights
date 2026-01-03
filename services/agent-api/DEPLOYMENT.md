@@ -13,9 +13,9 @@ Hosted agent service for content processing pipeline.
 1. Go to [render.com](https://render.com) → New → Web Service
 2. Connect GitHub repo: `Rick-te-Molder/bfsi-insights`
 3. Configure:
-   - **Root Directory:** `services/agent-api`
-   - **Build Command:** `npm install && npx playwright install chromium --with-deps`
-   - **Start Command:** `npm start`
+   - **Root Directory:** `.`
+   - **Build Command:** `npm ci -w services/agent-api --ignore-scripts && npm -w services/agent-api exec -- playwright install chromium --with-deps`
+   - **Start Command:** `npm -w services/agent-api start`
    - **Plan:** Starter ($7/mo)
 
 4. Add environment variables:

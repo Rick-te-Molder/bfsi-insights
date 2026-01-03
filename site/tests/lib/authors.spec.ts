@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeAuthors } from '../../site/lib/authors';
+import { normalizeAuthors } from '../../lib/authors';
 
 describe('normalizeAuthors', () => {
   it('returns empty array for null', () => {

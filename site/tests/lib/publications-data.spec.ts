@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock the supabase lib to avoid env var check
-vi.mock('../../site/lib/supabase', () => ({
+vi.mock('../../lib/supabase', () => ({
   getAllPublications: vi.fn(() => Promise.resolve([])),
 }));
 
@@ -21,9 +21,9 @@ import {
   addCounts,
   createValuesWithCounts,
   loadPublicationsData,
-} from '../../site/lib/publications-data';
-import type { TaxonomyItem } from '../../site/lib/publications-data';
-import { getAllPublications } from '../../site/lib/supabase';
+} from '../../lib/publications-data';
+import type { TaxonomyItem } from '../../lib/publications-data';
+import { getAllPublications } from '../../lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 
 // Get mock references after import

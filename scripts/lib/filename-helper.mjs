@@ -22,14 +22,15 @@ const publisherSlug = ({ source_name, source_domain }) => {
   return 'unknown';
 };
 
-export function kbFileName({
-  title,
-  date_published,
-  authors,
-  source_name = '',
-  source_domain = '',
-  version = '',
-}) {
+export function kbFileName(options) {
+  const {
+    title,
+    date_published,
+    authors,
+    source_name = '',
+    source_domain = '',
+    version = '',
+  } = options || {};
   const year = String(date_published || '0000').slice(0, 4) || '0000';
   const s = slug(title || 'untitled');
   const authorList = Array.isArray(authors) ? authors : [];

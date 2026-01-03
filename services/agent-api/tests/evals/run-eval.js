@@ -6,9 +6,9 @@
  * Uses Supabase tables: eval_golden_set, eval_run, eval_result
  *
  * Usage:
- *   node tests/evals/run-eval.js discovery-relevance
- *   node tests/evals/run-eval.js discovery-relevance --verbose
- *   node tests/evals/run-eval.js discovery-relevance --dry-run
+ *   node services/agent-api/tests/evals/run-eval.js discovery-relevance
+ *   node services/agent-api/tests/evals/run-eval.js discovery-relevance --verbose
+ *   node services/agent-api/tests/evals/run-eval.js discovery-relevance --dry-run
  */
 
 import process from 'node:process';
@@ -33,6 +33,222 @@ const colors = {
 
 function log(message, color = 'reset') {
   console.log(`${colors[color]}${message}${colors.reset}`);
+}
+
+function logExampleHeader(verbose, id, input) {
+  if (!verbose) return;
+  log(`\n  Testing: ${id}`, 'blue');
+  log(`    Input: ${input.title?.slice(0, 60)}...`, 'dim');
+}
+
+async function callAgent(agent, agentName, id, input) {
+  if (agentName === 'scorer') {
+    return agent.scoreRelevance({
+      title: input.title,
+      description: input.description,
+      source: input.source,
+      publishedDate: input.publishedDate,
+    });
+  }
+
+  if (agentName === 'screener') {
+    return agent.runRelevanceFilter({
+      id: 'eval-' + id,
+      payload: {
+        title: input.title,
+        description: input.description,
+      },
+    });
+  }
+
+  if (agentName === 'tagger') {
+    return agent.runTagger({
+      id: 'eval-' + id,
+      payload: {
+        title: input.title,
+        description: input.description,
+        summary: input.summary,
+        url: input.url,
+      },
+    });
+  }
+
+  throw new Error(`Eval not implemented for agent: ${agentName}`);
+}
+
+function checkMinScore(expected, result, checks) {
+  if (expected.min_score === undefined) return true;
+  const scoreOk = result.relevance_score >= expected.min_score;
+  checks.push({
+    check: 'min_score',
+    expected: `>= ${expected.min_score}`,
+    actual: result.relevance_score,
+    passed: scoreOk,
+  });
+  return scoreOk;
+}
+
+function checkMaxScore(expected, result, checks) {
+  if (expected.max_score === undefined) return true;
+  const scoreOk = result.relevance_score <= expected.max_score;
+  checks.push({
+    check: 'max_score',
+    expected: `<= ${expected.max_score}`,
+    actual: result.relevance_score,
+    passed: scoreOk,
+  });
+  return scoreOk;
+}
+
+function checkMustQueue(expected, result, checks) {
+  if (expected.must_queue === undefined) return true;
+  const queueOk = result.should_queue === expected.must_queue;
+  checks.push({
+    check: 'must_queue',
+    expected: expected.must_queue,
+    actual: result.should_queue,
+    passed: queueOk,
+  });
+  return queueOk;
+}
+
+function maybeWarnPrimaryAudience(verbose, expected, result, checks) {
+  if (expected.primary_audience === undefined || expected.primary_audience === null) {
+    return;
+  }
+  const audienceOk = result.primary_audience === expected.primary_audience;
+  checks.push({
+    check: 'primary_audience',
+    expected: expected.primary_audience,
+    actual: result.primary_audience,
+    passed: audienceOk,
+  });
+  if (!audienceOk && verbose) {
+    log(
+      `    ⚠️ Audience mismatch: expected ${expected.primary_audience}, got ${result.primary_audience}`,
+      'yellow',
+    );
+  }
+}
+
+function checkRelevant(expected, result, checks) {
+  if (expected.relevant === undefined) return true;
+  const relevantOk = result.relevant === expected.relevant;
+  checks.push({
+    check: 'relevant',
+    expected: expected.relevant,
+    actual: result.relevant,
+    passed: relevantOk,
+  });
+  return relevantOk;
+}
+
+function checkMinConfidence(expected, result, checks) {
+  if (expected.min_confidence === undefined) return true;
+  const confidenceOk = (result.confidence || 0) >= expected.min_confidence;
+  checks.push({
+    check: 'min_confidence',
+    expected: `>= ${expected.min_confidence}`,
+    actual: result.confidence,
+    passed: confidenceOk,
+  });
+  return confidenceOk;
+}
+
+function summarizeChecks(expected, result, verbose) {
+  const checks = [];
+  let passed = true;
+
+  if (!checkMinScore(expected, result, checks)) passed = false;
+  if (!checkMaxScore(expected, result, checks)) passed = false;
+  if (!checkMustQueue(expected, result, checks)) passed = false;
+  maybeWarnPrimaryAudience(verbose, expected, result, checks);
+  if (!checkRelevant(expected, result, checks)) passed = false;
+  if (!checkMinConfidence(expected, result, checks)) passed = false;
+
+  return { checks, passed };
+}
+
+function logExampleResult(verbose, passed, result) {
+  if (!verbose) return;
+  const icon = passed ? '✓' : '✗';
+  const color = passed ? 'green' : 'red';
+  if (result.relevant !== undefined) {
+    log(`    ${icon} Relevant: ${result.relevant}, Confidence: ${result.confidence}`, color);
+    return;
+  }
+  log(`    ${icon} Score: ${result.relevance_score}, Queue: ${result.should_queue}`, color);
+}
+
+function evalErrorMessage(err) {
+  return err instanceof Error ? err.message : String(err);
+}
+
+function summarizeResults(results) {
+  const passed = results.filter((r) => r.status === 'passed').length;
+  const failed = results.filter((r) => r.status === 'failed').length;
+  const errors = results.filter((r) => r.status === 'error').length;
+  const skipped = results.filter((r) => r.status === 'skipped').length;
+  return { passed, failed, errors, skipped };
+}
+
+async function saveEvalRunToSupabase(agentName, results, summary) {
+  const total = summary.passed + summary.failed + summary.errors;
+  const score = total > 0 ? summary.passed / total : 0;
+
+  const { error: runError } = await supabase.from('eval_run').insert({
+    agent_name: agentName,
+    prompt_version: 'current',
+    eval_type: 'golden',
+    status: summary.failed > 0 || summary.errors > 0 ? 'failed' : 'success',
+    total_examples: total,
+    passed: summary.passed,
+    failed: summary.failed + summary.errors,
+    score,
+    results: results,
+    finished_at: new Date().toISOString(),
+  });
+
+  if (runError) {
+    log(`  ⚠️ Failed to save eval run: ${runError.message}`, 'yellow');
+    return;
+  }
+  log('  📊 Eval run saved to Supabase', 'dim');
+}
+
+function logRunHeader(agentName) {
+  log(`\n${'='.repeat(60)}`, 'blue');
+  log(`  EVAL: ${agentName}`, 'bold');
+  log(`${'='.repeat(60)}`, 'blue');
+}
+
+function logRunSummary(results, summary, verbose) {
+  log(`\n${'─'.repeat(60)}`, 'dim');
+  log('  SUMMARY', 'bold');
+  log(`${'─'.repeat(60)}`, 'dim');
+
+  log(`  ✓ Passed:  ${summary.passed}`, summary.passed > 0 ? 'green' : 'dim');
+  log(`  ✗ Failed:  ${summary.failed}`, summary.failed > 0 ? 'red' : 'dim');
+  log(`  ⚠ Errors:  ${summary.errors}`, summary.errors > 0 ? 'yellow' : 'dim');
+  if (summary.skipped > 0) {
+    log(`  ○ Skipped: ${summary.skipped}`, 'dim');
+  }
+
+  const total = summary.passed + summary.failed + summary.errors;
+  const passRate = total > 0 ? Math.round((summary.passed / total) * 100) : 0;
+  log(`\n  Pass Rate: ${passRate}%`, passRate >= 80 ? 'green' : passRate >= 50 ? 'yellow' : 'red');
+
+  if (summary.failed > 0 && verbose) {
+    log('\n  FAILURES:', 'red');
+    for (const r of results.filter((r) => r.status === 'failed')) {
+      log(`    - ${r.id}`, 'red');
+      for (const check of r.checks.filter((c) => !c.passed)) {
+        log(`      ${check.check}: expected ${check.expected}, got ${check.actual}`, 'dim');
+      }
+    }
+  }
+
+  log('\n');
 }
 
 // Dynamically import the agent based on name
@@ -83,144 +299,17 @@ async function evaluateExample(agent, agentName, example, options) {
   const { verbose, dryRun } = options;
   const { id, input, expected } = example;
 
-  if (verbose) {
-    log(`\n  Testing: ${id}`, 'blue');
-    log(`    Input: ${input.title?.slice(0, 60)}...`, 'dim');
-  }
+  logExampleHeader(verbose, id, input);
 
   if (dryRun) {
     return { id, status: 'skipped', reason: 'dry-run' };
   }
 
   try {
-    let result;
+    const result = await callAgent(agent, agentName, id, input);
+    const { checks, passed } = summarizeChecks(expected, result, verbose);
 
-    // Call the appropriate agent function
-    if (agentName === 'scorer') {
-      result = await agent.scoreRelevance({
-        title: input.title,
-        description: input.description,
-        source: input.source,
-        publishedDate: input.publishedDate,
-      });
-    } else if (agentName === 'screener') {
-      // screener uses AgentRunner pattern, needs queue item format
-      result = await agent.runRelevanceFilter({
-        id: 'eval-' + id,
-        payload: {
-          title: input.title,
-          description: input.description,
-        },
-      });
-    } else if (agentName === 'tagger') {
-      // Tagger uses AgentRunner pattern, needs queue item format
-      result = await agent.runTagger({
-        id: 'eval-' + id,
-        payload: {
-          title: input.title,
-          description: input.description,
-          summary: input.summary,
-          url: input.url,
-        },
-      });
-    } else {
-      throw new Error(`Eval not implemented for agent: ${agentName}`);
-    }
-
-    // Evaluate against expected
-    const checks = [];
-    let passed = true;
-
-    // Check min_score
-    if (expected.min_score !== undefined) {
-      const scoreOk = result.relevance_score >= expected.min_score;
-      checks.push({
-        check: 'min_score',
-        expected: `>= ${expected.min_score}`,
-        actual: result.relevance_score,
-        passed: scoreOk,
-      });
-      if (!scoreOk) passed = false;
-    }
-
-    // Check max_score
-    if (expected.max_score !== undefined) {
-      const scoreOk = result.relevance_score <= expected.max_score;
-      checks.push({
-        check: 'max_score',
-        expected: `<= ${expected.max_score}`,
-        actual: result.relevance_score,
-        passed: scoreOk,
-      });
-      if (!scoreOk) passed = false;
-    }
-
-    // Check must_queue
-    if (expected.must_queue !== undefined) {
-      const queueOk = result.should_queue === expected.must_queue;
-      checks.push({
-        check: 'must_queue',
-        expected: expected.must_queue,
-        actual: result.should_queue,
-        passed: queueOk,
-      });
-      if (!queueOk) passed = false;
-    }
-
-    // Check primary_audience (if expected is not null)
-    if (expected.primary_audience !== undefined && expected.primary_audience !== null) {
-      const audienceOk = result.primary_audience === expected.primary_audience;
-      checks.push({
-        check: 'primary_audience',
-        expected: expected.primary_audience,
-        actual: result.primary_audience,
-        passed: audienceOk,
-      });
-      // Audience mismatch is a warning, not a failure
-      if (!audienceOk && verbose) {
-        log(
-          `    ⚠️ Audience mismatch: expected ${expected.primary_audience}, got ${result.primary_audience}`,
-          'yellow',
-        );
-      }
-    }
-
-    // Check relevant (for screener agent)
-    if (expected.relevant !== undefined) {
-      const relevantOk = result.relevant === expected.relevant;
-      checks.push({
-        check: 'relevant',
-        expected: expected.relevant,
-        actual: result.relevant,
-        passed: relevantOk,
-      });
-      if (!relevantOk) passed = false;
-    }
-
-    // Check min_confidence (for screener agent)
-    if (expected.min_confidence !== undefined) {
-      const confidenceOk = (result.confidence || 0) >= expected.min_confidence;
-      checks.push({
-        check: 'min_confidence',
-        expected: `>= ${expected.min_confidence}`,
-        actual: result.confidence,
-        passed: confidenceOk,
-      });
-      if (!confidenceOk) passed = false;
-    }
-
-    if (verbose) {
-      const icon = passed ? '✓' : '✗';
-      const color = passed ? 'green' : 'red';
-      // Format output based on agent type
-      if (result.relevant !== undefined) {
-        // screener format
-        log(`    ${icon} Relevant: ${result.relevant}, Confidence: ${result.confidence}`, color);
-      } else {
-        // scorer format
-        log(`    ${icon} Score: ${result.relevance_score}, Queue: ${result.should_queue}`, color);
-      }
-    }
+    logExampleResult(verbose, passed, result);
 
     return {
       id,
@@ -235,12 +324,12 @@ async function evaluateExample(agent, agentName, example, options) {
     };
   } catch (err) {
     if (verbose) {
-      log(`    ✗ Error: ${err.message}`, 'red');
+      log(`    ✗ Error: ${evalErrorMessage(err)}`, 'red');
     }
     return {
       id,
       status: 'error',
-      error: err.message,
+      error: evalErrorMessage(err),
     };
   }
 }
@@ -249,9 +338,7 @@ async function evaluateExample(agent, agentName, example, options) {
 async function runEval(agentName, options = {}) {
   const { verbose = false, dryRun = false } = options;
 
-  log(`\n${'='.repeat(60)}`, 'blue');
-  log(`  EVAL: ${agentName}`, 'bold');
-  log(`${'='.repeat(60)}`, 'blue');
+  logRunHeader(agentName);
 
   // Load agent and dataset
   const agent = await loadAgent(agentName);
@@ -270,66 +357,17 @@ async function runEval(agentName, options = {}) {
   }
 
   // Summary
-  const passed = results.filter((r) => r.status === 'passed').length;
-  const failed = results.filter((r) => r.status === 'failed').length;
-  const errors = results.filter((r) => r.status === 'error').length;
-  const skipped = results.filter((r) => r.status === 'skipped').length;
+  const summary = summarizeResults(results);
 
   // Save eval run to Supabase (unless dry-run)
   if (!dryRun) {
-    const total = passed + failed + errors;
-    const score = total > 0 ? passed / total : 0;
-
-    const { error: runError } = await supabase.from('eval_run').insert({
-      agent_name: agentName,
-      prompt_version: 'current',
-      eval_type: 'golden',
-      status: failed > 0 || errors > 0 ? 'failed' : 'success',
-      total_examples: total,
-      passed,
-      failed: failed + errors,
-      score,
-      results: results,
-      finished_at: new Date().toISOString(),
-    });
-
-    if (runError) {
-      log(`  ⚠️ Failed to save eval run: ${runError.message}`, 'yellow');
-    } else {
-      log('  📊 Eval run saved to Supabase', 'dim');
-    }
+    await saveEvalRunToSupabase(agentName, results, summary);
   }
 
-  log(`\n${'─'.repeat(60)}`, 'dim');
-  log('  SUMMARY', 'bold');
-  log(`${'─'.repeat(60)}`, 'dim');
-
-  log(`  ✓ Passed:  ${passed}`, passed > 0 ? 'green' : 'dim');
-  log(`  ✗ Failed:  ${failed}`, failed > 0 ? 'red' : 'dim');
-  log(`  ⚠ Errors:  ${errors}`, errors > 0 ? 'yellow' : 'dim');
-  if (skipped > 0) {
-    log(`  ○ Skipped: ${skipped}`, 'dim');
-  }
-
-  const total = passed + failed + errors;
-  const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
-  log(`\n  Pass Rate: ${passRate}%`, passRate >= 80 ? 'green' : passRate >= 50 ? 'yellow' : 'red');
-
-  // Show failures
-  if (failed > 0 && verbose) {
-    log('\n  FAILURES:', 'red');
-    for (const r of results.filter((r) => r.status === 'failed')) {
-      log(`    - ${r.id}`, 'red');
-      for (const check of r.checks.filter((c) => !c.passed)) {
-        log(`      ${check.check}: expected ${check.expected}, got ${check.actual}`, 'dim');
-      }
-    }
-  }
-
-  log('\n');
+  logRunSummary(results, summary, verbose);
 
   // Return exit code based on results
-  return failed > 0 || errors > 0 ? 1 : 0;
+  return summary.failed > 0 || summary.errors > 0 ? 1 : 0;
 }
 
 // CLI entry point

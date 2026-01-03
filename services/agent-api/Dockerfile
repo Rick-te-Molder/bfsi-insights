@@ -15,17 +15,16 @@ RUN apt-get update && apt-get install -y \
 
 RUN pip3 install --break-system-packages pdf2image Pillow
 
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies (skip postinstall since browsers are pre-installed)
-RUN npm ci --ignore-scripts
+# Install Node dependencies from the monorepo root (single lockfile)
+COPY package.json package-lock.json ./
+COPY services/agent-api/package.json ./services/agent-api/package.json
+RUN npm ci -w services/agent-api --ignore-scripts
 
 # Copy source code
-COPY . .
+COPY services/agent-api ./services/agent-api
 
 # Expose port
 EXPOSE 10000
 
 # Start the server
-CMD ["npm", "start"]
+CMD ["npm", "-w", "services/agent-api", "start"]

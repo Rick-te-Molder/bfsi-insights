@@ -56,6 +56,15 @@ export default [
   },
   // Ignore generated/build output, types, and archived scripts
   {
-    ignores: ['dist/**', 'node_modules/**', '.astro/**', '**/*.d.ts', 'scripts/_archive/**'],
+    ignores: [
+      'dist/**',
+      'coverage/**',
+      'test-results/**',
+      'reports/**',
+      'node_modules/**',
+      '.astro/**',
+      '**/*.d.ts',
+      'scripts/_archive/**',
+    ],
   },
 ];
