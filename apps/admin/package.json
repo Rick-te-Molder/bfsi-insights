@@ -1,10 +1,10 @@
 {
-  "name": "admin-next",
+  "name": "admin",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "cd ../packages/types && npm run build",
+    "prebuild": "cd ../../packages/types && npm run build",
     "build": "next build",
     "start": "next start",
     "lint": "eslint \"src/**/*.{ts,tsx}\""

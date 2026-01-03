@@ -13,8 +13,8 @@ This repository is a monorepo containing:
 
 | Surface         | Location              | Runtime | Primary commands                  |
 | --------------- | --------------------- | ------- | --------------------------------- |
-| Public website  | `site/`               | Astro   | `npm run dev`, `npm run build`    |
-| Admin dashboard | `admin-next/`         | Next.js | `npm run dev -w admin-next`       |
+| Public website  | `apps/web/`           | Astro   | `npm run dev`, `npm run build`    |
+| Admin dashboard | `apps/admin/`         | Next.js | `npm run dev -w admin`            |
 | Agent API       | `services/agent-api/` | Node.js | `npm start -w services/agent-api` |
 
 ## Where "truth" lives
@@ -54,7 +54,7 @@ npm run dev
 
 ```bash
 npm install
-npm run dev -w admin-next
+npm run dev -w admin
 ```
 
 ### Agent API

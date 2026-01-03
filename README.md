@@ -159,7 +159,7 @@ See [`docs/data-model/schema.md`](docs/data-model/schema.md) for full ER diagram
 
 ## 5. Admin UI
 
-The admin UI (`admin-next/`) is a Next.js 15 app:
+The admin UI (`apps/admin/`) is a Next.js 15 app:
 
 - **Dashboard** — Pipeline stats, agent controls (run batches, pause discovery)
 - **Review Queue** — Master-detail with keyboard shortcuts (↑↓ navigate, a/r/e actions)
@@ -193,7 +193,7 @@ The admin UI (`admin-next/`) is a Next.js 15 app:
 npm install && npm run dev
 
 # Admin UI
-cd admin-next && npm install && npm run dev
+npm run dev -w admin
 
 # Agent API
 npm install

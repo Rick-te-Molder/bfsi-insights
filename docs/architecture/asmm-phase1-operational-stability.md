@@ -365,7 +365,7 @@ Track these metrics to measure Phase 1 maturity:
 - State Machine: `services/agent-api/src/lib/state-machine.js`
 - Pipeline Tracking: `services/agent-api/src/lib/pipeline-tracking.js`
 - Event Log: `kb_pipeline_run`, `kb_pipeline_step_run` tables
-- Admin UI: `admin-next/src/app/(dashboard)/items/[id]/page.tsx`
+- Admin UI: `apps/admin/src/app/(dashboard)/items/[id]/page.tsx`
 
 ---
 

@@ -29,7 +29,7 @@ Improve repository structure for safety, clarity, and maintainability without un
 
 ### 3. Duplicate workspace lockfiles
 
-**Problem**: `admin-next/package-lock.json` exists alongside root lockfile.
+**Problem**: `apps/admin/package-lock.json` exists alongside root lockfile.
 
 **Risk**: Defeats npm workspaces semantics; causes version drift and slower CI.
 
@@ -148,7 +148,7 @@ Improve repository structure for safety, clarity, and maintainability without un
 
 #### Changes
 
-1. Delete `admin-next/package-lock.json`
+1. Delete `apps/admin/package-lock.json`
 
 2. Add CI check in `ci.yml` and `ci-main.yml`:
 
@@ -173,7 +173,7 @@ Improve repository structure for safety, clarity, and maintainability without un
 
 #### Changes
 
-1. Rename `src/` → `site/`
+1. Move `site/` → `apps/web/`
    - Update `astro.config.mjs` paths
    - Update any import references
    - Update root `README.md` project structure
@@ -187,8 +187,8 @@ Improve repository structure for safety, clarity, and maintainability without un
 
    | Surface         | Location              | Runtime            | Start command                     |
    | --------------- | --------------------- | ------------------ | --------------------------------- |
-   | Public website  | `site/`               | Astro (Cloudflare) | `npm run dev`                     |
-   | Admin dashboard | `admin-next/`         | Next.js (Vercel)   | `npm run dev -w admin-next`       |
+   | Public website  | `apps/web/`           | Astro (Cloudflare) | `npm run dev`                     |
+   | Admin dashboard | `apps/admin/`         | Next.js (Vercel)   | `npm run dev -w admin`            |
    | Agent API       | `services/agent-api/` | Node.js (Render)   | `npm start -w services/agent-api` |
 
    ## Shared code
@@ -256,5 +256,5 @@ Improve repository structure for safety, clarity, and maintainability without un
 - [ ] `scripts/run-sql.mjs` prevents accidental prod execution
 - [ ] `scripts/README.md` documents safety levels
 - [ ] CI fails if `package-lock.json` found outside root
-- [ ] `src/` renamed to `site/`
+- [ ] `site/` moved to `apps/web/`
 - [ ] `docs/repo-map.md` exists as reference architecture landing page

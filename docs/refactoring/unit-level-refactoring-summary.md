@@ -23,7 +23,7 @@
 
 #### 1. Sidebar Component ✅
 
-**File:** `admin-next/src/components/ui/sidebar.tsx`  
+**File:** `apps/admin/src/components/ui/sidebar.tsx`  
 **Reduction:** 361 → 118 lines (67%)  
 **Commit:** 17e7e4d
 
@@ -42,7 +42,7 @@
 
 #### 2. AgentDetailPage ✅
 
-**File:** `admin-next/src/app/(dashboard)/agents/[agent]/page.tsx`  
+**File:** `apps/admin/src/app/(dashboard)/agents/[agent]/page.tsx`  
 **Reduction:** 356 → 91 lines (74%)  
 **Commit:** 575a4f3
 
@@ -58,7 +58,7 @@
 
 #### 3. ItemCard ✅
 
-**File:** `admin-next/src/app/(dashboard)/items/card-view.tsx`  
+**File:** `apps/admin/src/app/(dashboard)/items/card-view.tsx`  
 **Reduction:** 347 → 119 lines (66%)  
 **Commit:** e2d116a
 
@@ -74,7 +74,7 @@
 
 #### 4. AddArticlePage ✅
 
-**File:** `admin-next/src/app/(dashboard)/add/page.tsx`  
+**File:** `apps/admin/src/app/(dashboard)/add/page.tsx`  
 **Reduction:** 340 → 217 lines (36%)  
 **Commit:** adee89d
 
@@ -87,7 +87,7 @@
 
 #### 5. HeadToHeadContent ✅
 
-**File:** `admin-next/src/app/(dashboard)/evals/head-to-head/page.tsx`  
+**File:** `apps/admin/src/app/(dashboard)/evals/head-to-head/page.tsx`  
 **Reduction:** 339 → 238 lines (30%)  
 **Commit:** d180374
 
@@ -105,11 +105,11 @@
 
 | #   | Unit                   | Lines | File                                                              | Complexity |
 | --- | ---------------------- | ----- | ----------------------------------------------------------------- | ---------- |
-| 6   | DetailPanel            | 349   | `admin-next/src/app/(dashboard)/items/detail-panel.tsx`           | Medium     |
-| 7   | initPublicationFilters | 685   | `site/features/publications/publication-filters.ts`               | High       |
-| 8   | ReviewActions          | 301   | `admin-next/src/app/(dashboard)/items/[id]/actions.tsx`           | Medium     |
-| 9   | ReviewList             | 309   | `admin-next/src/app/(dashboard)/items/review-list.tsx`            | Medium     |
-| 10  | MissedForm             | 366   | `admin-next/src/app/(dashboard)/missed/components/MissedForm.tsx` | Medium\*   |
+| 6   | DetailPanel            | 349   | `apps/admin/src/app/(dashboard)/items/detail-panel.tsx`           | Medium     |
+| 7   | initPublicationFilters | 685   | `apps/web/features/publications/publication-filters.ts`           | High       |
+| 8   | ReviewActions          | 301   | `apps/admin/src/app/(dashboard)/items/[id]/actions.tsx`           | Medium     |
+| 9   | ReviewList             | 309   | `apps/admin/src/app/(dashboard)/items/review-list.tsx`            | Medium     |
+| 10  | MissedForm             | 366   | `apps/admin/src/app/(dashboard)/missed/components/MissedForm.tsx` | Medium\*   |
 
 \*Note: MissedForm only exists on `refactor/kb-151-reduce-large-files` branch
 

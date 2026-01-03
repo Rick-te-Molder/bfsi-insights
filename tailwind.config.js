@@ -1,7 +1,7 @@
 import typography from '@tailwindcss/typography';
 
 export default {
-  content: ['./site/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}'],
+  content: ['./apps/web/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}'],
   darkMode: 'class',
   theme: {
     extend: {

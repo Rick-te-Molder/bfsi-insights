@@ -41,7 +41,7 @@ These rules exist because bugs, incidents, and CI failures happened.
 ## Linting (KB-204)
 
 ### Strict Policy: Zero Errors AND Zero Warnings
-- Run `npm run lint` in `admin-next` before every commit.
+- Run `npm run lint -w admin` before every commit.
 - Must pass with 0 errors AND 0 warnings.
 
 ### Exception Process
@@ -83,7 +83,7 @@ Fast CI is the gate for merging.
 It must be quick and deterministic.
 
 Fast CI should include:
-- Lint (admin-next, and any other lint jobs you maintain)
+- Lint (admin, and any other lint jobs you maintain)
 - Unit tests + coverage (especially `services/agent-api`)
 - Build checks (e.g., Next/Astro build)
 - Typecheck (if separate)
@@ -117,12 +117,12 @@ Slow CI can include:
 
 ### Before every commit
 1. Confirm you are on a feature branch (not `main`).
-2. Run `npm run lint` in `admin-next` (0 errors, 0 warnings).
+2. Run `npm run lint -w admin` (0 errors, 0 warnings).
 
 ### For agent-api test/coverage work
 Run and paste relevant excerpts from:
 - `npm run test:coverage -w services/agent-api`
-- plus a targeted grep/coverage proof for the touched files (example: `grep -E "^\s*replay\.js\s+\|"`)
+- plus a targeted `grep/coverage` proof for the touched files (example: `grep -E "^\s*replay\.js\s+\|"`)
 
 ---
 
@@ -144,79 +144,106 @@ Run and paste relevant excerpts from:
 - Use `throw new Error('CRITICAL: ...')` pattern from KB-206.
 
 ### Prompt Version Migrations (KB-258)
+
 - Always INSERT new rows for prompt versions, never UPDATE existing rows.
 - Pattern:
-  ```sql
-  UPDATE prompt_version SET is_current = false
-  WHERE agent_name = 'X' AND is_current = true;
 
-  INSERT INTO prompt_version (agent_name, version, prompt_text, is_current, notes)
-  VALUES (...);
+```sql
+UPDATE prompt_version
+SET is_current = false
+WHERE agent_name = 'X' AND is_current = true;
 
+INSERT INTO prompt_version (
+  agent_name,
+  version,
+  prompt_text,
+  is_current,
+  notes
+)
+VALUES (
+  'X',
+  'vYYYYMMDD-01',
+  '... full prompt text ...',
+  true,
+  'What changed and why'
+);
 
-⸻
+---
 
-Taxonomy & Tags (KB-219)
+### Taxonomy & Tags (KB-219)
 
 Use taxonomy_config for dynamic tag insertion
-	•	Never hardcode tag types in approve handlers.
-	•	Always query taxonomy_config for junction mappings.
-	•	Pattern:
+- Never hardcode tag types in approve handlers.
+- Always query taxonomy_config for junction mappings.
+- Pattern:
+### Taxonomy & Tags (KB-219)
 
-const { data: configs } = await supabase
+Use `taxonomy_config` for dynamic tag insertion
+
+- Never hardcode tag types in approve handlers.
+- Always query `taxonomy_config` for junction mappings.
+- Pattern:
+
+```ts
+const { data: configs, error } = await supabase
   .from('taxonomy_config')
   .select('payload_field, junction_table, junction_code_column')
   .eq('is_active', true)
   .not('junction_table', 'is', null);
 
-for (const config of configs) {
+if (error) throw error;
+
+for (const config of configs ?? []) {
   const codes = payload[config.payload_field];
+
   if (codes?.length) {
-    await supabase.from(config.junction_table).insert(...);
+    await supabase.from(config.junction_table).insert(
+      codes.map(code => ({
+        publication_id: pubId,
+        [config.junction_code_column]: code,
+      }))
+    );
   }
 }
+```
 
+---
 
+## Code Quality (KB-151)
 
-⸻
+### Boy Scout Rule
+- All touched files must meet Quality Guidelines (no exceptions).
+- Files must be < 300 lines.
+- Functions must be < 30 lines (should be < 15).
+- Pre-commit hook enforces this: `scripts/ci/check-large-files.cjs`
+- Known violations are tracked in ALLOW_LIST inside that script.
 
-Code Quality (KB-151)
+---
 
-Boy Scout Rule
-	•	All touched files must meet Quality Guidelines (no exceptions).
-	•	Files must be < 300 lines.
-	•	Functions must be < 30 lines (should be < 15).
-	•	Pre-commit hook enforces this: scripts/ci/check-large-files.cjs
-	•	Known violations are tracked in ALLOW_LIST inside that script.
+### Hard rules for all changes (no exceptions)
 
-⸻
+1. No claims without evidence
+- Do not say “fixed”, “works”, “tests pass”, “coverage improved”, “CI is green”, etc. unless you include quoted evidence from command output or CI logs.
+- If you cannot produce evidence, state exactly what is unverified.
 
-Hard rules for all changes (no exceptions)
-	1.	No claims without evidence
+2. Small diffs only
+- One concern per change/commit/PR.
+- Split multiple concerns into separate PRs.
 
-	•	Do not say “fixed”, “works”, “tests pass”, “coverage improved”, “CI is green”, etc.
-unless you include quoted evidence from command output or CI logs.
-	•	If you cannot produce evidence, state exactly what is unverified.
+3. Verify locally before responding
+For `test/coverage` work in `services/agent-api`, run and paste relevant excerpts:
+- `npm run test:coverage -w services/agent-api` 
+- plus a targeted `grep` proof for touched files.
+For CI workflow edits, paste the literal unified diff of the workflow change.
 
-	2.	Small diffs only
+---
 
-	•	One concern per change/commit/PR.
-	•	Split multiple concerns into separate PRs.
+### Required response format for “done” messages
+- Evidence:
+  <paste command output / CI log lines>
+- Diff summary:
+  <files changed + why>
+- Remaining risks / unverified:
+  <explicit list, or “none”>
 
-	3.	Verify locally before responding
-
-	•	For test/coverage work in services/agent-api, run and paste relevant excerpts:
-	•	npm run test:coverage -w services/agent-api
-	•	and a targeted grep proof for touched files.
-	•	For CI workflow edits, paste the literal unified diff of the workflow change.
-
-⸻
-
-Required response format for “done” messages
-	•	Evidence:
-	•	<paste command output / CI log lines>
-	•	Diff summary:
-	•	<files changed + why>
-	•	Remaining risks / unverified:
-	•	<explicit list, or “none”>
-
+---
