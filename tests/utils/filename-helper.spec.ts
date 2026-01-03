@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toAscii, slug, lastName, kbFileName } from '../../scripts/utilities/filename-helper.mjs';
+import { toAscii, slug, lastName, kbFileName } from '../../scripts/lib/filename-helper.mjs';
 
 describe('toAscii', () => {
   it('removes diacritics', () => {

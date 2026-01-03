@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { fmt, withLabel } from '../../src/lib/fmt';
+import { fmt, withLabel } from '../../site/lib/fmt';
 
 describe('fmt', () => {
   it('formats ISO date to en-GB format', () => {

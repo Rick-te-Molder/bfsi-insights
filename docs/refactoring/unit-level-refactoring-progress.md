@@ -77,9 +77,9 @@ Refactoring the 10 largest functions in the codebase to comply with Quality Guid
 - **File:** `admin-next/src/app/(dashboard)/items/detail-panel.tsx`
 - **Planned Extraction:** Panel sections, action handlers, display components
 
-### 7. initPublicationFilters (317 lines)
+### 7. initPublicationFilters (317 lines) - IN PROGRESS
 
-- **File:** `src/features/publications/publication-filters.ts`
+- **File:** `site/features/publications/publication-filters.ts`
 - **Planned Extraction:** Filter initialization, event handlers, UI updates
 
 ### 8. ReviewActions (284 lines)

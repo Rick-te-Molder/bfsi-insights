@@ -13,15 +13,26 @@ import { Buffer } from 'node:buffer';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-// Path from services/agent-api/src/lib/ to scripts/utilities/
+// Path from services/agent-api/src/lib/ to scripts/lib/
 // Go up 4 levels: src/lib -> src -> agent-api -> services -> project-root
-const PDF_EXTRACTOR_PATH = join(__dirname, '../../../../scripts/utilities/extract-pdf.py');
+const PDF_EXTRACTOR_PATH = join(__dirname, '../../../../scripts/lib/extract-pdf.py');
 
-// Supabase client for storage
-const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-);
+/** @type {ReturnType<typeof createClient> | null} */
+let supabase = null;
+
+function getSupabase() {
+  if (supabase) return supabase;
+
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase environment variables');
+  }
+
+  supabase = createClient(supabaseUrl, supabaseKey);
+  return supabase;
+}
 
 const FETCH_HEADERS = {
   'User-Agent':
@@ -30,6 +41,11 @@ const FETCH_HEADERS = {
     'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
   'Accept-Language': 'en-US,en;q=0.9',
 };
+
+/** @param {unknown} error */
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
+}
 
 /**
  * Check if URL points to a PDF file
@@ -40,6 +56,7 @@ export { isPdfUrl } from './url-utils.js';
 /**
  * Download PDF and return as Buffer
  */
+/** @param {string} url */
 async function downloadPdf(url) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 60000);
@@ -66,6 +83,7 @@ async function downloadPdf(url) {
 /**
  * Store PDF in Supabase Storage
  */
+/** @param {Buffer} pdfBuffer */
 async function storePdf(pdfBuffer) {
   try {
     // Generate storage path: pdfs/YYYY/MM/hash.pdf
@@ -76,10 +94,12 @@ async function storePdf(pdfBuffer) {
     const storagePath = `pdfs/${year}/${month}/${hash}.pdf`;
 
     // Upload to Supabase Storage
-    const { error } = await supabase.storage.from('raw-content').upload(storagePath, pdfBuffer, {
-      contentType: 'application/pdf',
-      upsert: true,
-    });
+    const { error } = await getSupabase()
+      .storage.from('raw-content')
+      .upload(storagePath, pdfBuffer, {
+        contentType: 'application/pdf',
+        upsert: true,
+      });
 
     if (error) {
       console.log(`   ⚠️ Failed to store PDF: ${error.message}`);
@@ -89,7 +109,8 @@ async function storePdf(pdfBuffer) {
     console.log(`   ✅ Stored PDF at ${storagePath}`);
     return storagePath;
   } catch (error) {
-    console.log(`   ⚠️ Failed to store PDF: ${error.message}`);
+    const message = error instanceof Error ? error.message : String(error);
+    console.log(`   ⚠️ Failed to store PDF: ${message}`);
     return null;
   }
 }
@@ -97,55 +118,99 @@ async function storePdf(pdfBuffer) {
 /**
  * Extract text from PDF using Python script
  */
+/** @param {string} url */
 async function extractPdfText(url) {
+  return await runPdfExtractor(url);
+}
+
+function getPythonPath() {
+  return process.env.PYTHON_PATH || '/usr/bin/python3';
+}
+
+/** @param {string} url */
+function spawnPdfExtractor(url) {
+  const pythonPath = getPythonPath();
+  console.log(`   🐍 Python path: ${pythonPath}`);
+  console.log(`   📄 Script path: ${PDF_EXTRACTOR_PATH}`);
+  return spawn(pythonPath, [PDF_EXTRACTOR_PATH, url]);
+}
+
+/** @param {string} stdout */
+function parsePdfExtractorStdout(stdout) {
+  const result = JSON.parse(stdout);
+  if (!result.success) {
+    throw new Error(result.message || 'PDF extraction failed');
+  }
+  return result;
+}
+
+/** @param {string} url */
+function runPdfExtractor(url) {
   return new Promise((resolve, reject) => {
-    // Use absolute path to python3 to avoid PATH security issues
-    const pythonPath = process.env.PYTHON_PATH || '/usr/bin/python3';
-    console.log(`   🐍 Python path: ${pythonPath}`);
-    console.log(`   📄 Script path: ${PDF_EXTRACTOR_PATH}`);
-    const python = spawn(pythonPath, [PDF_EXTRACTOR_PATH, url]);
-    let stdout = '';
-    let stderr = '';
+    const python = spawnPdfExtractor(url);
+    const state = { stdout: '', stderr: '' };
 
-    python.stdout.on('data', (data) => {
-      stdout += data.toString();
-    });
+    wirePdfExtractorStreams(python, state);
+    wirePdfExtractorError(python, reject);
+    wirePdfExtractorClose(python, state, resolve, reject);
+  });
+}
 
-    python.stderr.on('data', (data) => {
-      stderr += data.toString();
-    });
+/** @param {any} python @param {{ stdout: string, stderr: string }} state */
+function wirePdfExtractorStreams(python, state) {
+  python.stdout.on(
+    'data',
+    /** @param {any} data */ (data) => {
+      state.stdout += data.toString();
+    },
+  );
 
-    python.on('close', (code) => {
+  python.stderr.on(
+    'data',
+    /** @param {any} data */ (data) => {
+      state.stderr += data.toString();
+    },
+  );
+}
+
+/** @param {any} python @param {(err: Error) => void} reject */
+function wirePdfExtractorError(python, reject) {
+  python.on(
+    'error',
+    /** @param {any} err */ (err) => {
+      reject(new Error(`Failed to spawn Python process: ${err.message}`));
+    },
+  );
+}
+
+/** @param {any} python @param {{ stdout: string, stderr: string }} state @param {(value: any) => void} resolve @param {(err: Error) => void} reject */
+function wirePdfExtractorClose(python, state, resolve, reject) {
+  python.on(
+    'close',
+    /** @param {any} code */ (code) => {
       if (code !== 0) {
-        reject(new Error(`PDF extraction failed: ${stderr}`));
+        reject(new Error(`PDF extraction failed: ${state.stderr}`));
         return;
       }
 
       try {
-        const result = JSON.parse(stdout);
-        if (!result.success) {
-          reject(new Error(result.message || 'PDF extraction failed'));
-          return;
-        }
-        resolve(result);
+        resolve(parsePdfExtractorStdout(state.stdout));
       } catch (e) {
-        reject(new Error(`Failed to parse PDF extraction result: ${e.message}`));
+        reject(new Error(`Failed to parse PDF extraction result: ${errorMessage(e)}`));
       }
-    });
-
-    python.on('error', (err) => {
-      reject(new Error(`Failed to spawn Python process: ${err.message}`));
-    });
-  });
+    },
+  );
 }
 
 /**
  * Extract title from URL as fallback
  */
+/** @param {string} url */
 function extractTitleFromUrl(url) {
   try {
     const u = new URL(url);
-    const lastSegment = u.pathname.split('/').findLast(Boolean) || '';
+    const parts = u.pathname.split('/').filter(Boolean);
+    const lastSegment = parts.length ? parts[parts.length - 1] : '';
     return lastSegment
       .replaceAll('-', ' ')
       .replaceAll('_', ' ')
@@ -159,36 +224,46 @@ function extractTitleFromUrl(url) {
  * Fetch PDF content and extract text
  * Returns parsed content with title, description, date, textContent
  */
+/** @param {string} url */
 export async function fetchPdfContent(url) {
   console.log('   📄 Detected PDF, downloading and extracting text...');
 
   try {
-    // Download PDF
     const pdfBuffer = await downloadPdf(url);
-
-    // Store PDF in Supabase Storage
     const storagePath = await storePdf(pdfBuffer);
-
-    // Extract text from PDF
     const pdfResult = await extractPdfText(url);
-
-    // Extract title from PDF metadata or URL
-    const title = pdfResult.metadata?.title || extractTitleFromUrl(url);
-
-    return {
-      title,
-      description: pdfResult.text.substring(0, 500), // First 500 chars as description
-      date: pdfResult.metadata?.creationDate || null,
-      textContent: pdfResult.text,
-      isPdf: true,
-      raw_ref: storagePath, // Storage path for raw PDF
-      pdfMetadata: {
-        pages: pdfResult.pages,
-        charCount: pdfResult.char_count,
-      },
-    };
+    return buildPdfContentResponse({ url, pdfResult, storagePath });
   } catch (error) {
-    console.log(`   ⚠️ PDF extraction failed: ${error.message}`);
-    throw new Error(`Failed to extract PDF content: ${error.message}`);
+    const message = errorMessage(error);
+    console.log(`   ⚠️ PDF extraction failed: ${message}`);
+    throw new Error(`Failed to extract PDF content: ${message}`);
   }
+}
+
+/** @param {string} url @param {any} pdfResult */
+function getPdfTitle(url, pdfResult) {
+  return pdfResult.metadata?.title || extractTitleFromUrl(url);
+}
+
+/** @param {any} pdfResult */
+function buildPdfMetadata(pdfResult) {
+  return {
+    pages: pdfResult.pages,
+    charCount: pdfResult.char_count,
+  };
+}
+
+/** @param {{ url: string, pdfResult: any, storagePath: string | null }} opts */
+function buildPdfContentResponse({ url, pdfResult, storagePath }) {
+  const title = getPdfTitle(url, pdfResult);
+
+  return {
+    title,
+    description: pdfResult.text.substring(0, 500),
+    date: pdfResult.metadata?.creationDate || null,
+    textContent: pdfResult.text,
+    isPdf: true,
+    raw_ref: storagePath,
+    pdfMetadata: buildPdfMetadata(pdfResult),
+  };
 }

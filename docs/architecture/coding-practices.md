@@ -85,7 +85,7 @@ All code that passes through your hands must meet Quality Guidelines.
 
 ### Enforcement
 
-The pre-commit hook (`scripts/check-large-files.cjs`) checks ALL staged files:
+The pre-commit hook (`scripts/ci/check-large-files.cjs`) checks ALL staged files:
 
 - ✅ **Blocks commits** if any staged file violates guidelines
 - 🧹 **Boy Scout Rule**: If you touch a file, you must clean it
@@ -96,7 +96,7 @@ The pre-commit hook (`scripts/check-large-files.cjs`) checks ALL staged files:
 
 - **31 files** > 300 lines
 - **~117 files** with functions > 30 lines
-- See `ALLOW_LIST` in `scripts/check-large-files.cjs` for tracking
+- See `ALLOW_LIST` in `scripts/ci/check-large-files.cjs` for tracking
 
 These files WILL block commits when modified - refactor them when you touch them.
 

@@ -4,8 +4,8 @@
  * KB-207: Validates that all required prompts from manifest exist in prompt_version
  *
  * Usage:
- *   node scripts/check-prompt-coverage.js
- *   node scripts/check-prompt-coverage.js --ci  # Exit with error code on failure
+ *   node scripts/ci/check-prompt-coverage.js
+ *   node scripts/ci/check-prompt-coverage.js --ci  # Exit with error code on failure
  *
  * Requires:
  *   - SUPABASE_URL or PUBLIC_SUPABASE_URL

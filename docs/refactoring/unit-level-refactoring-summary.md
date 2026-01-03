@@ -106,7 +106,7 @@
 | #   | Unit                   | Lines | File                                                              | Complexity |
 | --- | ---------------------- | ----- | ----------------------------------------------------------------- | ---------- |
 | 6   | DetailPanel            | 349   | `admin-next/src/app/(dashboard)/items/detail-panel.tsx`           | Medium     |
-| 7   | initPublicationFilters | 685   | `src/features/publications/publication-filters.ts`                | High       |
+| 7   | initPublicationFilters | 685   | `site/features/publications/publication-filters.ts`               | High       |
 | 8   | ReviewActions          | 301   | `admin-next/src/app/(dashboard)/items/[id]/actions.tsx`           | Medium     |
 | 9   | ReviewList             | 309   | `admin-next/src/app/(dashboard)/items/review-list.tsx`            | Medium     |
 | 10  | MissedForm             | 366   | `admin-next/src/app/(dashboard)/missed/components/MissedForm.tsx` | Medium\*   |
@@ -217,7 +217,7 @@ All files now < 500 lines. Will be merged separately.
 
 ### Quality Gate Checker
 
-**File:** `scripts/check-large-files.cjs`
+**File:** `scripts/ci/check-large-files.cjs`
 
 New features:
 

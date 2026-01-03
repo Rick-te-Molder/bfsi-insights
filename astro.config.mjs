@@ -22,6 +22,7 @@ function emitHeadersFile() {
 
 export default defineConfig({
   site: 'https://www.bfsiinsights.com',
+  srcDir: './site',
   output: 'static', // Static by default
   // No adapter needed for pure static
   integrations: [tailwind()],

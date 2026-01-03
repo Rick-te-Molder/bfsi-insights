@@ -9,7 +9,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       reportsDirectory: './coverage',
-      include: ['src/**/*.ts', 'services/agent-api/src/**/*.js'],
+      include: ['site/**/*.ts', 'services/agent-api/src/**/*.js'],
       exclude: [
         '**/node_modules/**',
         '**/dist/**',

@@ -3,7 +3,7 @@
  * Test RSS Feeds - Validates all RSS feeds in kb_source table
  *
  * Usage:
- *   node scripts/utilities/test-rss-feeds.mjs
+ *   node scripts/dev/test-rss-feeds.mjs
  */
 
 import { createClient } from '@supabase/supabase-js';

@@ -85,7 +85,7 @@ agents:
 
 #### 1.3 Add CI Prompt Coverage Check
 
-- [ ] Create script `scripts/check-prompt-coverage.js`
+- [ ] Create script `scripts/ci/check-prompt-coverage.js`
 - [ ] Reads manifest, queries DB (or uses seed files)
 - [ ] Fails CI if any declared prompt is missing
 - [ ] Add to GitHub Actions workflow
@@ -283,7 +283,7 @@ Based on analysis, **Braintrust free tier** is best fit:
 
 1. [ ] Create `docs/agents/manifest.yaml`
 2. [ ] Audit current `prompt_versions` table
-3. [ ] Create `scripts/check-prompt-coverage.js`
+3. [ ] Create `scripts/ci/check-prompt-coverage.js`
 4. [ ] Add to CI workflow
 5. [ ] Update `.windsurfrules` with new rules
 

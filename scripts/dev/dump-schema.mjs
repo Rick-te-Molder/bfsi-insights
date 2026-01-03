@@ -8,7 +8,7 @@
  * - Indexes
  * - Row counts for context
  *
- * Run: node scripts/utilities/dump-schema.mjs
+ * Run: node scripts/dev/dump-schema.mjs
  * Or:  npm run dump:schema
  */
 

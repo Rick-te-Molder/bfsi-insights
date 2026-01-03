@@ -8,7 +8,9 @@ Technical documentation for BFSI Insights using **Mermaid diagrams** (renders in
 | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | [Architecture](architecture/overview.md)                                            | System components, layers, security boundaries                           |
 | [Data Model](data-model/schema.md)                                                  | ER diagram, tables, taxonomies                                           |
+| [Repo Map](repo-map.md)                                                             | What runs where, where truth lives, how to start each surface            |
 | [CI: Node + ESM Standardization](development/plans/gha-node-esm-standardization.md) | GitHub Actions determinism plan (Node version, ESM-explicit, workspaces) |
+| [Repo Layout Improvements](development/plans/repo-layout-improvements.md)           | SQL hygiene, scripts reorg, monorepo enforcement, clarity                |
 
 ## Folder Structure
 

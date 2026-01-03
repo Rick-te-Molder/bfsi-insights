@@ -11,7 +11,7 @@
 const { execSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
-const { findUnits } = require('./lib/unit-detector.cjs');
+const { findUnits } = require('../lib/unit-detector.cjs');
 
 // 300/30 size limits per language
 const LANGUAGE_LIMITS = {
@@ -59,23 +59,23 @@ const PARAM_LIMITS = {
 const ALLOW_LIST = new Set([
   // Files > 300 lines (31 files) - must be refactored when touched
   'services/agent-api/src/agents/scorer.js',
-  'src/features/publications/publication-filters.ts',
+  'site/features/publications/publication-filters.ts',
   'admin-next/src/app/(dashboard)/items/page.tsx',
   'services/agent-api/src/routes/agents.js',
-  'src/features/publications/multi-select-filters.ts',
+  'site/features/publications/multi-select-filters.ts',
   'services/agent-api/src/agents/thumbnailer.js',
   'services/agent-api/src/routes/agent-jobs.js',
   'services/agent-api/src/agents/improver.js',
   'services/agent-api/src/lib/content-fetcher.js',
-  'src/features/publications/PublicationCard.astro',
+  'site/features/publications/PublicationCard.astro',
   'admin-next/src/app/(dashboard)/evals/golden-sets/page.tsx',
   'services/agent-api/src/agents/tagger.js',
   'admin-next/src/app/(dashboard)/missed/components/MissedForm.tsx',
   'services/agent-api/src/lib/evals.js',
   'admin-next/src/components/tags/TagDisplay.tsx',
-  'src/components/FilterPanel.astro',
+  'site/components/FilterPanel.astro',
   'services/agent-api/src/lib/sitemap.js',
-  'src/layouts/Base.astro',
+  'site/layouts/Base.astro',
   'services/agent-api/src/cli/commands/pipeline.js',
   'services/agent-api/src/agents/discoverer.js',
   'admin-next/src/app/(dashboard)/items/[id]/page.tsx',
@@ -84,7 +84,7 @@ const ALLOW_LIST = new Set([
   'admin-next/src/app/(dashboard)/items/actions.ts',
   'admin-next/src/app/(dashboard)/items/[id]/evaluation-panel.tsx',
   'services/agent-api/src/lib/semantic-scholar.js',
-  'src/features/publications/multi-filters/chips.ts',
+  'site/features/publications/multi-filters/chips.ts',
   'services/agent-api/src/agents/orchestrator.js',
   'admin-next/src/app/(dashboard)/items/review-list.tsx',
   'services/agent-api/src/agents/discover-classics.js',
@@ -94,7 +94,7 @@ const ALLOW_LIST = new Set([
 // Allowed file extensions and path prefixes
 const ALLOWED_EXT = new Set(['.ts', '.js', '.tsx', '.jsx', '.astro']);
 const ALLOWED_PREFIXES = [
-  'src/',
+  'site/',
   'admin-next/src/',
   'services/agent-api/', // includes src/ and __tests__/
 ];

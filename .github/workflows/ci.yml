@@ -10,6 +10,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lockfile-guardrail:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for non-root package-lock.json
+        run: |
+          set -euo pipefail
+          stray=$(find . -name 'package-lock.json' -not -path './package-lock.json' -not -path './node_modules/*')
+          if [ -n "$stray" ]; then
+            echo "ERROR: Found package-lock.json outside repo root:"
+            echo "$stray"
+            exit 1
+          fi
+
   module-sanity:
     runs-on: ubuntu-latest
 
@@ -29,7 +46,7 @@ jobs:
 
       - name: "Guardrail: workflow inline Node mode"
         continue-on-error: true
-        run: node scripts/utilities/check-workflow-node-inline-esm.mjs
+        run: node scripts/ci/check-workflow-node-inline-esm.mjs
 
       - name: Report Node version
         continue-on-error: true
@@ -57,7 +74,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Check for large files (>500 lines)
-        run: node scripts/check-large-files.cjs || echo "⚠️ Quality Gate violations found - see KB-151 for tracking"
+        run: node scripts/ci/check-large-files.cjs || echo "⚠️ Quality Gate violations found - see KB-151 for tracking"
         continue-on-error: true
 
   build:
