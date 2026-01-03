@@ -17,6 +17,11 @@ This repository is a monorepo containing:
 | Admin dashboard | `apps/admin/`         | Next.js | `npm run dev -w admin`            |
 | Agent API       | `services/agent-api/` | Node.js | `npm start -w services/agent-api` |
 
+Deployment roots:
+
+- Vercel: `apps/admin/`
+- Cloudflare Pages: `apps/web/`
+
 ## Where "truth" lives
 
 | Concern                 | Source of truth        |
