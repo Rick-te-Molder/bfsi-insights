@@ -17,6 +17,12 @@ This repository is a monorepo containing:
 | Admin dashboard | `apps/admin/`         | Next.js | `npm run dev -w admin`            |
 | Agent API       | `services/agent-api/` | Node.js | `npm start -w services/agent-api` |
 
+Test ownership:
+
+- Web unit tests: `apps/web/tests/`
+- Web E2E tests: `apps/web/e2e/`
+- Web public assets: `apps/web/public/`
+
 Deployment roots:
 
 - Vercel: `apps/admin/`
