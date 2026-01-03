@@ -12,7 +12,7 @@
     "dev": "node --watch src/index.js",
     "validate:prompts": "node src/scripts/validate-agent-registry.js",
     "lint": "eslint \"src/**/*.js\"",
-    "typecheck": "tsc --noEmit --allowJs --checkJs",
+    "typecheck": "tsc -p tsconfig.checkjs.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.0.16",
+    "typescript": "^5.7.3",
     "vitest": "^4.0.16"
   }
 }
