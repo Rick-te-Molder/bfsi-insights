@@ -25,26 +25,20 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install root dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Install agent-api dependencies
-        run: npm ci --legacy-peer-deps
-        working-directory: services/agent-api
+        run: npm ci
 
       - name: Debug module resolution (ESM)
-        working-directory: services/agent-api
         run: |
-          node -p "process.cwd()"
-          node --input-type=module -e "console.log(await import.meta.resolve('openai/package.json'))"
-          node --input-type=module -e "console.log(await import.meta.resolve('zod'))"
+          npm -w services/agent-api exec -- node -p "process.cwd()"
+          npm -w services/agent-api exec -- node --input-type=module -e "console.log(await import.meta.resolve('openai/package.json'))"
+          npm -w services/agent-api exec -- node --input-type=module -e "console.log(await import.meta.resolve('zod'))"
 
       - name: Run discovery (agent-api)
-        working-directory: services/agent-api
         env:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: node src/cli.js discovery --agentic --premium
+        run: npm -w services/agent-api exec -- node src/cli.js discovery --agentic --premium
 
       - name: Notify on failure
         if: failure()
@@ -76,24 +70,18 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install root dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Install agent-api dependencies
-        run: npm ci --legacy-peer-deps
-        working-directory: services/agent-api
+        run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install chromium
-        working-directory: services/agent-api
+        run: npm -w services/agent-api exec -- playwright install chromium
 
       - name: Run enrichment pipeline (limit 20 per night)
-        working-directory: services/agent-api
         env:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: node src/cli.js process-queue --limit=20
+        run: npm -w services/agent-api exec -- node src/cli.js process-queue --limit=20
 
       - name: Summary
         run: |
