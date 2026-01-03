@@ -43,4 +43,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: link-check-logs
-          path: scripts/utilities/check-links.mjs
+          path: scripts/dev/check-links.mjs

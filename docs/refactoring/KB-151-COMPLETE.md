@@ -133,7 +133,7 @@ If pursuing full unit-size compliance (< 30 lines per function):
 - `docs/refactoring/unit-level-refactoring-progress.md` - Detailed progress tracking
 - `docs/refactoring/unit-level-refactoring-summary.md` - Comprehensive summary
 - `docs/architecture/pipeline-state-machine.md` - State machine implementation
-- `scripts/check-large-files.cjs` - Quality Gate checker implementation
+- `scripts/ci/check-large-files.cjs` - Quality Gate checker implementation
 
 ## Lessons Learned
 

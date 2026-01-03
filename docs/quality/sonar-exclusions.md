@@ -34,9 +34,9 @@ This document explains which files are excluded from coverage requirements in So
 | `**/agents/summarize.js`                       | Thin LLM wrapper; AgentRunner orchestration                                            | 2025-12-02    | 2026-06-02 |
 | `**/agents/thumbnail.js`                       | Thin LLM wrapper; screenshot/image processing                                          | 2025-12-02    | 2026-06-02 |
 | `**/lib/pipeline-tracking.js`                  | Pipeline run/step tracking infrastructure; Supabase client calls only                  | 2025-12-16    | 2026-06-16 |
-| `src/pages/**`                                 | Astro pages; DOM/SSR glue code                                                         | 2025-11-30    | 2026-03-31 |
-| `src/features/**`                              | UI components; DOM wiring (business logic extracted to `src/lib/`)                     | 2025-11-30    | 2026-03-31 |
-| `src/lib/admin/**`                             | Admin UI orchestration; DOM + Supabase client calls                                    | 2025-12-03    | 2026-06-03 |
+| `site/pages/**`                                | Astro pages; DOM/SSR glue code                                                         | 2025-11-30    | 2026-03-31 |
+| `site/features/**`                             | UI components; DOM wiring (business logic extracted to `site/lib/`)                    | 2025-11-30    | 2026-03-31 |
+| `site/lib/admin/**`                            | Admin UI orchestration; DOM + Supabase client calls                                    | 2025-12-03    | 2026-06-03 |
 | `**/pages/api/**`                              | Astro API routes; minimal glue code                                                    | 2025-11-30    | 2026-03-31 |
 
 ## 3. Files NOT Excluded (Business Logic)
@@ -45,12 +45,12 @@ These files contain core business logic and **must** have test coverage:
 
 | File                                                   | Purpose                          | Test File                                  |
 | ------------------------------------------------------ | -------------------------------- | ------------------------------------------ |
-| `src/lib/filters.ts`                                   | Publication filtering logic      | `tests/lib/filters.spec.ts`                |
-| `src/lib/authors.ts`                                   | Author normalization             | `tests/lib/authors.spec.ts`                |
-| `src/lib/text.ts`                                      | Text utilities (linkify, escape) | `tests/lib/text.spec.ts`                   |
-| `src/lib/fmt.ts`                                       | Date formatting                  | `tests/lib/fmt.spec.ts`                    |
+| `site/lib/filters.ts`                                  | Publication filtering logic      | `tests/lib/filters.spec.ts`                |
+| `site/lib/authors.ts`                                  | Author normalization             | `tests/lib/authors.spec.ts`                |
+| `site/lib/text.ts`                                     | Text utilities (linkify, escape) | `tests/lib/text.spec.ts`                   |
+| `site/lib/fmt.ts`                                      | Date formatting                  | `tests/lib/fmt.spec.ts`                    |
 | `services/agent-api/src/agents/discovery-relevance.js` | LLM relevance scoring logic      | `tests/agents/discovery-relevance.spec.js` |
-| `services/agent-api/src/lib/sitemap.js`                | Sitemap parsing                  | `tests/lib/sitemap.spec.js`                |
+| `services/agent-api/src/lib/sitemap.js`                | Sitemap parsing                  | `tests/lib/sitemap.spec.ts`                |
 
 ## 4. Review Policy
 
@@ -65,12 +65,12 @@ Do not configure exclusions in the SonarCloud UI—keep the single source of tru
 
 ## 6. Changelog
 
-| Date       | Change                                                              | Author         |
-| ---------- | ------------------------------------------------------------------- | -------------- |
-| 2025-11-30 | Initial documentation of coverage exclusions                        | Rick te Molder |
-| 2025-11-30 | Add pages/** and features/** - business logic extracted to src/lib/ | Rick te Molder |
-| 2025-11-30 | Add lib/content-fetcher.js - extracted from enrich-item.js          | Rick te Molder |
-| 2025-12-01 | Add agent-api infrastructure: middleware, index.js, runner, tag.js  | Rick te Molder |
-| 2025-12-02 | Add agent wrappers (filter, summarize, thumbnail, scrapers)         | Cascade        |
-| 2025-12-02 | Document new tested files: discovery-relevance.js, embeddings.js    | Cascade        |
-| 2025-12-03 | Add src/lib/admin/\*\* - admin UI orchestration code                | Cascade        |
+| Date       | Change                                                               | Author         |
+| ---------- | -------------------------------------------------------------------- | -------------- |
+| 2025-11-30 | Initial documentation of coverage exclusions                         | Rick te Molder |
+| 2025-11-30 | Add pages/** and features/** - business logic extracted to site/lib/ | Rick te Molder |
+| 2025-11-30 | Add lib/content-fetcher.js - extracted from enrich-item.js           | Rick te Molder |
+| 2025-12-01 | Add agent-api infrastructure: middleware, index.js, runner, tag.js   | Rick te Molder |
+| 2025-12-02 | Add agent wrappers (filter, summarize, thumbnail, scrapers)          | Cascade        |
+| 2025-12-02 | Document new tested files: discovery-relevance.js, embeddings.js     | Cascade        |
+| 2025-12-03 | Add site/lib/admin/\*\* - admin UI orchestration code                | Cascade        |

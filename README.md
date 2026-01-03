@@ -69,6 +69,8 @@ See [`docs/architecture/overview.md`](docs/architecture/overview.md) for detaile
 
 Documentation index: [`docs/README.md`](docs/README.md)
 
+Repository map: [`docs/repo-map.md`](docs/repo-map.md)
+
 ---
 
 ## 3. Agent Pipeline
@@ -194,7 +196,8 @@ npm install && npm run dev
 cd admin-next && npm install && npm run dev
 
 # Agent API
-cd services/agent-api && npm install && node src/index.js
+npm install
+npm start -w services/agent-api
 ```
 
 ---

@@ -25,14 +25,15 @@ const publisherSlug = ({ source_name, source_domain }) => {
 export function kbFileName({
   title,
   date_published,
-  authors = [],
+  authors,
   source_name = '',
   source_domain = '',
   version = '',
 }) {
   const year = String(date_published || '0000').slice(0, 4) || '0000';
   const s = slug(title || 'untitled');
-  const a = authors.length ? lastName(authors[0]) : 'unknown';
+  const authorList = Array.isArray(authors) ? authors : [];
+  const a = authorList.length ? lastName(authorList[0]) : 'unknown';
   const pub = publisherSlug({ source_name, source_domain });
   const ver = version ? `_v${String(version).replace(/^v/i, '')}` : '';
   return `${year}_${s}_${a}-${pub}${ver}.json`;

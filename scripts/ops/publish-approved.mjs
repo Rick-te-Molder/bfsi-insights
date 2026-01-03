@@ -7,7 +7,7 @@
  * and populates all junction tables (industry, topic, vendor, org, process).
  *
  * Usage:
- *   node scripts/publishing/publish-approved.mjs [--dry-run] [--limit=10]
+ *   node scripts/ops/publish-approved.mjs [--dry-run] [--limit=10]
  */
 
 import dotenv from 'dotenv';

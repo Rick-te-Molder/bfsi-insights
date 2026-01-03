@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * View Supabase Schema - Lists all tables, columns, and relationships
- * Usage: node scripts/utilities/view-schema.mjs
+ * Usage: node scripts/dev/view-schema.mjs
  */
 
 import 'dotenv/config';

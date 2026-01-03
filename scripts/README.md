@@ -8,14 +8,11 @@ Utility scripts for BFSI Insights.
 
 ```
 scripts/
-├── publishing/         # Publishing utilities
-│   └── publish-approved.mjs
-├── utilities/          # Maintenance utilities
-│   ├── check-links.mjs     # Check for broken links
-│   ├── test-rss-feeds.mjs  # Validate RSS feeds
-│   ├── extract-pdf.py      # PDF text extraction
-│   └── filename-helper.mjs # Slug/filename utilities
-└── _archive/           # Retired scripts (not used)
+├── ci/                 # Deterministic checks used in CI/hooks
+├── dev/                # Local developer utilities
+├── ops/                # Operational scripts (may touch prod)
+├── lib/                # Shared helpers used by scripts/services
+└── sql/                # Operational SQL + one-time SQL (see sql/README.md)
 ```
 
 ## Publishing
@@ -25,7 +22,7 @@ scripts/
 Publishes approved items from ingestion_queue to kb_publication.
 
 ```bash
-node scripts/publishing/publish-approved.mjs --limit=10 --dry-run
+node scripts/ops/publish-approved.mjs --limit=10 --dry-run
 ```
 
 ## Utilities
@@ -43,7 +40,7 @@ npm run check:links
 Validates RSS feeds configured in kb_source.
 
 ```bash
-node scripts/utilities/test-rss-feeds.mjs
+node scripts/dev/test-rss-feeds.mjs
 ```
 
 ## Agent Pipeline

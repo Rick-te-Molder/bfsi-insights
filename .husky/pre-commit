@@ -4,7 +4,7 @@
 npx lint-staged
 
 # Check for large files in staged changes (BLOCKS commit if new code violates Quality Gate)
-node scripts/check-large-files.cjs
+node scripts/ci/check-large-files.cjs
 
 # Check if schema.md needs updating after migration changes
-node scripts/check-schema-sync.cjs
+node scripts/ci/check-schema-sync.cjs
