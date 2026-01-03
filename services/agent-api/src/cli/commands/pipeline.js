@@ -47,7 +47,7 @@ export async function runProcessQueueCmd(options) {
   const result = await orchestrator.processQueue({ limit, includeThumbnail });
   return {
     processed: result.processed,
-    enriched: result.success,
+    enriched: result.enriched ?? result.success,
     failed: result.failed,
   };
 }
