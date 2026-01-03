@@ -43,14 +43,14 @@ This document explains which files are excluded from coverage requirements in So
 
 These files contain core business logic and **must** have test coverage:
 
-| File                                                   | Purpose                          | Test File                                  |
-| ------------------------------------------------------ | -------------------------------- | ------------------------------------------ |
-| `site/lib/filters.ts`                                  | Publication filtering logic      | `tests/lib/filters.spec.ts`                |
-| `site/lib/authors.ts`                                  | Author normalization             | `tests/lib/authors.spec.ts`                |
-| `site/lib/text.ts`                                     | Text utilities (linkify, escape) | `tests/lib/text.spec.ts`                   |
-| `site/lib/fmt.ts`                                      | Date formatting                  | `tests/lib/fmt.spec.ts`                    |
-| `services/agent-api/src/agents/discovery-relevance.js` | LLM relevance scoring logic      | `tests/agents/discovery-relevance.spec.js` |
-| `services/agent-api/src/lib/sitemap.js`                | Sitemap parsing                  | `tests/lib/sitemap.spec.ts`                |
+| File                                                   | Purpose                          | Test File                                        |
+| ------------------------------------------------------ | -------------------------------- | ------------------------------------------------ |
+| `site/lib/filters.ts`                                  | Publication filtering logic      | `site/tests/lib/filters.spec.ts`                 |
+| `site/lib/authors.ts`                                  | Author normalization             | `site/tests/lib/authors.spec.ts`                 |
+| `site/lib/text.ts`                                     | Text utilities (linkify, escape) | `site/tests/lib/text.spec.ts`                    |
+| `site/lib/fmt.ts`                                      | Date formatting                  | `site/tests/lib/fmt.spec.ts`                     |
+| `services/agent-api/src/agents/discovery-relevance.js` | LLM relevance scoring logic      | `services/agent-api/tests/agents/scorer.spec.js` |
+| `services/agent-api/src/lib/sitemap.js`                | Sitemap parsing                  | `services/agent-api/tests/lib/sitemap.spec.js`   |
 
 ## 4. Review Policy
 
