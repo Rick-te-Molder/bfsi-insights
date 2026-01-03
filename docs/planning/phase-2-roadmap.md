@@ -79,7 +79,7 @@
 **Files:**
 
 - `services/agent-api/src/lib/state-machine.js` (new)
-- `supabase/migrations/YYYYMMDD_add_state_constraints.sql` (new)
+- `infra/supabase/migrations/YYYYMMDD_add_state_constraints.sql` (new)
 
 ---
 

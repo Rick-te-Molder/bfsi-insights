@@ -184,7 +184,7 @@ function detectStalePage(pageContent) {
 | `services/agent-api/src/agents/discovery-relevance.js` | Add date/staleness checks                 |
 | `services/agent-api/src/agents/discover.js`            | Pass publication date to scoring          |
 | `services/agent-api/src/agents/summarize.js`           | Add post-fetch staleness detection        |
-| `supabase/`                                            | Migration to add `is_stale` flag to queue |
+| `infra/supabase/`                                      | Migration to add `is_stale` flag to queue |
 
 ### Questions to Resolve
 

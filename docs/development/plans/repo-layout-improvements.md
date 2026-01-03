@@ -199,11 +199,11 @@ Improve repository structure for safety, clarity, and maintainability without un
 
    ## Infrastructure
 
-   | Location               | Purpose                               |
-   | ---------------------- | ------------------------------------- |
-   | `supabase/migrations/` | Database migrations (source of truth) |
-   | `supabase/functions/`  | Edge functions                        |
-   | `.github/workflows/`   | CI/CD pipelines                       |
+   | Location                     | Purpose                               |
+   | ---------------------------- | ------------------------------------- |
+   | `infra/supabase/migrations/` | Database migrations (source of truth) |
+   | `infra/supabase/functions/`  | Edge functions                        |
+   | `.github/workflows/`         | CI/CD pipelines                       |
 
    ## Scripts
 

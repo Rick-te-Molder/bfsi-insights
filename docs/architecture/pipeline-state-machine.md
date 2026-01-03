@@ -173,7 +173,7 @@ To add a new valid transition:
 1. **Create migration:**
 
 ```sql
--- supabase/migrations/YYYYMMDD_add_new_transition.sql
+-- infra/supabase/migrations/YYYYMMDD_add_new_transition.sql
 INSERT INTO public.state_transitions (from_status, to_status, is_manual, description)
 VALUES (300, 240, true, 'pending_review → enriched (skip re-enrichment)');
 ```
@@ -284,6 +284,6 @@ See `services/agent-api/src/lib/state-machine.test.js` for comprehensive test co
 ## Related
 
 - `docs/architecture/pipeline-status-codes.md` - Status code definitions
-- `supabase/migrations/20250101000000_add_state_machine_constraints.sql` - Migration
+- `infra/supabase/migrations/20250101000000_add_state_machine_constraints.sql` - Migration
 - `services/agent-api/src/lib/state-machine.js` - Implementation
 - `services/agent-api/src/lib/state-machine.test.js` - Tests

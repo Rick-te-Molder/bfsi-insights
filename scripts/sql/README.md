@@ -1,6 +1,6 @@
 # SQL scripts
 
-This folder contains **operational SQL** and **one-time SQL** that is intentionally kept out of `supabase/migrations/`.
+This folder contains **operational SQL** and **one-time SQL** that is intentionally kept out of `infra/supabase/migrations/`.
 
 ## Categories
 
