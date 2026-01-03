@@ -4,9 +4,9 @@ services:
     runtime: node
     region: frankfurt # EU region
     plan: starter # $7/month, no sleep
-    rootDir: services/agent-api
-    buildCommand: npm install && npx playwright install chromium --with-deps
-    startCommand: npm start
+    rootDir: .
+    buildCommand: npm ci -w services/agent-api --ignore-scripts && npm -w services/agent-api exec -- playwright install chromium --with-deps
+    startCommand: npm -w services/agent-api start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
