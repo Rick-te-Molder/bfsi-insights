@@ -72,9 +72,11 @@
     "node": ">=20 <25"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,mjs,astro,json,css,md}": [
-      "prettier --write",
-      "eslint --fix"
+    "*.{ts,tsx,js,jsx,mjs,cjs,astro,json,css,md}": [
+      "prettier --write"
+    ],
+    "*.{ts,tsx,js,jsx,mjs,cjs,astro}": [
+      "eslint --fix --no-warn-ignored --max-warnings=0"
     ]
   }
 }

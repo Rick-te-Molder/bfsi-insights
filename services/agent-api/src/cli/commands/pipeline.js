@@ -3,15 +3,23 @@
  * Imports per-agent command modules
  */
 
-import { runFetchCmd } from './fetch.js';
 import { runFilterCmd } from './filter.js';
 import { runSummarizeCmd } from './summarize.js';
 import { runTagCmd } from './tag.js';
 import { runThumbnailCmd } from './thumbnail.js';
 import * as orchestrator from '../../agents/orchestrator.js';
 
-export async function runEnrichCmd(options = {}) {
-  const { limit = 20 } = options;
+export { runFetchCmd } from './fetch.js';
+export { runFilterCmd } from './filter.js';
+export { runSummarizeCmd } from './summarize.js';
+export { runTagCmd } from './tag.js';
+export { runThumbnailCmd } from './thumbnail.js';
+
+/**
+ * @param {{ limit?: number } | undefined} options
+ */
+export async function runEnrichCmd(options) {
+  const { limit = 20 } = options ?? {};
 
   console.log(' Full Enrichment Pipeline');
   console.log('Step 1/4: Relevance Filter');
@@ -29,9 +37,12 @@ export async function runEnrichCmd(options = {}) {
   console.log(' Full enrichment pipeline complete');
 }
 
-export async function runProcessQueueCmd(options = {}) {
-  const limit = typeof options.limit === 'number' ? options.limit : 10;
-  const includeThumbnail = options['no-thumbnail'] ? false : true;
+/**
+ * @param {{ limit?: number, 'no-thumbnail'?: boolean } | undefined} options
+ */
+export async function runProcessQueueCmd(options) {
+  const limit = typeof options?.limit === 'number' ? options.limit : 10;
+  const includeThumbnail = !options?.['no-thumbnail'];
 
   const result = await orchestrator.processQueue({ limit, includeThumbnail });
   return {
@@ -40,5 +51,3 @@ export async function runProcessQueueCmd(options = {}) {
     failed: result.failed,
   };
 }
-
-export { runFetchCmd, runFilterCmd, runSummarizeCmd, runTagCmd, runThumbnailCmd };
