@@ -186,7 +186,7 @@ Boy Scout Rule
 	•	All touched files must meet Quality Guidelines (no exceptions).
 	•	Files must be < 300 lines.
 	•	Functions must be < 30 lines (should be < 15).
-	•	Pre-commit hook enforces this: scripts/check-large-files.cjs
+	•	Pre-commit hook enforces this: scripts/ci/check-large-files.cjs
 	•	Known violations are tracked in ALLOW_LIST inside that script.
 
 ⸻
