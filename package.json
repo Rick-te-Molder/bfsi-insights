@@ -5,7 +5,8 @@
   "type": "module",
   "workspaces": [
     "packages/*",
-    "admin-next",
+    "apps/admin",
+    "apps/web",
     "services/*"
   ],
   "scripts": {
@@ -17,7 +18,7 @@
     "preflight": "npm run lint && npm run typecheck && npm run test:coverage",
     "typecheck:root": "tsc --noEmit",
     "typecheck": "npm run typecheck:root && npm run -ws --if-present typecheck",
-    "lint": "npm run lint --workspaces --if-present && eslint \"site/**/*.{js,ts,astro}\" \"scripts/**/*.{js,mjs,cjs}\"",
+    "lint": "npm run lint --workspaces --if-present && eslint \"apps/web/**/*.{js,ts,astro}\" \"scripts/**/*.{js,mjs,cjs}\"",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "npm run test:coverage --workspaces --if-present",

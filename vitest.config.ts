@@ -4,12 +4,12 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     globals: true,
-    include: ['site/tests/**/*.spec.ts', 'scripts/tests/**/*.spec.ts'],
+    include: ['apps/web/tests/**/*.spec.ts', 'scripts/tests/**/*.spec.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
       reportsDirectory: './coverage',
-      include: ['site/**/*.ts', 'services/agent-api/src/**/*.js'],
+      include: ['apps/web/**/*.ts', 'services/agent-api/src/**/*.js'],
       exclude: [
         '**/node_modules/**',
         '**/dist/**',

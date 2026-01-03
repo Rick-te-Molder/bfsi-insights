@@ -68,33 +68,33 @@ Refactoring the 10 largest functions in the codebase to comply with Quality Guid
 
 ### 5. HeadToHeadContent (339 lines) - IN PROGRESS
 
-- **File:** `admin-next/src/app/(dashboard)/evals/head-to-head/page.tsx`
+- **File:** `apps/admin/src/app/(dashboard)/evals/head-to-head/page.tsx`
 - **Actual Size:** 389 lines
 - **Planned Extraction:** Data loading hooks, comparison logic, result display components
 
 ### 6. DetailPanel (322 lines)
 
-- **File:** `admin-next/src/app/(dashboard)/items/detail-panel.tsx`
+- **File:** `apps/admin/src/app/(dashboard)/items/detail-panel.tsx`
 - **Planned Extraction:** Panel sections, action handlers, display components
 
 ### 7. initPublicationFilters (317 lines) - IN PROGRESS
 
-- **File:** `site/features/publications/publication-filters.ts`
+- **File:** `apps/web/features/publications/publication-filters.ts`
 - **Planned Extraction:** Filter initialization, event handlers, UI updates
 
 ### 8. ReviewActions (284 lines)
 
-- **File:** `admin-next/src/app/(dashboard)/items/[id]/actions.tsx`
+- **File:** `apps/admin/src/app/(dashboard)/items/[id]/actions.tsx`
 - **Planned Extraction:** Action handlers, validation, API calls
 
 ### 9. ReviewList (280 lines)
 
-- **File:** `admin-next/src/app/(dashboard)/items/review-list.tsx`
+- **File:** `apps/admin/src/app/(dashboard)/items/review-list.tsx`
 - **Planned Extraction:** List rendering, filtering, sorting logic
 
 ### 10. MissedForm (366 lines)
 
-- **File:** `admin-next/src/app/(dashboard)/missed/components/MissedForm.tsx`
+- **File:** `apps/admin/src/app/(dashboard)/missed/components/MissedForm.tsx`
 - **Note:** Only exists on `refactor/kb-151-reduce-large-files` branch
 - **Status:** Will be addressed when that branch is merged
 

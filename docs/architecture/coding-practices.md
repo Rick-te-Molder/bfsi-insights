@@ -50,9 +50,9 @@ if (payload.topic_codes?.length) {
 
 ### Files using this pattern
 
-- `admin-next/src/app/(dashboard)/review/actions.ts`
-- `admin-next/src/app/(dashboard)/review/carousel/carousel-review.tsx`
-- `admin-next/src/app/(dashboard)/review/[id]/actions.tsx`
+- `apps/admin/src/app/(dashboard)/review/actions.ts`
+- `apps/admin/src/app/(dashboard)/review/carousel/carousel-review.tsx`
+- `apps/admin/src/app/(dashboard)/review/[id]/actions.tsx`
 
 ### Context
 

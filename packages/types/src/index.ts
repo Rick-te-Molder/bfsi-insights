@@ -2,9 +2,9 @@
  * @bfsi/types - Shared TypeScript types for BFSI Insights
  *
  * This package contains type definitions shared between:
- * - admin-next (Next.js admin UI)
+ * - apps/admin (Next.js admin UI)
  * - agent-api (Express processing API)
- * - Main Astro site
+ * - apps/web (Astro public site)
  */
 
 export * from './ingestion-queue';
