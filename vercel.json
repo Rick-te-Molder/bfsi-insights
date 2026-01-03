@@ -1,7 +1,5 @@
 {
   "git": {
     "deploymentEnabled": true
-  },
-  "installCommand": "npm ci",
-  "buildCommand": "npm run build:admin"
+  }
 }
