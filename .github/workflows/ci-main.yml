@@ -28,6 +28,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: "Guardrail: workflow inline Node mode"
+        continue-on-error: true
+        run: node scripts/utilities/check-workflow-node-inline-esm.mjs
+
       - name: Report Node version
         continue-on-error: true
         run: node -p "process.versions.node"
