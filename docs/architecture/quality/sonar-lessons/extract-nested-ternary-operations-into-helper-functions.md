@@ -1,7 +1,10 @@
 # Extract Nested Ternary Operations into Helper Functions
 
-**Rule**:
-[Ternary operators should not be nested](../sonar-rules/ternary-operators-should-not-be-nested.md)
+**Rule ID**: typescript:S3358  
+**SonarCloud message**: "Ternary operators should not be nested."  
+**Aliases**: nested ternary, chained ternary, multiple ? : operators
+
+**Rule**: [Ternary operators should not be nested](../sonar-rules/ternary-operators-should-not-be-nested.md)
 
 **Pattern to avoid**:
 
