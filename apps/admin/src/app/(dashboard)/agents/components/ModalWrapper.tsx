@@ -10,11 +10,10 @@ interface ModalWrapperProps {
 
 export function ModalWrapper({ onClose, maxWidth = 'max-w-4xl', children }: ModalWrapperProps) {
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       aria-label="Close modal"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 w-full h-full border-none cursor-default"
       onClick={onClose}
       onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
@@ -26,6 +25,6 @@ export function ModalWrapper({ onClose, maxWidth = 'max-w-4xl', children }: Moda
       >
         {children}
       </div>
-    </div>
+    </button>
   );
 }
