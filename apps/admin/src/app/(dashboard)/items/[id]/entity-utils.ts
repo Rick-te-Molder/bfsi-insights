@@ -59,32 +59,43 @@ export function calculateUnknownEntities(
     return proposedSet.has(`${entityType}:${name.toLowerCase()}`);
   };
 
-  for (const name of (payload.organization_names as string[]) || []) {
-    if (
-      !lookups.organizations.has(name.toLowerCase()) &&
-      !isAlreadyProposed('bfsi_organization', name)
-    ) {
-      unknownEntities.push({ entityType: 'bfsi_organization', name, label: 'Organization' });
+  const collectUnknowns = (
+    values: string[],
+    hasLookup: (v: string) => boolean,
+    entityType: UnknownEntity['entityType'],
+    label: string,
+  ) => {
+    for (const value of values) {
+      if (!hasLookup(value) && !isAlreadyProposed(entityType, value)) {
+        unknownEntities.push({ entityType, name: value, label });
+      }
     }
-  }
-  for (const name of (payload.vendor_names as string[]) || []) {
-    if (!lookups.vendors.has(name.toLowerCase()) && !isAlreadyProposed('ag_vendor', name)) {
-      unknownEntities.push({ entityType: 'ag_vendor', name, label: 'Vendor' });
-    }
-  }
-  for (const code of (payload.regulator_codes as string[]) || []) {
-    if (!lookups.regulators.has(code.toLowerCase()) && !isAlreadyProposed('regulator', code)) {
-      unknownEntities.push({ entityType: 'regulator', name: code, label: 'Regulator' });
-    }
-  }
-  for (const code of (payload.standard_setter_codes as string[]) || []) {
-    if (
-      !lookups.standardSetters.has(code.toLowerCase()) &&
-      !isAlreadyProposed('standard_setter', code)
-    ) {
-      unknownEntities.push({ entityType: 'standard_setter', name: code, label: 'Standard Setter' });
-    }
-  }
+  };
+
+  collectUnknowns(
+    (payload.organization_names as string[]) || [],
+    (v) => lookups.organizations.has(v.toLowerCase()),
+    'bfsi_organization',
+    'Organization',
+  );
+  collectUnknowns(
+    (payload.vendor_names as string[]) || [],
+    (v) => lookups.vendors.has(v.toLowerCase()),
+    'ag_vendor',
+    'Vendor',
+  );
+  collectUnknowns(
+    (payload.regulator_codes as string[]) || [],
+    (v) => lookups.regulators.has(v.toLowerCase()),
+    'regulator',
+    'Regulator',
+  );
+  collectUnknowns(
+    (payload.standard_setter_codes as string[]) || [],
+    (v) => lookups.standardSetters.has(v.toLowerCase()),
+    'standard_setter',
+    'Standard Setter',
+  );
 
   return unknownEntities;
 }
