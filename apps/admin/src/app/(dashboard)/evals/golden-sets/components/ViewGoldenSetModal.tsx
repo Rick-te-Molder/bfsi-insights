@@ -58,25 +58,25 @@ function ViewGoldenSetFooter({ item, onClose }: { item: EvalGoldenSet; onClose: 
 
 export function ViewGoldenSetModal({ item, onClose }: ViewGoldenSetModalProps) {
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       aria-label="Close modal"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 w-full h-full border-none cursor-default"
       onClick={onClose}
       onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="view-modal-title"
-        className="w-full max-w-3xl max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <ViewGoldenSetHeader item={item} />
-        <ViewGoldenSetContent item={item} />
-        <ViewGoldenSetFooter item={item} onClose={onClose} />
+      <div role="presentation" onMouseDown={(e) => e.stopPropagation()}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="view-modal-title"
+          className="w-full max-w-3xl max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col"
+        >
+          <ViewGoldenSetHeader item={item} />
+          <ViewGoldenSetContent item={item} />
+          <ViewGoldenSetFooter item={item} onClose={onClose} />
+        </div>
       </div>
-    </div>
+    </button>
   );
 }
