@@ -86,10 +86,10 @@ function AudienceGrid(props: {
   readonly setSubmitterAudience: (a: string) => void;
 }) {
   return (
-    <div>
-      <label className="block text-sm font-medium text-neutral-300 mb-2">
+    <fieldset>
+      <legend className="block text-sm font-medium text-neutral-300 mb-2">
         Their Role / Audience <span className="text-red-400">*</span>
-      </label>
+      </legend>
       <div className="grid grid-cols-2 gap-2">
         {AUDIENCES.map((aud) => (
           <button
@@ -107,7 +107,7 @@ function AudienceGrid(props: {
           </button>
         ))}
       </div>
-    </div>
+    </fieldset>
   );
 }
 
@@ -116,10 +116,10 @@ function UrgencyRow(props: {
   readonly setSubmitterUrgency: (u: string) => void;
 }) {
   return (
-    <div>
-      <label className="block text-sm font-medium text-neutral-300 mb-2">
+    <fieldset>
+      <legend className="block text-sm font-medium text-neutral-300 mb-2">
         Urgency <span className="text-red-400">*</span>
-      </label>
+      </legend>
       <div className="flex gap-2">
         {URGENCY_OPTIONS.map((opt) => (
           <button
@@ -136,7 +136,7 @@ function UrgencyRow(props: {
           </button>
         ))}
       </div>
-    </div>
+    </fieldset>
   );
 }
 
