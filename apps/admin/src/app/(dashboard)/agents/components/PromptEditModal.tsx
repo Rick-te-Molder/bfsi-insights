@@ -103,6 +103,12 @@ function PromptTextField({ value, onChange }: { value: string; onChange: (v: str
   );
 }
 
+function getSubmitButtonLabel(saving: boolean, mode: 'edit' | 'create'): string {
+  if (saving) return 'Saving...';
+  if (mode === 'create') return 'Create DEV Version';
+  return 'Save Changes';
+}
+
 function ModalFooter({
   onClose,
   onSave,
@@ -114,7 +120,7 @@ function ModalFooter({
   saving: boolean;
   mode: 'edit' | 'create';
 }) {
-  const label = saving ? 'Saving...' : mode === 'create' ? 'Create DEV Version' : 'Save Changes';
+  const label = getSubmitButtonLabel(saving, mode);
   return (
     <div className="p-4 border-t border-neutral-800 flex justify-end gap-3">
       <button
