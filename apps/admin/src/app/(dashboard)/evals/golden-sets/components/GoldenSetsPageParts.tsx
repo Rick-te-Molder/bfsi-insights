@@ -106,13 +106,13 @@ function GoldenSetsPageHeader({
   goldenSetsCount,
   onAddClick,
   setFilterAgent,
-}: {
+}: Readonly<{
   agentsCount: number;
   filterAgent: string;
   goldenSetsCount: number;
   onAddClick: () => void;
   setFilterAgent: (v: string) => void;
-}) {
+}>) {
   return (
     <GoldenSetsHeader
       goldenSetsCount={goldenSetsCount}
@@ -128,11 +128,11 @@ function GoldenSetsPageBody({
   filteredSets,
   handleDelete,
   setSelectedItem,
-}: {
+}: Readonly<{
   filteredSets: EvalGoldenSet[];
   handleDelete: (id: string) => void | Promise<void>;
   setSelectedItem: (v: EvalGoldenSet | null) => void;
-}) {
+}>) {
   return (
     <GoldenSetsList
       filteredSets={filteredSets}
@@ -148,13 +148,13 @@ function GoldenSetsPageModals({
   onCloseView,
   selectedItem,
   showCreateModal,
-}: {
+}: Readonly<{
   loadData: () => Promise<void>;
   onCloseCreate: () => void;
   onCloseView: () => void;
   selectedItem: EvalGoldenSet | null;
   showCreateModal: boolean;
-}) {
+}>) {
   return (
     <>
       {showCreateModal && <CreateModal onClose={onCloseCreate} onCreated={loadData} />}
@@ -178,7 +178,7 @@ type GoldenSetsPageViewProps = {
   toggleCreate: (v: boolean) => void;
 };
 
-function GoldenSetsPageView(props: GoldenSetsPageViewProps) {
+function GoldenSetsPageView(props: Readonly<GoldenSetsPageViewProps>) {
   if (props.showLoading) return <GoldenSetsPageLoading />;
 
   return (

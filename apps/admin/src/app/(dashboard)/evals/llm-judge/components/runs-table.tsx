@@ -20,7 +20,7 @@ function getScoreColor(score: number): string {
   return 'text-red-400';
 }
 
-function ScoreCell({ score }: { score: number | null }) {
+function ScoreCell({ score }: Readonly<{ score: number | null }>) {
   if (score === null) return <span className="text-neutral-500">—</span>;
   return <span className={getScoreColor(score)}>{(score * 100).toFixed(1)}%</span>;
 }
@@ -31,7 +31,7 @@ function getStatusColor(status: string): string {
   return 'bg-red-500/20 text-red-400';
 }
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: Readonly<{ status: string }>) {
   return (
     <span className={`rounded-full px-2 py-0.5 text-xs ${getStatusColor(status)}`}>{status}</span>
   );
@@ -52,7 +52,7 @@ function TableHeader() {
   );
 }
 
-function RunRow({ run }: { run: EvalRun }) {
+function RunRow({ run }: Readonly<{ run: EvalRun }>) {
   return (
     <tr className="border-b border-neutral-800/50 hover:bg-neutral-800/30">
       <td className="px-4 py-3 text-white">{run.agent_name}</td>
@@ -79,7 +79,7 @@ function EmptyState() {
   );
 }
 
-export function RunsTable({ runs }: { runs: EvalRun[] }) {
+export function RunsTable({ runs }: Readonly<{ runs: EvalRun[] }>) {
   if (runs.length === 0) return <EmptyState />;
   return (
     <table className="w-full">

@@ -4,7 +4,7 @@ interface RawTabProps {
   payload: Record<string, unknown>;
 }
 
-export function RawTab({ payload }: RawTabProps) {
+export function RawTab({ payload }: Readonly<RawTabProps>) {
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide">

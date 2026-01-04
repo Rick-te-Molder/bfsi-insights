@@ -1,10 +1,10 @@
 export function PublishedDateInput({
   value,
   onChange,
-}: {
+}: Readonly<{
   value: string;
   onChange: (v: string) => void;
-}) {
+}>) {
   return (
     <input
       id="publication-date-input"
@@ -20,11 +20,11 @@ export function PublishedDateSaveButton({
   disabled,
   loading,
   onClick,
-}: {
+}: Readonly<{
   disabled: boolean;
   loading: string | null;
   onClick: () => void;
-}) {
+}>) {
   return (
     <button
       onClick={onClick}

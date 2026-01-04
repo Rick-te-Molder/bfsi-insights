@@ -6,7 +6,7 @@ export function ArticleHeader() {
   );
 }
 
-export function UrlField({ url, setUrl }: { url: string; setUrl: (v: string) => void }) {
+export function UrlField({ url, setUrl }: Readonly<{ url: string; setUrl: (v: string) => void }>) {
   return (
     <div>
       <label htmlFor="url" className="block text-sm font-medium text-neutral-300 mb-2">
@@ -28,10 +28,10 @@ export function UrlField({ url, setUrl }: { url: string; setUrl: (v: string) => 
 export function DomainHint({
   detectedDomain,
   existingSource,
-}: {
+}: Readonly<{
   detectedDomain: string | null;
   existingSource: ExistingSource | null;
-}) {
+}>) {
   if (!detectedDomain) return null;
 
   const existingLabel = existingSource ? (existingSource.name ?? existingSource.slug) : null;

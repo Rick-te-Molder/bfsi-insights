@@ -6,13 +6,13 @@ export function SubmitterBasics({
   submitterChannel,
   setSubmitterChannel,
   channels,
-}: {
+}: Readonly<{
   submitterName: string;
   setSubmitterName: (v: string) => void;
   submitterChannel: string;
   setSubmitterChannel: (v: string) => void;
   channels: Array<{ value: string; label: string }>;
-}) {
+}>) {
   return (
     <div className="grid grid-cols-2 gap-4">
       <SubmitterNameField submitterName={submitterName} setSubmitterName={setSubmitterName} />
@@ -29,11 +29,11 @@ export function SubmitterAudience({
   submitterAudience,
   setSubmitterAudience,
   audiences,
-}: {
+}: Readonly<{
   submitterAudience: string;
   setSubmitterAudience: (v: string) => void;
   audiences: Array<{ value: string; label: string; description: string }>;
-}) {
+}>) {
   return (
     <fieldset>
       <legend className="block text-sm font-medium text-neutral-300 mb-2">
@@ -60,11 +60,11 @@ export function SubmitterUrgency({
   submitterUrgency,
   setSubmitterUrgency,
   urgencyOptions,
-}: {
+}: Readonly<{
   submitterUrgency: string;
   setSubmitterUrgency: (v: string) => void;
   urgencyOptions: Array<{ value: string; label: string; color: string }>;
-}) {
+}>) {
   return (
     <fieldset>
       <legend className="block text-sm font-medium text-neutral-300 mb-2">Urgency</legend>

@@ -1,10 +1,10 @@
 export function SubmitterNameField({
   submitterName,
   setSubmitterName,
-}: {
+}: Readonly<{
   submitterName: string;
   setSubmitterName: (v: string) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="submitterName" className="block text-sm font-medium text-neutral-300 mb-2">
@@ -26,11 +26,11 @@ export function SubmitterChannelSelect({
   submitterChannel,
   setSubmitterChannel,
   channels,
-}: {
+}: Readonly<{
   submitterChannel: string;
   setSubmitterChannel: (v: string) => void;
   channels: Array<{ value: string; label: string }>;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="submitterChannel" className="block text-sm font-medium text-neutral-300 mb-2">

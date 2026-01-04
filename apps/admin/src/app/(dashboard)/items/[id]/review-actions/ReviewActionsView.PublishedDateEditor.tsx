@@ -8,12 +8,12 @@ export function PublishedDateEditor({
   setPublishedDate,
   loading,
   onSave,
-}: {
+}: Readonly<{
   publishedDate: string;
   setPublishedDate: (v: string) => void;
   loading: string | null;
   onSave: () => void;
-}) {
+}>) {
   return (
     <div className="mb-4">
       <label htmlFor="publication-date-input" className="block text-sm text-neutral-400 mb-1">

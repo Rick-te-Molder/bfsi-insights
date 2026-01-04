@@ -28,7 +28,7 @@ export function SourceForm({
   onSubmit,
   onClose,
   saving,
-}: SourceFormProps) {
+}: Readonly<SourceFormProps>) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <NameSlugFields formData={formData} setFormData={setFormData} isEdit={isEdit} />

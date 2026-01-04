@@ -18,11 +18,7 @@ function SummaryHeader({
   label,
   text,
   spec,
-}: {
-  label: string;
-  text: string;
-  spec: { min: number; max: number };
-}) {
+}: Readonly<{ label: string; text: string; spec: { min: number; max: number } }>) {
   const status = getLengthStatus(text.length, spec.min, spec.max);
   const statusColors = { ok: 'text-emerald-400', short: 'text-amber-400', long: 'text-red-400' };
   const statusIcons = { ok: '✓', short: '↓', long: '↑' };
@@ -36,7 +32,7 @@ function SummaryHeader({
   );
 }
 
-function SummaryContent({ text, useMarkdown }: { text: string; useMarkdown: boolean }) {
+function SummaryContent({ text, useMarkdown }: Readonly<{ text: string; useMarkdown: boolean }>) {
   if (useMarkdown)
     return (
       <MarkdownRenderer
@@ -52,12 +48,12 @@ function SummaryBlock({
   text,
   spec,
   useMarkdown = false,
-}: {
+}: Readonly<{
   label: string;
   text?: string;
   spec: { min: number; max: number; label: string };
   useMarkdown?: boolean;
-}) {
+}>) {
   if (!text) return null;
   return (
     <div className="border-b border-neutral-700/50 pb-3 last:border-0">
@@ -67,7 +63,7 @@ function SummaryBlock({
   );
 }
 
-function OriginalContentPanel({ rawContent }: { rawContent: string }) {
+function OriginalContentPanel({ rawContent }: Readonly<{ rawContent: string }>) {
   return (
     <div className="rounded-lg border border-neutral-700 bg-neutral-800/50 p-4">
       <div className="flex items-center justify-between mb-3">
@@ -90,9 +86,7 @@ function OriginalContentPanel({ rawContent }: { rawContent: string }) {
 
 function SummariesPanel({
   summary,
-}: {
-  summary: { short?: string; medium?: string; long?: string };
-}) {
+}: Readonly<{ summary: { short?: string; medium?: string; long?: string } }>) {
   return (
     <div className="rounded-lg border border-sky-500/20 bg-sky-500/5 p-4">
       <div className="flex items-center justify-between mb-3">
@@ -110,7 +104,7 @@ function SummariesPanel({
   );
 }
 
-function CompressionStat({ value, label }: { value: string; label: string }) {
+function CompressionStat({ value, label }: Readonly<{ value: string; label: string }>) {
   return (
     <div>
       <div className="text-lg font-bold text-white">{value}</div>
@@ -122,10 +116,7 @@ function CompressionStat({ value, label }: { value: string; label: string }) {
 function CompressionStats({
   rawContent,
   summaryLong,
-}: {
-  rawContent: string;
-  summaryLong: string;
-}) {
+}: Readonly<{ rawContent: string; summaryLong: string }>) {
   const compressionPct = Math.round((1 - summaryLong.length / rawContent.length) * 100);
   const ratio = Math.round(rawContent.length / summaryLong.length);
   const words = `${rawContent.split(/\s+/).length} → ${summaryLong.split(/\s+/).length}`;
@@ -146,7 +137,7 @@ interface CompareTabProps {
   summary: { short?: string; medium?: string; long?: string };
 }
 
-export function CompareTab({ rawContent, summary }: CompareTabProps) {
+export function CompareTab({ rawContent, summary }: Readonly<CompareTabProps>) {
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide">

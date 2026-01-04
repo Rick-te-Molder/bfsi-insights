@@ -36,7 +36,12 @@ type Props = {
   onSubmit: (e: FormEvent) => void;
 };
 
-export function MissedFormView({ form, detectedDomain, existingSource, onSubmit }: Props) {
+export function MissedFormView({
+  form,
+  detectedDomain,
+  existingSource,
+  onSubmit,
+}: Readonly<Props>) {
   return (
     <div className="max-w-2xl">
       <StatusBanner status={form.status} message={form.message} />

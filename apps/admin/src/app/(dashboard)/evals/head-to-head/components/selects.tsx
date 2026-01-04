@@ -10,11 +10,7 @@ export function AgentSelect({
   agents,
   value,
   onChange,
-}: {
-  agents: string[];
-  value: string;
-  onChange: (v: string) => void;
-}) {
+}: Readonly<{ agents: string[]; value: string; onChange: (v: string) => void }>) {
   return (
     <div>
       <label htmlFor="h2hAgent" className="block text-sm text-neutral-400 mb-1">
@@ -44,14 +40,14 @@ export function VersionSelect({
   onChange,
   disabled,
   prompts,
-}: {
+}: Readonly<{
   id: string;
   label: string;
   value: string;
   onChange: (v: string) => void;
   disabled: boolean;
   prompts: PromptItem[];
-}) {
+}>) {
   return (
     <div>
       <label htmlFor={id} className="block text-sm text-neutral-400 mb-1">
@@ -74,13 +70,13 @@ function VersionOptions({
   onChange,
   disabled,
   prompts,
-}: {
+}: Readonly<{
   id: string;
   value: string;
   onChange: (v: string) => void;
   disabled: boolean;
   prompts: PromptItem[];
-}) {
+}>) {
   return (
     <select
       id={id}

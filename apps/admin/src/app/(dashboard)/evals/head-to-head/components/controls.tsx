@@ -3,10 +3,7 @@
 function LLMJudgeCheckbox({
   checked,
   onChange,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
+}: Readonly<{ checked: boolean; onChange: (v: boolean) => void }>) {
   return (
     <label className="flex items-center gap-2 text-sm text-neutral-400">
       <input
@@ -24,11 +21,7 @@ function RunButton({
   onClick,
   disabled,
   running,
-}: {
-  onClick: () => void;
-  disabled: boolean;
-  running: boolean;
-}) {
+}: Readonly<{ onClick: () => void; disabled: boolean; running: boolean }>) {
   return (
     <button
       onClick={onClick}
@@ -46,13 +39,13 @@ export function ComparisonControls({
   onRun,
   running,
   disabled,
-}: {
+}: Readonly<{
   useLLMJudge: boolean;
   setUseLLMJudge: (v: boolean) => void;
   onRun: () => void;
   running: boolean;
   disabled: boolean;
-}) {
+}>) {
   return (
     <div className="mt-4 flex items-center justify-between">
       <LLMJudgeCheckbox checked={useLLMJudge} onChange={setUseLLMJudge} />

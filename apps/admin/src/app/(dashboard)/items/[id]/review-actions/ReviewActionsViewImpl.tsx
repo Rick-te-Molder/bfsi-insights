@@ -3,7 +3,7 @@ import { ActionsBlock } from './ReviewActionsView.ActionsBlock';
 import { EditorsBlock } from './ReviewActionsView.EditorsBlock';
 import type { ReviewActionsViewProps } from './ReviewActionsView.types';
 
-export function ReviewActionsView(props: ReviewActionsViewProps) {
+export function ReviewActionsView(props: Readonly<ReviewActionsViewProps>) {
   return (
     <ActionsCard>
       <ActionsCardHeader />

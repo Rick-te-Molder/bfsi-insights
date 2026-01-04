@@ -48,12 +48,12 @@ function VersionSelectA({
   versionA,
   setVersionA,
   disabled,
-}: {
+}: Readonly<{
   agentPrompts: PromptItem[];
   versionA: string;
   setVersionA: (v: string) => void;
   disabled: boolean;
-}) {
+}>) {
   return (
     <VersionSelect
       id="h2hVersionA"
@@ -71,12 +71,12 @@ function VersionSelectB({
   versionB,
   setVersionB,
   disabled,
-}: {
+}: Readonly<{
   agentPrompts: PromptItem[];
   versionB: string;
   setVersionB: (v: string) => void;
   disabled: boolean;
-}) {
+}>) {
   return (
     <VersionSelect
       id="h2hVersionB"
@@ -89,7 +89,7 @@ function VersionSelectB({
   );
 }
 
-function VersionSelects(props: ComparisonFormProps) {
+function VersionSelects(props: Readonly<ComparisonFormProps>) {
   const disabled = !props.selectedAgent;
   return (
     <>
@@ -109,7 +109,7 @@ function VersionSelects(props: ComparisonFormProps) {
   );
 }
 
-function FormGrid(props: ComparisonFormProps) {
+function FormGrid(props: Readonly<ComparisonFormProps>) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       <AgentSelect
@@ -132,7 +132,7 @@ function FormGrid(props: ComparisonFormProps) {
   );
 }
 
-export function ComparisonForm(props: ComparisonFormProps) {
+export function ComparisonForm(props: Readonly<ComparisonFormProps>) {
   const runDisabled = props.running || !props.versionA || !props.versionB || !props.selectedItem;
   return (
     <div className="mb-8 rounded-lg border border-neutral-800 bg-neutral-900 p-4">

@@ -13,7 +13,14 @@ type ActionButtonProps = {
   color: string;
 };
 
-function ActionButton({ action, loading, onClick, label, activeLabel, color }: ActionButtonProps) {
+function ActionButton({
+  action,
+  loading,
+  onClick,
+  label,
+  activeLabel,
+  color,
+}: Readonly<ActionButtonProps>) {
   return (
     <button onClick={onClick} disabled={loading !== null} className={`${BTN} ${color}`}>
       {loading === action ? activeLabel : label}
@@ -24,7 +31,7 @@ function ActionButton({ action, loading, onClick, label, activeLabel, color }: A
 function ApproveButton({
   actionLoading,
   handleAction,
-}: Pick<DetailPanelActionsProps, 'actionLoading' | 'handleAction'>) {
+}: Readonly<Pick<DetailPanelActionsProps, 'actionLoading' | 'handleAction'>>) {
   return (
     <ActionButton
       action="approve"
@@ -40,7 +47,7 @@ function ApproveButton({
 function RejectButton({
   actionLoading,
   handleAction,
-}: Pick<DetailPanelActionsProps, 'actionLoading' | 'handleAction'>) {
+}: Readonly<Pick<DetailPanelActionsProps, 'actionLoading' | 'handleAction'>>) {
   return (
     <ActionButton
       action="reject"
@@ -56,7 +63,7 @@ function RejectButton({
 function ReenrichButton({
   actionLoading,
   handleAction,
-}: Pick<DetailPanelActionsProps, 'actionLoading' | 'handleAction'>) {
+}: Readonly<Pick<DetailPanelActionsProps, 'actionLoading' | 'handleAction'>>) {
   return (
     <ActionButton
       action="reenrich"
@@ -73,7 +80,7 @@ export function DetailPanelActions({
   actionLoading,
   handleAction,
   statusCode,
-}: DetailPanelActionsProps) {
+}: Readonly<DetailPanelActionsProps>) {
   return (
     <div className="flex flex-wrap gap-2">
       {statusCode === 300 && (

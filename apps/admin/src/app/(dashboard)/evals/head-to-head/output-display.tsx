@@ -1,6 +1,6 @@
 'use client';
 
-function TaggedCodesSection({ codes, label }: { codes: unknown; label: string }) {
+function TaggedCodesSection({ codes, label }: Readonly<{ codes: unknown; label: string }>) {
   if (!Array.isArray(codes) || codes.length === 0) return null;
   return (
     <div className="mb-3">
@@ -26,7 +26,7 @@ function TaggedCodesSection({ codes, label }: { codes: unknown; label: string })
   );
 }
 
-function AudienceScoresSection({ scores }: { scores: unknown }) {
+function AudienceScoresSection({ scores }: Readonly<{ scores: unknown }>) {
   if (!scores || typeof scores !== 'object') return null;
   const s = scores as Record<string, number>;
   return (
@@ -44,7 +44,7 @@ function AudienceScoresSection({ scores }: { scores: unknown }) {
   );
 }
 
-function NamesSection({ names, label }: { names: unknown; label: string }) {
+function NamesSection({ names, label }: Readonly<{ names: unknown; label: string }>) {
   if (!Array.isArray(names) || names.length === 0) return null;
   return (
     <div className="mb-3">
@@ -54,7 +54,7 @@ function NamesSection({ names, label }: { names: unknown; label: string }) {
   );
 }
 
-function ConfidenceSection({ confidence }: { confidence: unknown }) {
+function ConfidenceSection({ confidence }: Readonly<{ confidence: unknown }>) {
   if (typeof confidence !== 'number') return null;
   return (
     <div className="mb-3">
@@ -64,7 +64,7 @@ function ConfidenceSection({ confidence }: { confidence: unknown }) {
   );
 }
 
-function ReasoningSection({ reasoning }: { reasoning: unknown }) {
+function ReasoningSection({ reasoning }: Readonly<{ reasoning: unknown }>) {
   if (!reasoning) return null;
   return (
     <div className="mb-3">
@@ -74,7 +74,7 @@ function ReasoningSection({ reasoning }: { reasoning: unknown }) {
   );
 }
 
-function UsageSection({ usage }: { usage: unknown }) {
+function UsageSection({ usage }: Readonly<{ usage: unknown }>) {
   if (!usage || typeof usage !== 'object') return null;
   const u = usage as Record<string, unknown>;
   return (
@@ -86,7 +86,7 @@ function UsageSection({ usage }: { usage: unknown }) {
   );
 }
 
-function RawDataSection({ rest }: { rest: Record<string, unknown> }) {
+function RawDataSection({ rest }: Readonly<{ rest: Record<string, unknown> }>) {
   if (Object.keys(rest).length === 0) return null;
   return (
     <details className="mt-2">
@@ -102,7 +102,7 @@ interface OutputDisplayProps {
   output: Record<string, unknown>;
 }
 
-function MainSections({ output }: { output: Record<string, unknown> }) {
+function MainSections({ output }: Readonly<{ output: Record<string, unknown> }>) {
   const {
     audience_scores,
     industry_codes,
@@ -133,7 +133,7 @@ function MainSections({ output }: { output: Record<string, unknown> }) {
   );
 }
 
-export function OutputDisplay({ output }: OutputDisplayProps) {
+export function OutputDisplay({ output }: Readonly<OutputDisplayProps>) {
   if (!output) return <span className="text-neutral-500">No output</span>;
   return (
     <div className="text-sm">

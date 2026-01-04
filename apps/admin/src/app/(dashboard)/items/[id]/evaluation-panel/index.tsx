@@ -30,11 +30,7 @@ function TabButton({
   tab,
   isActive,
   onClick,
-}: {
-  tab: (typeof TABS)[number];
-  isActive: boolean;
-  onClick: () => void;
-}) {
+}: Readonly<{ tab: (typeof TABS)[number]; isActive: boolean; onClick: () => void }>) {
   const activeClass = isActive
     ? 'text-sky-400 border-b-2 border-sky-400 -mb-px'
     : 'text-neutral-400 hover:text-white';
@@ -73,10 +69,7 @@ function useEnrichmentData(item: QueueItem) {
 function TabContent({
   activeTab,
   data,
-}: {
-  activeTab: TabId;
-  data: ReturnType<typeof useEnrichmentData>;
-}) {
+}: Readonly<{ activeTab: TabId; data: ReturnType<typeof useEnrichmentData> }>) {
   if (activeTab === 'logs')
     return (
       <LogsTab
@@ -93,7 +86,7 @@ function TabContent({
   return <RawTab payload={data.payload} />;
 }
 
-export function EvaluationPanel({ item }: { item: QueueItem }) {
+export function EvaluationPanel({ item }: Readonly<{ item: QueueItem }>) {
   const [activeTab, setActiveTab] = useState<TabId>('compare');
   const data = useEnrichmentData(item);
   return (

@@ -27,7 +27,7 @@ interface StatCardProps {
   color?: string;
 }
 
-function StatCard({ value, label, color = 'text-white' }: StatCardProps) {
+function StatCard({ value, label, color = 'text-white' }: Readonly<StatCardProps>) {
   return (
     <div className="rounded-lg bg-neutral-800/50 p-3 text-center">
       <div className={`text-lg font-bold ${color}`}>{value}</div>
@@ -47,7 +47,7 @@ function AggregateStats({
   totalDuration,
   totalInputTokens,
   totalOutputTokens,
-}: LogsTabProps) {
+}: Readonly<LogsTabProps>) {
   if (enrichmentLog.length === 0) return null;
   const failColor = failCount > 0 ? 'text-red-400' : 'text-neutral-400';
   const totalTokens = (totalInputTokens + totalOutputTokens).toLocaleString();
@@ -63,7 +63,7 @@ function AggregateStats({
   );
 }
 
-function LogEntryDetails({ entry }: { entry: EnrichmentLogEntry }) {
+function LogEntryDetails({ entry }: Readonly<{ entry: EnrichmentLogEntry }>) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-neutral-400">
       <div>
@@ -89,7 +89,7 @@ function LogEntryDetails({ entry }: { entry: EnrichmentLogEntry }) {
   );
 }
 
-function LogEntryCard({ entry }: { entry: EnrichmentLogEntry }) {
+function LogEntryCard({ entry }: Readonly<{ entry: EnrichmentLogEntry }>) {
   const borderClass = entry.success
     ? 'border-emerald-500/20 bg-emerald-500/5'
     : 'border-red-500/20 bg-red-500/5';
@@ -107,7 +107,7 @@ function LogEntryCard({ entry }: { entry: EnrichmentLogEntry }) {
   );
 }
 
-export function LogsTab(props: LogsTabProps) {
+export function LogsTab(props: Readonly<LogsTabProps>) {
   const { enrichmentLog } = props;
   return (
     <div className="space-y-4">

@@ -14,7 +14,7 @@ type Props = {
   urgencyOptions: Array<{ value: string; label: string; color: string }>;
 };
 
-export function SubmitterSectionView(props: Props) {
+export function SubmitterSectionView(props: Readonly<Props>) {
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 space-y-4">
       <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">

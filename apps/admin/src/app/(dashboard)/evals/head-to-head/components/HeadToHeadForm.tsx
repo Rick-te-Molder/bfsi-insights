@@ -49,6 +49,6 @@ function buildFormProps(props: HeadToHeadFormProps) {
  * Wrapper component that connects ComparisonState to ComparisonForm.
  * Reduces prop drilling in the main page component.
  */
-export function HeadToHeadForm(props: HeadToHeadFormProps) {
+export function HeadToHeadForm(props: Readonly<HeadToHeadFormProps>) {
   return <ComparisonForm {...buildFormProps(props)} />;
 }

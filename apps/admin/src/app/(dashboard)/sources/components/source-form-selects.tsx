@@ -24,10 +24,10 @@ const CATEGORIES = [
 function CategorySelect({
   formData,
   setFormData,
-}: {
+}: Readonly<{
   formData: FormData;
   setFormData: SetFormData;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="sourceCategory" className={labelClass}>
@@ -49,7 +49,10 @@ function CategorySelect({
   );
 }
 
-function TierSelect({ formData, setFormData }: { formData: FormData; setFormData: SetFormData }) {
+function TierSelect({
+  formData,
+  setFormData,
+}: Readonly<{ formData: FormData; setFormData: SetFormData }>) {
   return (
     <div>
       <label htmlFor="sourceTier" className={labelClass}>
@@ -73,10 +76,10 @@ function TierSelect({ formData, setFormData }: { formData: FormData; setFormData
 export function CategoryTierFields({
   formData,
   setFormData,
-}: {
+}: Readonly<{
   formData: FormData;
   setFormData: SetFormData;
-}) {
+}>) {
   return (
     <div className="grid grid-cols-2 gap-4">
       <CategorySelect formData={formData} setFormData={setFormData} />

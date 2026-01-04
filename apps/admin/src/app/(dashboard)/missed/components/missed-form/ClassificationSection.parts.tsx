@@ -10,11 +10,11 @@ export function AudienceChips({
   audiences,
   suggestedAudiences,
   toggleAudience,
-}: {
+}: Readonly<{
   audiences: Array<{ value: string; label: string }>;
   suggestedAudiences: string[];
   toggleAudience: (audience: string) => void;
-}) {
+}>) {
   return (
     <fieldset>
       <legend className="block text-sm font-medium text-neutral-300 mb-2">

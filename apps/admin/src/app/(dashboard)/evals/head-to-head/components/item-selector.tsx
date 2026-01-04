@@ -11,11 +11,7 @@ export function StatusFilterSelect({
   value,
   onChange,
   statuses,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  statuses: StatusItem[];
-}) {
+}: Readonly<{ value: string; onChange: (v: string) => void; statuses: StatusItem[] }>) {
   return (
     <select
       value={value}
@@ -32,7 +28,10 @@ export function StatusFilterSelect({
   );
 }
 
-export function SearchInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function SearchInput({
+  value,
+  onChange,
+}: Readonly<{ value: string; onChange: (v: string) => void }>) {
   return (
     <input
       type="text"
@@ -48,12 +47,12 @@ export function ItemList({
   items,
   selectedItem,
   setSelectedItem,
-}: {
+}: Readonly<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   items: any[];
   selectedItem: string;
   setSelectedItem: (v: string) => void;
-}) {
+}>) {
   const handleClick = (e: React.MouseEvent<HTMLSelectElement>) => {
     const t = e.target as HTMLOptionElement;
     if (t.value) setSelectedItem(t.value);
@@ -73,7 +72,7 @@ export function ItemList({
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function ItemOptions({ items }: { items: any[] }) {
+function ItemOptions({ items }: Readonly<{ items: any[] }>) {
   if (items.length === 0) {
     return (
       <option value="" disabled>
@@ -115,7 +114,7 @@ function FilterRow({
   setSelectedItem,
   searchQuery,
   setSearchQuery,
-}: ItemSelectorProps) {
+}: Readonly<ItemSelectorProps>) {
   const handleStatusChange = (v: string) => {
     setStatusFilter(v);
     setSelectedItem('');
@@ -128,7 +127,7 @@ function FilterRow({
   );
 }
 
-export function ItemSelector(props: ItemSelectorProps) {
+export function ItemSelector(props: Readonly<ItemSelectorProps>) {
   return (
     <div className="lg:col-span-2">
       <span className="block text-sm text-neutral-400 mb-1">Test Item</span>

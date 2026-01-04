@@ -13,7 +13,7 @@ export interface ComparisonResult {
   reasoning?: string;
 }
 
-function ResultHeader({ result }: { result: ComparisonResult }) {
+function ResultHeader({ result }: Readonly<{ result: ComparisonResult }>) {
   return (
     <div className="mb-4">
       <h3 className="text-sm font-medium text-neutral-300">{result.title}</h3>
@@ -22,7 +22,7 @@ function ResultHeader({ result }: { result: ComparisonResult }) {
   );
 }
 
-function ResultMeta({ result }: { result: ComparisonResult }) {
+function ResultMeta({ result }: Readonly<{ result: ComparisonResult }>) {
   return (
     <div className="flex gap-4 mt-2 text-xs text-neutral-500">
       <span>Version A: {result.versionA}</span>
@@ -32,7 +32,10 @@ function ResultMeta({ result }: { result: ComparisonResult }) {
   );
 }
 
-function OutputColumn({ label, output }: { label: string; output: Record<string, unknown> }) {
+function OutputColumn({
+  label,
+  output,
+}: Readonly<{ label: string; output: Record<string, unknown> }>) {
   return (
     <div>
       <h4 className="text-xs font-medium text-neutral-400 mb-2">{label}</h4>
@@ -41,7 +44,7 @@ function OutputColumn({ label, output }: { label: string; output: Record<string,
   );
 }
 
-function ResultOutputs({ result }: { result: ComparisonResult }) {
+function ResultOutputs({ result }: Readonly<{ result: ComparisonResult }>) {
   return (
     <div className="grid grid-cols-2 gap-4">
       <OutputColumn label="Output A" output={result.outputA} />
@@ -50,7 +53,7 @@ function ResultOutputs({ result }: { result: ComparisonResult }) {
   );
 }
 
-function ResultReasoning({ reasoning }: { reasoning: string }) {
+function ResultReasoning({ reasoning }: Readonly<{ reasoning: string }>) {
   return (
     <div className="mt-4 pt-4 border-t border-neutral-800">
       <h4 className="text-xs font-medium text-neutral-400 mb-1">LLM Judge Reasoning</h4>
@@ -59,7 +62,7 @@ function ResultReasoning({ reasoning }: { reasoning: string }) {
   );
 }
 
-export function ResultCard({ result }: { result: ComparisonResult }) {
+export function ResultCard({ result }: Readonly<{ result: ComparisonResult }>) {
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
       <ResultHeader result={result} />
@@ -69,7 +72,7 @@ export function ResultCard({ result }: { result: ComparisonResult }) {
   );
 }
 
-export function ResultsList({ results }: { results: ComparisonResult[] }) {
+export function ResultsList({ results }: Readonly<{ results: ComparisonResult[] }>) {
   if (results.length === 0) return null;
   return (
     <div className="space-y-6">

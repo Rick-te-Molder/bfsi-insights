@@ -90,7 +90,7 @@ function createButtonClassName(selectedId: string | null, itemId: string) {
   }`;
 }
 
-function ItemListHeader({ count }: { count: number }) {
+function ItemListHeader({ count }: Readonly<{ count: number }>) {
   return (
     <div className="flex-shrink-0 border-b border-neutral-800 px-4 py-3 flex items-center justify-between">
       <span className="text-sm font-medium text-neutral-300">{count} items</span>
@@ -102,10 +102,10 @@ function ItemListHeader({ count }: { count: number }) {
 function ItemListBody({
   items,
   renderItemButton,
-}: {
+}: Readonly<{
   items: QueueItem[];
   renderItemButton: (item: QueueItem) => React.ReactElement;
-}) {
+}>) {
   return (
     <div className="flex-1 overflow-y-auto divide-y divide-neutral-800/50">
       {items.length === 0 ? (
