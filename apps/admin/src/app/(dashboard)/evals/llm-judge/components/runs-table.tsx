@@ -14,20 +14,27 @@ interface EvalRun {
   finished_at: string | null;
 }
 
+function getScoreColor(score: number): string {
+  if (score >= 0.8) return 'text-emerald-400';
+  if (score >= 0.5) return 'text-yellow-400';
+  return 'text-red-400';
+}
+
 function ScoreCell({ score }: { score: number | null }) {
   if (score === null) return <span className="text-neutral-500">—</span>;
-  const cls = score >= 0.8 ? 'text-emerald-400' : score >= 0.5 ? 'text-yellow-400' : 'text-red-400';
-  return <span className={cls}>{(score * 100).toFixed(1)}%</span>;
+  return <span className={getScoreColor(score)}>{(score * 100).toFixed(1)}%</span>;
+}
+
+function getStatusColor(status: string): string {
+  if (status === 'completed') return 'bg-emerald-500/20 text-emerald-400';
+  if (status === 'running') return 'bg-sky-500/20 text-sky-400';
+  return 'bg-red-500/20 text-red-400';
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const cls =
-    status === 'completed'
-      ? 'bg-emerald-500/20 text-emerald-400'
-      : status === 'running'
-        ? 'bg-sky-500/20 text-sky-400'
-        : 'bg-red-500/20 text-red-400';
-  return <span className={`rounded-full px-2 py-0.5 text-xs ${cls}`}>{status}</span>;
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-xs ${getStatusColor(status)}`}>{status}</span>
+  );
 }
 
 function TableHeader() {

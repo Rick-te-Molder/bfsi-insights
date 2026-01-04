@@ -7,7 +7,7 @@ These rules exist because bugs, incidents, and CI failures happened.
 
 ## Data Consistency
 
-### Pipeline Status Queries (KB-202)
+### Pipeline Status Queries
 - Always use `status_code` (numeric) for pipeline status queries, never `status` (text).
 - Load status codes from the `status_lookup` table (single source of truth).
 - Never hardcode status code values; query `status_lookup` at runtime.
@@ -38,7 +38,7 @@ These rules exist because bugs, incidents, and CI failures happened.
 
 ---
 
-## Linting (KB-204)
+## Linting
 
 ### Strict Policy: Zero Errors AND Zero Warnings
 - Run `npm run lint -w admin` before every commit.
@@ -126,7 +126,7 @@ Run and paste relevant excerpts from:
 
 ---
 
-## Prompt Engineering (KB-207)
+## Prompt Engineering
 
 ### Agent Registry
 - Every agent must be declared in `docs/agents/manifest.yaml`.
@@ -143,7 +143,7 @@ Run and paste relevant excerpts from:
 - No silent fallbacks to hardcoded prompts.
 - Use `throw new Error('CRITICAL: ...')` pattern from KB-206.
 
-### Prompt Version Migrations (KB-258)
+### Prompt Version Migrations
 
 - Always INSERT new rows for prompt versions, never UPDATE existing rows.
 - Pattern:
@@ -170,13 +170,7 @@ VALUES (
 
 ---
 
-### Taxonomy & Tags (KB-219)
-
-Use taxonomy_config for dynamic tag insertion
-- Never hardcode tag types in approve handlers.
-- Always query taxonomy_config for junction mappings.
-- Pattern:
-### Taxonomy & Tags (KB-219)
+### Taxonomy & Tags
 
 Use `taxonomy_config` for dynamic tag insertion
 
@@ -209,7 +203,7 @@ for (const config of configs ?? []) {
 
 ---
 
-## Code Quality (KB-151)
+## Code Quality
 
 ### Boy Scout Rule
 - All touched files must meet Quality Guidelines (no exceptions).
@@ -217,6 +211,19 @@ for (const config of configs ?? []) {
 - Functions must be < 30 lines (should be < 15).
 - Pre-commit hook enforces this: `scripts/ci/check-large-files.cjs`
 - Known violations are tracked in ALLOW_LIST inside that script.
+- It's NOT allowed to "solve" these issues by adding them to the allow list - this defeats the purpose of the rule.
+- Any violation must be addressed by refactoring, not by adding to the allow list.
+- The goal is to maintain code quality standards across the entire codebase at all times.
+- Every file should be clean and well-structured at all times, consistently, without exception.
+- After touching and thus refactoring a file that is in the allow list, please remove it from the allow list.
+
+---
+
+### Preventing Sonar Cloud Issues
+
+- Follow the rules documented in `docs/sonarcloud-rules.md` to avoid SonarCloud warnings and issues.
+- Pay special attention to rules around nested ternaries, cyclomatic complexity, and code duplication.
+- Ensure all code changes comply with SonarCloud quality gates and maintain clean code standards at all times, consistently, without exception, across the entire codebase at all times.
 
 ---
 
@@ -245,5 +252,3 @@ For CI workflow edits, paste the literal unified diff of the workflow change.
   <files changed + why>
 - Remaining risks / unverified:
   <explicit list, or “none”>
-
----
