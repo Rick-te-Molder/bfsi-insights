@@ -82,10 +82,8 @@ function createTriggerStep(
     try {
       show('success', `✓ Processing ${stepKey}...`);
       const result = await callEnrichStep(stepKey, item.id);
-      show(
-        'success',
-        `✓ ${stepKey} complete${result.processed ? ` (${result.processed} processed)` : ''}`,
-      );
+      const processedSuffix = result.processed ? ` (${result.processed} processed)` : '';
+      show('success', `✓ ${stepKey} complete${processedSuffix}`);
       refresh();
     } catch (err) {
       show('error', `Failed: ${err instanceof Error ? err.message : 'Unknown'}`);
