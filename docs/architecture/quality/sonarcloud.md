@@ -40,6 +40,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S6842   | [Do not add interactive ARIA roles to non-interactive elements](./sonar-lessons/use-native-interactive-elements-or-add-proper-aria-roles.md)                  |
 | S6819   | [Use native HTML elements instead of ARIA roles](./sonar-lessons/use-native-html-elements-instead-of-aria-roles.md)                                           |
 | S6847   | [Use role presentation for non-interactive event handlers](./sonar-lessons/use-role-presentation-for-non-interactive-event-handlers.md)                       |
+| S4624   | [Refactor this code to not use nested template literals](./sonar-lessons/refactor-this-code-to-not-use-nested-template-literals.md)                           |
 
 ---
 
@@ -48,6 +49,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 Quick checks before committing. If you're about to write any of these patterns, stop and refactor.
 
 - [ ] **No nested ternaries** — Extract to helper function with early returns
+- [ ] **No nested template literals** — Extract conditional parts to variables first
 - [ ] **No boolean selector parameters** — Use separate methods or union types
 - [ ] **Interactive handlers on interactive elements only** — Use `<button>`, not `<div onClick>`
 - [ ] **Prefer native HTML over ARIA roles** — Use `<button>` not `<div role="button">`
@@ -91,6 +93,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Refactor this code to not use nested template literals](./sonar-lessons/refactor-this-code-to-not-use-nested-template-literals.md) (S4624)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -116,5 +122,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [Non-interactive elements shouldn't have event handlers](./sonar-rules/6847_non-interactive-elements-shouldnt-have-event-handlers.md)
+
+---
+
+## [Template literals should not be nested](./sonar-rules/4624_template-literals-should-not-be-nested.md)
 
 ---
