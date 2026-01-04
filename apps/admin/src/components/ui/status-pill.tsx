@@ -3,6 +3,23 @@
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
+function getCountColorClass(
+  isActive: boolean,
+  activeColor: string | undefined,
+  count: number,
+  color: string,
+): string {
+  if (isActive) return (activeColor || '') + ' text-white';
+  if (count > 0) return color;
+  return 'text-neutral-500';
+}
+
+function getContainerBorderClass(isActive: boolean, count: number, borderColor: string): string {
+  if (isActive) return 'ring-2 ring-offset-1 ring-offset-neutral-900';
+  if (count > 0) return borderColor;
+  return 'border-neutral-700';
+}
+
 interface StatusPillProps {
   code: number;
   name: string;
@@ -12,6 +29,69 @@ interface StatusPillProps {
   isActive?: boolean;
   activeColor?: string;
   href?: string;
+}
+
+function getCodeClass(isActive: boolean | undefined, activeColor: string | undefined): string {
+  return isActive ? (activeColor || '') + ' text-white' : 'bg-neutral-700/50 text-neutral-400';
+}
+
+function getNameClass(isActive: boolean | undefined, activeColor: string | undefined): string {
+  return isActive ? (activeColor || '') + ' text-white' : 'bg-neutral-700/50 text-neutral-300';
+}
+
+function CodeSpan({
+  code,
+  isActive,
+  activeColor,
+}: {
+  code: number;
+  isActive?: boolean;
+  activeColor?: string;
+}) {
+  return (
+    <span className={cn('pl-2 pr-1 py-1 font-mono', getCodeClass(isActive, activeColor))}>
+      {code}
+    </span>
+  );
+}
+
+function NameSpan({
+  name,
+  isActive,
+  activeColor,
+}: {
+  name: string;
+  isActive?: boolean;
+  activeColor?: string;
+}) {
+  return (
+    <span className={cn('pr-2 py-1', getNameClass(isActive, activeColor))}>
+      {name.replace(/_/g, ' ')}
+    </span>
+  );
+}
+
+function CountSpan({
+  count,
+  color,
+  isActive,
+  activeColor,
+}: {
+  count: number;
+  color: string;
+  isActive?: boolean;
+  activeColor?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        'px-2 py-1 font-bold',
+        getCountColorClass(isActive ?? false, activeColor, count, color),
+      )}
+    >
+      {count}
+    </span>
+  );
 }
 
 function PillContent({
@@ -24,78 +104,68 @@ function PillContent({
 }: Omit<StatusPillProps, 'borderColor' | 'href'>) {
   return (
     <>
-      <span
-        className={cn(
-          'pl-2 pr-1 py-1 font-mono',
-          isActive ? activeColor + ' text-white' : 'bg-neutral-700/50 text-neutral-400',
-        )}
-      >
-        {code}
-      </span>
-      <span
-        className={cn(
-          'pr-2 py-1',
-          isActive ? activeColor + ' text-white' : 'bg-neutral-700/50 text-neutral-300',
-        )}
-      >
-        {name.replace(/_/g, ' ')}
-      </span>
-      <span
-        className={cn(
-          'px-2 py-1 font-bold',
-          isActive ? activeColor + ' text-white' : count > 0 ? color : 'text-neutral-500',
-        )}
-      >
-        {count}
-      </span>
+      <CodeSpan code={code} isActive={isActive} activeColor={activeColor} />
+      <NameSpan name={name} isActive={isActive} activeColor={activeColor} />
+      <CountSpan count={count} color={color} isActive={isActive} activeColor={activeColor} />
     </>
   );
 }
 
-export function StatusPill({
-  code,
-  name,
-  count,
-  color,
-  borderColor,
-  isActive = false,
-  activeColor,
-  href,
-}: StatusPillProps) {
-  const containerClass = cn(
+function useContainerClass(
+  isActive: boolean,
+  count: number,
+  borderColor: string,
+  activeColor?: string,
+  href?: string,
+) {
+  return cn(
     'inline-flex items-center rounded-full text-xs overflow-hidden transition-colors',
-    isActive
-      ? 'ring-2 ring-offset-1 ring-offset-neutral-900'
-      : count > 0
-        ? borderColor
-        : 'border-neutral-700',
+    getContainerBorderClass(isActive, count, borderColor),
     isActive && activeColor?.replace('bg-', 'ring-'),
     'border',
     href && 'hover:opacity-80',
   );
+}
 
-  const content = (
-    <PillContent
-      code={code}
-      name={name}
-      count={count}
-      color={color}
-      isActive={isActive}
-      activeColor={activeColor}
-    />
-  );
-
-  if (href) {
+function PillWrapper({
+  href,
+  className,
+  title,
+  children,
+}: {
+  href?: string;
+  className: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  if (href)
     return (
-      <Link href={href} className={containerClass} title={`Code ${code}: ${name} (${count} items)`}>
-        {content}
+      <Link href={href} className={className} title={title}>
+        {children}
       </Link>
     );
-  }
+  return (
+    <div className={className} title={title}>
+      {children}
+    </div>
+  );
+}
+
+export function StatusPill(props: StatusPillProps) {
+  const { code, name, count, color, borderColor, isActive = false, activeColor, href } = props;
+  const containerClass = useContainerClass(isActive, count, borderColor, activeColor, href);
+  const title = `Code ${code}: ${name} (${count} items)`;
 
   return (
-    <div className={containerClass} title={`Code ${code}: ${name} (${count} items)`}>
-      {content}
-    </div>
+    <PillWrapper href={href} className={containerClass} title={title}>
+      <PillContent
+        code={code}
+        name={name}
+        count={count}
+        color={color}
+        isActive={isActive}
+        activeColor={activeColor}
+      />
+    </PillWrapper>
   );
 }
