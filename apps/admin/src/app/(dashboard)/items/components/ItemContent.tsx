@@ -4,10 +4,10 @@ import type { QueueItem } from '@bfsi/types';
 export function ItemContent({
   item,
   getAudienceLabel,
-}: {
+}: Readonly<{
   item: QueueItem;
   getAudienceLabel: (code: string) => string;
-}) {
+}>) {
   return (
     <div className="flex items-start justify-between gap-2">
       <ItemMainContent item={item} />
@@ -16,7 +16,7 @@ export function ItemContent({
   );
 }
 
-function ItemMainContent({ item }: { item: QueueItem }) {
+function ItemMainContent({ item }: Readonly<{ item: QueueItem }>) {
   return (
     <div className="min-w-0 flex-1">
       <p className="font-medium text-sm text-white truncate">
@@ -37,7 +37,7 @@ function ItemMainContent({ item }: { item: QueueItem }) {
   );
 }
 
-function ItemStatusInfo({ item }: { item: QueueItem }) {
+function ItemStatusInfo({ item }: Readonly<{ item: QueueItem }>) {
   return (
     <div className="flex items-center gap-2 mt-1">
       <span
@@ -52,7 +52,7 @@ function ItemStatusInfo({ item }: { item: QueueItem }) {
   );
 }
 
-function ItemTaxonomyChips({ item }: { item: QueueItem }) {
+function ItemTaxonomyChips({ item }: Readonly<{ item: QueueItem }>) {
   const hasChips =
     (item.payload?.industry_codes || []).length > 0 ||
     (item.payload?.geography_codes || []).length > 0;
@@ -92,10 +92,10 @@ function renderGeographyChips(geographyCodes: string[]) {
 function ItemMetaContent({
   item,
   getAudienceLabel,
-}: {
+}: Readonly<{
   item: QueueItem;
   getAudienceLabel: (code: string) => string;
-}) {
+}>) {
   return (
     <div className="flex-shrink-0 text-right">
       <span className="text-[10px] text-neutral-500 block">

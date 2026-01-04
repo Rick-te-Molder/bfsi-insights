@@ -12,7 +12,10 @@ interface SourceModalProps {
   onSave: () => void;
 }
 
-function ModalWrapper({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+function ModalWrapper({
+  onClose,
+  children,
+}: Readonly<{ onClose: () => void; children: React.ReactNode }>) {
   return (
     <button
       type="button"
@@ -32,7 +35,7 @@ function ModalWrapper({ onClose, children }: { onClose: () => void; children: Re
   );
 }
 
-export function SourceModal({ source, onClose, onSave }: SourceModalProps) {
+export function SourceModal({ source, onClose, onSave }: Readonly<SourceModalProps>) {
   const [formData, setFormData] = useState<FormData>(source || defaultFormData);
   const { saving, handleSubmit } = useSourceModalSubmit(source, formData, onSave);
 

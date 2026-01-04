@@ -1,4 +1,4 @@
-export function ActionsCard({ children }: { children: React.ReactNode }) {
+export function ActionsCard({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">{children}</div>
   );

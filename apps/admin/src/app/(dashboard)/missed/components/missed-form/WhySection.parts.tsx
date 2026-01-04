@@ -14,10 +14,10 @@ export function WhyHeader() {
 export function WhyTextarea({
   whyValuable,
   setWhyValuable,
-}: {
+}: Readonly<{
   whyValuable: string;
   setWhyValuable: (v: string) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="why" className="block text-sm font-medium text-neutral-300 mb-2">
@@ -39,10 +39,10 @@ export function WhyTextarea({
 export function VerbatimField({
   verbatimComment,
   setVerbatimComment,
-}: {
+}: Readonly<{
   verbatimComment: string;
   setVerbatimComment: (v: string) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="verbatim" className="block text-sm font-medium text-neutral-300 mb-2">

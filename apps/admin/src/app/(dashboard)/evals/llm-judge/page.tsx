@@ -24,7 +24,7 @@ interface EvalFormProps {
   running: boolean;
 }
 
-function EvalFormGrid(props: EvalFormProps) {
+function EvalFormGrid(props: Readonly<EvalFormProps>) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <AgentSelect
@@ -48,7 +48,7 @@ function EvalFormGrid(props: EvalFormProps) {
   );
 }
 
-function EvalForm(props: EvalFormProps) {
+function EvalForm(props: Readonly<EvalFormProps>) {
   return (
     <div className="mb-8 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
       <h2 className="text-lg font-semibold text-white mb-4">Run New Evaluation</h2>
@@ -58,7 +58,7 @@ function EvalForm(props: EvalFormProps) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function RunsSection({ runs }: { runs: any[] }) {
+function RunsSection({ runs }: Readonly<{ runs: any[] }>) {
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900">
       <div className="border-b border-neutral-800 px-4 py-3">

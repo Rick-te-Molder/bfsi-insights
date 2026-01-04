@@ -1,4 +1,7 @@
-export function TitleField({ title, setTitle }: { title: string; setTitle: (v: string) => void }) {
+export function TitleField({
+  title,
+  setTitle,
+}: Readonly<{ title: string; setTitle: (v: string) => void }>) {
   return (
     <div className="mb-4">
       <label htmlFor="title-input" className="block text-sm text-neutral-400 mb-1">

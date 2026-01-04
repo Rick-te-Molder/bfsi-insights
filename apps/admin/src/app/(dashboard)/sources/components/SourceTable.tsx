@@ -34,7 +34,7 @@ function TableHeader() {
   );
 }
 
-function SourceCell({ source }: { source: Source }) {
+function SourceCell({ source }: Readonly<{ source: Source }>) {
   return (
     <td className="px-4 py-3">
       <div className="flex items-center gap-2">
@@ -56,10 +56,10 @@ function SourceCell({ source }: { source: Source }) {
 function CategoryCell({
   source,
   getCategoryColor,
-}: {
+}: Readonly<{
   source: Source;
   getCategoryColor: (c: string) => string;
-}) {
+}>) {
   return (
     <td className="px-4 py-3">
       <span className={`rounded-full px-2 py-0.5 text-xs ${getCategoryColor(source.category)}`}>
@@ -70,7 +70,7 @@ function CategoryCell({
   );
 }
 
-function DiscoveryCell({ methods }: { methods: DiscoveryMethod[] }) {
+function DiscoveryCell({ methods }: Readonly<{ methods: DiscoveryMethod[] }>) {
   if (methods.length === 0) {
     return (
       <td className="px-4 py-3">
@@ -96,7 +96,10 @@ function DiscoveryCell({ methods }: { methods: DiscoveryMethod[] }) {
   );
 }
 
-function HealthCell({ health, badge }: { health: SourceHealth | undefined; badge: HealthBadge }) {
+function HealthCell({
+  health,
+  badge,
+}: Readonly<{ health: SourceHealth | undefined; badge: HealthBadge }>) {
   const errorSuffix = health ? ` (${health.error_rate}% errors)` : '';
   return (
     <td className="px-4 py-3">
@@ -107,7 +110,7 @@ function HealthCell({ health, badge }: { health: SourceHealth | undefined; badge
   );
 }
 
-function ItemsCell({ health }: { health: SourceHealth | undefined }) {
+function ItemsCell({ health }: Readonly<{ health: SourceHealth | undefined }>) {
   return (
     <td className="px-4 py-3">
       <span className={`text-sm ${health?.items_7d ? 'text-white' : 'text-neutral-600'}`}>
@@ -120,7 +123,7 @@ function ItemsCell({ health }: { health: SourceHealth | undefined }) {
   );
 }
 
-function ToggleCell({ source, onToggle }: { source: Source; onToggle: () => void }) {
+function ToggleCell({ source, onToggle }: Readonly<{ source: Source; onToggle: () => void }>) {
   return (
     <td className="px-4 py-3">
       <button
@@ -135,7 +138,7 @@ function ToggleCell({ source, onToggle }: { source: Source; onToggle: () => void
   );
 }
 
-function ActionsCell({ onEdit }: { onEdit: () => void }) {
+function ActionsCell({ onEdit }: Readonly<{ onEdit: () => void }>) {
   return (
     <td className="px-4 py-3">
       <button onClick={onEdit} className="text-sky-400 hover:text-sky-300 text-xs">
@@ -156,7 +159,7 @@ interface SourceRowProps {
   onEdit: () => void;
 }
 
-function SourceRow(props: SourceRowProps) {
+function SourceRow(props: Readonly<SourceRowProps>) {
   const {
     source,
     health,
@@ -185,7 +188,7 @@ function SourceRow(props: SourceRowProps) {
   );
 }
 
-function TableBody(props: SourceTableProps) {
+function TableBody(props: Readonly<SourceTableProps>) {
   const {
     sources,
     healthData,
@@ -215,7 +218,7 @@ function TableBody(props: SourceTableProps) {
   );
 }
 
-export function SourceTable(props: SourceTableProps) {
+export function SourceTable(props: Readonly<SourceTableProps>) {
   return (
     <div className="overflow-hidden rounded-lg border border-neutral-800">
       <table className="w-full">

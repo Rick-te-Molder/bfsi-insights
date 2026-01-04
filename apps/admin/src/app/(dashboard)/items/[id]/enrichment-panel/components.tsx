@@ -7,12 +7,12 @@ function UtilityVersionInfo({
   upToDate,
   currentVersion,
   formatDate,
-}: {
+}: Readonly<{
   meta: EnrichmentMeta;
   upToDate: boolean;
   currentVersion?: UtilityVersion;
   formatDate: (iso?: string) => string;
-}) {
+}>) {
   return (
     <>
       <span className="text-neutral-400">v{meta.implementation_version}</span>
@@ -32,12 +32,12 @@ function LLMVersionInfo({
   upToDate,
   current,
   formatDate,
-}: {
+}: Readonly<{
   meta?: EnrichmentMeta;
   upToDate: boolean;
   current?: CurrentPrompt;
   formatDate: (iso?: string) => string;
-}) {
+}>) {
   return (
     <>
       {meta?.prompt_version}
@@ -67,7 +67,7 @@ export function StepVersionInfo({
   getCurrentUtilityVersion,
   agent,
   formatDate,
-}: StepVersionInfoProps) {
+}: Readonly<StepVersionInfoProps>) {
   if (meta?.agent_type === 'utility') {
     return (
       <UtilityVersionInfo
@@ -88,9 +88,7 @@ export function StepVersionInfo({
 
 export function StatusMessage({
   message,
-}: {
-  message: { type: 'success' | 'error'; text: string } | null;
-}) {
+}: Readonly<{ message: { type: 'success' | 'error'; text: string } | null }>) {
   if (!message) return null;
   const cls =
     message.type === 'success'
@@ -101,7 +99,7 @@ export function StatusMessage({
   );
 }
 
-export function StatusIndicator({ statusCode }: { statusCode: number }) {
+export function StatusIndicator({ statusCode }: Readonly<{ statusCode: number }>) {
   return (
     <div className="mb-3 px-2 py-1.5 rounded bg-neutral-800/50 text-xs text-neutral-400">
       Status: <span className="font-mono text-neutral-300">{statusCode}</span>
@@ -113,11 +111,7 @@ function StepLabel({
   label,
   hasRun,
   upToDate,
-}: {
-  label: string;
-  hasRun: boolean;
-  upToDate: boolean;
-}) {
+}: Readonly<{ label: string; hasRun: boolean; upToDate: boolean }>) {
   return (
     <div className="flex items-center gap-2">
       <span className="text-sm font-medium text-neutral-200">{label}</span>
@@ -136,13 +130,13 @@ function StepButton({
   upToDate,
   hasRun,
   onTrigger,
-}: {
+}: Readonly<{
   loading: string | null;
   stepKey: string;
   upToDate: boolean;
   hasRun: boolean;
   onTrigger: () => void;
-}) {
+}>) {
   const cls = upToDate
     ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
     : 'bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 border border-sky-500/30';
@@ -175,7 +169,7 @@ export function StepRow({
   stepKey,
   onTrigger,
   children,
-}: StepRowProps) {
+}: Readonly<StepRowProps>) {
   return (
     <div className="flex items-center justify-between gap-2">
       <div className="min-w-0 flex-1">
@@ -199,7 +193,11 @@ interface ReEnrichButtonProps {
   onTrigger: () => void;
 }
 
-export function ReEnrichButton({ loading, hasAnyOutdated, onTrigger }: ReEnrichButtonProps) {
+export function ReEnrichButton({
+  loading,
+  hasAnyOutdated,
+  onTrigger,
+}: Readonly<ReEnrichButtonProps>) {
   const btnClass = hasAnyOutdated
     ? 'bg-sky-600 text-white hover:bg-sky-500'
     : 'bg-neutral-800 text-neutral-500 cursor-not-allowed';

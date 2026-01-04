@@ -18,7 +18,7 @@ type FormModel = {
   toggleAudience: (a: string) => void;
 };
 
-export function WhyAndActionsSections({ form }: { form: FormModel }) {
+export function WhyAndActionsSections({ form }: Readonly<{ form: FormModel }>) {
   return (
     <>
       <WhySection

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { SubmissionStatus } from '../../types';
 
-export function FormActions({ status }: { status: SubmissionStatus }) {
+export function FormActions({ status }: Readonly<{ status: SubmissionStatus }>) {
   return (
     <div className="flex gap-3">
       <button

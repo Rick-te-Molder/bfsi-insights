@@ -7,7 +7,7 @@ interface ViewGoldenSetModalProps {
   onClose: () => void;
 }
 
-function ViewGoldenSetHeader({ item }: { item: EvalGoldenSet }) {
+function ViewGoldenSetHeader({ item }: Readonly<{ item: EvalGoldenSet }>) {
   return (
     <div className="p-4 border-b border-neutral-800">
       <div className="flex items-center gap-2">
@@ -23,7 +23,7 @@ function ViewGoldenSetHeader({ item }: { item: EvalGoldenSet }) {
   );
 }
 
-function ViewGoldenSetContent({ item }: { item: EvalGoldenSet }) {
+function ViewGoldenSetContent({ item }: Readonly<{ item: EvalGoldenSet }>) {
   return (
     <div className="flex-1 overflow-auto p-4 space-y-4">
       <div>
@@ -43,7 +43,10 @@ function ViewGoldenSetContent({ item }: { item: EvalGoldenSet }) {
   );
 }
 
-function ViewGoldenSetFooter({ item, onClose }: { item: EvalGoldenSet; onClose: () => void }) {
+function ViewGoldenSetFooter({
+  item,
+  onClose,
+}: Readonly<{ item: EvalGoldenSet; onClose: () => void }>) {
   return (
     <div className="p-4 border-t border-neutral-800 flex justify-between">
       <div className="text-xs text-neutral-500">
@@ -56,7 +59,7 @@ function ViewGoldenSetFooter({ item, onClose }: { item: EvalGoldenSet; onClose: 
   );
 }
 
-export function ViewGoldenSetModal({ item, onClose }: ViewGoldenSetModalProps) {
+export function ViewGoldenSetModal({ item, onClose }: Readonly<ViewGoldenSetModalProps>) {
   return (
     <button
       type="button"

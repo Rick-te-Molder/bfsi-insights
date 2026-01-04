@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-export function CompareLink({ itemId }: { itemId: string }) {
+export function CompareLink({ itemId }: Readonly<{ itemId: string }>) {
   return (
     <Link
       href={`/evals/head-to-head?item=${itemId}`}

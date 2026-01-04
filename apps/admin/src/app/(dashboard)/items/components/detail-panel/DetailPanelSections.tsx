@@ -10,7 +10,7 @@ import type {
 
 const CARD = 'rounded-lg border border-neutral-800 bg-neutral-900/60 p-4';
 
-export function DetailPanelSummary({ summary }: { summary: SummaryPayload }) {
+export function DetailPanelSummary({ summary }: Readonly<{ summary: SummaryPayload }>) {
   const text = summary.medium || summary.short || summary.long || 'No summary';
   return (
     <div className={CARD}>
@@ -24,7 +24,7 @@ export function DetailPanelClassification({
   payload,
   taxonomyConfig,
   taxonomyData,
-}: DetailPanelClassificationProps) {
+}: Readonly<DetailPanelClassificationProps>) {
   return (
     <div className={CARD}>
       <h3 className="text-sm font-semibold text-neutral-400 mb-3">Classification</h3>
@@ -42,11 +42,11 @@ function MetaRow({
   label,
   value,
   color = 'text-neutral-300',
-}: {
+}: Readonly<{
   label: string;
   value: string;
   color?: string;
-}) {
+}>) {
   return (
     <div className="flex justify-between">
       <dt className="text-neutral-500">{label}</dt>
@@ -55,7 +55,7 @@ function MetaRow({
   );
 }
 
-export function DetailPanelMetadata({ payload, discoveredAt }: DetailPanelMetadataProps) {
+export function DetailPanelMetadata({ payload, discoveredAt }: Readonly<DetailPanelMetadataProps>) {
   const published = typeof payload.published_at === 'string' ? payload.published_at : null;
   const confidence =
     typeof payload.relevance_confidence === 'number' ? payload.relevance_confidence : null;

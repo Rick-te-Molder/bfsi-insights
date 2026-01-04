@@ -1,6 +1,9 @@
 import type { SubmissionStatus } from '../../types';
 
-export function StatusBanner({ status, message }: { status: SubmissionStatus; message: string }) {
+export function StatusBanner({
+  status,
+  message,
+}: Readonly<{ status: SubmissionStatus; message: string }>) {
   if (status !== 'success' && status !== 'error') return null;
 
   const isSuccess = status === 'success';

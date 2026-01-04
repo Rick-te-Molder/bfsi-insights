@@ -9,7 +9,10 @@ const inputClass =
   'w-full rounded-md border border-neutral-700 bg-neutral-800 px-3 py-2 text-white';
 const labelClass = 'block text-sm text-neutral-400 mb-1';
 
-function NameField({ formData, setFormData }: { formData: FormData; setFormData: SetFormData }) {
+function NameField({
+  formData,
+  setFormData,
+}: Readonly<{ formData: FormData; setFormData: SetFormData }>) {
   return (
     <div>
       <label htmlFor="sourceName" className={labelClass}>
@@ -31,11 +34,11 @@ function SlugField({
   formData,
   setFormData,
   disabled,
-}: {
+}: Readonly<{
   formData: FormData;
   setFormData: SetFormData;
   disabled: boolean;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="sourceSlug" className={labelClass}>
@@ -58,11 +61,11 @@ export function NameSlugFields({
   formData,
   setFormData,
   isEdit,
-}: {
+}: Readonly<{
   formData: FormData;
   setFormData: SetFormData;
   isEdit: boolean;
-}) {
+}>) {
   return (
     <div className="grid grid-cols-2 gap-4">
       <NameField formData={formData} setFormData={setFormData} />
@@ -74,10 +77,10 @@ export function NameSlugFields({
 export function DomainField({
   formData,
   setFormData,
-}: {
+}: Readonly<{
   formData: FormData;
   setFormData: SetFormData;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="sourceDomain" className={labelClass}>
@@ -97,7 +100,10 @@ export function DomainField({
 
 export { CategoryTierFields } from './source-form-selects';
 
-function RssField({ formData, setFormData }: { formData: FormData; setFormData: SetFormData }) {
+function RssField({
+  formData,
+  setFormData,
+}: Readonly<{ formData: FormData; setFormData: SetFormData }>) {
   return (
     <div>
       <label htmlFor="sourceRss" className={labelClass}>
@@ -115,7 +121,10 @@ function RssField({ formData, setFormData }: { formData: FormData; setFormData: 
   );
 }
 
-function SitemapField({ formData, setFormData }: { formData: FormData; setFormData: SetFormData }) {
+function SitemapField({
+  formData,
+  setFormData,
+}: Readonly<{ formData: FormData; setFormData: SetFormData }>) {
   return (
     <div>
       <label htmlFor="sourceSitemap" className={labelClass}>
@@ -136,10 +145,10 @@ function SitemapField({ formData, setFormData }: { formData: FormData; setFormDa
 export function UrlFields({
   formData,
   setFormData,
-}: {
+}: Readonly<{
   formData: FormData;
   setFormData: SetFormData;
-}) {
+}>) {
   return (
     <>
       <RssField formData={formData} setFormData={setFormData} />
@@ -151,10 +160,10 @@ export function UrlFields({
 export function PriorityField({
   formData,
   setFormData,
-}: {
+}: Readonly<{
   formData: FormData;
   setFormData: SetFormData;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="sourcePriority" className={labelClass}>
@@ -174,10 +183,10 @@ export function PriorityField({
 export function CheckboxFields({
   formData,
   setFormData,
-}: {
+}: Readonly<{
   formData: FormData;
   setFormData: SetFormData;
-}) {
+}>) {
   return (
     <div className="flex items-center gap-4">
       <label className="flex items-center gap-2 text-sm text-neutral-400">
@@ -202,7 +211,10 @@ export function CheckboxFields({
   );
 }
 
-export function FormFooter({ onClose, saving }: { onClose: () => void; saving: boolean }) {
+export function FormFooter({
+  onClose,
+  saving,
+}: Readonly<{ onClose: () => void; saving: boolean }>) {
   return (
     <div className="flex justify-end gap-3 pt-4 border-t border-neutral-800">
       <button

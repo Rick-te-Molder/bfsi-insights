@@ -4,7 +4,7 @@ import type { QueueItem } from '@bfsi/types';
 import { ReviewActionsView } from './ReviewActionsView';
 import { useReviewActionsController } from './useReviewActionsController';
 
-export function ReviewActions({ item }: { item: QueueItem }) {
+export function ReviewActions({ item }: Readonly<{ item: QueueItem }>) {
   const c = useReviewActionsController(item);
 
   return (

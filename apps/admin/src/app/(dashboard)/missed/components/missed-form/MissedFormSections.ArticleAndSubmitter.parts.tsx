@@ -24,11 +24,11 @@ export function ArticleSectionBlock({
   form,
   detectedDomain,
   existingSource,
-}: {
+}: Readonly<{
   form: FormModel;
   detectedDomain: string | null;
   existingSource: ExistingSource | null;
-}) {
+}>) {
   return (
     <ArticleSection
       url={form.values.url}
@@ -39,7 +39,7 @@ export function ArticleSectionBlock({
   );
 }
 
-export function SubmitterSectionBlock({ form }: { form: FormModel }) {
+export function SubmitterSectionBlock({ form }: Readonly<{ form: FormModel }>) {
   return (
     <SubmitterSection
       submitterName={form.values.submitterName}

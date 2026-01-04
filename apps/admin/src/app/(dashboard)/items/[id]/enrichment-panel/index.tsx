@@ -66,37 +66,44 @@ interface StepsContext {
   checks: ReturnType<typeof useVersionChecks>;
 }
 
-function StepItemContent({ step, ctx }: { step: (typeof STEP_CONFIG)[number]; ctx: StepsContext }) {
-  const { key, label, agent } = step;
-  const meta = ctx.enrichmentMeta[key];
-  const upToDate = ctx.checks.isUpToDate(key, agent);
+function useStepState(step: (typeof STEP_CONFIG)[number], ctx: StepsContext) {
+  const meta = ctx.enrichmentMeta[step.key];
+  const upToDate = ctx.checks.isUpToDate(step.key, step.agent);
   const hasMetaRun = !!meta?.prompt_version;
-  const hasLegacy = hasStepOutput(ctx.item.payload, key);
+  const hasLegacy = hasStepOutput(ctx.item.payload, step.key);
+  return { meta, upToDate, hasMetaRun, hasLegacy };
+}
+
+function StepItemContent({
+  step,
+  ctx,
+}: Readonly<{ step: (typeof STEP_CONFIG)[number]; ctx: StepsContext }>) {
+  const { meta, upToDate, hasMetaRun, hasLegacy } = useStepState(step, ctx);
   return (
     <StepRow
-      key={key}
-      label={label}
+      key={step.key}
+      label={step.label}
       hasRun={hasMetaRun || hasLegacy}
       upToDate={upToDate}
       loading={ctx.loading}
-      stepKey={key}
-      onTrigger={() => ctx.triggerStep(key)}
+      stepKey={step.key}
+      onTrigger={() => ctx.triggerStep(step.key)}
     >
       <StepVersionInfo
         meta={meta}
         upToDate={upToDate}
         hasMetaRun={hasMetaRun}
         isLegacy={!hasMetaRun && hasLegacy}
-        current={ctx.checks.getCurrentPrompt(agent)}
+        current={ctx.checks.getCurrentPrompt(step.agent)}
         getCurrentUtilityVersion={ctx.checks.getCurrentUtilityVersion}
-        agent={agent}
+        agent={step.agent}
         formatDate={formatDate}
       />
     </StepRow>
   );
 }
 
-function StepsList(ctx: StepsContext) {
+function StepsList(ctx: Readonly<StepsContext>) {
   return (
     <div className="space-y-3">
       {STEP_CONFIG.map((step) => (
@@ -123,7 +130,7 @@ function PanelContent({
   currentPrompts,
   utilityVersions,
   actions,
-}: EnrichmentPanelProps & { actions: ReturnType<typeof useEnrichmentActions> }) {
+}: Readonly<EnrichmentPanelProps & { actions: ReturnType<typeof useEnrichmentActions> }>) {
   const enrichmentMeta = (item.payload?.enrichment_meta || {}) as Record<string, EnrichmentMeta>;
   const checks = useVersionChecks(currentPrompts, utilityVersions || [], enrichmentMeta);
   const hasAnyOutdated = checkHasAnyOutdated(item, enrichmentMeta, checks.isUpToDate);

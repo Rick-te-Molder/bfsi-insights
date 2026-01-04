@@ -2,7 +2,7 @@
 
 import type { FilterTier, FilterEnabled, FilterHealth } from '../types';
 
-export function PageHeader({ onAdd }: { onAdd: () => void }) {
+export function PageHeader({ onAdd }: Readonly<{ onAdd: () => void }>) {
   return (
     <header className="mb-6 flex items-center justify-between">
       <div>
@@ -21,9 +21,9 @@ export function PageHeader({ onAdd }: { onAdd: () => void }) {
 
 export function StatsBadges({
   stats,
-}: {
+}: Readonly<{
   stats: { total: number; enabled: number; premium: number; withRss: number; withScraper: number };
-}) {
+}>) {
   return (
     <div className="mb-6 flex flex-wrap gap-3 text-sm">
       <span className="rounded-full bg-neutral-800 px-3 py-1">{stats.total} total</span>
@@ -61,11 +61,11 @@ export function CategoryFilter({
   value,
   onChange,
   categories,
-}: {
+}: Readonly<{
   value: string;
   onChange: (v: string) => void;
   categories: string[];
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="filterCategory" className="block text-xs text-neutral-400 mb-1">
@@ -91,10 +91,10 @@ export function CategoryFilter({
 export function TierFilter({
   value,
   onChange,
-}: {
+}: Readonly<{
   value: FilterTier;
   onChange: (v: FilterTier) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="filterTier" className="block text-xs text-neutral-400 mb-1">
@@ -117,10 +117,10 @@ export function TierFilter({
 export function StatusFilter({
   value,
   onChange,
-}: {
+}: Readonly<{
   value: FilterEnabled;
   onChange: (v: FilterEnabled) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="filterStatus" className="block text-xs text-neutral-400 mb-1">
@@ -143,10 +143,10 @@ export function StatusFilter({
 export function HealthFilter({
   value,
   onChange,
-}: {
+}: Readonly<{
   value: FilterHealth;
   onChange: (v: FilterHealth) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="filterHealth" className="block text-xs text-neutral-400 mb-1">

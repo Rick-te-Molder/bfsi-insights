@@ -31,11 +31,11 @@ export function MissedFormSections({
   form,
   detectedDomain,
   existingSource,
-}: {
+}: Readonly<{
   form: FormModel;
   detectedDomain: string | null;
   existingSource: ExistingSource | null;
-}) {
+}>) {
   return (
     <>
       <ArticleAndSubmitterSections

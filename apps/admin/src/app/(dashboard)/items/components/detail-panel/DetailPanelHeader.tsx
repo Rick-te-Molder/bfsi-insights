@@ -6,7 +6,7 @@ import type { DetailPanelHeaderProps, DetailPanelTitleBlockProps } from './detai
 const NAV_BTN =
   'px-2 py-1 text-xs rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed';
 
-function StatusPill({ statusCode }: { statusCode: number }) {
+function StatusPill({ statusCode }: Readonly<{ statusCode: number }>) {
   return (
     <span
       className={`rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColorByCode(statusCode)}`}
@@ -16,7 +16,7 @@ function StatusPill({ statusCode }: { statusCode: number }) {
   );
 }
 
-function PublishedAt({ date }: { date: string }) {
+function PublishedAt({ date }: Readonly<{ date: string }>) {
   const formatted = new Date(date).toLocaleDateString('en-GB', {
     year: 'numeric',
     month: 'short',
@@ -25,7 +25,10 @@ function PublishedAt({ date }: { date: string }) {
   return <p className="text-xs text-neutral-400 mt-1">Published {formatted}</p>;
 }
 
-function TitleRow({ statusCode, sourceSlug }: { statusCode: number; sourceSlug: string | null }) {
+function TitleRow({
+  statusCode,
+  sourceSlug,
+}: Readonly<{ statusCode: number; sourceSlug: string | null }>) {
   return (
     <div className="flex items-center gap-2 mb-1">
       <StatusPill statusCode={statusCode} />
@@ -34,7 +37,7 @@ function TitleRow({ statusCode, sourceSlug }: { statusCode: number; sourceSlug: 
   );
 }
 
-function TitleLinks({ itemId, url }: { itemId: string; url: string }) {
+function TitleLinks({ itemId, url }: Readonly<{ itemId: string; url: string }>) {
   return (
     <>
       <a
@@ -56,7 +59,7 @@ function TitleLinks({ itemId, url }: { itemId: string; url: string }) {
   );
 }
 
-function TitleBlock({ itemId, payload, statusCode, url }: DetailPanelTitleBlockProps) {
+function TitleBlock({ itemId, payload, statusCode, url }: Readonly<DetailPanelTitleBlockProps>) {
   const title = (payload.title as string) || 'Untitled';
   const sourceSlug = typeof payload.source_slug === 'string' ? payload.source_slug : null;
   const publishedAt = typeof payload.published_at === 'string' ? payload.published_at : null;
@@ -75,7 +78,7 @@ function NavButtons({
   onNavigate,
   canNavigatePrev,
   canNavigateNext,
-}: Pick<DetailPanelHeaderProps, 'onNavigate' | 'canNavigatePrev' | 'canNavigateNext'>) {
+}: Readonly<Pick<DetailPanelHeaderProps, 'onNavigate' | 'canNavigatePrev' | 'canNavigateNext'>>) {
   return (
     <div className="flex items-center gap-2 mt-3">
       <button
@@ -99,7 +102,7 @@ function NavButtons({
   );
 }
 
-export function DetailPanelHeader(props: DetailPanelHeaderProps) {
+export function DetailPanelHeader(props: Readonly<DetailPanelHeaderProps>) {
   return (
     <div className="flex-shrink-0 border-b border-neutral-800 p-4">
       <div className="flex items-start justify-between gap-3">

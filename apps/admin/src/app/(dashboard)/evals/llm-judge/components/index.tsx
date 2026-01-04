@@ -56,7 +56,7 @@ interface PromptSelectProps {
   disabled: boolean;
 }
 
-function PromptOptions({ prompts }: { prompts: PromptVersion[] }) {
+function PromptOptions({ prompts }: Readonly<{ prompts: PromptVersion[] }>) {
   return (
     <>
       <option value="">Select version...</option>
@@ -69,7 +69,7 @@ function PromptOptions({ prompts }: { prompts: PromptVersion[] }) {
   );
 }
 
-export function PromptSelect({ prompts, value, onChange, disabled }: PromptSelectProps) {
+export function PromptSelect({ prompts, value, onChange, disabled }: Readonly<PromptSelectProps>) {
   return (
     <div>
       <label htmlFor="judgePrompt" className="block text-sm text-neutral-400 mb-1">

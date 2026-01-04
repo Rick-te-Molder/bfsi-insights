@@ -11,7 +11,7 @@ import {
 } from './DetailPanelSections';
 import { DetailPanelEmpty, DetailPanelLoading, DetailPanelNotFound } from './DetailPanelStates';
 
-function DetailPanelBody(props: DetailPanelViewProps & { summary: SummaryPayload }) {
+function DetailPanelBody(props: Readonly<DetailPanelViewProps & { summary: SummaryPayload }>) {
   const { selectedItem } = props;
   if (!selectedItem) return null;
   return (
@@ -32,7 +32,7 @@ function DetailPanelBody(props: DetailPanelViewProps & { summary: SummaryPayload
   );
 }
 
-export function DetailPanelView(props: DetailPanelViewProps) {
+export function DetailPanelView(props: Readonly<DetailPanelViewProps>) {
   if (!props.itemId) return <DetailPanelEmpty />;
   if (props.loading) return <DetailPanelLoading />;
   if (!props.selectedItem) return <DetailPanelNotFound />;

@@ -6,12 +6,12 @@ export function ArticleSection({
   setUrl,
   detectedDomain,
   existingSource,
-}: {
+}: Readonly<{
   url: string;
   setUrl: (v: string) => void;
   detectedDomain: string | null;
   existingSource: ExistingSource | null;
-}) {
+}>) {
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 space-y-4">
       <ArticleHeader />

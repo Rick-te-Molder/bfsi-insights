@@ -1,10 +1,10 @@
 export function MoveToReviewButton({
   loading,
   onClick,
-}: {
+}: Readonly<{
   loading: string | null;
   onClick: () => void;
-}) {
+}>) {
   return (
     <button
       onClick={onClick}
@@ -20,11 +20,11 @@ export function ApproveRejectButtons({
   loading,
   onApprove,
   onReject,
-}: {
+}: Readonly<{
   loading: string | null;
   onApprove: () => void;
   onReject: () => void;
-}) {
+}>) {
   return (
     <>
       <button
@@ -48,10 +48,10 @@ export function ApproveRejectButtons({
 export function ReenrichButton({
   loading,
   onClick,
-}: {
+}: Readonly<{
   loading: string | null;
   onClick: () => void;
-}) {
+}>) {
   return (
     <button
       onClick={onClick}

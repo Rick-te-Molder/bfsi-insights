@@ -25,7 +25,7 @@ export function FilterBar({
   filterHealth,
   setFilterHealth,
   categories,
-}: FilterBarProps) {
+}: Readonly<FilterBarProps>) {
   return (
     <div className="mb-6 flex flex-wrap gap-4 rounded-lg border border-neutral-800 bg-neutral-900/60 p-4">
       <CategoryFilter value={filterCategory} onChange={setFilterCategory} categories={categories} />

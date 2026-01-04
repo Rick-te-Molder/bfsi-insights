@@ -25,11 +25,11 @@ export function ArticleAndSubmitterSections({
   form,
   detectedDomain,
   existingSource,
-}: {
+}: Readonly<{
   form: FormModel;
   detectedDomain: string | null;
   existingSource: ExistingSource | null;
-}) {
+}>) {
   return (
     <>
       <ArticleSectionBlock

@@ -7,18 +7,20 @@ import {
   ReenrichButton,
 } from './ReviewActionsView.ActionButtons';
 
-export function ActionsBlock(props: {
-  loading: string | null;
-  showMoveToReview: boolean;
-  onMoveToReview: () => void;
-  showApproveReject: boolean;
-  onApprove: () => void;
-  onReject: () => void;
-  showReenrich: boolean;
-  onReenrich: () => void;
-  showApprovedNote: boolean;
-  itemId: string;
-}) {
+export function ActionsBlock(
+  props: Readonly<{
+    loading: string | null;
+    showMoveToReview: boolean;
+    onMoveToReview: () => void;
+    showApproveReject: boolean;
+    onApprove: () => void;
+    onReject: () => void;
+    showReenrich: boolean;
+    onReenrich: () => void;
+    showApprovedNote: boolean;
+    itemId: string;
+  }>,
+) {
   return (
     <ButtonStack>
       {props.showMoveToReview && (
