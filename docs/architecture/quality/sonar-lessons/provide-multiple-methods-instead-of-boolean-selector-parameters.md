@@ -1,7 +1,10 @@
 # Provide multiple methods instead of boolean selector parameters
 
-**Rule**:
-[Methods should not contain selector parameters](../sonar-rules/methods-should-not-contain-selector-parameters.md)
+**Rule ID**: typescript:S2301  
+**SonarCloud message**: "Provide multiple methods instead of using \"isPdf\" to determine which action to take."  
+**Aliases**: boolean parameter, isPdf parameter, isX parameter, selector argument
+
+**Rule**: [Methods should not contain selector parameters](../sonar-rules/methods-should-not-contain-selector-parameters.md)
 
 **Pattern to avoid**:
 

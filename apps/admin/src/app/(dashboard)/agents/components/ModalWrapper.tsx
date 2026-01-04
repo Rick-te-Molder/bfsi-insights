@@ -17,13 +17,14 @@ export function ModalWrapper({ onClose, maxWidth = 'max-w-4xl', children }: Moda
       onClick={onClose}
       onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        className={`w-full ${maxWidth} max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col`}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        {children}
+      <div role="presentation" onMouseDown={(e) => e.stopPropagation()}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          className={`w-full ${maxWidth} max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col`}
+        >
+          {children}
+        </div>
       </div>
     </button>
   );

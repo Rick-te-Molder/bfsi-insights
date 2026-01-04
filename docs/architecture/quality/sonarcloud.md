@@ -38,6 +38,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S6848   | [Add role and keyboard handling to interactive divs](./sonar-lessons/add-role-and-keyboard-handling-to-interactive-divs.md)                  |
 | S6842   | [Do not add interactive ARIA roles to non-interactive elements](./sonar-lessons/use-native-interactive-elements-or-add-proper-aria-roles.md) |
 | S6819   | [Use native HTML elements instead of ARIA roles](./sonar-lessons/use-native-html-elements-instead-of-aria-roles.md)                          |
+| S6847   | [Use role presentation for non-interactive event handlers](./sonar-lessons/use-role-presentation-for-non-interactive-event-handlers.md)      |
 
 ---
 
@@ -49,6 +50,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **No boolean selector parameters** — Use separate methods or union types
 - [ ] **Interactive handlers on interactive elements only** — Use `<button>`, not `<div onClick>`
 - [ ] **Prefer native HTML over ARIA roles** — Use `<button>` not `<div role="button">`
+- [ ] **Use role="presentation" for layout event handlers** — When divs need stopPropagation
 - [ ] **No code duplication** — Extract shared logic to functions/components
 - [ ] **No overly complex functions** — Keep cyclomatic complexity low
 
@@ -60,11 +62,11 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
-## [Extract nested ternary operations into helper functions](./sonar-lessons/extract-nested-ternary-operations-into-helper-functions.md)
+## [Extract nested ternary operations into helper functions](./sonar-lessons/extract-nested-ternary-operations-into-helper-functions.md) (S3358)
 
 ---
 
-## [Provide multiple methods instead of boolean selector parameters](./sonar-lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md)
+## [Provide multiple methods instead of boolean selector parameters](./sonar-lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md) (S2301)
 
 ---
 
@@ -77,6 +79,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 ---
 
 ## [Use native HTML elements instead of ARIA roles](./sonar-lessons/use-native-html-elements-instead-of-aria-roles.md) (S6819)
+
+---
+
+## [Use role presentation for non-interactive event handlers](./sonar-lessons/use-role-presentation-for-non-interactive-event-handlers.md) (S6847)
 
 ---
 
@@ -101,5 +107,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [Prefer tag over ARIA role](./sonar-rules/prefer-tag-over-aria-role.md)
+
+---
+
+## [Non-interactive elements shouldn't have event handlers](./sonar-rules/non-interactive-elements-shouldnt-have-event-handlers.md)
 
 ---
