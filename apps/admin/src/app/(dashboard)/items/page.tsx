@@ -178,14 +178,15 @@ export default async function ReviewPage({
       </div>
 
       {/* Content View */}
-      {viewMode === 'card' ? (
+      {viewMode === 'card' && (
         <CardView
           items={items}
           status={status}
           taxonomyConfig={taxonomyConfig}
           taxonomyData={taxonomyData}
         />
-      ) : viewMode === 'split' ? (
+      )}
+      {viewMode === 'split' && (
         <>
           {/* Split view for landscape/tablet+ */}
           <div className="hidden landscape:block md:block">
@@ -205,7 +206,8 @@ export default async function ReviewPage({
             />
           </div>
         </>
-      ) : (
+      )}
+      {viewMode === 'list' && (
         <ReviewList
           items={items}
           status={status}
