@@ -191,7 +191,6 @@ export default async function ReviewPage({
           <div className="hidden landscape:block md:block">
             <MasterDetailView
               items={items}
-              status={status}
               taxonomyConfig={taxonomyConfig}
               taxonomyData={taxonomyData}
             />
