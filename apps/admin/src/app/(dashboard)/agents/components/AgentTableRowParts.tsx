@@ -161,7 +161,11 @@ function ActionsCell(props: {
   readonly onTest: (p: PromptVersion) => void;
 }) {
   return (
-    <div className="flex items-center gap-2" onMouseDown={(e) => e.stopPropagation()}>
+    <div
+      role="presentation"
+      className="flex items-center gap-2"
+      onMouseDown={(e) => e.stopPropagation()}
+    >
       <ActionButtons
         currentPrompt={props.currentPrompt}
         onEdit={props.onEdit}

@@ -67,15 +67,16 @@ function CreateGoldenSetModalContent({
   onClose: () => void;
 }) {
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
-      className="w-full max-w-2xl max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col"
-      onMouseDown={(e) => e.stopPropagation()}
-    >
-      <CreateGoldenSetModalHeader />
-      <CreateGoldenSetModalForm state={state} handleCreate={handleCreate} onClose={onClose} />
+    <div role="presentation" onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        className="w-full max-w-2xl max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col"
+      >
+        <CreateGoldenSetModalHeader />
+        <CreateGoldenSetModalForm state={state} handleCreate={handleCreate} onClose={onClose} />
+      </div>
     </div>
   );
 }
@@ -90,16 +91,15 @@ function CreateGoldenSetModalWrapper({
   onClose: () => void;
 }) {
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       aria-label="Close modal"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 w-full h-full border-none cursor-default"
       onClick={onClose}
       onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
       <CreateGoldenSetModalContent state={state} handleCreate={handleCreate} onClose={onClose} />
-    </div>
+    </button>
   );
 }
 
