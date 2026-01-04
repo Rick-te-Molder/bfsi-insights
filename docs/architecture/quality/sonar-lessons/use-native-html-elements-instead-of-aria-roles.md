@@ -1,8 +1,11 @@
 # Use native HTML elements instead of ARIA roles
 
 **Rule ID**: typescript:S6819  
-**SonarCloud message**: "Use \<button> instead of the \"button\" role to ensure accessibility across all devices."  
-**Aliases**: div role="button", ARIA role instead of semantic HTML, prefer semantic elements
+**SonarCloud messages**:
+
+- "Use \<button> instead of the \"button\" role to ensure accessibility across all devices."
+- "Use \<img alt=...> instead of the \"presentation\" role to ensure accessibility across all devices."  
+  **Aliases**: div role="button", role="presentation", ARIA role instead of semantic HTML
 
 **Rule**: [Prefer tag over ARIA role](../sonar-rules/prefer-tag-over-aria-role.md)
 
@@ -49,22 +52,42 @@ ARIA roles are a fallback, not a replacement for semantic HTML.
 
 ## Modal backdrop pattern
 
-For modal backdrops that close on click:
+For modal backdrops that close on click, use target check instead of stopPropagation:
 
 ```tsx
 {
-  /* GOOD: Button styled as backdrop */
+  /* GOOD: Check if click is on backdrop (not dialog) */
 }
 <button
   type="button"
   aria-label="Close modal"
   className="fixed inset-0 z-50 bg-black/50 w-full h-full border-none cursor-default"
-  onClick={onClose}
+  onClick={(e) => e.target === e.currentTarget && onClose()}
   onKeyDown={(e) => e.key === 'Escape' && onClose()}
 >
-  <div role="dialog" aria-modal="true" onMouseDown={(e) => e.stopPropagation()}>
+  <div role="dialog" aria-modal="true">
     {children}
   </div>
+</button>;
+```
+
+This eliminates the need for `role="presentation"` wrappers with stopPropagation.
+
+## Avoid role="presentation" for event handling
+
+```tsx
+{
+  /* BAD: Using presentation role for stopPropagation */
+}
+<div role="presentation" onMouseDown={(e) => e.stopPropagation()}>
+  <div role="dialog">{children}</div>
+</div>;
+
+{
+  /* GOOD: Use target check instead */
+}
+<button onClick={(e) => e.target === e.currentTarget && onClose()}>
+  <div role="dialog">{children}</div>
 </button>;
 ```
 
