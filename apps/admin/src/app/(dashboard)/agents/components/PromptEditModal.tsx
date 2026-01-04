@@ -15,7 +15,10 @@ interface PromptEditModalProps {
 
 type ModalState = { promptText: string; notes: string; newVersion: string; saving: boolean };
 
-function ModalHeader({ agentName, promptText }: { agentName: string; promptText: string }) {
+function ModalHeader({
+  agentName,
+  promptText,
+}: Readonly<{ agentName: string; promptText: string }>) {
   return (
     <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
       <div>
@@ -30,7 +33,7 @@ function ModalHeader({ agentName, promptText }: { agentName: string; promptText:
   );
 }
 
-function ModeNotice({ mode, version }: { mode: 'edit' | 'create'; version: string }) {
+function ModeNotice({ mode, version }: Readonly<{ mode: 'edit' | 'create'; version: string }>) {
   if (mode === 'create') {
     return (
       <div className="p-3 rounded-lg bg-neutral-800/50 border border-neutral-700">
@@ -51,7 +54,10 @@ function ModeNotice({ mode, version }: { mode: 'edit' | 'create'; version: strin
   );
 }
 
-function VersionNameField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function VersionNameField({
+  value,
+  onChange,
+}: Readonly<{ value: string; onChange: (v: string) => void }>) {
   return (
     <div>
       <label htmlFor="versionName" className="block text-sm text-neutral-400 mb-1">
@@ -69,7 +75,10 @@ function VersionNameField({ value, onChange }: { value: string; onChange: (v: st
   );
 }
 
-function NotesField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function NotesField({
+  value,
+  onChange,
+}: Readonly<{ value: string; onChange: (v: string) => void }>) {
   return (
     <div>
       <label htmlFor="notes" className="block text-sm text-neutral-400 mb-1">
@@ -87,7 +96,10 @@ function NotesField({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-function PromptTextField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function PromptTextField({
+  value,
+  onChange,
+}: Readonly<{ value: string; onChange: (v: string) => void }>) {
   return (
     <div className="flex-1">
       <label htmlFor="promptText" className="block text-sm text-neutral-400 mb-1">
@@ -114,12 +126,12 @@ function ModalFooter({
   onSave,
   saving,
   mode,
-}: {
+}: Readonly<{
   onClose: () => void;
   onSave: () => void;
   saving: boolean;
   mode: 'edit' | 'create';
-}) {
+}>) {
   const label = getSubmitButtonLabel(saving, mode);
   return (
     <div className="p-4 border-t border-neutral-800 flex justify-end gap-3">
@@ -186,11 +198,11 @@ function ModalBody({
   mode,
   prompt,
   state,
-}: {
+}: Readonly<{
   mode: 'edit' | 'create';
   prompt: PromptVersion;
   state: ReturnType<typeof useEditState>;
-}) {
+}>) {
   return (
     <div className="flex-1 overflow-auto p-4 space-y-4">
       <ModeNotice mode={mode} version={prompt.version} />
@@ -203,7 +215,7 @@ function ModalBody({
   );
 }
 
-export function PromptEditModal({ prompt, mode, onClose, onSave }: PromptEditModalProps) {
+export function PromptEditModal({ prompt, mode, onClose, onSave }: Readonly<PromptEditModalProps>) {
   const state = useEditState(prompt);
   const supabase = createClient();
 

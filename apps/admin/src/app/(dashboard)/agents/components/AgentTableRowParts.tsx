@@ -3,7 +3,7 @@
 import type { PromptVersion } from '@/types/database';
 import { estimateTokens, getStageBadge, getAgentIcon } from '../utils';
 
-function EvalStatusBadge({ status, score }: { status: string; score?: number }) {
+function EvalStatusBadge({ status, score }: Readonly<{ status: string; score?: number }>) {
   const configs: Record<string, { icon: string; className: string; label: string }> = {
     passed: { icon: '🟢', className: 'bg-emerald-500/20 text-emerald-300', label: 'Passed' },
     warning: { icon: '🟡', className: 'bg-yellow-500/20 text-yellow-300', label: 'Warning' },

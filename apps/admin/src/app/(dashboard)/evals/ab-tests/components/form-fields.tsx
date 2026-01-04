@@ -9,10 +9,10 @@ const labelClass = 'block text-sm text-neutral-400 mb-1';
 export function TestNameField({
   value,
   onChange,
-}: {
+}: Readonly<{
   value: string;
   onChange: (v: string) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="testName" className={labelClass}>
@@ -34,11 +34,11 @@ export function AgentSelect({
   agents,
   value,
   onChange,
-}: {
+}: Readonly<{
   agents: string[];
   value: string;
   onChange: (v: string) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="agentSelect" className={labelClass}>
@@ -60,7 +60,7 @@ export function AgentSelect({
   );
 }
 
-function VariantOptions({ prompts }: { prompts: PromptVersion[] }) {
+function VariantOptions({ prompts }: Readonly<{ prompts: PromptVersion[] }>) {
   return (
     <>
       <option value="">Select version</option>
@@ -82,7 +82,14 @@ interface VariantSelectProps {
   prompts: PromptVersion[];
 }
 
-export function VariantSelect({ id, label, color, value, onChange, prompts }: VariantSelectProps) {
+export function VariantSelect({
+  id,
+  label,
+  color,
+  value,
+  onChange,
+  prompts,
+}: Readonly<VariantSelectProps>) {
   return (
     <div>
       <label htmlFor={id} className={labelClass}>
@@ -103,10 +110,10 @@ export function VariantSelect({ id, label, color, value, onChange, prompts }: Va
 export function TrafficSplitField({
   value,
   onChange,
-}: {
+}: Readonly<{
   value: number;
   onChange: (v: number) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="trafficSplit" className={labelClass}>
@@ -132,10 +139,10 @@ export function TrafficSplitField({
 export function SampleSizeField({
   value,
   onChange,
-}: {
+}: Readonly<{
   value: number;
   onChange: (v: number) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="sampleSize" className={labelClass}>
@@ -158,11 +165,11 @@ export function ModalFooter({
   onClose,
   onCreate,
   saving,
-}: {
+}: Readonly<{
   onClose: () => void;
   onCreate: () => void;
   saving: boolean;
-}) {
+}>) {
   return (
     <div className="flex justify-end gap-2 mt-6">
       <button onClick={onClose} className="px-4 py-2 text-sm text-neutral-400 hover:text-white">

@@ -23,11 +23,11 @@ function GoldenSetsItem({
   item,
   setSelectedItem,
   handleDelete,
-}: {
+}: Readonly<{
   item: EvalGoldenSet;
   setSelectedItem: (item: EvalGoldenSet) => void;
   handleDelete: (id: string) => void;
-}) {
+}>) {
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 hover:border-neutral-700 transition-colors">
       <GoldenSetsItemContent item={item} />
@@ -41,7 +41,7 @@ function GoldenSetsItem({
   );
 }
 
-function GoldenSetsItemContent({ item }: { item: EvalGoldenSet }) {
+function GoldenSetsItemContent({ item }: Readonly<{ item: EvalGoldenSet }>) {
   return (
     <div className="flex items-start justify-between gap-4">
       <div className="flex-1 min-w-0">
@@ -53,7 +53,7 @@ function GoldenSetsItemContent({ item }: { item: EvalGoldenSet }) {
   );
 }
 
-function GoldenSetsItemHeader({ item }: { item: EvalGoldenSet }) {
+function GoldenSetsItemHeader({ item }: Readonly<{ item: EvalGoldenSet }>) {
   return (
     <div className="flex items-center gap-2 mb-2">
       <span className="rounded-full bg-sky-500/20 text-sky-300 px-2 py-0.5 text-xs">
@@ -64,7 +64,7 @@ function GoldenSetsItemHeader({ item }: { item: EvalGoldenSet }) {
   );
 }
 
-function GoldenSetsItemData({ item }: { item: EvalGoldenSet }) {
+function GoldenSetsItemData({ item }: Readonly<{ item: EvalGoldenSet }>) {
   return (
     <div className="grid grid-cols-2 gap-4 text-xs">
       <div>
@@ -89,11 +89,11 @@ function GoldenSetsItemActions({
   item,
   setSelectedItem,
   handleDelete,
-}: {
+}: Readonly<{
   item: EvalGoldenSet;
   setSelectedItem: (item: EvalGoldenSet) => void;
   handleDelete: (id: string) => void;
-}) {
+}>) {
   return (
     <div className="flex flex-col gap-2">
       <button
@@ -112,7 +112,7 @@ function GoldenSetsItemActions({
   );
 }
 
-function GoldenSetsItemFooter({ item }: { item: EvalGoldenSet }) {
+function GoldenSetsItemFooter({ item }: Readonly<{ item: EvalGoldenSet }>) {
   return (
     <div className="mt-2 text-xs text-neutral-500">
       Added {new Date(item.created_at).toLocaleDateString()}
@@ -125,7 +125,7 @@ export function GoldenSetsList({
   filteredSets,
   setSelectedItem,
   handleDelete,
-}: GoldenSetsListProps) {
+}: Readonly<GoldenSetsListProps>) {
   if (filteredSets.length === 0) {
     return <GoldenSetsEmpty />;
   }

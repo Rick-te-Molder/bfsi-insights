@@ -13,7 +13,7 @@ export type TestResults = {
   variant_b?: { avg_confidence?: number };
 };
 
-export function ModalHeader({ test }: { test: PromptABTest }) {
+export function ModalHeader({ test }: Readonly<{ test: PromptABTest }>) {
   return (
     <div className="flex items-center justify-between mb-4">
       <div>
@@ -44,13 +44,13 @@ function VariantCard({
   version,
   items,
   confidence,
-}: {
+}: Readonly<{
   label: string;
   color: string;
   version: string;
   items: number;
   confidence?: number;
-}) {
+}>) {
   const styles = getVariantStyles(color);
   return (
     <div className={`rounded-lg border ${styles.border} p-4`}>
@@ -68,7 +68,10 @@ function VariantCard({
   );
 }
 
-export function VariantCards({ test, results }: { test: PromptABTest; results?: TestResults }) {
+export function VariantCards({
+  test,
+  results,
+}: Readonly<{ test: PromptABTest; results?: TestResults }>) {
   return (
     <div className="grid grid-cols-2 gap-4 mb-6">
       <VariantCard
@@ -89,7 +92,7 @@ export function VariantCards({ test, results }: { test: PromptABTest; results?: 
   );
 }
 
-export function ProgressBar({ processed, total }: { processed: number; total: number }) {
+export function ProgressBar({ processed, total }: Readonly<{ processed: number; total: number }>) {
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between text-sm mb-2">

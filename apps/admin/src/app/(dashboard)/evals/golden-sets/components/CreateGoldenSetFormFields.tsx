@@ -4,11 +4,11 @@ function CreateGoldenSetFormAgentField({
   agentName,
   setAgentName,
   agentOptions,
-}: {
+}: Readonly<{
   agentName: string;
   setAgentName: (v: string) => void;
   agentOptions: string[];
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="agent-select" className="block text-sm text-neutral-400 mb-1">
@@ -33,10 +33,10 @@ function CreateGoldenSetFormAgentField({
 function CreateGoldenSetFormNameField({
   name,
   setName,
-}: {
+}: Readonly<{
   name: string;
   setName: (v: string) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="golden-set-name" className="block text-sm text-neutral-400 mb-1">
@@ -57,10 +57,10 @@ function CreateGoldenSetFormNameField({
 function CreateGoldenSetFormInputField({
   inputJson,
   setInputJson,
-}: {
+}: Readonly<{
   inputJson: string;
   setInputJson: (v: string) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="golden-set-input" className="block text-sm text-neutral-400 mb-1">
@@ -79,10 +79,10 @@ function CreateGoldenSetFormInputField({
 function CreateGoldenSetFormExpectedField({
   expectedJson,
   setExpectedJson,
-}: {
+}: Readonly<{
   expectedJson: string;
   setExpectedJson: (v: string) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="golden-set-output" className="block text-sm text-neutral-400 mb-1">
@@ -102,11 +102,11 @@ function CreateGoldenSetFormActions({
   handleCreate,
   onClose,
   saving,
-}: {
+}: Readonly<{
   handleCreate: () => void;
   onClose: () => void;
   saving: boolean;
-}) {
+}>) {
   return (
     <div className="p-4 border-t border-neutral-800 flex justify-end gap-3">
       <button onClick={onClose} className="px-4 py-2 text-sm text-neutral-400 hover:text-white">

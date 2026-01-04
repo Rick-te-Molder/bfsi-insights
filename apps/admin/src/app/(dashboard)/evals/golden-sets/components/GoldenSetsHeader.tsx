@@ -9,10 +9,10 @@ interface GoldenSetsHeaderProps {
 function GoldenSetsStats({
   goldenSetsCount,
   agentsCount,
-}: {
+}: Readonly<{
   goldenSetsCount: number;
   agentsCount: number;
-}) {
+}>) {
   return (
     <div className="flex gap-4">
       <div className="rounded-lg bg-neutral-800/50 px-4 py-2 text-center">
@@ -30,10 +30,10 @@ function GoldenSetsStats({
 function GoldenSetsFilter({
   filterAgent,
   setFilterAgent,
-}: {
+}: Readonly<{
   filterAgent: string;
   setFilterAgent: (v: string) => void;
-}) {
+}>) {
   const agents = ['all', 'tagger', 'summarizer', 'screener'];
 
   return (
@@ -54,7 +54,7 @@ function GoldenSetsFilter({
   );
 }
 
-function GoldenSetsHeaderMain({ onAddClick }: { onAddClick: () => void }) {
+function GoldenSetsHeaderMain({ onAddClick }: Readonly<{ onAddClick: () => void }>) {
   return (
     <header className="mb-6 flex items-center justify-between">
       <div>
@@ -78,12 +78,12 @@ function GoldenSetsHeaderStatsFilter({
   agentsCount,
   filterAgent,
   setFilterAgent,
-}: {
+}: Readonly<{
   goldenSetsCount: number;
   agentsCount: number;
   filterAgent: string;
   setFilterAgent: (v: string) => void;
-}) {
+}>) {
   return (
     <div className="flex items-center justify-between mb-6">
       <GoldenSetsStats goldenSetsCount={goldenSetsCount} agentsCount={agentsCount} />
@@ -98,13 +98,13 @@ function GoldenSetsHeaderContent({
   filterAgent,
   setFilterAgent,
   onAddClick,
-}: {
+}: Readonly<{
   goldenSetsCount: number;
   agentsCount: number;
   filterAgent: string;
   setFilterAgent: (v: string) => void;
   onAddClick: () => void;
-}) {
+}>) {
   return (
     <>
       <GoldenSetsHeaderMain onAddClick={onAddClick} />
@@ -124,7 +124,7 @@ export function GoldenSetsHeader({
   filterAgent,
   setFilterAgent,
   onAddClick,
-}: GoldenSetsHeaderProps) {
+}: Readonly<GoldenSetsHeaderProps>) {
   return (
     <GoldenSetsHeaderContent
       goldenSetsCount={goldenSetsCount}

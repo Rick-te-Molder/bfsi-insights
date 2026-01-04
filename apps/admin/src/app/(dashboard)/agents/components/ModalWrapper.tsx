@@ -8,7 +8,11 @@ interface ModalWrapperProps {
   children: ReactNode;
 }
 
-export function ModalWrapper({ onClose, maxWidth = 'max-w-4xl', children }: ModalWrapperProps) {
+export function ModalWrapper({
+  onClose,
+  maxWidth = 'max-w-4xl',
+  children,
+}: Readonly<ModalWrapperProps>) {
   return (
     <button
       type="button"

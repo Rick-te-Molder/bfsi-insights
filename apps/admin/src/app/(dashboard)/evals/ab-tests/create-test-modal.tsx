@@ -73,7 +73,12 @@ function useCreateHandler(state: ReturnType<typeof useTestFormState>, onCreated:
   return { saving, handleCreate };
 }
 
-export function CreateTestModal({ agents, prompts, onClose, onCreated }: CreateTestModalProps) {
+export function CreateTestModal({
+  agents,
+  prompts,
+  onClose,
+  onCreated,
+}: Readonly<CreateTestModalProps>) {
   const state = useTestFormState(agents, prompts);
   const { saving, handleCreate } = useCreateHandler(state, onCreated);
 

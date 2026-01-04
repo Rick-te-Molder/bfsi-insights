@@ -23,11 +23,11 @@ function AgentDropdown({
   agents,
   value,
   onChange,
-}: {
+}: Readonly<{
   agents: string[];
   value: string;
   onChange: (v: string) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="agentSelect" className="block text-sm text-neutral-400 mb-1">
@@ -50,7 +50,7 @@ function AgentDropdown({
   );
 }
 
-function VersionOption({ p, showStage }: { p: PromptVersion; showStage: boolean }) {
+function VersionOption({ p, showStage }: Readonly<{ p: PromptVersion; showStage: boolean }>) {
   const stageText = showStage && p.stage ? ` (${p.stage})` : '';
   const currentMark = p.is_current ? ' ★' : '';
   return (
@@ -78,7 +78,7 @@ function VersionDropdown({
   label,
   disabled,
   showStage,
-}: VersionDropdownProps) {
+}: Readonly<VersionDropdownProps>) {
   return (
     <div>
       <label htmlFor="versionSelect" className="block text-sm text-neutral-400 mb-1">
@@ -109,7 +109,7 @@ export function AgentVersionSelect({
   onVersionChange,
   versionLabel = 'Prompt Version',
   showStage = false,
-}: AgentVersionSelectProps) {
+}: Readonly<AgentVersionSelectProps>) {
   const agentPrompts = prompts.filter((p) => p.agent_name === selectedAgent);
   const handleAgentChange = (v: string) => {
     onAgentChange(v);
