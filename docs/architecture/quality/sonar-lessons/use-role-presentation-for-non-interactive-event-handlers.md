@@ -4,7 +4,7 @@
 **SonarCloud message**: "Non-interactive elements should not be assigned mouse or keyboard event listeners."  
 **Aliases**: onMouseDown on div, onClick on span, event handler on non-interactive element
 
-**Rule**: [Non-interactive elements shouldn't have event handlers](../sonar-rules/non-interactive-elements-shouldnt-have-event-handlers.md)
+**Rule**: [Non-interactive elements shouldn't have event handlers](../sonar-rules/6847_non-interactive-elements-shouldnt-have-event-handlers.md)
 
 ---
 

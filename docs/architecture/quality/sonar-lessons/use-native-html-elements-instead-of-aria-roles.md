@@ -8,7 +8,7 @@
 - "Use \<dialog> instead of the \"dialog\" role to ensure accessibility across all devices."  
   **Aliases**: div role="button", role="presentation", role="dialog", ARIA role instead of semantic HTML
 
-**Rule**: [Prefer tag over ARIA role](../sonar-rules/prefer-tag-over-aria-role.md)
+**Rule**: [Prefer tag over ARIA role](../sonar-rules/6819_prefer-tag-over-aria-role.md)
 
 ---
 

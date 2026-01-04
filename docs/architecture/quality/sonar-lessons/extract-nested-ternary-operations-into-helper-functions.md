@@ -4,7 +4,7 @@
 **SonarCloud message**: "Ternary operators should not be nested."  
 **Aliases**: nested ternary, chained ternary, multiple ? : operators
 
-**Rule**: [Ternary operators should not be nested](../sonar-rules/ternary-operators-should-not-be-nested.md)
+**Rule**: [Ternary operators should not be nested](../sonar-rules/3358_ternary-operators-should-not-be-nested.md)
 
 **Pattern to avoid**:
 
