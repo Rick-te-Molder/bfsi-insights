@@ -14,13 +14,75 @@ interface SourceHealth {
   health_status: 'healthy' | 'warning' | 'error' | 'inactive';
 }
 
+type SourceStats = {
+  lastDiscovery: string | null;
+  items7d: number;
+  items30d: number;
+  failed7d: number;
+  total7d: number;
+};
+
+function getTimestamps() {
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  return { now, sevenDaysAgo, thirtyDaysAgo };
+}
+
+function updateStats(
+  stats: SourceStats,
+  item: { payload: unknown; status_code: number; discovered_at: string },
+  sevenDaysAgo: string,
+) {
+  const sourceSlug = (item.payload as { source_slug?: string })?.source_slug;
+  if (!sourceSlug) return null;
+
+  const isLast7Days = new Date(item.discovered_at) >= new Date(sevenDaysAgo);
+  stats.items30d++;
+  if (isLast7Days) {
+    stats.items7d++;
+    stats.total7d++;
+    if (item.status_code === 500) stats.failed7d++;
+  }
+
+  if (!stats.lastDiscovery || item.discovered_at > stats.lastDiscovery) {
+    stats.lastDiscovery = item.discovered_at;
+  }
+  return sourceSlug;
+}
+
+function getHealthStatus(stats: SourceStats, now: Date): SourceHealth['health_status'] {
+  const daysSinceLastDiscovery = stats.lastDiscovery
+    ? (now.getTime() - new Date(stats.lastDiscovery).getTime()) / (24 * 60 * 60 * 1000)
+    : Infinity;
+
+  const errorRate = stats.total7d > 0 ? stats.failed7d / stats.total7d : 0;
+
+  if (daysSinceLastDiscovery > 7) return 'inactive';
+  if (errorRate > 0.3) return 'error';
+  if (errorRate > 0.1 || stats.items7d < 2) return 'warning';
+  return 'healthy';
+}
+
+function buildHealthItem(sourceSlug: string, stats: SourceStats, now: Date): SourceHealth {
+  const errorRate = stats.total7d > 0 ? stats.failed7d / stats.total7d : 0;
+  return {
+    source_slug: sourceSlug,
+    last_discovery: stats.lastDiscovery,
+    items_7d: stats.items7d,
+    items_30d: stats.items30d,
+    failed_7d: stats.failed7d,
+    total_7d: stats.total7d,
+    error_rate: Math.round(errorRate * 100),
+    health_status: getHealthStatus(stats, now),
+  };
+}
+
 export async function GET() {
   const supabase = createServiceRoleClient();
 
   try {
-    const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { now, sevenDaysAgo, thirtyDaysAgo } = getTimestamps();
 
     // Get all items from last 30 days with source info
     const { data: recentItems, error } = await supabase
@@ -33,85 +95,8 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    // Aggregate by source
-    const sourceStats = new Map<
-      string,
-      {
-        lastDiscovery: string | null;
-        items7d: number;
-        items30d: number;
-        failed7d: number;
-        total7d: number;
-      }
-    >();
-
-    for (const item of recentItems || []) {
-      const sourceSlug = (item.payload as { source_slug?: string })?.source_slug;
-      if (!sourceSlug) continue;
-
-      const discoveredAt = item.discovered_at;
-      const isLast7Days = new Date(discoveredAt) >= new Date(sevenDaysAgo);
-
-      let stats = sourceStats.get(sourceSlug);
-      if (!stats) {
-        stats = {
-          lastDiscovery: null,
-          items7d: 0,
-          items30d: 0,
-          failed7d: 0,
-          total7d: 0,
-        };
-        sourceStats.set(sourceSlug, stats);
-      }
-
-      // Update last discovery
-      if (!stats.lastDiscovery || discoveredAt > stats.lastDiscovery) {
-        stats.lastDiscovery = discoveredAt;
-      }
-
-      // Count items
-      stats.items30d++;
-      if (isLast7Days) {
-        stats.items7d++;
-        stats.total7d++;
-        if (item.status_code === 500) {
-          stats.failed7d++;
-        }
-      }
-    }
-
-    // Convert to response format with health status
-    const healthData: SourceHealth[] = [];
-
-    sourceStats.forEach((stats, sourceSlug) => {
-      const errorRate = stats.total7d > 0 ? stats.failed7d / stats.total7d : 0;
-
-      // Determine health status
-      let healthStatus: SourceHealth['health_status'] = 'healthy';
-
-      const daysSinceLastDiscovery = stats.lastDiscovery
-        ? (now.getTime() - new Date(stats.lastDiscovery).getTime()) / (24 * 60 * 60 * 1000)
-        : Infinity;
-
-      if (daysSinceLastDiscovery > 7) {
-        healthStatus = 'inactive';
-      } else if (errorRate > 0.3) {
-        healthStatus = 'error';
-      } else if (errorRate > 0.1 || stats.items7d < 2) {
-        healthStatus = 'warning';
-      }
-
-      healthData.push({
-        source_slug: sourceSlug,
-        last_discovery: stats.lastDiscovery,
-        items_7d: stats.items7d,
-        items_30d: stats.items30d,
-        failed_7d: stats.failed7d,
-        total_7d: stats.total7d,
-        error_rate: Math.round(errorRate * 100),
-        health_status: healthStatus,
-      });
-    });
+    const sourceStats = await aggregateSourceStats(recentItems || [], sevenDaysAgo);
+    const healthData = buildHealthData(sourceStats, now);
 
     return NextResponse.json({ health: healthData });
   } catch (error) {
@@ -121,4 +106,38 @@ export async function GET() {
       { status: 500 },
     );
   }
+}
+
+async function aggregateSourceStats(
+  recentItems: { payload: unknown; status_code: number; discovered_at: string }[],
+  sevenDaysAgo: string,
+) {
+  const sourceStats = new Map<string, SourceStats>();
+
+  for (const item of recentItems) {
+    let stats = sourceStats.get((item.payload as { source_slug?: string })?.source_slug || '');
+    if (!stats) {
+      stats = {
+        lastDiscovery: null,
+        items7d: 0,
+        items30d: 0,
+        failed7d: 0,
+        total7d: 0,
+      };
+      sourceStats.set((item.payload as { source_slug?: string })?.source_slug || '', stats);
+    }
+
+    const sourceSlug = updateStats(stats, item, sevenDaysAgo);
+    if (sourceSlug) sourceStats.set(sourceSlug, stats);
+  }
+
+  return sourceStats;
+}
+
+function buildHealthData(sourceStats: Map<string, SourceStats>, now: Date) {
+  const healthData: SourceHealth[] = [];
+  sourceStats.forEach((stats, sourceSlug) => {
+    healthData.push(buildHealthItem(sourceSlug, stats, now));
+  });
+  return healthData;
 }

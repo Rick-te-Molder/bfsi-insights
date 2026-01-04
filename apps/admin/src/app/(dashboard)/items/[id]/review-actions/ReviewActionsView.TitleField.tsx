@@ -1,8 +1,11 @@
 export function TitleField({ title, setTitle }: { title: string; setTitle: (v: string) => void }) {
   return (
     <div className="mb-4">
-      <label className="block text-sm text-neutral-400 mb-1">Title</label>
+      <label htmlFor="title-input" className="block text-sm text-neutral-400 mb-1">
+        Title
+      </label>
       <input
+        id="title-input"
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}

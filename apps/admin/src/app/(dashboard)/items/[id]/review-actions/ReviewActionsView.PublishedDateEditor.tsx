@@ -16,7 +16,9 @@ export function PublishedDateEditor({
 }) {
   return (
     <div className="mb-4">
-      <label className="block text-sm text-neutral-400 mb-1">Publication Date</label>
+      <label htmlFor="publication-date-input" className="block text-sm text-neutral-400 mb-1">
+        Publication Date
+      </label>
       <div className="flex gap-2">
         <PublishedDateInput value={publishedDate} onChange={setPublishedDate} />
         <PublishedDateSaveButton

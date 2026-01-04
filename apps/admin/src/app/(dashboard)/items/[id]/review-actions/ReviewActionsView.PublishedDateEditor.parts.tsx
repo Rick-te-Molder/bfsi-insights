@@ -7,6 +7,7 @@ export function PublishedDateInput({
 }) {
   return (
     <input
+      id="publication-date-input"
       type="date"
       value={value}
       onChange={(e) => onChange(e.target.value)}

@@ -28,60 +28,71 @@ export async function upsertPublication(
   let publicationId: string;
 
   if (existingPub) {
-    const { error: updateError } = await supabase
-      .from('kb_publication')
-      .update({
-        title: data.title,
-        date_published: data.datePublished,
-        summary_short: data.summaryShort,
-        summary_medium: data.summaryMedium,
-        summary_long: data.summaryLong,
-        thumbnail: data.thumbnailUrl,
-        thumbnail_bucket: data.thumbnailBucket,
-        thumbnail_path: data.thumbnailPath,
-        last_edited: new Date().toISOString(),
-      })
-      .eq('id', existingPub.id);
-
-    if (updateError) {
-      return { success: false, error: updateError.message };
-    }
-
+    const result = await updateExistingPublication(supabase, existingPub.id, data);
+    if (!result.success) return result;
     publicationId = existingPub.id;
 
     const deleteResult = await deleteTaxonomyTags(supabase, publicationId);
-    if (!deleteResult.success) {
-      return deleteResult;
-    }
+    if (!deleteResult.success) return deleteResult;
   } else {
-    const { data: pubData, error: pubError } = await supabase
-      .from('kb_publication')
-      .insert({
-        slug: data.slug,
-        title: data.title,
-        source_url: data.sourceUrl,
-        source_name: data.sourceName,
-        source_domain: data.sourceDomain,
-        date_published: data.datePublished,
-        summary_short: data.summaryShort,
-        summary_medium: data.summaryMedium,
-        summary_long: data.summaryLong,
-        thumbnail: data.thumbnailUrl,
-        thumbnail_bucket: data.thumbnailBucket,
-        thumbnail_path: data.thumbnailPath,
-        status: 'published',
-      })
-      .select('id')
-      .single();
-
-    if (pubError || !pubData) {
-      return { success: false, error: pubError?.message || 'Failed to publish' };
-    }
-
-    publicationId = pubData.id;
+    const result = await insertNewPublication(supabase, data);
+    if (!result.success) return result;
+    publicationId = result.publicationId;
   }
 
   return { success: true, publicationId };
+}
+
+async function updateExistingPublication(
+  supabase: SupabaseClient,
+  id: string,
+  data: PublicationData,
+): Promise<{ success: true } | { success: false; error: string }> {
+  const { error } = await supabase
+    .from('kb_publication')
+    .update({
+      title: data.title,
+      date_published: data.datePublished,
+      summary_short: data.summaryShort,
+      summary_medium: data.summaryMedium,
+      summary_long: data.summaryLong,
+      thumbnail: data.thumbnailUrl,
+      thumbnail_bucket: data.thumbnailBucket,
+      thumbnail_path: data.thumbnailPath,
+      last_edited: new Date().toISOString(),
+    })
+    .eq('id', id);
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+async function insertNewPublication(
+  supabase: SupabaseClient,
+  data: PublicationData,
+): Promise<{ success: true; publicationId: string } | { success: false; error: string }> {
+  const { data: pubData, error } = await supabase
+    .from('kb_publication')
+    .insert({
+      slug: data.slug,
+      title: data.title,
+      source_url: data.sourceUrl,
+      source_name: data.sourceName,
+      source_domain: data.sourceDomain,
+      date_published: data.datePublished,
+      summary_short: data.summaryShort,
+      summary_medium: data.summaryMedium,
+      summary_long: data.summaryLong,
+      thumbnail: data.thumbnailUrl,
+      thumbnail_bucket: data.thumbnailBucket,
+      thumbnail_path: data.thumbnailPath,
+      status: 'published',
+    })
+    .select('id')
+    .single();
+
+  if (error || !pubData) return { success: false, error: error?.message || 'Failed to publish' };
+  return { success: true, publicationId: pubData.id };
 }
 
 async function deleteTaxonomyTags(
@@ -110,55 +121,77 @@ export async function insertTaxonomyTags(
   publicationId: string,
   payload: Record<string, unknown>,
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const { data: taxonomyConfigs, error: taxonomyConfigError } = await supabase
-    .from('taxonomy_config')
-    .select('payload_field, junction_table, junction_code_column')
-    .eq('is_active', true)
-    .not('junction_table', 'is', null);
-
-  if (taxonomyConfigError) {
-    return { success: false, error: taxonomyConfigError.message };
-  }
+  const { data: taxonomyConfigs, error: taxonomyConfigError } =
+    await fetchTaxonomyConfigs(supabase);
+  if (taxonomyConfigError) return { success: false, error: taxonomyConfigError.message };
 
   for (const config of taxonomyConfigs || []) {
     const key = config.payload_field as string;
     if (!config.junction_table || !config.junction_code_column) continue;
 
     if (key === 'audience_scores') {
-      const scores = payload[key] as Record<string, number> | undefined;
-      if (scores && typeof scores === 'object') {
-        const entries = Object.entries(scores).filter(([, score]) => score > 0);
-        if (entries.length > 0) {
-          const { error: insertError } = await supabase.from(config.junction_table).insert(
-            entries.map(([code, score]) => ({
-              publication_id: publicationId,
-              [config.junction_code_column as string]: code,
-              score,
-            })),
-          );
-          if (insertError) {
-            return { success: false, error: insertError.message };
-          }
-        }
-      }
+      const result = await handleAudienceScores(supabase, config, publicationId, payload);
+      if (!result.success) return result;
       continue;
     }
 
-    const codes = payload[key] as string[] | undefined;
-    if (!codes?.length) continue;
-
-    const { error: insertError } = await supabase.from(config.junction_table).insert(
-      codes.map((code: string) => ({
-        publication_id: publicationId,
-        [config.junction_code_column as string]: code,
-      })),
-    );
-
-    if (insertError) {
-      return { success: false, error: insertError.message };
-    }
+    const result = await handleCodesArray(supabase, config, publicationId, payload, key);
+    if (!result.success) return result;
   }
 
+  return { success: true };
+}
+
+async function fetchTaxonomyConfigs(supabase: SupabaseClient) {
+  return await supabase
+    .from('taxonomy_config')
+    .select('payload_field, junction_table, junction_code_column')
+    .eq('is_active', true)
+    .not('junction_table', 'is', null);
+}
+
+async function handleAudienceScores(
+  supabase: SupabaseClient,
+  config: { payload_field: string; junction_table: string; junction_code_column: string },
+  publicationId: string,
+  payload: Record<string, unknown>,
+): Promise<{ success: true } | { success: false; error: string }> {
+  const scores = payload[config.payload_field] as Record<string, number> | undefined;
+  if (!scores || typeof scores !== 'object') return { success: true };
+
+  const entries = Object.entries(scores).filter(([, score]) => score > 0);
+  if (entries.length === 0) return { success: true };
+
+  const { error } = await supabase.from(config.junction_table).insert(
+    entries.map(([code, score]) => ({
+      publication_id: publicationId,
+      [config.junction_code_column]: code,
+      score,
+    })),
+  );
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
+async function handleCodesArray(
+  supabase: SupabaseClient,
+  config: { payload_field: string; junction_table: string; junction_code_column: string },
+  publicationId: string,
+  payload: Record<string, unknown>,
+  key: string,
+): Promise<{ success: true } | { success: false; error: string }> {
+  const codes = payload[key] as string[] | undefined;
+  if (!codes?.length) return { success: true };
+
+  const { error } = await supabase.from(config.junction_table).insert(
+    codes.map((code: string) => ({
+      publication_id: publicationId,
+      [config.junction_code_column]: code,
+    })),
+  );
+
+  if (error) return { success: false, error: error.message };
   return { success: true };
 }
 
