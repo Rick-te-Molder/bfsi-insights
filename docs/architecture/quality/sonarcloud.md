@@ -90,26 +90,26 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
 
-## [Ternary operators should not be nested](./sonar-rules/ternary-operators-should-not-be-nested.md)
+## [Ternary operators should not be nested](./sonar-rules/3358_ternary-operators-should-not-be-nested.md)
 
 ---
 
-## [Methods should not contain selector parameters](./sonar-rules/methods-should-not-contain-selector-parameters.md)
+## [Methods should not contain selector parameters](./sonar-rules/2301_methods-should-not-contain-selector-parameters.md)
 
 ---
 
-## [Non-interactive elements should not have interactive handlers](./sonar-rules/non-interactive-elements-should-not-have-interactive-handlers.md)
+## [Non-interactive elements should not have interactive handlers](./sonar-rules/6848_non-interactive-elements-should-not-have-interactive-handlers.md)
 
 ---
 
-## [Non-interactive DOM elements should not have interactive ARIA roles](./sonar-rules/non-interactive-dom-elements-should-not-have-interactive-aria-roles.md)
+## [Non-interactive DOM elements should not have interactive ARIA roles](./sonar-rules/6842_non-interactive-dom-elements-should-not-have-interactive-aria-roles.md)
 
 ---
 
-## [Prefer tag over ARIA role](./sonar-rules/prefer-tag-over-aria-role.md)
+## [Prefer tag over ARIA role](./sonar-rules/6819_prefer-tag-over-aria-role.md)
 
 ---
 
-## [Non-interactive elements shouldn't have event handlers](./sonar-rules/non-interactive-elements-shouldnt-have-event-handlers.md)
+## [Non-interactive elements shouldn't have event handlers](./sonar-rules/6847_non-interactive-elements-shouldnt-have-event-handlers.md)
 
 ---

@@ -4,7 +4,7 @@
 **SonarCloud message**: "Non-interactive DOM elements should not have interactive ARIA roles"  
 **Aliases**: role="button" on div without proper handling, ARIA role mismatch
 
-**Rule**: [Non-interactive DOM elements should not have interactive ARIA roles](../sonar-rules/non-interactive-dom-elements-should-not-have-interactive-aria-roles.md)
+**Rule**: [Non-interactive DOM elements should not have interactive ARIA roles](../sonar-rules/6842_non-interactive-dom-elements-should-not-have-interactive-aria-roles.md)
 
 ---
 

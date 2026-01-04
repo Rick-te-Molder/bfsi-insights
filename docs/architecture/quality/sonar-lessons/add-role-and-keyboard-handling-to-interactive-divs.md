@@ -4,7 +4,7 @@
 **SonarCloud message**: "Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element."  
 **Aliases**: onClick on div, interactive handler on non-interactive element, div with click handler
 
-**Rule**: [Non-interactive elements should not have interactive handlers](../sonar-rules/non-interactive-elements-should-not-have-interactive-handlers.md)
+**Rule**: [Non-interactive elements should not have interactive handlers](../sonar-rules/6848_non-interactive-elements-should-not-have-interactive-handlers.md)
 
 ---
 
