@@ -3,9 +3,11 @@
 Project-specific rules for AI assistants (Windsurf/Cursor).
 These rules exist because bugs, incidents, and CI failures happened.
 
+**Quality System**: This file implements controls from [docs/architecture/quality-system.md](cci:7://file:///Users/micro/projects/bfsi-insights/docs/architecture/quality-system.md:0:0-0:0).
+
 ---
 
-## Data Consistency
+## Data Consistency (C4)
 
 ### Pipeline Status Queries
 - Always use `status_code` (numeric) for pipeline status queries, never `status` (text).
@@ -38,7 +40,7 @@ These rules exist because bugs, incidents, and CI failures happened.
 
 ---
 
-## Linting
+## Linting (C5)
 
 ### Strict Policy: Zero Errors AND Zero Warnings
 - Run `npm run lint -w admin` before every commit.
@@ -47,12 +49,13 @@ These rules exist because bugs, incidents, and CI failures happened.
 ### Exception Process
 If a warning cannot be fixed:
 1. Stop and ask user for approval before committing.
-2. Explain: warning, why it can’t be fixed, risk.
+2. Explain: warning, why it can't be fixed, risk.
 3. If approved: add `eslint-disable` with a comment explaining why.
+4. Document in [docs/architecture/quality/exceptions.md](cci:7://file:///Users/micro/projects/bfsi-insights/docs/architecture/quality/exceptions.md:0:0-0:0).
 
 ---
 
-## Git Workflow (PRs re-enabled)
+## Git Workflow
 
 ### Core rules
 - Never commit directly to `main`.
@@ -76,7 +79,7 @@ If a warning cannot be fixed:
 
 ---
 
-## CI Strategy: Fast vs Slow
+## CI Strategy: Fast vs Slow (C8)
 
 ### Fast CI (runs on PRs)
 Fast CI is the gate for merging.
@@ -104,16 +107,16 @@ Slow CI can include:
 - Supabase lint / remote DB checks
 - Schema docs update
 - E2E / Playwright
-- SonarCloud full analysis if it’s slow
+- SonarCloud full analysis if it's slow
 - Any job known to be flaky due to external dependencies
 
 ### Rules for changes that touch CI
 - When editing workflows, explicitly state whether the change affects Fast CI, Slow CI, or both.
-- Prefer moving flaky/network-heavy steps to Slow CI rather than “continue-on-error” in Fast CI.
+- Prefer moving flaky/network-heavy steps to Slow CI rather than "continue-on-error" in Fast CI.
 
 ---
 
-## Pre-commit & local verification
+## Pre-commit & Local Verification (C2)
 
 ### Before every commit
 1. Confirm you are on a feature branch (not `main`).
@@ -126,7 +129,7 @@ Run and paste relevant excerpts from:
 
 ---
 
-## Prompt Engineering
+## Prompt Engineering (C10)
 
 ### Agent Registry
 - Every agent must be declared in `docs/agents/manifest.yaml`.
@@ -144,7 +147,6 @@ Run and paste relevant excerpts from:
 - Use `throw new Error('CRITICAL: ...')` pattern from KB-206.
 
 ### Prompt Version Migrations
-
 - Always INSERT new rows for prompt versions, never UPDATE existing rows.
 - Pattern:
 
@@ -167,88 +169,3 @@ VALUES (
   true,
   'What changed and why'
 );
-
----
-
-### Taxonomy & Tags
-
-Use `taxonomy_config` for dynamic tag insertion
-
-- Never hardcode tag types in approve handlers.
-- Always query `taxonomy_config` for junction mappings.
-- Pattern:
-
-```ts
-const { data: configs, error } = await supabase
-  .from('taxonomy_config')
-  .select('payload_field, junction_table, junction_code_column')
-  .eq('is_active', true)
-  .not('junction_table', 'is', null);
-
-if (error) throw error;
-
-for (const config of configs ?? []) {
-  const codes = payload[config.payload_field];
-
-  if (codes?.length) {
-    await supabase.from(config.junction_table).insert(
-      codes.map(code => ({
-        publication_id: pubId,
-        [config.junction_code_column]: code,
-      }))
-    );
-  }
-}
-```
-
----
-
-## Code Quality
-
-### Boy Scout Rule
-- All touched files must meet Quality Guidelines (no exceptions).
-- Files must be < 300 lines.
-- Functions must be < 30 lines (should be < 15).
-- Pre-commit hook enforces this: `scripts/ci/check-large-files.cjs`
-- Known violations are tracked in ALLOW_LIST inside that script.
-- It's NOT allowed to "solve" these issues by adding them to the allow list - this defeats the purpose of the rule.
-- Any violation must be addressed by refactoring, not by adding to the allow list.
-- The goal is to maintain code quality standards across the entire codebase at all times.
-- Every file should be clean and well-structured at all times, consistently, without exception.
-- After touching and thus refactoring a file that is in the allow list, please remove it from the allow list.
-
----
-
-### Preventing Sonar Cloud Issues
-
-- Follow the rules documented in `docs/sonarcloud-rules.md` to avoid SonarCloud warnings and issues.
-- Pay special attention to rules around nested ternaries, cyclomatic complexity, and code duplication.
-- Ensure all code changes comply with SonarCloud quality gates and maintain clean code standards at all times, consistently, without exception, across the entire codebase at all times.
-
----
-
-### Hard rules for all changes (no exceptions)
-
-1. No claims without evidence
-- Do not say “fixed”, “works”, “tests pass”, “coverage improved”, “CI is green”, etc. unless you include quoted evidence from command output or CI logs.
-- If you cannot produce evidence, state exactly what is unverified.
-
-2. Small diffs only
-- One concern per change/commit/PR.
-- Split multiple concerns into separate PRs.
-
-3. Verify locally before responding
-For `test/coverage` work in `services/agent-api`, run and paste relevant excerpts:
-- `npm run test:coverage -w services/agent-api` 
-- plus a targeted `grep` proof for touched files.
-For CI workflow edits, paste the literal unified diff of the workflow change.
-
----
-
-### Required response format for “done” messages
-- Evidence:
-  <paste command output / CI log lines>
-- Diff summary:
-  <files changed + why>
-- Remaining risks / unverified:
-  <explicit list, or “none”>
