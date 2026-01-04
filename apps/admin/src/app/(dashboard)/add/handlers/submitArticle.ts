@@ -173,10 +173,12 @@ async function submitUpdate(ctx: SubmitCtx) {
   ctx.resetForm();
 }
 
-function getSuccessMessage(isPdf: boolean) {
-  return isPdf
-    ? 'PDF uploaded! Processing started - check History tab for progress.'
-    : 'Article submitted! Processing started - check History tab for progress.';
+function getPdfSuccessMessage() {
+  return 'PDF uploaded! Processing started - check History tab for progress.';
+}
+
+function getArticleSuccessMessage() {
+  return 'Article submitted! Processing started - check History tab for progress.';
 }
 
 async function submitCreate(
@@ -196,7 +198,7 @@ async function submitCreate(
   }
 
   ctx.setStatus('success');
-  ctx.setMessage(getSuccessMessage(isPdf));
+  ctx.setMessage(isPdf ? getPdfSuccessMessage() : getArticleSuccessMessage());
   ctx.resetForm();
 }
 
