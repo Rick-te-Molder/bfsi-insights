@@ -11,7 +11,9 @@ import {
 function CreateGoldenSetModalHeader() {
   return (
     <div className="p-4 border-b border-neutral-800">
-      <h2 className="text-lg font-bold text-white">Add Golden Set Item</h2>
+      <h2 id="modal-title" className="text-lg font-bold text-white">
+        Add Golden Set Item
+      </h2>
     </div>
   );
 }
@@ -66,6 +68,9 @@ function CreateGoldenSetModalContent({
 }) {
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
       className="w-full max-w-2xl max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col"
       onClick={(e) => e.stopPropagation()}
     >
@@ -86,8 +91,12 @@ function CreateGoldenSetModalWrapper({
 }) {
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label="Close modal"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
       <CreateGoldenSetModalContent state={state} handleCreate={handleCreate} onClose={onClose} />
     </div>

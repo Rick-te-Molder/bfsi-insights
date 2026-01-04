@@ -150,22 +150,35 @@ https://rules.sonarsource.com/typescript/RSPEC-6842/
 
 ---
 
+## Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.
+
+**Rule**:
+typescript:S6848
+Non-interactive elements should not have interactive handlers
+https://rules.sonarsource.com/typescript/RSPEC-6848/
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
 
-```
-RULE ID            SUMMARY
-─────────────────────────────────────────────────────────────────────────────
-typescript:S3358   Ternary operators should not be nested
-typescript:S2301   Methods should not contain selector parameters
-typescript:S6848   Non-interactive elements should not have interactive handlers
-typescript:S6842   Non-interactive DOM elements should not have interactive ARIA roles
-```
+## Ternary operators should not be nested
 
-**Links**:
+typescript:S3358
+https://rules.sonarsource.com/typescript/RSPEC-3358/
 
-- S3358: https://rules.sonarsource.com/typescript/RSPEC-3358/
-- S2301: https://rules.sonarsource.com/typescript/RSPEC-2301/
-- S6848: https://rules.sonarsource.com/typescript/RSPEC-6848/
-- S6842: https://rules.sonarsource.com/typescript/RSPEC-6842/
+## Methods should not contain selector parameters
+
+typescript:S2301
+https://rules.sonarsource.com/typescript/RSPEC-2301/
+
+## Non-interactive elements should not have interactive handlers
+
+typescript:S6848
+https://rules.sonarsource.com/typescript/RSPEC-6848/
+
+## Non-interactive DOM elements should not have interactive ARIA roles
+
+typescript:S6842  
+https://rules.sonarsource.com/typescript/RSPEC-6842/

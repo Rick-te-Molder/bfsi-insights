@@ -14,7 +14,9 @@ function ViewGoldenSetHeader({ item }: { item: EvalGoldenSet }) {
         <span className="rounded-full bg-sky-500/20 text-sky-300 px-2 py-0.5 text-xs">
           {item.agent_name}
         </span>
-        <h2 className="text-lg font-bold text-white">{item.name}</h2>
+        <h2 id="view-modal-title" className="text-lg font-bold text-white">
+          {item.name}
+        </h2>
       </div>
       {item.description && <p className="text-sm text-neutral-400 mt-1">{item.description}</p>}
     </div>
@@ -57,10 +59,17 @@ function ViewGoldenSetFooter({ item, onClose }: { item: EvalGoldenSet; onClose: 
 export function ViewGoldenSetModal({ item, onClose }: ViewGoldenSetModalProps) {
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-label="Close modal"
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onClick={onClose}
+      onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="view-modal-title"
         className="w-full max-w-3xl max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
