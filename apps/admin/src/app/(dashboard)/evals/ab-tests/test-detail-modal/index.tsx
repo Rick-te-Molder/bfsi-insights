@@ -11,7 +11,7 @@ interface TestDetailModalProps {
   onUpdate: () => void;
 }
 
-function ModalContent({ test, onClose, onUpdate }: TestDetailModalProps) {
+function ModalContent({ test, onClose, onUpdate }: Readonly<TestDetailModalProps>) {
   const { updating, updateStatus, promoteWinner } = useTestActions(test, onUpdate);
   const results = test.results as TestResults | undefined;
   return (
@@ -38,7 +38,7 @@ function ModalContent({ test, onClose, onUpdate }: TestDetailModalProps) {
   );
 }
 
-export function TestDetailModal({ test, onClose, onUpdate }: TestDetailModalProps) {
+export function TestDetailModal({ test, onClose, onUpdate }: Readonly<TestDetailModalProps>) {
   return (
     <button
       type="button"

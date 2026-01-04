@@ -5,7 +5,7 @@ interface ModalWrapperProps {
   children: React.ReactNode;
 }
 
-export function ModalWrapper({ onClose, children }: ModalWrapperProps) {
+export function ModalWrapper({ onClose, children }: Readonly<ModalWrapperProps>) {
   return (
     <button
       type="button"

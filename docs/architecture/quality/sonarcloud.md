@@ -42,6 +42,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S6847   | [Use role presentation for non-interactive event handlers](./sonar-lessons/use-role-presentation-for-non-interactive-event-handlers.md)                       |
 | S4624   | [Refactor this code to not use nested template literals](./sonar-lessons/refactor-this-code-to-not-use-nested-template-literals.md)                           |
 | S6479   | [Do not use Array index in keys](./sonar-lessons/do-not-use-array-index-in-keys.md)                                                                           |
+| S6759   | [Mark React props as read-only](./sonar-lessons/mark-react-props-as-read-only.md)                                                                             |
 
 ---
 
@@ -52,6 +53,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **No nested ternaries** — Extract to helper function with early returns
 - [ ] **No nested template literals** — Extract conditional parts to variables first
 - [ ] **No array index as React key** — Use unique identifier from data (id, slug, code)
+- [ ] **Mark React props as read-only** — Use `Readonly<Props>` wrapper on component props
 - [ ] **No boolean selector parameters** — Use separate methods or union types
 - [ ] **Interactive handlers on interactive elements only** — Use `<button>`, not `<div onClick>`
 - [ ] **Prefer native HTML over ARIA roles** — Use `<button>` not `<div role="button">`
@@ -103,6 +105,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Mark React props as read-only](./sonar-lessons/mark-react-props-as-read-only.md) (S6759)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -136,5 +142,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [JSX list components should not use array indexes as key](./sonar-rules/6479_jsx-list-components-should-not-use-array-indexes-as-key.md)
+
+---
+
+## [React props should be read-only](./sonar-rules/6759_react-props-should-be-read-only.md)
 
 ---

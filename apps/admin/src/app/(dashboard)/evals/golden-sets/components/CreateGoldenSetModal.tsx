@@ -33,11 +33,11 @@ function CreateGoldenSetModalForm({
   state,
   handleCreate,
   onClose,
-}: {
+}: Readonly<{
   state: ReturnType<typeof useCreateGoldenSetState>;
   handleCreate: () => void;
   onClose: () => void;
-}) {
+}>) {
   const formData = toCreateGoldenSetFormData(state);
   const bindings = {
     setAgentName: state.setAgentName,
@@ -61,11 +61,11 @@ function CreateGoldenSetModalContent({
   state,
   handleCreate,
   onClose,
-}: {
+}: Readonly<{
   state: ReturnType<typeof useCreateGoldenSetState>;
   handleCreate: () => void;
   onClose: () => void;
-}) {
+}>) {
   return (
     <dialog
       open
@@ -83,11 +83,11 @@ function CreateGoldenSetModalWrapper({
   state,
   handleCreate,
   onClose,
-}: {
+}: Readonly<{
   state: ReturnType<typeof useCreateGoldenSetState>;
   handleCreate: () => void;
   onClose: () => void;
-}) {
+}>) {
   return (
     <button
       type="button"
@@ -101,7 +101,7 @@ function CreateGoldenSetModalWrapper({
   );
 }
 
-export function CreateGoldenSetModal({ onClose, onCreated }: CreateGoldenSetModalProps) {
+export function CreateGoldenSetModal({ onClose, onCreated }: Readonly<CreateGoldenSetModalProps>) {
   const state = useCreateGoldenSetState();
 
   const handleCreate = async () => {

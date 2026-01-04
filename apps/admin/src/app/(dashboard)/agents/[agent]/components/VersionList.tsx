@@ -22,7 +22,7 @@ function getVersionDate(p: PromptVersion): string {
   return new Date(date).toLocaleDateString();
 }
 
-function VersionHeader({ p }: { p: PromptVersion }) {
+function VersionHeader({ p }: Readonly<{ p: PromptVersion }>) {
   return (
     <div className="flex items-center gap-2">
       <span
@@ -43,11 +43,11 @@ function VersionButton({
   p,
   isSelected,
   onSelect,
-}: {
+}: Readonly<{
   p: PromptVersion;
   isSelected: boolean;
   onSelect: () => void;
-}) {
+}>) {
   return (
     <button
       onClick={onSelect}
@@ -64,7 +64,7 @@ function VersionButton({
   );
 }
 
-export function VersionList({ prompts, selectedVersion, onSelect }: VersionListProps) {
+export function VersionList({ prompts, selectedVersion, onSelect }: Readonly<VersionListProps>) {
   return (
     <div className="w-64 flex-shrink-0 rounded-xl border border-neutral-800 bg-neutral-900/60 overflow-hidden flex flex-col">
       <div className="p-4 border-b border-neutral-800 flex-shrink-0">

@@ -11,7 +11,7 @@ interface WhyValuableProps {
   toggleAudience: (audience: string) => void;
 }
 
-function WhyInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function WhyInput({ value, onChange }: Readonly<{ value: string; onChange: (v: string) => void }>) {
   return (
     <div>
       <label htmlFor="why" className="block text-sm font-medium text-neutral-300 mb-2">
@@ -30,7 +30,10 @@ function WhyInput({ value, onChange }: { value: string; onChange: (v: string) =>
   );
 }
 
-function VerbatimInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function VerbatimInput({
+  value,
+  onChange,
+}: Readonly<{ value: string; onChange: (v: string) => void }>) {
   return (
     <div>
       <label htmlFor="verbatimComment" className="block text-sm font-medium text-neutral-300 mb-2">
@@ -66,9 +69,11 @@ function WhyValuableCard({
   setWhyValuable,
   verbatimComment,
   setVerbatimComment,
-}: Pick<
-  WhyValuableProps,
-  'whyValuable' | 'setWhyValuable' | 'verbatimComment' | 'setVerbatimComment'
+}: Readonly<
+  Pick<
+    WhyValuableProps,
+    'whyValuable' | 'setWhyValuable' | 'verbatimComment' | 'setVerbatimComment'
+  >
 >) {
   return (
     <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-4">
@@ -91,11 +96,11 @@ function AudienceButton({
   aud,
   isSelected,
   onClick,
-}: {
+}: Readonly<{
   aud: { value: string; label: string };
   isSelected: boolean;
   onClick: () => void;
-}) {
+}>) {
   const cls = isSelected
     ? 'bg-purple-500/30 text-purple-300 border border-purple-500/50'
     : 'bg-neutral-800 text-neutral-400 border border-neutral-700 hover:border-neutral-600';
@@ -110,7 +115,7 @@ function AudienceButton({
   );
 }
 
-function AudienceSelector({ suggestedAudiences, toggleAudience }: AudienceSelectorProps) {
+function AudienceSelector({ suggestedAudiences, toggleAudience }: Readonly<AudienceSelectorProps>) {
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900/60 p-4 space-y-4">
       <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wide">
@@ -135,7 +140,7 @@ function AudienceSelector({ suggestedAudiences, toggleAudience }: AudienceSelect
   );
 }
 
-export function WhyValuable(props: WhyValuableProps) {
+export function WhyValuable(props: Readonly<WhyValuableProps>) {
   return (
     <>
       <WhyValuableCard

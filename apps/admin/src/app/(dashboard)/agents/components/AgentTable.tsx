@@ -11,7 +11,7 @@ interface AgentTableProps {
   onTest: (p: PromptVersion) => void;
 }
 
-export function AgentTable({ agents, promptsByAgent, onEdit, onTest }: AgentTableProps) {
+export function AgentTable({ agents, promptsByAgent, onEdit, onTest }: Readonly<AgentTableProps>) {
   return (
     <table className="w-full">
       <thead className="bg-neutral-900 sticky top-0">

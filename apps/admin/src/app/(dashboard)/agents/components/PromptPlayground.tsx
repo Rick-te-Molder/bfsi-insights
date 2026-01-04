@@ -10,7 +10,7 @@ interface PromptPlaygroundProps {
   onClose: () => void;
 }
 
-function PlaygroundHeader({ prompt }: { prompt: PromptVersion }) {
+function PlaygroundHeader({ prompt }: Readonly<{ prompt: PromptVersion }>) {
   return (
     <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
       <div>
@@ -28,7 +28,7 @@ function PlaygroundHeader({ prompt }: { prompt: PromptVersion }) {
   );
 }
 
-function PromptPreview({ text }: { text: string }) {
+function PromptPreview({ text }: Readonly<{ text: string }>) {
   return (
     <div>
       <span className="block text-sm text-neutral-400 mb-1">
@@ -42,7 +42,10 @@ function PromptPreview({ text }: { text: string }) {
   );
 }
 
-function TestInputField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function TestInputField({
+  value,
+  onChange,
+}: Readonly<{ value: string; onChange: (v: string) => void }>) {
   return (
     <div>
       <label htmlFor="testInput" className="block text-sm text-neutral-400 mb-1">
@@ -63,11 +66,11 @@ function RunButton({
   onClick,
   disabled,
   testing,
-}: {
+}: Readonly<{
   onClick: () => void;
   disabled: boolean;
   testing: boolean;
-}) {
+}>) {
   return (
     <button
       onClick={onClick}
@@ -79,7 +82,7 @@ function RunButton({
   );
 }
 
-function OutputDisplay({ output }: { output: string }) {
+function OutputDisplay({ output }: Readonly<{ output: string }>) {
   return (
     <div>
       <span className="block text-sm text-neutral-400 mb-1">Output</span>
@@ -90,7 +93,7 @@ function OutputDisplay({ output }: { output: string }) {
   );
 }
 
-function PlaygroundFooter({ onClose }: { onClose: () => void }) {
+function PlaygroundFooter({ onClose }: Readonly<{ onClose: () => void }>) {
   return (
     <div className="p-4 border-t border-neutral-800 flex justify-between items-center">
       <p className="text-xs text-neutral-500">
@@ -152,11 +155,11 @@ function PlaygroundBody({
   prompt,
   state,
   onRun,
-}: {
+}: Readonly<{
   prompt: PromptVersion;
   state: ReturnType<typeof usePlaygroundState>;
   onRun: () => void;
-}) {
+}>) {
   return (
     <div className="flex-1 overflow-auto p-4 space-y-4">
       <PromptPreview text={prompt.prompt_text} />
@@ -174,7 +177,7 @@ function PlaygroundBody({
   );
 }
 
-export function PromptPlayground({ prompt, onClose }: PromptPlaygroundProps) {
+export function PromptPlayground({ prompt, onClose }: Readonly<PromptPlaygroundProps>) {
   const state = usePlaygroundState();
 
   async function runTest() {

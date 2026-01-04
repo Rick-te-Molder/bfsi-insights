@@ -71,7 +71,7 @@ async function runSubmit(state: ReturnType<typeof useAddArticle>) {
   await submitArticle(buildSubmitParams(state));
 }
 
-function StatusBanner(state: { status: string; message: string }) {
+function StatusBanner(state: Readonly<{ status: string; message: string }>) {
   if (state.status === 'success') {
     return (
       <div className="mb-6 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4">
@@ -91,11 +91,13 @@ function StatusBanner(state: { status: string; message: string }) {
   return null;
 }
 
-function Tabs(state: {
-  activeTab: string;
-  setActiveTab: (tab: 'add' | 'list') => void;
-  missedItemsLength: number;
-}) {
+function Tabs(
+  state: Readonly<{
+    activeTab: string;
+    setActiveTab: (tab: 'add' | 'list') => void;
+    missedItemsLength: number;
+  }>,
+) {
   return (
     <div className="flex gap-6 border-b border-neutral-800">
       <button
@@ -114,7 +116,7 @@ function Tabs(state: {
   );
 }
 
-function EditingBanner(state: { editingId: string | null; cancelEdit: () => void }) {
+function EditingBanner(state: Readonly<{ editingId: string | null; cancelEdit: () => void }>) {
   if (!state.editingId) return null;
   return (
     <div className="mb-4 flex items-center justify-between rounded-lg border border-sky-500/20 bg-sky-500/10 p-3">
@@ -130,7 +132,7 @@ function EditingBanner(state: { editingId: string | null; cancelEdit: () => void
   );
 }
 
-function SubmitActions(state: { status: string; submitLabel: string }) {
+function SubmitActions(state: Readonly<{ status: string; submitLabel: string }>) {
   return (
     <div className="flex gap-3">
       <button
@@ -150,7 +152,7 @@ function SubmitActions(state: { status: string; submitLabel: string }) {
   );
 }
 
-function ArticleSection(state: ReturnType<typeof useAddArticle>) {
+function ArticleSection(state: Readonly<ReturnType<typeof useAddArticle>>) {
   return (
     <ArticleInput
       inputMode={state.inputMode}
@@ -169,7 +171,7 @@ function ArticleSection(state: ReturnType<typeof useAddArticle>) {
   );
 }
 
-function SubmitterSection(state: ReturnType<typeof useAddArticle>) {
+function SubmitterSection(state: Readonly<ReturnType<typeof useAddArticle>>) {
   return (
     <SubmitterInfo
       submitterName={state.submitterName}
@@ -184,7 +186,7 @@ function SubmitterSection(state: ReturnType<typeof useAddArticle>) {
   );
 }
 
-function WhyValuableSection(state: ReturnType<typeof useAddArticle>) {
+function WhyValuableSection(state: Readonly<ReturnType<typeof useAddArticle>>) {
   return (
     <WhyValuable
       whyValuable={state.whyValuable}
@@ -197,7 +199,7 @@ function WhyValuableSection(state: ReturnType<typeof useAddArticle>) {
   );
 }
 
-function AddFormFields(state: ReturnType<typeof useAddArticle>) {
+function AddFormFields(state: Readonly<ReturnType<typeof useAddArticle>>) {
   return (
     <>
       <ArticleSection {...state} />

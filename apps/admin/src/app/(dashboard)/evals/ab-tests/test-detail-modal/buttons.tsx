@@ -6,7 +6,10 @@ const BTN = 'rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50';
 const BTN_PRIMARY = `${BTN} text-white`;
 const BTN_OUTLINE = `${BTN} border`;
 
-function StartButton({ updating, onClick }: { updating: string | null; onClick: () => void }) {
+function StartButton({
+  updating,
+  onClick,
+}: Readonly<{ updating: string | null; onClick: () => void }>) {
   return (
     <button
       onClick={onClick}
@@ -22,11 +25,11 @@ function RunningButtons({
   updating,
   onPause,
   onComplete,
-}: {
+}: Readonly<{
   updating: string | null;
   onPause: () => void;
   onComplete: () => void;
-}) {
+}>) {
   return (
     <>
       <button
@@ -47,7 +50,10 @@ function RunningButtons({
   );
 }
 
-function ResumeButton({ updating, onClick }: { updating: string | null; onClick: () => void }) {
+function ResumeButton({
+  updating,
+  onClick,
+}: Readonly<{ updating: string | null; onClick: () => void }>) {
   return (
     <button
       onClick={onClick}
@@ -62,10 +68,10 @@ function ResumeButton({ updating, onClick }: { updating: string | null; onClick:
 function PromoteButtons({
   updating,
   onPromote,
-}: {
+}: Readonly<{
   updating: string | null;
   onPromote: (w: 'a' | 'b') => void;
-}) {
+}>) {
   return (
     <>
       <button
@@ -86,7 +92,7 @@ function PromoteButtons({
   );
 }
 
-function WinnerBadge({ winner }: { winner: string }) {
+function WinnerBadge({ winner }: Readonly<{ winner: string }>) {
   return (
     <div className="text-emerald-400 text-sm py-2">
       ✓ Variant {winner.toUpperCase()} promoted as current
@@ -105,11 +111,11 @@ function StatusButtons({
   test,
   updating,
   updateStatus,
-}: {
+}: Readonly<{
   test: PromptABTest;
   updating: string | null;
   updateStatus: (s: string) => void;
-}) {
+}>) {
   if (test.status === 'draft')
     return <StartButton updating={updating} onClick={() => updateStatus('running')} />;
   if (test.status === 'running')
@@ -125,7 +131,12 @@ function StatusButtons({
   return null;
 }
 
-export function ActionButtons({ test, updating, updateStatus, promoteWinner }: ActionButtonsProps) {
+export function ActionButtons({
+  test,
+  updating,
+  updateStatus,
+  promoteWinner,
+}: Readonly<ActionButtonsProps>) {
   const showPromote = (test.status === 'completed' || test.items_processed > 0) && !test.winner;
   return (
     <div className="flex flex-wrap gap-2">

@@ -44,7 +44,7 @@ function VariantSelects({
   setVariantA,
   variantB,
   setVariantB,
-}: VariantSelectsProps) {
+}: Readonly<VariantSelectsProps>) {
   return (
     <div className="grid grid-cols-2 gap-4">
       <VariantSelect
@@ -72,12 +72,12 @@ function SplitSizeFields({
   setTrafficSplit,
   sampleSize,
   setSampleSize,
-}: {
+}: Readonly<{
   trafficSplit: number;
   setTrafficSplit: (v: number) => void;
   sampleSize: number;
   setSampleSize: (v: number) => void;
-}) {
+}>) {
   return (
     <div className="grid grid-cols-2 gap-4">
       <TrafficSplitField value={trafficSplit} onChange={setTrafficSplit} />
@@ -86,7 +86,7 @@ function SplitSizeFields({
   );
 }
 
-export function ModalContent(props: ModalContentProps) {
+export function ModalContent(props: Readonly<ModalContentProps>) {
   return (
     <>
       <h2 className="text-lg font-bold text-white mb-4">Create A/B Test</h2>

@@ -10,62 +10,94 @@ interface ViewVersionModalProps {
   onRollback: () => void;
 }
 
-export function ViewVersionModal({ prompt, onClose, onRollback }: ViewVersionModalProps) {
+function HeaderTitle({ prompt }: Readonly<{ prompt: PromptVersion }>) {
+  return (
+    <div>
+      <h2 className="text-lg font-bold text-white">{prompt.version}</h2>
+      <p className="text-sm text-neutral-400">
+        {prompt.agent_name} • {new Date(prompt.created_at).toLocaleString()}
+      </p>
+    </div>
+  );
+}
+
+function HeaderActions({
+  prompt,
+  onRollback,
+}: Readonly<{ prompt: PromptVersion; onRollback: () => void }>) {
+  const stageClass =
+    prompt.stage === 'PRD'
+      ? 'bg-emerald-500/20 text-emerald-300'
+      : 'bg-neutral-700 text-neutral-400';
+  return (
+    <div className="flex items-center gap-2">
+      {prompt.stage && (
+        <span className={`rounded-full px-2 py-0.5 text-xs ${stageClass}`}>
+          {prompt.stage === 'PRD' ? 'Live' : prompt.stage}
+        </span>
+      )}
+      <button
+        onClick={onRollback}
+        className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-500"
+      >
+        Make Current
+      </button>
+    </div>
+  );
+}
+
+function VersionHeader({
+  prompt,
+  onRollback,
+}: Readonly<{ prompt: PromptVersion; onRollback: () => void }>) {
+  return (
+    <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
+      <HeaderTitle prompt={prompt} />
+      <HeaderActions prompt={prompt} onRollback={onRollback} />
+    </div>
+  );
+}
+
+function VersionBody({ prompt }: Readonly<{ prompt: PromptVersion }>) {
+  return (
+    <div className="flex-1 overflow-auto p-4">
+      {prompt.notes && (
+        <div className="mb-4 p-3 rounded-md bg-neutral-800/50 text-sm">
+          <span className="text-neutral-400">Notes: </span>
+          <span className="text-neutral-300">{prompt.notes}</span>
+        </div>
+      )}
+      <div className="flex gap-4 mb-4 text-sm text-neutral-400">
+        <span>{prompt.prompt_text.length.toLocaleString()} chars</span>
+        <span>~{estimateTokens(prompt.prompt_text).toLocaleString()} tokens</span>
+        {prompt.model_id && <span>Model: {prompt.model_id}</span>}
+      </div>
+      <pre className="p-4 rounded-md bg-neutral-950 text-sm text-neutral-300 overflow-auto whitespace-pre-wrap">
+        {prompt.prompt_text}
+      </pre>
+    </div>
+  );
+}
+
+function VersionFooter({ onClose }: Readonly<{ onClose: () => void }>) {
+  return (
+    <div className="p-4 border-t border-neutral-800 flex justify-end">
+      <button
+        onClick={onClose}
+        className="rounded-md px-4 py-2 text-sm text-neutral-400 hover:text-white"
+      >
+        Close
+      </button>
+    </div>
+  );
+}
+
+export function ViewVersionModal({ prompt, onClose, onRollback }: Readonly<ViewVersionModalProps>) {
   return (
     <ModalWrapper onClose={onClose}>
-      <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold text-white">{prompt.version}</h2>
-          <p className="text-sm text-neutral-400">
-            {prompt.agent_name} • {new Date(prompt.created_at).toLocaleString()}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {prompt.stage && (
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs ${
-                prompt.stage === 'PRD'
-                  ? 'bg-emerald-500/20 text-emerald-300'
-                  : 'bg-neutral-700 text-neutral-400'
-              }`}
-            >
-              {prompt.stage === 'PRD' ? 'Live' : prompt.stage}
-            </span>
-          )}
-          <button
-            onClick={onRollback}
-            className="rounded-lg bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-500"
-          >
-            Make Current
-          </button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-auto p-4">
-        {prompt.notes && (
-          <div className="mb-4 p-3 rounded-md bg-neutral-800/50 text-sm">
-            <span className="text-neutral-400">Notes: </span>
-            <span className="text-neutral-300">{prompt.notes}</span>
-          </div>
-        )}
-        <div className="flex gap-4 mb-4 text-sm text-neutral-400">
-          <span>{prompt.prompt_text.length.toLocaleString()} chars</span>
-          <span>~{estimateTokens(prompt.prompt_text).toLocaleString()} tokens</span>
-          {prompt.model_id && <span>Model: {prompt.model_id}</span>}
-        </div>
-        <pre className="p-4 rounded-md bg-neutral-950 text-sm text-neutral-300 overflow-auto whitespace-pre-wrap">
-          {prompt.prompt_text}
-        </pre>
-      </div>
-
-      <div className="p-4 border-t border-neutral-800 flex justify-end">
-        <button
-          onClick={onClose}
-          className="rounded-md px-4 py-2 text-sm text-neutral-400 hover:text-white"
-        >
-          Close
-        </button>
-      </div>
+      <VersionHeader prompt={prompt} onRollback={onRollback} />
+      <VersionBody prompt={prompt} />
+      <VersionFooter onClose={onClose} />
     </ModalWrapper>
   );
 }

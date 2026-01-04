@@ -15,13 +15,13 @@ function CreateGoldenSetFormAgentNameSection({
   name,
   setName,
   agentOptions,
-}: {
+}: Readonly<{
   agentName: string;
   setAgentName: (v: string) => void;
   name: string;
   setName: (v: string) => void;
   agentOptions: string[];
-}) {
+}>) {
   return (
     <div className="grid grid-cols-2 gap-4">
       <CreateGoldenSetFormAgentField
@@ -37,10 +37,10 @@ function CreateGoldenSetFormAgentNameSection({
 function CreateGoldenSetFormDescriptionSection({
   description,
   setDescription,
-}: {
+}: Readonly<{
   description: string;
   setDescription: (v: string) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="golden-set-description" className="block text-sm text-neutral-400 mb-1">
@@ -63,12 +63,12 @@ function CreateGoldenSetFormJsonSection({
   setInputJson,
   expectedJson,
   setExpectedJson,
-}: {
+}: Readonly<{
   inputJson: string;
   setInputJson: (v: string) => void;
   expectedJson: string;
   setExpectedJson: (v: string) => void;
-}) {
+}>) {
   return (
     <>
       <CreateGoldenSetFormInputField inputJson={inputJson} setInputJson={setInputJson} />
@@ -82,7 +82,7 @@ function CreateGoldenSetFormJsonSection({
 
 type CreateGoldenSetFormLayoutProps = CreateGoldenSetFormProps & { agentOptions: string[] };
 
-function CreateGoldenSetFormLayoutSections(props: CreateGoldenSetFormLayoutProps) {
+function CreateGoldenSetFormLayoutSections(props: Readonly<CreateGoldenSetFormLayoutProps>) {
   return (
     <div className="flex-1 overflow-auto p-4 space-y-4">
       <CreateGoldenSetFormAgentNameSection
@@ -111,15 +111,15 @@ function CreateGoldenSetFormLayoutSections(props: CreateGoldenSetFormLayoutProps
   );
 }
 
-function CreateGoldenSetFormLayoutBody(props: CreateGoldenSetFormLayoutProps) {
+function CreateGoldenSetFormLayoutBody(props: Readonly<CreateGoldenSetFormLayoutProps>) {
   return <CreateGoldenSetFormLayoutSections {...props} />;
 }
 
-function CreateGoldenSetFormLayout({ ...props }: CreateGoldenSetFormLayoutProps) {
+function CreateGoldenSetFormLayout({ ...props }: Readonly<CreateGoldenSetFormLayoutProps>) {
   return <CreateGoldenSetFormLayoutBody {...props} />;
 }
 
-export function CreateGoldenSetForm(props: CreateGoldenSetFormProps) {
+export function CreateGoldenSetForm(props: Readonly<CreateGoldenSetFormProps>) {
   const agentOptions = ['tagger', 'summarizer', 'screener'];
   return <CreateGoldenSetFormLayout {...props} agentOptions={agentOptions} />;
 }
