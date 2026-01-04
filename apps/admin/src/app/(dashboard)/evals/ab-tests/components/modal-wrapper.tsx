@@ -19,7 +19,7 @@ export function ModalWrapper({ onClose, children }: ModalWrapperProps) {
         role="dialog"
         aria-modal="true"
         className="w-full max-w-lg rounded-lg border border-neutral-800 bg-neutral-900 p-6"
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         {children}
       </div>

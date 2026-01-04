@@ -22,7 +22,7 @@ export function ModalWrapper({ onClose, maxWidth = 'max-w-4xl', children }: Moda
         role="dialog"
         aria-modal="true"
         className={`w-full ${maxWidth} max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col`}
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         {children}
       </div>

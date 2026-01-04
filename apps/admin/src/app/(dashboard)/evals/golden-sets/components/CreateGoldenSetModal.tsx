@@ -72,7 +72,7 @@ function CreateGoldenSetModalContent({
       aria-modal="true"
       aria-labelledby="modal-title"
       className="w-full max-w-2xl max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col"
-      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       <CreateGoldenSetModalHeader />
       <CreateGoldenSetModalForm state={state} handleCreate={handleCreate} onClose={onClose} />
@@ -107,15 +107,7 @@ export function CreateGoldenSetModal({ onClose, onCreated }: CreateGoldenSetModa
   const state = useCreateGoldenSetState();
 
   const handleCreate = async () => {
-    const formData = {
-      agentName: state.agentName,
-      name: state.name,
-      description: state.description,
-      inputJson: state.inputJson,
-      expectedJson: state.expectedJson,
-      saving: state.saving,
-    };
-
+    const formData = toCreateGoldenSetFormData(state);
     if (!validateCreateForm(formData)) return;
 
     state.setSaving(true);

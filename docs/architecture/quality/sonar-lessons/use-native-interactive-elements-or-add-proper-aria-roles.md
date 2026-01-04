@@ -1,58 +1,47 @@
-# Use native interactive elements or add proper ARIA roles
+# Do not add interactive ARIA roles to non-interactive elements
 
-**Rules**:
+**Rule ID**: typescript:S6842  
+**SonarCloud message**: "Non-interactive DOM elements should not have interactive ARIA roles"  
+**Aliases**: role="button" on div without proper handling, ARIA role mismatch
 
-- [Non-interactive elements should not have interactive handlers](../sonar-rules/non-interactive-elements-should-not-have-interactive-handlers.md) (S6848)
-- [Non-interactive DOM elements should not have interactive ARIA roles](../sonar-rules/non-interactive-dom-elements-should-not-have-interactive-aria-roles.md) (S6842)
+**Rule**: [Non-interactive DOM elements should not have interactive ARIA roles](../sonar-rules/non-interactive-dom-elements-should-not-have-interactive-aria-roles.md)
 
-**Pattern to avoid**:
+---
+
+## Pattern to avoid
+
+Adding an interactive role without proper keyboard/focus support:
 
 ```tsx
-<div onClick={() => handleClick()}>Click me</div>
+{
+  /* BAD: has role but no keyboard handling */
+}
+<div role="button" onClick={handleClick}>
+  Click me
+</div>;
 ```
 
-**Fix** (preferred) — Use native interactive element:
+## Fix — Add complete accessibility support
 
-```tsx
-<button onClick={() => handleClick()}>Click me</button>
-```
+If you add an interactive role, you MUST also add:
 
-**Fix** (if native not possible) — Add role + keyboard handling:
+- `tabIndex={0}` for keyboard focus
+- `onKeyDown` for keyboard activation
+- `aria-label` if no visible text
 
 ```tsx
 <div
-  onClick={handleClick}
   role="button"
   tabIndex={0}
+  onClick={handleClick}
   onKeyDown={(e) => e.key === 'Enter' && handleClick()}
 >
   Click me
 </div>
 ```
 
-**Modal pattern** — For modal backdrops that close on click:
+## Preferred — Use native elements
 
 ```tsx
-{
-  /* Backdrop */
-}
-<div
-  role="button"
-  tabIndex={0}
-  aria-label="Close modal"
-  className="fixed inset-0 bg-black/50"
-  onClick={onClose}
-  onKeyDown={(e) => e.key === 'Escape' && onClose()}
->
-  {/* Dialog */}
-  <div
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="modal-title"
-    onClick={(e) => e.stopPropagation()}
-  >
-    <h2 id="modal-title">Title</h2>
-    {children}
-  </div>
-</div>;
+<button onClick={handleClick}>Click me</button>
 ```
