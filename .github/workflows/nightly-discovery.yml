@@ -30,7 +30,7 @@ jobs:
       - name: Debug module resolution (ESM)
         run: |
           npm -w services/agent-api exec -- node -p "process.cwd()"
-          npm -w services/agent-api exec -- node --input-type=module -e "console.log(await import.meta.resolve('openai/package.json'))"
+          npm -w services/agent-api exec -- node --input-type=module -e "console.log(await import.meta.resolve('openai'))"
           npm -w services/agent-api exec -- node --input-type=module -e "console.log(await import.meta.resolve('zod'))"
 
       - name: Run discovery (agent-api)
