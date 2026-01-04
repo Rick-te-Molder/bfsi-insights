@@ -50,7 +50,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **No boolean selector parameters** — Use separate methods or union types
 - [ ] **Interactive handlers on interactive elements only** — Use `<button>`, not `<div onClick>`
 - [ ] **Prefer native HTML over ARIA roles** — Use `<button>` not `<div role="button">`
-- [ ] **Use role="presentation" for layout event handlers** — When divs need stopPropagation
+- [ ] **Use target check for modal backdrops** — `e.target === e.currentTarget` instead of stopPropagation
 - [ ] **No code duplication** — Extract shared logic to functions/components
 - [ ] **No overly complex functions** — Keep cyclomatic complexity low
 
