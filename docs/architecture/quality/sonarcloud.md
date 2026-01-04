@@ -27,6 +27,19 @@ https://rules.sonarsource.com/githubactions/ | 26 rules
 
 ---
 
+# Quick Lookup (for AI assistants)
+
+When you see a SonarCloud issue, extract the Rule ID and find the matching lesson:
+
+| Rule ID | Lesson                                                                                                                                       |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| S3358   | [Extract nested ternary operations](./sonar-lessons/extract-nested-ternary-operations-into-helper-functions.md)                              |
+| S2301   | [Provide multiple methods instead of boolean selectors](./sonar-lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md)  |
+| S6848   | [Add role and keyboard handling to interactive divs](./sonar-lessons/add-role-and-keyboard-handling-to-interactive-divs.md)                  |
+| S6842   | [Do not add interactive ARIA roles to non-interactive elements](./sonar-lessons/use-native-interactive-elements-or-add-proper-aria-roles.md) |
+
+---
+
 # Prevention Checklist
 
 Quick checks before committing. If you're about to write any of these patterns, stop and refactor.
@@ -53,7 +66,11 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
-## [Use native interactive elements or add proper ARIA roles](./sonar-lessons/use-native-interactive-elements-or-add-proper-aria-roles.md)
+## [Add role and keyboard handling to interactive divs](./sonar-lessons/add-role-and-keyboard-handling-to-interactive-divs.md) (S6848)
+
+---
+
+## [Do not add interactive ARIA roles to non-interactive elements](./sonar-lessons/use-native-interactive-elements-or-add-proper-aria-roles.md) (S6842)
 
 ---
 

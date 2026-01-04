@@ -71,7 +71,7 @@ export function ViewGoldenSetModal({ item, onClose }: ViewGoldenSetModalProps) {
         aria-modal="true"
         aria-labelledby="view-modal-title"
         className="w-full max-w-3xl max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <ViewGoldenSetHeader item={item} />
         <ViewGoldenSetContent item={item} />

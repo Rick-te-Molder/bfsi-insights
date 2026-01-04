@@ -19,7 +19,7 @@ function ModalContent({ test, onClose, onUpdate }: TestDetailModalProps) {
       role="dialog"
       aria-modal="true"
       className="w-full max-w-2xl rounded-lg border border-neutral-800 bg-neutral-900 p-6"
-      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       <ModalHeader test={test} />
       <VariantCards test={test} results={results} />
