@@ -41,6 +41,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S6819   | [Use native HTML elements instead of ARIA roles](./sonar-lessons/use-native-html-elements-instead-of-aria-roles.md)                                           |
 | S6847   | [Use role presentation for non-interactive event handlers](./sonar-lessons/use-role-presentation-for-non-interactive-event-handlers.md)                       |
 | S4624   | [Refactor this code to not use nested template literals](./sonar-lessons/refactor-this-code-to-not-use-nested-template-literals.md)                           |
+| S6479   | [Do not use Array index in keys](./sonar-lessons/do-not-use-array-index-in-keys.md)                                                                           |
 
 ---
 
@@ -50,6 +51,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 
 - [ ] **No nested ternaries** — Extract to helper function with early returns
 - [ ] **No nested template literals** — Extract conditional parts to variables first
+- [ ] **No array index as React key** — Use unique identifier from data (id, slug, code)
 - [ ] **No boolean selector parameters** — Use separate methods or union types
 - [ ] **Interactive handlers on interactive elements only** — Use `<button>`, not `<div onClick>`
 - [ ] **Prefer native HTML over ARIA roles** — Use `<button>` not `<div role="button">`
@@ -97,6 +99,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Do not use Array index in keys](./sonar-lessons/do-not-use-array-index-in-keys.md) (S6479)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -126,5 +132,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [Template literals should not be nested](./sonar-rules/4624_template-literals-should-not-be-nested.md)
+
+---
+
+## [JSX list components should not use array indexes as key](./sonar-rules/6479_jsx-list-components-should-not-use-array-indexes-as-key.md)
 
 ---

@@ -74,8 +74,8 @@ export function ResultsList({ results }: { results: ComparisonResult[] }) {
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-semibold text-white">Results</h2>
-      {results.map((result, idx) => (
-        <ResultCard key={idx} result={result} />
+      {results.map((result) => (
+        <ResultCard key={result.itemId} result={result} />
       ))}
     </div>
   );

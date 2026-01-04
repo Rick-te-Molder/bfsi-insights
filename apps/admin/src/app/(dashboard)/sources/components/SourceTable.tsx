@@ -83,10 +83,10 @@ function DiscoveryCell({ methods }: { methods: DiscoveryMethod[] }) {
   return (
     <td className="px-4 py-3">
       <div className="flex items-center gap-1">
-        {methods.map((method, i) => {
+        {methods.map((method) => {
           const urlSuffix = method.url ? `: ${method.url}` : '';
           return (
-            <span key={i} title={`${method.label}${urlSuffix}`} className="cursor-help">
+            <span key={method.label} title={`${method.label}${urlSuffix}`} className="cursor-help">
               {method.icon}
             </span>
           );
