@@ -45,10 +45,11 @@ export function VerbatimField({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-neutral-300 mb-2">
+      <label htmlFor="verbatim" className="block text-sm font-medium text-neutral-300 mb-2">
         Their exact words (optional)
       </label>
       <input
+        id="verbatim"
         type="text"
         value={verbatimComment}
         onChange={(e) => setVerbatimComment(e.target.value)}

@@ -7,8 +7,11 @@ export function SubmitterNameField({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-neutral-300 mb-2">Name / Company</label>
+      <label htmlFor="submitterName" className="block text-sm font-medium text-neutral-300 mb-2">
+        Name / Company
+      </label>
       <input
+        id="submitterName"
         type="text"
         value={submitterName}
         onChange={(e) => setSubmitterName(e.target.value)}
@@ -30,8 +33,11 @@ export function SubmitterChannelSelect({
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-neutral-300 mb-2">Channel</label>
+      <label htmlFor="submitterChannel" className="block text-sm font-medium text-neutral-300 mb-2">
+        Channel
+      </label>
       <select
+        id="submitterChannel"
         value={submitterChannel}
         onChange={(e) => setSubmitterChannel(e.target.value)}
         className="w-full rounded-lg border border-neutral-700 bg-neutral-800 px-4 py-2 text-white focus:border-sky-500 focus:outline-none"

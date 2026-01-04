@@ -16,10 +16,10 @@ export function AudienceChips({
   toggleAudience: (audience: string) => void;
 }) {
   return (
-    <div>
-      <label className="block text-sm font-medium text-neutral-300 mb-2">
+    <fieldset>
+      <legend className="block text-sm font-medium text-neutral-300 mb-2">
         Who should see this?
-      </label>
+      </legend>
       <div className="flex flex-wrap gap-2">
         {audiences.map((aud) => (
           <button
@@ -32,6 +32,6 @@ export function AudienceChips({
           </button>
         ))}
       </div>
-    </div>
+    </fieldset>
   );
 }

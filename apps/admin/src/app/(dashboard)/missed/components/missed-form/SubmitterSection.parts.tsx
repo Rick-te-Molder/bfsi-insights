@@ -35,10 +35,10 @@ export function SubmitterAudience({
   audiences: Array<{ value: string; label: string; description: string }>;
 }) {
   return (
-    <div>
-      <label className="block text-sm font-medium text-neutral-300 mb-2">
+    <fieldset>
+      <legend className="block text-sm font-medium text-neutral-300 mb-2">
         Their Role / Audience <span className="text-red-400">*</span>
-      </label>
+      </legend>
       <div className="grid grid-cols-2 gap-2">
         {audiences.map((aud) => (
           <button
@@ -52,7 +52,7 @@ export function SubmitterAudience({
           </button>
         ))}
       </div>
-    </div>
+    </fieldset>
   );
 }
 
@@ -66,8 +66,8 @@ export function SubmitterUrgency({
   urgencyOptions: Array<{ value: string; label: string; color: string }>;
 }) {
   return (
-    <div>
-      <label className="block text-sm font-medium text-neutral-300 mb-2">Urgency</label>
+    <fieldset>
+      <legend className="block text-sm font-medium text-neutral-300 mb-2">Urgency</legend>
       <div className="flex gap-2">
         {urgencyOptions.map((opt) => (
           <button
@@ -80,6 +80,6 @@ export function SubmitterUrgency({
           </button>
         ))}
       </div>
-    </div>
+    </fieldset>
   );
 }
