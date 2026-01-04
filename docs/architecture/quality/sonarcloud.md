@@ -45,117 +45,15 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
-## Extract nested ternary operations into helper functions
-
-**Rule**:
-typescript:S3358
-Ternary operators should not be nested
-https://rules.sonarsource.com/typescript/RSPEC-3358/
-
-**Pattern to avoid**:
-
-```tsx
-const color = status === 'running' ? 'green' : status === 'completed' ? 'blue' : 'gray';
-```
-
-**Fix**: Extract to helper function with early returns:
-
-```tsx
-function getStatusColor(status: string): string {
-  if (status === 'running') return 'green';
-  if (status === 'completed') return 'blue';
-  return 'gray';
-}
-
-const color = getStatusColor(status);
-```
-
-**Exception**: Nested ternaries in JSX are acceptable when nesting happens in separate `{}` containers.
+## [Extract nested ternary operations into helper functions](./sonar-lessons/extract-nested-ternary-operations-into-helper-functions.md)
 
 ---
 
-## Provide multiple methods instead of boolean selector parameters
-
-**Rule**:
-typescript:S2301
-Methods should not contain selector parameters
-https://rules.sonarsource.com/typescript/RSPEC-2301/
-
-**Pattern to avoid**:
-
-```ts
-function processContent(content: string, isPdf: boolean) {
-  if (isPdf) {
-    /* PDF */
-  } else {
-    /* HTML */
-  }
-}
-processContent(data, true); // What does true mean?
-```
-
-**Fix Option 1** — Separate methods:
-
-```ts
-function processPdfContent(content: string) {
-  /* PDF */
-}
-function processHtmlContent(content: string) {
-  /* HTML */
-}
-processPdfContent(data); // Clear intent
-```
-
-**Fix Option 2** — Union type:
-
-```ts
-type ContentType = 'pdf' | 'html';
-function processContent(content: string, type: ContentType) { ... }
-processContent(data, 'pdf');  // Clear intent
-```
+## [Provide multiple methods instead of boolean selector parameters](./sonar-lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md)
 
 ---
 
-## Use native interactive elements or add proper ARIA roles
-
-**Rule**:
-typescript:S6842
-Non-interactive DOM elements should not have interactive ARIA roles
-https://rules.sonarsource.com/typescript/RSPEC-6842/
-
-**Pattern to avoid**:
-
-```tsx
-<div onClick={() => handleClick()}>Click me</div>
-```
-
-**Fix** (preferred) — Use native interactive element:
-
-```tsx
-<button onClick={() => handleClick()}>Click me</button>
-```
-
-**Fix** (if native not possible) — Add role + keyboard handling:
-
-```tsx
-<div
-  onClick={handleClick}
-  role="button"
-  tabIndex={0}
-  onKeyDown={(e) => e.key === 'Enter' && handleClick()}
->
-  Click me
-</div>
-```
-
----
-
-## Avoid non-native interactive elements. If using native HTML is not possible, add an appropriate role and support for tabbing, mouse, keyboard, and touch inputs to an interactive content element.
-
-**Rule**:
-typescript:S6848
-Non-interactive elements should not have interactive handlers
-https://rules.sonarsource.com/typescript/RSPEC-6848/
+## [Use native interactive elements or add proper ARIA roles](./sonar-lessons/use-native-interactive-elements-or-add-proper-aria-roles.md)
 
 ---
 
@@ -163,22 +61,18 @@ https://rules.sonarsource.com/typescript/RSPEC-6848/
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
 
-## Ternary operators should not be nested
+## [Ternary operators should not be nested](./sonar-rules/ternary-operators-should-not-be-nested.md)
 
-typescript:S3358
-https://rules.sonarsource.com/typescript/RSPEC-3358/
+---
 
-## Methods should not contain selector parameters
+## [Methods should not contain selector parameters](./sonar-rules/methods-should-not-contain-selector-parameters.md)
 
-typescript:S2301
-https://rules.sonarsource.com/typescript/RSPEC-2301/
+---
 
-## Non-interactive elements should not have interactive handlers
+## [Non-interactive elements should not have interactive handlers](./sonar-rules/non-interactive-elements-should-not-have-interactive-handlers.md)
 
-typescript:S6848
-https://rules.sonarsource.com/typescript/RSPEC-6848/
+---
 
-## Non-interactive DOM elements should not have interactive ARIA roles
+## [Non-interactive DOM elements should not have interactive ARIA roles](./sonar-rules/non-interactive-dom-elements-should-not-have-interactive-aria-roles.md)
 
-typescript:S6842  
-https://rules.sonarsource.com/typescript/RSPEC-6842/
+---
