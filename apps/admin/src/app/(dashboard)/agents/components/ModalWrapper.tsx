@@ -17,13 +17,13 @@ export function ModalWrapper({ onClose, maxWidth = 'max-w-4xl', children }: Moda
       onClick={(e) => e.target === e.currentTarget && onClose()}
       onKeyDown={(e) => e.key === 'Escape' && onClose()}
     >
-      <div
-        role="dialog"
+      <dialog
+        open
         aria-modal="true"
         className={`w-full ${maxWidth} max-h-[90vh] rounded-lg border border-neutral-800 bg-neutral-900 overflow-hidden flex flex-col`}
       >
         {children}
-      </div>
+      </dialog>
     </button>
   );
 }
