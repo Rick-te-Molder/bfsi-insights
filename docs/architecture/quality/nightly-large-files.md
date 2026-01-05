@@ -6,13 +6,14 @@ Files exceeding size limits (source: 300 lines, test: 500 lines)
 
 ## Summary
 
-- **Total large files:** 4
+- **Total large files:** 3
 
 ## Files
 
-| File                                                 | Lines | Limit | Over by |
-| ---------------------------------------------------- | ----: | ----: | ------: |
-| `services/agent-api/tests/lib/sitemap.spec.js`       |   983 |   500 |    +483 |
-| `services/agent-api/tests/agents/improver.spec.js`   |   954 |   500 |    +454 |
-| `services/agent-api/tests/agents/scorer.spec.js`     |   723 |   500 |    +223 |
-| `services/agent-api/src/agents/discover-classics.js` |   309 |   300 |      +9 |
+```text
+OVER  LINES  FILE
+----  -----  ------------------------------------------------
++483    983  services/agent-api/tests/lib/sitemap.spec.js
++454    954  services/agent-api/tests/agents/improver.spec.js
++223    723  services/agent-api/tests/agents/scorer.spec.js
+```

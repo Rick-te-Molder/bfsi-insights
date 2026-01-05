@@ -6,10 +6,10 @@
 
 | Metric                     | Count | Status |
 | -------------------------- | ----: | ------ |
-| Large files (>limit)       |     4 | ⚠️     |
-| Large functions (>limit)   |    87 | ⚠️     |
+| Large files (>limit)       |     3 | ⚠️     |
+| Large functions (>limit)   |    85 | ⚠️     |
 | High param functions (>=6) |     3 | ⚠️     |
-| Total files scanned        |   530 |        |
+| Total files scanned        |   534 |        |
 
 ## Detailed Reports
 
