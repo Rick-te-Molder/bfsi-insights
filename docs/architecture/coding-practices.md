@@ -74,12 +74,14 @@ All code that passes through your hands must meet Quality Guidelines.
 
 **File Size:**
 
-- Files MUST be < 300 lines
+- Aim for a file length of max 200-250 lines.
+- Files MUST be < 300 lines (upper limit)
 - Extract large files into smaller, focused modules
 
 **Unit Size (Functions/Methods):**
 
-- Functions MUST be < 30 lines (required)
+- Aim for a function length of max 15-20 lines.
+- Functions MUST be < 30 lines (upper limit)
 - Functions SHOULD be < 15 lines (excellent)
 - Extract large functions into smaller, focused helpers
 
@@ -92,13 +94,11 @@ The pre-commit hook (`scripts/ci/check-large-files.cjs`) checks ALL staged files
 - 📋 **No exceptions**: Even files with known violations must be refactored when touched
 - 🎉 **Celebrates cleanups**: Shows when known violators are fixed
 
-### Known Violations (as of 2026-01-02)
+### Known Violations
 
-- **31 files** > 300 lines
-- **~117 files** with functions > 30 lines
-- See `ALLOW_LIST` in `scripts/ci/check-large-files.cjs` for tracking
-
-These files WILL block commits when modified - refactor them when you touch them.
+- See docs/architecture/quality/known-large-files.md
+- See docs/architecture/quality/known-large-functions.md
+- See docs/architecture/quality/exceptions.md
 
 ### How to Fix
 
@@ -107,12 +107,14 @@ These files WILL block commits when modified - refactor them when you touch them
 1. Extract helper functions to separate modules
 2. Split into multiple focused files
 3. Move reusable code to shared utilities
+4. Aim for a file length of max 200-250 lines.
 
 **Large functions (> 30 lines):**
 
 1. Extract logical sections into helper functions
 2. Use single-responsibility principle
 3. Name helpers descriptively for what they do
+4. Aim for a function length of max 15-20 lines.
 
 ### Example Refactoring
 
@@ -156,6 +158,34 @@ Pre-commit enforcement implemented in commits:
 
 - `02b3c80` - Initial Quality Gate checker with grandfathering
 - `5c2253a` - Boy Scout rule enforcement (no exceptions)
+
+---
+
+## Local Linting (SonarQube for IDE)
+
+### Rule: Fix SonarCloud issues before committing
+
+Install **SonarQube for IDE** in Windsurf and connect it to SonarCloud (Connected Mode). This syncs your local analysis with the project's quality profile, ensuring you catch the same issues CI will catch.
+
+### Setup
+
+1. Install the **SonarQube for IDE** extension in Windsurf
+2. Open Command Palette → "SonarQube for IDE: Connect to SonarCloud"
+3. Authenticate with your SonarCloud account
+4. Select the `bfsi-insights` project
+
+### Workflow
+
+1. SonarQube for IDE highlights issues in real-time as you code
+2. Fix issues before committing
+3. If an issue cannot be fixed, document it in `docs/architecture/quality/exceptions.md`
+
+### Why
+
+- **Shift-left**: Catch issues before they reach CI
+- **Same rules**: Connected Mode uses the exact quality profile from SonarCloud
+- **Faster feedback**: No waiting for CI pipeline
+- **Zero CI cost**: Issues are caught locally, not in Slow CI
 
 ---
 
