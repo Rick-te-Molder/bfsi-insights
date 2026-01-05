@@ -1,0 +1,66 @@
+---
+/**
+ * Reusable Tag Badge Component
+ *
+ * Displays a styled tag badge with optional icon.
+ */
+
+interface Props {
+  label: string;
+  ariaLabel?: string;
+  variant: 'audience' | 'geography' | 'industry' | 'topic' | 'regulator' | 'regulation' | 'process';
+  icon?: 'user' | 'globe' | null;
+  expandedOnly?: boolean;
+}
+
+const { label, ariaLabel, variant, icon, expandedOnly = false } = Astro.props;
+
+const variantClasses: Record<string, string> = {
+  audience:
+    'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-amber-300 dark:ring-amber-500/20',
+  geography:
+    'bg-teal-100 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 ring-teal-300 dark:ring-teal-500/20',
+  industry:
+    'bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 ring-blue-300 dark:ring-blue-500/20',
+  topic:
+    'bg-violet-100 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300 ring-violet-300 dark:ring-violet-500/20',
+  regulator:
+    'bg-rose-100 dark:bg-rose-500/10 text-rose-700 dark:text-rose-300 ring-rose-300 dark:ring-rose-500/20',
+  regulation:
+    'bg-orange-100 dark:bg-orange-500/10 text-orange-700 dark:text-orange-300 ring-orange-300 dark:ring-orange-500/20',
+  process:
+    'bg-cyan-100 dark:bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 ring-cyan-300 dark:ring-cyan-500/20',
+};
+
+const baseClasses =
+  'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset';
+const expandedClasses = expandedOnly ? 'card-expanded-only hidden' : '';
+---
+
+<span class:list={[baseClasses, variantClasses[variant], expandedClasses]} aria-label={ariaLabel}>
+  {
+    icon === 'user' && (
+      <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+        />
+      </svg>
+    )
+  }
+  {
+    icon === 'globe' && (
+      <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+    )
+  }
+  {label}
+</span>
