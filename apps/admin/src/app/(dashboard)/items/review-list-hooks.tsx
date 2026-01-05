@@ -15,6 +15,13 @@ function useSuccessMessage() {
   return { message, show };
 }
 
+function getActionError(r: unknown): string {
+  if (typeof r === 'object' && r !== null && 'error' in r && typeof r.error === 'string') {
+    return r.error;
+  }
+  return 'Failed';
+}
+
 async function runApprove(
   ids: Set<string>,
   clear: () => void,
@@ -26,7 +33,7 @@ async function runApprove(
   setLoading('approve');
   show(`⏳ Approving ${ids.size} items...`);
   const r = await bulkApproveAction(Array.from(ids));
-  show(r.success ? `✅ ${r.count} items approved` : `❌ Failed: ${r.error}`);
+  show(r.success ? `✅ ${r.count} items approved` : `❌ Failed: ${getActionError(r)}`);
   setLoading(null);
   clear();
   refresh();
@@ -45,7 +52,7 @@ async function runReject(
   setLoading('reject');
   show(`⏳ Rejecting ${ids.size} items...`);
   const r = await bulkRejectAction(Array.from(ids), reason);
-  show(r.success ? `✅ ${r.count} items rejected` : `❌ Failed: ${r.error}`);
+  show(r.success ? `✅ ${r.count} items rejected` : `❌ Failed: ${getActionError(r)}`);
   setLoading(null);
   clear();
   refresh();
