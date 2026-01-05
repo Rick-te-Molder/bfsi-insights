@@ -7,480 +7,162 @@
  * KB-155: Agentic Discovery System - Phase 1
  */
 
-import { createClient } from '@supabase/supabase-js';
-import process from 'node:process';
 import { AgentRunner } from '../lib/runner.js';
+import {
+  isTrustedSource,
+  checkContentAge,
+  checkStaleIndicators,
+  checkRejectionPatterns,
+} from './scorer-checks.js';
+import { getSystemPrompt, getRejectionPatterns } from './scorer-prompt.js';
+import {
+  buildStaleResult,
+  buildRejectionResult,
+  buildTrustedSourceResult,
+  buildNoTitleResult,
+  buildLLMResult,
+  buildErrorResult,
+} from './scorer-results.js';
 
 const runner = new AgentRunner('scorer');
 
-// Lazy-load clients
-let supabase = null;
-let cachedPrompt = null;
-let cachedAudiences = null;
-let cachedRejectionPatterns = null;
-
-function getSupabase() {
-  if (!supabase) {
-    supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-  }
-  return supabase;
+/** Log stale content detection */
+function logStaleContent(indicator) {
+  console.log(`   ⏭️  Stale content detected: "${indicator}"`);
 }
 
-// Load audience definitions from DB (cached for performance)
-// KB-208: Single source of truth for audience definitions
-async function getAudiences() {
-  if (cachedAudiences) return cachedAudiences;
-
-  const { data, error } = await getSupabase()
-    .from('kb_audience')
-    .select('code, name, description, cares_about, doesnt_care_about, scoring_guide')
-    .order('sort_order');
-
-  if (error || !data || data.length === 0) {
-    throw new Error(
-      'CRITICAL: No audiences found in kb_audience table. ' +
-        'Run migrations to seed audience data. ' +
-        `DB error: ${error?.message || 'No data returned'}`,
-    );
-  }
-
-  cachedAudiences = data;
-  return cachedAudiences;
+/** Log rejection pattern match */
+function logRejection(keyword, pattern) {
+  console.log(`   🚫 Rejection pattern matched: "${keyword}" (${pattern})`);
 }
 
-// Load rejection patterns from DB (cached for performance)
-// KB-210: Single source of truth for rejection criteria
-async function getRejectionPatterns() {
-  if (cachedRejectionPatterns) return cachedRejectionPatterns;
-
-  const { data, error } = await getSupabase()
-    .from('kb_rejection_pattern')
-    .select('name, category, description, patterns, max_score')
-    .eq('is_active', true)
-    .order('sort_order');
-
-  if (error) {
-    console.warn('Warning: Failed to load rejection patterns:', error.message);
-    return []; // Graceful degradation - continue without rejection patterns
-  }
-
-  cachedRejectionPatterns = data || [];
-  return cachedRejectionPatterns;
+/** Log age penalty */
+function logAgePenalty(ageInYears, penalty) {
+  console.log(`   📅 Content is ${Math.floor(ageInYears)} years old (penalty: -${penalty})`);
 }
 
-// Generate system prompt dynamically from audience definitions
-// KB-208: Prompts pull from kb_audience table, not hardcoded
-async function getSystemPrompt() {
-  if (cachedPrompt) return cachedPrompt;
-
-  const audiences = await getAudiences();
-
-  // Build audience sections dynamically
-  const audienceSections = audiences
-    .map((a) => {
-      return `## ${a.name} (${a.code})
-${a.description}
-
-They care about:
-${a.cares_about}
-
-They don't care about:
-${a.doesnt_care_about}
-
-Scoring guide:
-${a.scoring_guide}`;
-    })
-    .join('\n\n');
-
-  // KB-210: Load rejection patterns from database
-  const rejectionPatterns = await getRejectionPatterns();
-
-  // Build rejection section dynamically
-  let rejectionSection = '';
-  if (rejectionPatterns.length > 0) {
-    const rejectionItems = rejectionPatterns
-      .map(
-        (p) =>
-          `- **${p.description}** - Keywords: ${p.patterns.slice(0, 5).join(', ')}${p.patterns.length > 5 ? '...' : ''}`,
-      )
-      .join('\n');
-
-    rejectionSection = `## AUTOMATIC REJECTION (score 1-3 for ALL audiences)
-
-The following content types are NOT relevant regardless of BFSI keywords:
-${rejectionItems}
-
-If title/description contains these patterns, score 1-3 for ALL audiences.\n\n`;
+/** Check staleness and return result if stale */
+function checkStaleness(title, description, url) {
+  const staleCheck = checkStaleIndicators(title, description, url);
+  if (staleCheck.hasStaleIndicators) {
+    logStaleContent(staleCheck.matchedIndicator);
+    return buildStaleResult(staleCheck.matchedIndicator);
   }
-
-  cachedPrompt = `You are an expert content curator for BFSI (Banking, Financial Services, Insurance) professionals.
-
-Your job is to score content relevance. Be STRICT about filtering out irrelevant content.
-
-${rejectionSection}## TARGET AUDIENCES
-
-Score content relevance (1-10) for EACH audience based on their needs:
-
-${audienceSections}
-
-## SCORING GUIDELINES
-
-- Score 8-10: Directly actionable, high-impact content for that audience
-- Score 5-7: Relevant background knowledge, worth reading
-- Score 3-4: Tangentially related, low priority
-- Score 1-2: Not relevant or should be rejected (see rejection criteria above)
-
-## RESPONSE FORMAT
-
-Respond with JSON:
-{
-  "relevance_scores": {
-${audiences.map((a) => `    "${a.code}": <1-10>`).join(',\n')}
-  },
-  "primary_audience": "<audience code with highest score>",
-  "executive_summary": "<1 sentence: what this content is about>",
-  "skip_reason": "<null if any score >= 4, otherwise brief reason why rejected>"
-}`;
-
-  return cachedPrompt;
+  return null;
 }
 
-// Minimum score to queue (below this = auto-skip)
-const MIN_RELEVANCE_SCORE = 4;
-
-// Content age thresholds for soft scoring penalties
-// KB-206: Use as soft signal, not hard cutoff (don't reject "Attention is All You Need")
-const AGE_PENALTY_THRESHOLD_YEARS = 2; // Start penalizing after 2 years
-
-// Staleness indicators - content with these terms is likely outdated/invalid
-// KB-206: Detect tombstone pages and expired content
-const STALENESS_INDICATORS = [
-  'inactive',
-  'rescinded',
-  'expired',
-  'superseded',
-  'archived',
-  'no longer active',
-  'no longer valid',
-  'no longer current',
-  'this page has been removed',
-  'this document has been withdrawn',
-  'this content is outdated',
-];
-
-// Trusted sources that auto-pass relevance filter (core BFSI institutions)
-// These sources publish content that is always relevant to BFSI executives
-// Slugs must match kb_source.slug in the database
-const TRUSTED_SOURCES = new Set([
-  // Central Banks
-  'bis', // Bank for International Settlements
-  'bis-research', // BIS Working Papers
-  'bis-innovation', // BIS Innovation Hub
-  'ecb', // European Central Bank
-  'fed', // Federal Reserve
-  'boe', // Bank of England
-  'dnb', // De Nederlandsche Bank
-  // Regulators
-  'eba', // European Banking Authority
-  'esma', // European Securities and Markets Authority
-  'eiopa', // European Insurance and Occupational Pensions Authority
-  'fca', // Financial Conduct Authority
-  'pra', // Prudential Regulation Authority
-  'fsb', // Financial Stability Board
-  'bcbs', // Basel Committee on Banking Supervision
-  'fatf', // Financial Action Task Force
-  'fdic', // Federal Deposit Insurance Corporation
-  'occ', // Office of the Comptroller of the Currency
-  'sec', // Securities and Exchange Commission
-  // International Organizations
-  'imf', // International Monetary Fund
-  // Premium Consultants (their content is curated, always relevant)
-  'mckinsey',
-  'bcg', // Boston Consulting Group
-  'bain',
-]);
-
-/**
- * Check if a source is in the trusted allowlist
- * @param {string} sourceSlug - Source slug to check
- * @returns {boolean}
- */
-export function isTrustedSource(sourceSlug) {
-  if (!sourceSlug) return false;
-  const normalized = sourceSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  return TRUSTED_SOURCES.has(normalized);
-}
-
-/**
- * Check content age and calculate penalty
- * KB-206: Soft signal approach - penalize old content but don't auto-reject
- * @param {string|Date} publishedDate - Publication date
- * @returns {{ageInDays: number|null, ageInYears: number|null, penalty: number}}
- */
-export function checkContentAge(publishedDate) {
-  if (!publishedDate) {
-    return { ageInDays: null, ageInYears: null, penalty: 0 }; // Unknown date, no penalty
-  }
-
-  const pubDate = new Date(publishedDate);
-  if (isNaN(pubDate.getTime())) {
-    return { ageInDays: null, ageInYears: null, penalty: 0 }; // Invalid date, no penalty
-  }
-
-  const ageMs = Date.now() - pubDate.getTime();
-  const ageInDays = Math.floor(ageMs / (1000 * 60 * 60 * 24));
-  const ageInYears = ageInDays / 365;
-
-  // Calculate penalty: -1 per 2 years over threshold, max -3
-  let penalty = 0;
-  if (ageInYears > AGE_PENALTY_THRESHOLD_YEARS) {
-    penalty = Math.min(3, Math.floor((ageInYears - AGE_PENALTY_THRESHOLD_YEARS) / 2) + 1);
-  }
-
-  return { ageInDays, ageInYears, penalty };
-}
-
-/**
- * Check if content contains staleness indicators
- * KB-206: Detect tombstone/expired pages
- * @param {string} title - Content title
- * @param {string} description - Content description
- * @param {string} url - Content URL
- * @returns {{hasStaleIndicators: boolean, matchedIndicator: string|null}}
- */
-export function checkStaleIndicators(title, description = '', url = '') {
-  const text = `${title} ${description} ${url}`.toLowerCase();
-
-  for (const indicator of STALENESS_INDICATORS) {
-    if (text.includes(indicator)) {
-      return { hasStaleIndicators: true, matchedIndicator: indicator };
-    }
-  }
-
-  return { hasStaleIndicators: false, matchedIndicator: null };
-}
-
-/**
- * Check if content matches rejection patterns (pre-filter before LLM)
- * KB-210: Deterministic rejection for obvious patterns
- * @param {string} title - Content title
- * @param {string} description - Content description
- * @param {string} source - Content source
- * @returns {Promise<{shouldReject: boolean, pattern: string|null, maxScore: number}>}
- */
-export async function checkRejectionPatterns(title, description = '', source = '') {
+/** Check rejection patterns and return result if rejected */
+async function checkRejection(title, description, source) {
   const patterns = await getRejectionPatterns();
-  if (patterns.length === 0) {
-    return { shouldReject: false, pattern: null, maxScore: 10 };
+  const check = checkRejectionPatterns(title, description, source, patterns);
+  if (check.shouldReject) {
+    logRejection(check.matchedKeyword, check.pattern);
+    return buildRejectionResult(check);
   }
+  return null;
+}
 
-  const text = `${title} ${description} ${source}`.toLowerCase();
+/** Check pre-LLM filters and return early result if applicable */
+async function checkPreFilters(candidate) {
+  const { title, description = '', source = '', publishedDate = null, url = '' } = candidate;
 
-  for (const p of patterns) {
-    for (const keyword of p.patterns) {
-      if (text.includes(keyword.toLowerCase())) {
-        return {
-          shouldReject: true,
-          pattern: p.name,
-          reason: p.description,
-          matchedKeyword: keyword,
-          maxScore: p.max_score,
-        };
-      }
-    }
-  }
+  const staleResult = checkStaleness(title, description, url);
+  if (staleResult) return staleResult;
 
-  return { shouldReject: false, pattern: null, maxScore: 10 };
+  const rejectionResult = await checkRejection(title, description, source);
+  if (rejectionResult) return rejectionResult;
+
+  const ageCheck = checkContentAge(publishedDate);
+  if (ageCheck.penalty > 0) logAgePenalty(ageCheck.ageInYears, ageCheck.penalty);
+
+  if (isTrustedSource(source)) return buildTrustedSourceResult(source, ageCheck.penalty);
+  if (!title || title.trim().length === 0) return buildNoTitleResult();
+
+  return { shouldContinue: true, agePenalty: ageCheck.penalty };
+}
+
+/** Build user content for LLM */
+function buildUserContent(source, title, description) {
+  return `Source: ${source}
+Title: ${title}
+Description: ${description || '(no description available)'}`;
+}
+
+/** Execute LLM scoring call */
+async function executeLLMScoring(tools, systemPrompt, userContent, agePenalty) {
+  const { llm } = tools;
+  const modelId = tools.model || 'gpt-4o-mini';
+  const maxTokens = tools.promptConfig?.max_tokens || 200;
+
+  const completion = await llm.complete({
+    model: modelId,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userContent },
+    ],
+    responseFormat: { type: 'json_object' },
+    temperature: 0.1,
+    maxTokens,
+  });
+
+  const result = JSON.parse(completion.content);
+  return buildLLMResult(result, completion.usage, modelId, agePenalty);
 }
 
 /**
  * Score a candidate for executive relevance
- * @param {Object} candidate - { title, description, source }
+ * @param {Object} candidate - { title, description, source, publishedDate, url }
  * @param {Object} options - { promptOverride } for head-to-head evals
- * @returns {Promise<Object>} - { relevance_score, executive_summary, skip_reason, usage }
+ * @returns {Promise<Object>} - Scoring result
  */
 export async function scoreRelevance(candidate, options = {}) {
-  const { title, description = '', source = '', publishedDate = null, url = '' } = candidate;
-
-  // KB-206: Check for staleness indicators BEFORE trusted source bypass
-  const staleCheck = checkStaleIndicators(title, description, url);
-  if (staleCheck.hasStaleIndicators) {
-    console.log(`   ⏭️  Stale content detected: "${staleCheck.matchedIndicator}"`);
-    return {
-      relevance_score: 1,
-      executive_summary: `Stale content: contains "${staleCheck.matchedIndicator}"`,
-      skip_reason: `Stale indicator: ${staleCheck.matchedIndicator}`,
-      should_queue: false,
-      usage: null,
-      stale_content: true,
-    };
+  // Run pre-filters (staleness, rejection, trusted source, empty title)
+  const preFilterResult = await checkPreFilters(candidate);
+  if (!preFilterResult.shouldContinue) {
+    return preFilterResult;
   }
 
-  // KB-210: Check for rejection patterns BEFORE LLM call (deterministic filter)
-  const rejectionCheck = await checkRejectionPatterns(title, description, source);
-  if (rejectionCheck.shouldReject) {
-    console.log(
-      `   🚫 Rejection pattern matched: "${rejectionCheck.matchedKeyword}" (${rejectionCheck.pattern})`,
-    );
-    return {
-      relevance_score: rejectionCheck.maxScore,
-      relevance_scores: {
-        executive: rejectionCheck.maxScore,
-        functional_specialist: rejectionCheck.maxScore,
-        engineer: rejectionCheck.maxScore,
-        researcher: rejectionCheck.maxScore,
-      },
-      primary_audience: null,
-      executive_summary: `Auto-rejected: ${rejectionCheck.reason}`,
-      skip_reason: `Matched rejection pattern: ${rejectionCheck.matchedKeyword}`,
-      should_queue: rejectionCheck.maxScore >= MIN_RELEVANCE_SCORE,
-      usage: null,
-      rejection_pattern: rejectionCheck.pattern,
-    };
-  }
-
-  // KB-206: Check content age for soft penalty (applied later)
-  const ageCheck = checkContentAge(publishedDate);
-  const agePenalty = ageCheck.penalty;
-  if (agePenalty > 0) {
-    console.log(
-      `   📅 Content is ${Math.floor(ageCheck.ageInYears)} years old (penalty: -${agePenalty})`,
-    );
-  }
-
-  // Fast path: trusted sources auto-pass without LLM call (after staleness checks)
-  // KB-208: Return multi-audience scores (assume high relevance for all audiences from trusted sources)
-  if (isTrustedSource(source)) {
-    const adjustedScore = Math.max(1, 8 - agePenalty);
-    return {
-      relevance_score: adjustedScore,
-      relevance_scores: {
-        executive: adjustedScore,
-        functional_specialist: adjustedScore,
-        engineer: Math.max(1, 6 - agePenalty),
-        researcher: Math.max(1, 6 - agePenalty),
-      },
-      primary_audience: 'executive',
-      executive_summary: `Trusted source: ${source}${agePenalty > 0 ? ` (age penalty: -${agePenalty})` : ''}`,
-      skip_reason: adjustedScore < MIN_RELEVANCE_SCORE ? `Old content from trusted source` : null,
-      should_queue: adjustedScore >= MIN_RELEVANCE_SCORE,
-      usage: null,
-      trusted_source: true,
-      age_penalty: agePenalty,
-    };
-  }
-
-  // Skip LLM call if no meaningful content to score (empty or whitespace-only)
-  if (!title || title.trim().length === 0) {
-    return {
-      relevance_score: 1,
-      executive_summary: 'No title available',
-      skip_reason: 'No title',
-      should_queue: false,
-      usage: null,
-    };
-  }
+  const { title, description = '', source = '' } = candidate;
+  const agePenalty = preFilterResult.agePenalty;
 
   // Use AgentRunner for LLM call with logging and tracing
   return runner
     .run(
-      {
-        payload: candidate,
-        promptOverride: options.promptOverride,
-      },
+      { payload: candidate, promptOverride: options.promptOverride },
       async (context, promptTemplate, tools) => {
-        const { llm } = tools;
-        const modelId = tools.model || 'gpt-4o-mini';
-        const maxTokens = tools.promptConfig?.max_tokens || 200;
-
-        // Use promptTemplate from DB, or fall back to dynamically built prompt
         const systemPrompt = promptTemplate || (await getSystemPrompt());
-
-        const userContent = `Source: ${source}
-Title: ${title}
-Description: ${description || '(no description available)'}`;
-
-        const completion = await llm.complete({
-          model: modelId,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userContent },
-          ],
-          responseFormat: { type: 'json_object' },
-          temperature: 0.1,
-          maxTokens,
-        });
-
-        const result = JSON.parse(completion.content);
-        const usage = completion.usage;
-
-        // KB-208: Handle multi-audience scores
-        const scores = result.relevance_scores || {};
-        const adjustedScores = {
-          executive: Math.max(1, (scores.executive || 5) - agePenalty),
-          functional_specialist: Math.max(1, (scores.functional_specialist || 5) - agePenalty),
-          engineer: Math.max(1, (scores.engineer || 5) - agePenalty),
-          researcher: Math.max(1, (scores.researcher || 5) - agePenalty),
-        };
-
-        const maxScore = Math.max(...Object.values(adjustedScores));
-        const primaryAudience =
-          result.primary_audience ||
-          Object.entries(adjustedScores).sort((a, b) => b[1] - a[1])[0][0];
-
-        return {
-          relevance_score: maxScore,
-          relevance_scores: adjustedScores,
-          primary_audience: primaryAudience,
-          executive_summary: result.executive_summary || '',
-          skip_reason:
-            result.skip_reason ||
-            (maxScore < MIN_RELEVANCE_SCORE && agePenalty > 0
-              ? `Score reduced by age penalty`
-              : null),
-          should_queue: maxScore >= MIN_RELEVANCE_SCORE,
-          usage: usage
-            ? {
-                prompt_tokens: usage.prompt_tokens,
-                completion_tokens: usage.completion_tokens,
-                total_tokens: usage.total_tokens,
-                model: modelId,
-              }
-            : null,
-          age_penalty: agePenalty > 0 ? agePenalty : undefined,
-        };
+        const userContent = buildUserContent(source, title, description);
+        return executeLLMScoring(tools, systemPrompt, userContent, agePenalty);
       },
     )
     .catch((error) => {
       console.error(`   ⚠️ Relevance scoring failed: ${error.message}`);
-      return {
-        relevance_score: 5,
-        executive_summary: 'Scoring failed - queued for manual review',
-        skip_reason: null,
-        should_queue: true,
-        usage: null,
-        error: error.message,
-      };
+      return buildErrorResult(error.message);
     });
 }
 
 /**
- * Batch score multiple candidates (more efficient)
- * @param {Array} candidates - Array of { title, description, source }
- * @returns {Array} - Array of scoring results
+ * Batch score multiple candidates
+ * @param {Array} candidates - Array of candidate objects
+ * @returns {Promise<Array>} - Array of scoring results
  */
 export async function scoreRelevanceBatch(candidates) {
-  // Process in parallel with concurrency limit
   const BATCH_SIZE = 5;
   const results = [];
 
   for (let i = 0; i < candidates.length; i += BATCH_SIZE) {
     const batch = candidates.slice(i, i + BATCH_SIZE);
-    const batchResults = await Promise.all(batch.map((candidate) => scoreRelevance(candidate)));
+    const batchResults = await Promise.all(batch.map(scoreRelevance));
     results.push(...batchResults);
   }
 
   return results;
 }
 
-export { MIN_RELEVANCE_SCORE, AGE_PENALTY_THRESHOLD_YEARS, STALENESS_INDICATORS };
+// Re-export for backwards compatibility
+export { isTrustedSource, checkContentAge, checkStaleIndicators } from './scorer-checks.js';
+export {
+  MIN_RELEVANCE_SCORE,
+  AGE_PENALTY_THRESHOLD_YEARS,
+  STALENESS_INDICATORS,
+} from './scorer-config.js';
