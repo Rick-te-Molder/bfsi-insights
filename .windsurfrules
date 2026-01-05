@@ -140,11 +140,11 @@ Run and paste relevant excerpts from:
 
 ### Documentation structure
 
-- **Quick Lookup**: `docs/architecture/quality/sonarcloud.md` 
+- **Quick Lookup**: `docs/architecture/quality/sonarcloud.md`
 (Rule ID → Lesson mapping)
-- **Lessons**: `docs/architecture/quality/sonar-lessons/*.md` 
+- **Lessons**: `docs/architecture/quality/sonar-lessons/*.md`
 (How we fix issues in this codebase)
-- **Rules**: `docs/architecture/quality/sonar-rules/*.md` 
+- **Rules**: `docs/architecture/quality/sonar-rules/*.md`
 (Links to SonarSource docs)
 
 ### If no lesson exists
@@ -159,7 +159,7 @@ Run and paste relevant excerpts from:
 When asked to fix a file without a specific Sonar rule:
 
 1. Read the file completely
-2. Open `docs/architecture/quality/sonarcloud.md` → **File Scan 
+2. Open `docs/architecture/quality/sonarcloud.md` → **File Scan
 Patterns** table
 3. Check the file against EACH pattern in the table
 4. For each match, read the linked lesson and apply the fix
@@ -171,7 +171,7 @@ When asked to fix a specific rule (e.g., branch name `fix/
 s3358-...`):
 
 1. Extract the rule ID from the branch name or request
-2. Open `docs/architecture/quality/sonarcloud.md` → **File Scan 
+2. Open `docs/architecture/quality/sonarcloud.md` → **File Scan
 Patterns** table
 3. Run the search command for that rule
 4. For each file found, read the lesson and apply the fix
@@ -179,10 +179,27 @@ Patterns** table
 
 ---
 
-## Code compaction
-- Aim for a function length of 15-20 lines. 
+## Quality Guidelines (Enforced on ALL touched files)
+
+**File Size:**
+
+- Aim for a file length of max 200-250 lines.
+- Files MUST be < 300 lines (upper limit)
+- Extract large files into smaller, focused modules
+
+**Unit Size (Functions/Methods):**
+
+- Aim for a function length of max 15-20 lines.
+- Functions SHOULD be < 15 lines (excellent)
+- Functions MUST be < 30 lines (upper limit)
+- Extract large functions into smaller, focused helpers
+
+**Code Compaction:**
+- Do not compact code to dodge size limits.
 - If a function exceeds 30 lines, refactor it by extracting smaller functions until you reach the goal of 15-20 lines.
-- Do not compact code to dodge size limits. Don't remove whitespace or comments. Don't squeeze code into one line. Don't complain about Prettier.
+- Don't remove whitespace or comments.
+- Don't squeeze code into one line.
+- Don't complain about Prettier.
 
 ---
 
