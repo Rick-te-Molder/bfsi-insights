@@ -152,8 +152,46 @@ Run and paste relevant excerpts from:
 1. Fix the issue using best practices
 2. **Create a new lesson** in `docs/architecture/quality/sonar-lessons/`
 3. **Add to Quick Lookup table** in `sonarcloud.md`
-4. **Add rule file** in `docs/architecture/quality/sonar-rules/
-`
+4. **Add rule file** in `docs/architecture/quality/sonar-rules/`
+
+### Fixing a file (no rule specified)
+
+When asked to fix a file without a specific Sonar rule:
+
+1. Read the file completely
+2. Open `docs/architecture/quality/sonarcloud.md` → **File Scan 
+Patterns** table
+3. Check the file against EACH pattern in the table
+4. For each match, read the linked lesson and apply the fix
+5. Report: "Found X issues: [list of rules]"
+
+### Fixing a rule across the repo
+
+When asked to fix a specific rule (e.g., branch name `fix/
+s3358-...`):
+
+1. Extract the rule ID from the branch name or request
+2. Open `docs/architecture/quality/sonarcloud.md` → **File Scan 
+Patterns** table
+3. Run the search command for that rule
+4. For each file found, read the lesson and apply the fix
+5. Report: "Fixed X files: [list of files]"
+
+---
+
+## Code compaction
+- Aim for a function length of 15-20 lines. 
+- If a function exceeds 30 lines, refactor it by extracting smaller functions until you reach the goal of 15-20 lines.
+- Do not compact code to dodge size limits. Don't remove whitespace or comments. Don't squeeze code into one line. Don't complain about Prettier.
+
+---
+
+## IDE-assisted fixing
+- Use SonarQube for IDE findings when available.
+- Follow `docs/architecture/quality/*` for fix patterns.
+- Document exceptions in `docs/architecture/quality/
+exceptions.md`.
+
 ---
 
 ## Prompt Engineering (C10)

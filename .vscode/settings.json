@@ -1,0 +1,6 @@
+{
+  "sonarlint.connectedMode.project": {
+    "connectionId": "rick-te-molder",
+    "projectKey": "Rick-te-Molder_bfsi-insights"
+  }
+}
