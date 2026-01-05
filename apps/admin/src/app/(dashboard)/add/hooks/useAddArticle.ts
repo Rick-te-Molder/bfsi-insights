@@ -59,6 +59,35 @@ type AddArticleFormState = ReturnType<typeof useInputState> &
   ReturnType<typeof useCommentState> &
   ReturnType<typeof useSuggestedAudiencesState>;
 
+type EditPromptFieldsDeps = {
+  setUrl: (value: string) => void;
+  setSubmitterName: (value: string) => void;
+  setSubmitterAudience: (value: string) => void;
+  setSubmitterChannel: (value: string) => void;
+  setSubmitterUrgency: (value: string) => void;
+  setWhyValuable: (value: string) => void;
+};
+
+type EditPromptUiDeps = {
+  setEditingId: (id: string | null) => void;
+  setActiveTab: (value: 'add' | 'list') => void;
+  setStatus: (value: SubmissionStatus) => void;
+  setMessage: (value: string) => void;
+};
+
+type EditItemDeps = EditPromptFieldsDeps & EditPromptUiDeps;
+
+type CancelEditDeps = {
+  setEditingId: (id: string | null) => void;
+  resetForm: () => void;
+  setSubmitterChannel: (value: string) => void;
+  setSubmitterUrgency: (value: string) => void;
+  setStatus: (value: SubmissionStatus) => void;
+  setMessage: (value: string) => void;
+};
+
+type EditActionsDeps = EditItemDeps & CancelEditDeps;
+
 function useSubmissionState() {
   const [status, setStatus] = useState<SubmissionStatus>('idle');
   const [message, setMessage] = useState('');
@@ -106,36 +135,13 @@ function useAudienceToggle(opts: {
   };
 }
 
-function useEditActions(opts: {
-  setEditingId: (id: string | null) => void;
-  setUrl: (value: string) => void;
-  setSubmitterName: (value: string) => void;
-  setSubmitterAudience: (value: string) => void;
-  setSubmitterChannel: (value: string) => void;
-  setSubmitterUrgency: (value: string) => void;
-  setWhyValuable: (value: string) => void;
-  setActiveTab: (value: 'add' | 'list') => void;
-  setStatus: (value: SubmissionStatus) => void;
-  setMessage: (value: string) => void;
-  resetForm: () => void;
-}) {
+function useEditActions(opts: EditActionsDeps) {
   const editItem = useEditItem(opts);
   const cancelEdit = useCancelEdit(opts);
   return { editItem, cancelEdit };
 }
 
-function useEditItem(opts: {
-  setEditingId: (id: string | null) => void;
-  setUrl: (value: string) => void;
-  setSubmitterName: (value: string) => void;
-  setSubmitterAudience: (value: string) => void;
-  setSubmitterChannel: (value: string) => void;
-  setSubmitterUrgency: (value: string) => void;
-  setWhyValuable: (value: string) => void;
-  setActiveTab: (value: 'add' | 'list') => void;
-  setStatus: (value: SubmissionStatus) => void;
-  setMessage: (value: string) => void;
-}) {
+function useEditItem(opts: EditItemDeps) {
   return (item: MissedDiscovery) => {
     opts.setEditingId(item.id);
     opts.setUrl(item.url);
@@ -150,14 +156,7 @@ function useEditItem(opts: {
   };
 }
 
-function useCancelEdit(opts: {
-  setEditingId: (id: string | null) => void;
-  resetForm: () => void;
-  setSubmitterChannel: (value: string) => void;
-  setSubmitterUrgency: (value: string) => void;
-  setStatus: (value: SubmissionStatus) => void;
-  setMessage: (value: string) => void;
-}) {
+function useCancelEdit(opts: CancelEditDeps) {
   return () => {
     opts.setEditingId(null);
     opts.resetForm();
