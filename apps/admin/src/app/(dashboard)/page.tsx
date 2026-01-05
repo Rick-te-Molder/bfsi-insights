@@ -27,44 +27,57 @@ const STATUS = {
   REJECTED: 540,
 };
 
+type SupabaseClient = ReturnType<typeof createServiceRoleClient>;
+
+/** Fetch status counts via RPC (single query replaces 6+ individual counts) */
+function fetchStatusCounts(supabase: SupabaseClient) {
+  return supabase.rpc('get_status_code_counts');
+}
+
+/** Fetch recent failures for alert section */
+function fetchRecentFailures(supabase: SupabaseClient) {
+  return supabase
+    .from('ingestion_queue')
+    .select('id, url, payload, updated_at')
+    .eq('status_code', STATUS.FAILED)
+    .order('updated_at', { ascending: false })
+    .limit(5);
+}
+
+/** Fetch failed count in last 24h for alerts */
+function fetchFailedLast24h(supabase: SupabaseClient, since: string) {
+  return supabase
+    .from('ingestion_queue')
+    .select('*', { count: 'exact', head: true })
+    .eq('status_code', STATUS.FAILED)
+    .gte('updated_at', since);
+}
+
+/** Fetch pending entity proposals count */
+function fetchPendingProposals(supabase: SupabaseClient) {
+  return supabase
+    .from('proposed_entity')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'pending');
+}
+
 async function getStats() {
   const supabase = createServiceRoleClient();
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
   // Run all queries in parallel for performance
-  const [
-    { data: allStatusData },
-    { data: recentFailures },
-    { count: failedLast24h },
-    { count: pendingProposals },
-  ] = await Promise.all([
-    // Primary data: status counts from RPC (single query replaces 6+ individual counts)
-    supabase.rpc('get_status_code_counts'),
-    // Recent failures for alert section
-    supabase
-      .from('ingestion_queue')
-      .select('id, url, payload, updated_at')
-      .eq('status_code', STATUS.FAILED)
-      .order('updated_at', { ascending: false })
-      .limit(5),
-    // Failed count in last 24h for alerts
-    supabase
-      .from('ingestion_queue')
-      .select('*', { count: 'exact', head: true })
-      .eq('status_code', STATUS.FAILED)
-      .gte('updated_at', oneDayAgo),
-    // Pending proposals count
-    supabase
-      .from('proposed_entity')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'pending'),
+  const [statusRes, failuresRes, failed24hRes, proposalsRes] = await Promise.all([
+    fetchStatusCounts(supabase),
+    fetchRecentFailures(supabase),
+    fetchFailedLast24h(supabase, oneDayAgo),
+    fetchPendingProposals(supabase),
   ]);
 
   return {
-    recentFailures: recentFailures || [],
-    pendingProposals: pendingProposals || 0,
-    failedLast24h: failedLast24h || 0,
-    allStatusData,
+    allStatusData: statusRes.data,
+    recentFailures: failuresRes.data || [],
+    failedLast24h: failed24hRes.count || 0,
+    pendingProposals: proposalsRes.count || 0,
   };
 }
 
@@ -147,7 +160,7 @@ export default async function DashboardPage() {
                 <span className="text-2xl">⚠️</span>
                 <div>
                   <p className="text-sm font-medium text-red-300">
-                    {failedLast24h} item{failedLast24h !== 1 ? 's' : ''} failed in the last 24h
+                    {failedLast24h} item{failedLast24h === 1 ? '' : 's'} failed in the last 24h
                   </p>
                   <p className="text-xs text-red-400/70">Click to view failed items</p>
                 </div>
@@ -161,7 +174,7 @@ export default async function DashboardPage() {
                 <span className="text-2xl">📥</span>
                 <div>
                   <p className="text-sm font-medium text-amber-300">
-                    {pendingProposals} entity proposal{pendingProposals !== 1 ? 's' : ''} pending
+                    {pendingProposals} entity proposal{pendingProposals === 1 ? '' : 's'} pending
                   </p>
                   <p className="text-xs text-amber-400/70">Review proposed entities</p>
                 </div>

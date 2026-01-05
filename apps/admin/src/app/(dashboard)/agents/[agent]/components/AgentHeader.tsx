@@ -39,7 +39,7 @@ function AgentTitle({
     <div>
       <h1 className="text-2xl font-bold text-white">{agentName}</h1>
       <p className="mt-1 text-sm text-neutral-400">
-        {prompts.length} version{prompts.length !== 1 ? 's' : ''} •{' '}
+        {prompts.length} version{prompts.length === 1 ? '' : 's'} •{' '}
         {currentPrompt && (
           <span className="text-emerald-400">Current: {currentPrompt.version}</span>
         )}

@@ -12,7 +12,7 @@ function EvalStatusBadge({ status, score }: Readonly<{ status: string; score?: n
     pending: { icon: '⏸️', className: 'bg-neutral-500/20 text-neutral-300', label: 'Pending' },
   };
   const config = configs[status] || configs.pending;
-  const scoreText = score !== undefined ? ` ${(score * 100).toFixed(0)}%` : '';
+  const scoreText = score === undefined ? '' : ` ${(score * 100).toFixed(0)}%`;
 
   return (
     <span className={`rounded-full px-2 py-0.5 text-xs ${config.className}`}>
