@@ -1,182 +1,36 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { MissedDiscovery } from '@bfsi/types';
 import type { SubmissionStatus, InputMode } from '../types';
+import { useMissedItems } from './useMissedItems';
+import { useDetectedSource } from './useDetectedSource';
 
-export function useAddArticle() {
+function useTabsState() {
   const [activeTab, setActiveTab] = useState<'add' | 'list'>('add');
-  const [missedItems, setMissedItems] = useState<MissedDiscovery[]>([]);
-  const [loadingList, setLoadingList] = useState(false);
+  return { activeTab, setActiveTab };
+}
 
+function useInputState() {
   const [inputMode, setInputMode] = useState<InputMode>('url');
   const [url, setUrl] = useState('');
+  return { inputMode, setInputMode, url, setUrl };
+}
+
+function usePdfState() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfTitle, setPdfTitle] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
+  return { pdfFile, setPdfFile, pdfTitle, setPdfTitle, uploadProgress, setUploadProgress };
+}
+
+function useSubmitterState() {
   const [submitterName, setSubmitterName] = useState('');
   const [submitterAudience, setSubmitterAudience] = useState('');
   const [submitterChannel, setSubmitterChannel] = useState('');
   const [submitterUrgency, setSubmitterUrgency] = useState('');
-  const [whyValuable, setWhyValuable] = useState('');
-  const [verbatimComment, setVerbatimComment] = useState('');
-  const [suggestedAudiences, setSuggestedAudiences] = useState<string[]>([]);
-
-  const [status, setStatus] = useState<SubmissionStatus>('idle');
-  const [message, setMessage] = useState('');
-  const [detectedDomain, setDetectedDomain] = useState<string | null>(null);
-  const [existingSource, setExistingSource] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  const supabase = createClient();
-
-  // KB-280: Fetch missed_discovery and ingestion_queue separately, then merge
-  const loadMissedItems = useCallback(async () => {
-    setLoadingList(true);
-    const { data: missedData, error: missedError } = await supabase
-      .from('missed_discovery')
-      .select(
-        `id, url, source_domain, submitter_name, submitter_audience, submitter_channel, 
-         why_valuable, submitter_urgency, resolution_status, submitted_at, existing_source_slug,
-         queue_id`,
-      )
-      .order('submitted_at', { ascending: false })
-      .limit(100);
-
-    if (missedError) {
-      console.error('Failed to load missed items:', missedError);
-      setLoadingList(false);
-      return;
-    }
-
-    const queueIds =
-      missedData?.map((item) => item.queue_id).filter((id): id is string => id !== null) || [];
-    let queueMap: Record<string, { status_code: number; payload: Record<string, unknown> | null }> =
-      {};
-
-    if (queueIds.length > 0) {
-      const { data: queueData } = await supabase
-        .from('ingestion_queue')
-        .select('id, status_code, payload')
-        .in('id', queueIds);
-      if (queueData) {
-        queueMap = Object.fromEntries(
-          queueData.map((q) => [q.id, { status_code: q.status_code, payload: q.payload }]),
-        );
-      }
-    }
-
-    const mergedData =
-      missedData?.map((item) => ({
-        ...item,
-        ingestion_queue:
-          item.queue_id && queueMap[item.queue_id] ? [queueMap[item.queue_id]] : null,
-      })) || [];
-
-    setMissedItems(mergedData);
-    setLoadingList(false);
-  }, [supabase]);
-
-  useEffect(() => {
-    if (activeTab === 'list') {
-      loadMissedItems();
-    }
-  }, [activeTab, loadMissedItems]);
-
-  useEffect(() => {
-    if (!url) {
-      setDetectedDomain(null);
-      setExistingSource(null);
-      return;
-    }
-    try {
-      const urlObj = new URL(url);
-      const domain = urlObj.hostname.replace(/^www\./, '');
-      setDetectedDomain(domain);
-      supabase
-        .from('kb_source')
-        .select('slug, name')
-        .ilike('domain', `%${domain}%`)
-        .limit(1)
-        .then(({ data }) => {
-          setExistingSource(data?.[0]?.name || data?.[0]?.slug || null);
-        });
-    } catch {
-      setDetectedDomain(null);
-      setExistingSource(null);
-    }
-  }, [url, supabase]);
-
-  const resetForm = () => {
-    setInputMode('url');
-    setUrl('');
-    setPdfFile(null);
-    setPdfTitle('');
-    setUploadProgress(0);
-    setSubmitterName('');
-    setSubmitterAudience('');
-    setWhyValuable('');
-    setVerbatimComment('');
-    setSuggestedAudiences([]);
-    setDetectedDomain(null);
-    setExistingSource(null);
-  };
-
-  const toggleAudience = (audience: string) => {
-    setSuggestedAudiences((prev) =>
-      prev.includes(audience) ? prev.filter((a) => a !== audience) : [...prev, audience],
-    );
-  };
-
-  const editItem = (item: MissedDiscovery) => {
-    setEditingId(item.id);
-    setUrl(item.url);
-    setSubmitterName(item.submitter_name || '');
-    setSubmitterAudience(item.submitter_audience || '');
-    setSubmitterChannel(item.submitter_channel || '');
-    setSubmitterUrgency(item.submitter_urgency || '');
-    setWhyValuable(item.why_valuable || '');
-    setDetectedDomain(item.source_domain);
-    setExistingSource(item.existing_source_slug);
-    setActiveTab('add');
-    setStatus('idle');
-    setMessage('');
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    resetForm();
-    setSubmitterChannel('');
-    setSubmitterUrgency('');
-    setStatus('idle');
-    setMessage('');
-  };
-
-  const deleteItem = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this article?')) return;
-    const { error } = await supabase.from('missed_discovery').delete().eq('id', id);
-    if (!error) {
-      setMissedItems((prev) => prev.filter((item) => item.id !== id));
-    }
-  };
-
   return {
-    activeTab,
-    setActiveTab,
-    missedItems,
-    loadingList,
-    loadMissedItems,
-    inputMode,
-    setInputMode,
-    url,
-    setUrl,
-    pdfFile,
-    setPdfFile,
-    pdfTitle,
-    setPdfTitle,
-    uploadProgress,
-    setUploadProgress,
     submitterName,
     setSubmitterName,
     submitterAudience,
@@ -185,24 +39,216 @@ export function useAddArticle() {
     setSubmitterChannel,
     submitterUrgency,
     setSubmitterUrgency,
-    whyValuable,
-    setWhyValuable,
-    verbatimComment,
-    setVerbatimComment,
-    suggestedAudiences,
-    toggleAudience,
-    status,
-    setStatus,
-    message,
-    setMessage,
-    detectedDomain,
-    existingSource,
-    editingId,
-    setEditingId,
-    resetForm,
-    editItem,
-    cancelEdit,
-    deleteItem,
-    supabase,
   };
+}
+
+function useCommentState() {
+  const [whyValuable, setWhyValuable] = useState('');
+  const [verbatimComment, setVerbatimComment] = useState('');
+  return { whyValuable, setWhyValuable, verbatimComment, setVerbatimComment };
+}
+
+function useSuggestedAudiencesState() {
+  const [suggestedAudiences, setSuggestedAudiences] = useState<string[]>([]);
+  return { suggestedAudiences, setSuggestedAudiences };
+}
+
+type AddArticleFormState = ReturnType<typeof useInputState> &
+  ReturnType<typeof usePdfState> &
+  ReturnType<typeof useSubmitterState> &
+  ReturnType<typeof useCommentState> &
+  ReturnType<typeof useSuggestedAudiencesState>;
+
+function useSubmissionState() {
+  const [status, setStatus] = useState<SubmissionStatus>('idle');
+  const [message, setMessage] = useState('');
+  return { status, setStatus, message, setMessage };
+}
+
+function useEditingState() {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  return { editingId, setEditingId };
+}
+
+function useResetForm(opts: {
+  setInputMode: (mode: InputMode) => void;
+  setUrl: (value: string) => void;
+  setPdfFile: (file: File | null) => void;
+  setPdfTitle: (value: string) => void;
+  setUploadProgress: (value: number) => void;
+  setSubmitterName: (value: string) => void;
+  setSubmitterAudience: (value: string) => void;
+  setWhyValuable: (value: string) => void;
+  setVerbatimComment: (value: string) => void;
+  setSuggestedAudiences: (value: string[]) => void;
+}) {
+  return () => {
+    opts.setInputMode('url');
+    opts.setUrl('');
+    opts.setPdfFile(null);
+    opts.setPdfTitle('');
+    opts.setUploadProgress(0);
+    opts.setSubmitterName('');
+    opts.setSubmitterAudience('');
+    opts.setWhyValuable('');
+    opts.setVerbatimComment('');
+    opts.setSuggestedAudiences([]);
+  };
+}
+
+function useAudienceToggle(opts: {
+  setSuggestedAudiences: (updater: (prev: string[]) => string[]) => void;
+}) {
+  return (audience: string) => {
+    opts.setSuggestedAudiences((prev) =>
+      prev.includes(audience) ? prev.filter((a) => a !== audience) : [...prev, audience],
+    );
+  };
+}
+
+function useEditActions(opts: {
+  setEditingId: (id: string | null) => void;
+  setUrl: (value: string) => void;
+  setSubmitterName: (value: string) => void;
+  setSubmitterAudience: (value: string) => void;
+  setSubmitterChannel: (value: string) => void;
+  setSubmitterUrgency: (value: string) => void;
+  setWhyValuable: (value: string) => void;
+  setActiveTab: (value: 'add' | 'list') => void;
+  setStatus: (value: SubmissionStatus) => void;
+  setMessage: (value: string) => void;
+  resetForm: () => void;
+}) {
+  const editItem = useEditItem(opts);
+  const cancelEdit = useCancelEdit(opts);
+  return { editItem, cancelEdit };
+}
+
+function useEditItem(opts: {
+  setEditingId: (id: string | null) => void;
+  setUrl: (value: string) => void;
+  setSubmitterName: (value: string) => void;
+  setSubmitterAudience: (value: string) => void;
+  setSubmitterChannel: (value: string) => void;
+  setSubmitterUrgency: (value: string) => void;
+  setWhyValuable: (value: string) => void;
+  setActiveTab: (value: 'add' | 'list') => void;
+  setStatus: (value: SubmissionStatus) => void;
+  setMessage: (value: string) => void;
+}) {
+  return (item: MissedDiscovery) => {
+    opts.setEditingId(item.id);
+    opts.setUrl(item.url);
+    opts.setSubmitterName(item.submitter_name || '');
+    opts.setSubmitterAudience(item.submitter_audience || '');
+    opts.setSubmitterChannel(item.submitter_channel || '');
+    opts.setSubmitterUrgency(item.submitter_urgency || '');
+    opts.setWhyValuable(item.why_valuable || '');
+    opts.setActiveTab('add');
+    opts.setStatus('idle');
+    opts.setMessage('');
+  };
+}
+
+function useCancelEdit(opts: {
+  setEditingId: (id: string | null) => void;
+  resetForm: () => void;
+  setSubmitterChannel: (value: string) => void;
+  setSubmitterUrgency: (value: string) => void;
+  setStatus: (value: SubmissionStatus) => void;
+  setMessage: (value: string) => void;
+}) {
+  return () => {
+    opts.setEditingId(null);
+    opts.resetForm();
+    opts.setSubmitterChannel('');
+    opts.setSubmitterUrgency('');
+    opts.setStatus('idle');
+    opts.setMessage('');
+  };
+}
+
+function useAddArticleBase() {
+  const tabs = useTabsState();
+  const input = useInputState();
+  const pdf = usePdfState();
+  const submitter = useSubmitterState();
+  const comments = useCommentState();
+  const suggested = useSuggestedAudiencesState();
+  const form: AddArticleFormState = { ...input, ...pdf, ...submitter, ...comments, ...suggested };
+  const submission = useSubmissionState();
+  const editing = useEditingState();
+
+  const supabase = createClient();
+  const missed = useMissedItems({ active: tabs.activeTab === 'list' });
+  const detected = useDetectedSource(form.url);
+
+  return { tabs, form, submission, editing, supabase, missed, detected };
+}
+
+function useAddArticleResetActions(form: AddArticleFormState) {
+  const resetForm = useResetForm({
+    setInputMode: form.setInputMode,
+    setUrl: form.setUrl,
+    setPdfFile: form.setPdfFile,
+    setPdfTitle: form.setPdfTitle,
+    setUploadProgress: form.setUploadProgress,
+    setSubmitterName: form.setSubmitterName,
+    setSubmitterAudience: form.setSubmitterAudience,
+    setWhyValuable: form.setWhyValuable,
+    setVerbatimComment: form.setVerbatimComment,
+    setSuggestedAudiences: form.setSuggestedAudiences,
+  });
+  const toggleAudience = useAudienceToggle({ setSuggestedAudiences: form.setSuggestedAudiences });
+  return { resetForm, toggleAudience };
+}
+
+function useAddArticleEditActions(opts: {
+  tabs: ReturnType<typeof useTabsState>;
+  form: AddArticleFormState;
+  submission: ReturnType<typeof useSubmissionState>;
+  editing: ReturnType<typeof useEditingState>;
+  resetForm: () => void;
+}) {
+  return useEditActions({
+    setEditingId: opts.editing.setEditingId,
+    setUrl: opts.form.setUrl,
+    setSubmitterName: opts.form.setSubmitterName,
+    setSubmitterAudience: opts.form.setSubmitterAudience,
+    setSubmitterChannel: opts.form.setSubmitterChannel,
+    setSubmitterUrgency: opts.form.setSubmitterUrgency,
+    setWhyValuable: opts.form.setWhyValuable,
+    setActiveTab: opts.tabs.setActiveTab,
+    setStatus: opts.submission.setStatus,
+    setMessage: opts.submission.setMessage,
+    resetForm: opts.resetForm,
+  });
+}
+
+function useAddArticleModel() {
+  const base = useAddArticleBase();
+  const resetActions = useAddArticleResetActions(base.form);
+  const editActions = useAddArticleEditActions({
+    tabs: base.tabs,
+    form: base.form,
+    submission: base.submission,
+    editing: base.editing,
+    resetForm: resetActions.resetForm,
+  });
+
+  return {
+    ...base.tabs,
+    ...base.missed,
+    ...base.form,
+    ...resetActions,
+    ...base.submission,
+    ...base.detected,
+    ...base.editing,
+    ...editActions,
+    supabase: base.supabase,
+  };
+}
+
+export function useAddArticle() {
+  return useAddArticleModel();
 }
