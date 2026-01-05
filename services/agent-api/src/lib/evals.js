@@ -7,38 +7,68 @@
  * - Option C: A/B Prompt Testing (compare two prompt versions)
  */
 
-import process from 'node:process';
-import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
 import { compareOutputs } from './eval-helpers.js';
+import {
+  fetchGoldenExamples,
+  getPromptVersion,
+  createEvalRun,
+  updateEvalRun,
+  storeEvalResult,
+  addGoldenExample,
+  getEvalHistory,
+} from './evals-db.js';
+import { judgeWithLLM, compareWithLLM } from './evals-judge.js';
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+// Re-export for backwards compatibility
+export { addGoldenExample, getEvalHistory };
 
-let openai = null;
-function getOpenAI() {
-  if (!openai) {
-    openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  }
-  return openai;
+/** Log golden eval start */
+function logGoldenStart(agentName, examplesCount) {
+  console.log(`\n🧪 Running Golden Dataset Eval for ${agentName}`);
+  console.log(`📋 Found ${examplesCount} golden examples\n`);
 }
 
-/**
- * Option A: Golden Dataset Eval
- * Compare agent output against human-verified expected outputs
- */
+/** Process a single golden example */
+async function processGoldenExample(example, agentFn, runId) {
+  const actual = await agentFn(example.input);
+  const { match, score } = compareOutputs(example.expected_output, actual);
+  const status = match ? '✅ Passed' : '❌ Failed';
+  console.log(`   ${status}: ${JSON.stringify(example.input).substring(0, 50)}...`);
+
+  await storeEvalResult({
+    run_id: runId,
+    input: example.input,
+    expected_output: example.expected_output,
+    actual_output: actual,
+    passed: match,
+    score,
+  });
+
+  return { input: example.input, expected: example.expected_output, actual, match, score };
+}
+
+/** Process all golden examples and return stats */
+async function processGoldenExamples(examples, agentFn, runId) {
+  let passed = 0,
+    failed = 0;
+  const results = [];
+  for (const example of examples) {
+    try {
+      const result = await processGoldenExample(example, agentFn, runId);
+      result.match ? passed++ : failed++;
+      results.push(result);
+    } catch (err) {
+      failed++;
+      console.log(`   ❌ Error: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+  return { passed, failed, results };
+}
+
+/** Option A: Golden Dataset Eval */
 export async function runGoldenEval(agentName, agentFn, options = {}) {
   const { goldenSetName, limit = 100 } = options;
-
-  console.log(`\n🧪 Running Golden Dataset Eval for ${agentName}`);
-
-  // Fetch golden examples
-  let query = supabase.from('eval_golden_set').select('*').eq('agent_name', agentName).limit(limit);
-
-  if (goldenSetName) {
-    query = query.eq('name', goldenSetName);
-  }
-
-  const { data: examples, error } = await query;
+  const { data: examples, error } = await fetchGoldenExamples(agentName, goldenSetName, limit);
 
   if (error) throw new Error(`Failed to fetch golden set: ${error.message}`);
   if (!examples?.length) {
@@ -46,331 +76,176 @@ export async function runGoldenEval(agentName, agentFn, options = {}) {
     return null;
   }
 
-  console.log(`📋 Found ${examples.length} golden examples\n`);
+  logGoldenStart(agentName, examples.length);
+  const promptVersion = await getPromptVersion(agentName);
+  const run = await createEvalRun({
+    agent_name: agentName,
+    prompt_version: promptVersion,
+    eval_type: 'golden',
+    total_examples: examples.length,
+    status: 'running',
+  });
 
-  // Get current prompt version
-  const { data: promptConfig } = await supabase
-    .from('prompt_version')
-    .select('version')
-    .eq('agent_name', agentName)
-    .eq('stage', 'PRD')
-    .single();
-
-  // Create eval run
-  const { data: run } = await supabase
-    .from('eval_run')
-    .insert({
-      agent_name: agentName,
-      prompt_version: promptConfig?.version || 'unknown',
-      eval_type: 'golden',
-      total_examples: examples.length,
-      status: 'running',
-    })
-    .select()
-    .single();
-
-  let passed = 0;
-  let failed = 0;
-  const results = [];
-
-  for (const example of examples) {
-    try {
-      // Run agent
-      const actual = await agentFn(example.input);
-
-      // Compare outputs
-      const { match, score } = compareOutputs(example.expected_output, actual);
-
-      if (match) {
-        passed++;
-        console.log(`   ✅ Passed: ${JSON.stringify(example.input).substring(0, 50)}...`);
-      } else {
-        failed++;
-        console.log(`   ❌ Failed: ${JSON.stringify(example.input).substring(0, 50)}...`);
-      }
-
-      // Store result
-      await supabase.from('eval_result').insert({
-        run_id: run.id,
-        input: example.input,
-        expected_output: example.expected_output,
-        actual_output: actual,
-        passed: match,
-        score,
-      });
-
-      results.push({
-        input: example.input,
-        expected: example.expected_output,
-        actual,
-        match,
-        score,
-      });
-    } catch (err) {
-      failed++;
-      console.log(`   ❌ Error: ${err.message}`);
-    }
-  }
-
-  // Update run with final results
+  const { passed, failed, results } = await processGoldenExamples(examples, agentFn, run.id);
   const score = passed / examples.length;
-  await supabase
-    .from('eval_run')
-    .update({
-      status: 'success',
-      passed,
-      failed,
-      score,
-      results,
-      finished_at: new Date().toISOString(),
-    })
-    .eq('id', run.id);
-
+  await updateEvalRun(run.id, { status: 'success', passed, failed, score, results });
   console.log(`\n📊 Results: ${passed}/${examples.length} passed (${(score * 100).toFixed(1)}%)`);
-
   return { runId: run.id, passed, failed, score, results };
 }
 
-/**
- * Option B: LLM-as-Judge Eval
- * Use a second LLM to evaluate agent output quality
- */
-export async function runLLMJudgeEval(agentName, agentFn, inputs, options = {}) {
-  const { criteria = 'quality, accuracy, and completeness', judgeModel = 'gpt-4o-mini' } = options;
+/** Process a single LLM judge example */
+async function processJudgeExample(input, agentFn, runId, criteria, judgeModel) {
+  const output = await agentFn(input);
+  const judgment = await judgeWithLLM(input, output, criteria, judgeModel);
+  console.log(`   Score: ${judgment.score.toFixed(2)} - ${judgment.reasoning.substring(0, 60)}...`);
 
-  console.log(`\n⚖️ Running LLM-as-Judge Eval for ${agentName}`);
-  console.log(`   Judge model: ${judgeModel}`);
-  console.log(`   Criteria: ${criteria}\n`);
+  await storeEvalResult({
+    run_id: runId,
+    input,
+    actual_output: output,
+    score: judgment.score,
+    judge_reasoning: judgment.reasoning,
+    judge_model: judgeModel,
+    passed: judgment.score >= 0.7,
+  });
+  return { input, output, judgment };
+}
 
-  const { data: promptConfig } = await supabase
-    .from('prompt_version')
-    .select('version')
-    .eq('agent_name', agentName)
-    .eq('stage', 'PRD')
-    .single();
-
-  // Create eval run
-  const { data: run } = await supabase
-    .from('eval_run')
-    .insert({
-      agent_name: agentName,
-      prompt_version: promptConfig?.version || 'unknown',
-      eval_type: 'llm_judge',
-      total_examples: inputs.length,
-      status: 'running',
-    })
-    .select()
-    .single();
-
+/** Process all LLM judge examples and return stats */
+async function processJudgeExamples(inputs, agentFn, runId, criteria, judgeModel) {
   let totalScore = 0;
   const results = [];
-
   for (const input of inputs) {
     try {
-      // Run agent
-      const output = await agentFn(input);
-
-      // Judge with LLM
-      const judgment = await judgeWithLLM(input, output, criteria, judgeModel);
-
-      totalScore += judgment.score;
-
-      console.log(
-        `   Score: ${judgment.score.toFixed(2)} - ${judgment.reasoning.substring(0, 60)}...`,
-      );
-
-      await supabase.from('eval_result').insert({
-        run_id: run.id,
-        input,
-        actual_output: output,
-        score: judgment.score,
-        judge_reasoning: judgment.reasoning,
-        judge_model: judgeModel,
-        passed: judgment.score >= 0.7,
-      });
-
-      results.push({ input, output, judgment });
+      const result = await processJudgeExample(input, agentFn, runId, criteria, judgeModel);
+      totalScore += result.judgment.score;
+      results.push(result);
     } catch (err) {
-      console.log(`   ❌ Error: ${err.message}`);
+      console.log(`   ❌ Error: ${err instanceof Error ? err.message : err}`);
     }
   }
+  return { totalScore, results };
+}
 
+/** Log LLM judge eval start */
+function logJudgeStart(agentName, judgeModel, criteria) {
+  console.log(`\n⚖️ Running LLM-as-Judge Eval for ${agentName}`);
+  console.log(`   Judge model: ${judgeModel}\n   Criteria: ${criteria}\n`);
+}
+
+/** Create LLM judge eval run */
+async function createJudgeRun(agentName, inputsLength) {
+  const promptVersion = await getPromptVersion(agentName);
+  return createEvalRun({
+    agent_name: agentName,
+    prompt_version: promptVersion,
+    eval_type: 'llm_judge',
+    total_examples: inputsLength,
+    status: 'running',
+  });
+}
+
+/** Option B: LLM-as-Judge Eval */
+export async function runLLMJudgeEval(agentName, agentFn, inputs, options = {}) {
+  const { criteria = 'quality, accuracy, and completeness', judgeModel = 'gpt-4o-mini' } = options;
+  logJudgeStart(agentName, judgeModel, criteria);
+
+  const run = await createJudgeRun(agentName, inputs.length);
+  const { totalScore, results } = await processJudgeExamples(
+    inputs,
+    agentFn,
+    run.id,
+    criteria,
+    judgeModel,
+  );
   const avgScore = totalScore / inputs.length;
   const passed = results.filter((r) => r.judgment.score >= 0.7).length;
 
-  await supabase
-    .from('eval_run')
-    .update({
-      status: 'success',
-      passed,
-      failed: inputs.length - passed,
-      score: avgScore,
-      results,
-      finished_at: new Date().toISOString(),
-    })
-    .eq('id', run.id);
-
+  await updateEvalRun(run.id, {
+    status: 'success',
+    passed,
+    failed: inputs.length - passed,
+    score: avgScore,
+    results,
+  });
   console.log(`\n📊 Average Score: ${(avgScore * 100).toFixed(1)}%`);
-
   return { runId: run.id, avgScore, results };
 }
 
-/**
- * Option C: A/B Prompt Testing
- * Compare outputs from two different prompt versions
- */
-export async function runABTest(agentName, agentFnA, agentFnB, inputs, options = {}) {
-  const { versionA, versionB, judgeModel = 'gpt-4o-mini' } = options;
+/** Process a single A/B test example */
+async function processABExample(input, agentFnA, agentFnB, runId, judgeModel) {
+  const [outputA, outputB] = await Promise.all([agentFnA(input), agentFnB(input)]);
+  const comparison = await compareWithLLM(input, outputA, outputB, judgeModel);
+  console.log(
+    `   Winner: ${comparison.winner.toUpperCase()} - ${comparison.reasoning.substring(0, 50)}...`,
+  );
 
-  console.log(`\n🔀 Running A/B Test for ${agentName}`);
-  console.log(`   Version A: ${versionA}`);
-  console.log(`   Version B: ${versionB}\n`);
+  await storeEvalResult({
+    run_id: runId,
+    input,
+    output_a: outputA,
+    output_b: outputB,
+    winner: comparison.winner,
+    judge_reasoning: comparison.reasoning,
+    judge_model: judgeModel,
+  });
+  return { input, outputA, outputB, winner: comparison.winner };
+}
 
-  // Create eval run
-  const { data: run } = await supabase
-    .from('eval_run')
-    .insert({
-      agent_name: agentName,
-      prompt_version: versionA,
-      compare_prompt_version: versionB,
-      eval_type: 'ab_test',
-      total_examples: inputs.length,
-      status: 'running',
-    })
-    .select()
-    .single();
-
-  let winsA = 0;
-  let winsB = 0;
-  let ties = 0;
+/** Process all A/B test examples and return stats */
+async function processABExamples(inputs, agentFnA, agentFnB, runId, judgeModel) {
+  let winsA = 0,
+    winsB = 0,
+    ties = 0;
   const results = [];
-
   for (const input of inputs) {
     try {
-      // Run both versions
-      const [outputA, outputB] = await Promise.all([agentFnA(input), agentFnB(input)]);
-
-      // Judge which is better
-      const comparison = await compareWithLLM(input, outputA, outputB, judgeModel);
-
-      if (comparison.winner === 'a') winsA++;
-      else if (comparison.winner === 'b') winsB++;
+      const result = await processABExample(input, agentFnA, agentFnB, runId, judgeModel);
+      if (result.winner === 'a') winsA++;
+      else if (result.winner === 'b') winsB++;
       else ties++;
-
-      console.log(
-        `   Winner: ${comparison.winner.toUpperCase()} - ${comparison.reasoning.substring(0, 50)}...`,
-      );
-
-      await supabase.from('eval_result').insert({
-        run_id: run.id,
-        input,
-        output_a: outputA,
-        output_b: outputB,
-        winner: comparison.winner,
-        judge_reasoning: comparison.reasoning,
-        judge_model: judgeModel,
-      });
-
-      results.push({ input, outputA, outputB, winner: comparison.winner });
+      results.push(result);
     } catch (err) {
-      console.log(`   ❌ Error: ${err.message}`);
+      console.log(`   ❌ Error: ${err instanceof Error ? err.message : err}`);
     }
   }
+  return { winsA, winsB, ties, results };
+}
 
-  await supabase
-    .from('eval_run')
-    .update({
-      status: 'success',
-      passed: winsA,
-      failed: winsB,
-      score: winsA / inputs.length,
-      results: { winsA, winsB, ties, details: results },
-      finished_at: new Date().toISOString(),
-    })
-    .eq('id', run.id);
+/** Log A/B test start */
+function logABStart(agentName, versionA, versionB) {
+  console.log(`\n🔀 Running A/B Test for ${agentName}`);
+  console.log(`   Version A: ${versionA}\n   Version B: ${versionB}\n`);
+}
 
+/** Option C: A/B Prompt Testing */
+export async function runABTest(agentName, agentFnA, agentFnB, inputs, options = {}) {
+  const { versionA, versionB, judgeModel = 'gpt-4o-mini' } = options;
+  logABStart(agentName, versionA, versionB);
+
+  const run = await createEvalRun({
+    agent_name: agentName,
+    prompt_version: versionA,
+    compare_prompt_version: versionB,
+    eval_type: 'ab_test',
+    total_examples: inputs.length,
+    status: 'running',
+  });
+
+  const { winsA, winsB, ties, results } = await processABExamples(
+    inputs,
+    agentFnA,
+    agentFnB,
+    run.id,
+    judgeModel,
+  );
+  await updateEvalRun(run.id, {
+    status: 'success',
+    passed: winsA,
+    failed: winsB,
+    score: winsA / inputs.length,
+    results: { winsA, winsB, ties, details: results },
+  });
   console.log(`\n📊 Results: A wins ${winsA}, B wins ${winsB}, Ties ${ties}`);
-
   return { runId: run.id, winsA, winsB, ties, results };
-}
-
-// compareOutputs imported from ./eval-helpers.js
-
-// Helper: Judge output quality with LLM
-async function judgeWithLLM(input, output, criteria, model) {
-  const client = getOpenAI();
-
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      {
-        role: 'system',
-        content: `You are an evaluation judge. Score the output on ${criteria}.
-Return JSON: { "score": 0.0-1.0, "reasoning": "brief explanation" }`,
-      },
-      {
-        role: 'user',
-        content: `Input: ${JSON.stringify(input)}\n\nOutput: ${JSON.stringify(output)}`,
-      },
-    ],
-    response_format: { type: 'json_object' },
-    temperature: 0.1,
-  });
-
-  return JSON.parse(response.choices[0].message.content);
-}
-
-// Helper: Compare two outputs with LLM
-async function compareWithLLM(input, outputA, outputB, model) {
-  const client = getOpenAI();
-
-  const response = await client.chat.completions.create({
-    model,
-    messages: [
-      {
-        role: 'system',
-        content: `Compare two outputs for the same input. Which is better?
-Return JSON: { "winner": "a" or "b" or "tie", "reasoning": "brief explanation" }`,
-      },
-      {
-        role: 'user',
-        content: `Input: ${JSON.stringify(input)}\n\nOutput A: ${JSON.stringify(outputA)}\n\nOutput B: ${JSON.stringify(outputB)}`,
-      },
-    ],
-    response_format: { type: 'json_object' },
-    temperature: 0.1,
-  });
-
-  return JSON.parse(response.choices[0].message.content);
-}
-
-// Helper: Add golden example
-export async function addGoldenExample(agentName, name, input, expectedOutput, createdBy = null) {
-  const { data, error } = await supabase
-    .from('eval_golden_set')
-    .insert({
-      agent_name: agentName,
-      name,
-      input,
-      expected_output: expectedOutput,
-      created_by: createdBy,
-    })
-    .select()
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
-// Helper: Get eval history
-export async function getEvalHistory(agentName, limit = 10) {
-  const { data, error } = await supabase
-    .from('eval_run')
-    .select('*')
-    .eq('agent_name', agentName)
-    .order('started_at', { ascending: false })
-    .limit(limit);
-
-  if (error) throw error;
-  return data;
 }
