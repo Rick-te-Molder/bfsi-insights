@@ -31,18 +31,18 @@ https://rules.sonarsource.com/githubactions/ | 26 rules
 
 When you see a SonarCloud issue, extract the Rule ID and find the matching lesson:
 
-| Rule ID | Lesson                                                                                                                                                        |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| S3358   | [Extract nested ternary operations](./sonar-lessons/extract-nested-ternary-operations-into-helper-functions.md)                                               |
-| S3358   | [Extract this nested ternary operation into an independent statement](./sonar-lessons/extract-this-nested-ternary-operation-into-an-independent-statement.md) |
-| S2301   | [Provide multiple methods instead of boolean selectors](./sonar-lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md)                   |
-| S6848   | [Add role and keyboard handling to interactive divs](./sonar-lessons/add-role-and-keyboard-handling-to-interactive-divs.md)                                   |
-| S6842   | [Do not add interactive ARIA roles to non-interactive elements](./sonar-lessons/use-native-interactive-elements-or-add-proper-aria-roles.md)                  |
-| S6819   | [Use native HTML elements instead of ARIA roles](./sonar-lessons/use-native-html-elements-instead-of-aria-roles.md)                                           |
-| S6847   | [Use role presentation for non-interactive event handlers](./sonar-lessons/use-role-presentation-for-non-interactive-event-handlers.md)                       |
-| S4624   | [Refactor this code to not use nested template literals](./sonar-lessons/refactor-this-code-to-not-use-nested-template-literals.md)                           |
-| S6479   | [Do not use Array index in keys](./sonar-lessons/do-not-use-array-index-in-keys.md)                                                                           |
-| S6759   | [Mark React props as read-only](./sonar-lessons/mark-react-props-as-read-only.md)                                                                             |
+| Rule ID | Lesson                                                                                                                                                        | File                                                                                   |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| S3358   | [Extract nested ternary operations](./sonar-lessons/extract-nested-ternary-operations-into-helper-functions.md)                                               | `sonar-lessons/extract-nested-ternary-operations-into-helper-functions.md`             |
+| S3358   | [Extract this nested ternary operation into an independent statement](./sonar-lessons/extract-this-nested-ternary-operation-into-an-independent-statement.md) | `sonar-lessons/extract-this-nested-ternary-operation-into-an-independent-statement.md` |
+| S2301   | [Provide multiple methods instead of boolean selectors](./sonar-lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md)                   | `sonar-lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md`     |
+| S6848   | [Add role and keyboard handling to interactive divs](./sonar-lessons/add-role-and-keyboard-handling-to-interactive-divs.md)                                   | `sonar-lessons/add-role-and-keyboard-handling-to-interactive-divs.md`                  |
+| S6842   | [Do not add interactive ARIA roles to non-interactive elements](./sonar-lessons/use-native-interactive-elements-or-add-proper-aria-roles.md)                  | `sonar-lessons/use-native-interactive-elements-or-add-proper-aria-roles.md`            |
+| S6819   | [Use native HTML elements instead of ARIA roles](./sonar-lessons/use-native-html-elements-instead-of-aria-roles.md)                                           | `sonar-lessons/use-native-html-elements-instead-of-aria-roles.md`                      |
+| S6847   | [Use role presentation for non-interactive event handlers](./sonar-lessons/use-role-presentation-for-non-interactive-event-handlers.md)                       | `sonar-lessons/use-role-presentation-for-non-interactive-event-handlers.md`            |
+| S4624   | [Refactor this code to not use nested template literals](./sonar-lessons/refactor-this-code-to-not-use-nested-template-literals.md)                           | `sonar-lessons/refactor-this-code-to-not-use-nested-template-literals.md`              |
+| S6479   | [Do not use Array index in keys](./sonar-lessons/do-not-use-array-index-in-keys.md)                                                                           | `sonar-lessons/do-not-use-array-index-in-keys.md`                                      |
+| S6759   | [Mark React props as read-only](./sonar-lessons/mark-react-props-as-read-only.md)                                                                             | `sonar-lessons/mark-react-props-as-read-only.md`                                       |
 
 ---
 
