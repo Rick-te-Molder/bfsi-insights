@@ -24,18 +24,18 @@ export function SuccessBanner({ message }: Readonly<{ message: string | null }>)
   );
 }
 
+function getLoadingLabel(loading: string): string {
+  if (loading === 'approve') return 'Approving...';
+  if (loading === 'reject') return 'Rejecting...';
+  return 'Queuing for re-enrichment...';
+}
+
 export function LoadingIndicator({ loading }: Readonly<{ loading: string | null }>) {
   if (!loading) return null;
-  const label =
-    loading === 'approve'
-      ? 'Approving...'
-      : loading === 'reject'
-        ? 'Rejecting...'
-        : 'Queuing for re-enrichment...';
   return (
     <div className="rounded-lg bg-sky-500/10 border border-sky-500/20 px-4 py-3 flex items-center gap-3">
       <div className="animate-spin rounded-full h-4 w-4 border-2 border-sky-500 border-t-transparent"></div>
-      <span className="text-sky-400 text-sm font-medium">{label}</span>
+      <span className="text-sky-400 text-sm font-medium">{getLoadingLabel(loading)}</span>
     </div>
   );
 }
