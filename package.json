@@ -29,6 +29,7 @@
     "check:links": "node scripts/dev/check-links.mjs",
     "dump:schema": "node scripts/dev/dump-schema.mjs",
     "check:large-files": "node scripts/ci/check-large-files.cjs",
+    "quality:report": "node scripts/ci/quality-report.cjs",
     "publish:approved": "node scripts/ops/publish-approved.mjs",
     "lhci": "npx @lhci/cli@0.14.0 autorun --config=.lighthouserc.json",
     "prepare": "node -e \"try { require('husky').default() } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') console.log(e) }\""
