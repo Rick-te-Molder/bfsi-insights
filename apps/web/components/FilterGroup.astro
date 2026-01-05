@@ -1,0 +1,33 @@
+---
+interface Props {
+  title: string;
+  filterKey: string;
+  open?: boolean;
+}
+
+const { title, filterKey, open = false } = Astro.props;
+---
+
+<details
+  class="filter-group filter-group-bg rounded-lg overflow-hidden"
+  data-filter-key={filterKey}
+  open={open}
+>
+  <summary
+    class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors"
+  >
+    <span class="text-sm font-medium text-primary">{title}</span>
+    <svg
+      class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"
+      ></path>
+    </svg>
+  </summary>
+  <div class="px-4 py-3 filter-group-content border-t">
+    <slot />
+  </div>
+</details>

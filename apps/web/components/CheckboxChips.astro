@@ -1,0 +1,33 @@
+---
+import type { FilterValue } from '../lib/publications-data';
+
+interface Props {
+  name: string;
+  values: FilterValue[];
+  checkedClasses: string;
+  display: 'label' | 'value';
+  showCount?: boolean;
+}
+
+const { name, values, checkedClasses, display, showCount = false } = Astro.props;
+
+function getDisplayText(v: FilterValue) {
+  return display === 'label' ? v.label : v.value;
+}
+---
+
+<div class="flex flex-wrap gap-2">
+  {
+    values.map((v) => (
+      <label class="filter-checkbox cursor-pointer">
+        <input type="checkbox" name={name} value={v.value} class="sr-only peer" />
+        <span
+          class={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm filter-chip transition-all ${checkedClasses}`}
+        >
+          {getDisplayText(v)}
+          {showCount && <span class="text-xs filter-chip-count">{v.count}</span>}
+        </span>
+      </label>
+    ))
+  }
+</div>
