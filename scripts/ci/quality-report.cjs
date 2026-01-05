@@ -120,11 +120,41 @@ function generateLargeFilesReport(results) {
     md += `✅ No files exceed size limits!\n`;
   } else {
     md += `## Files\n\n`;
-    md += `| File | Lines | Limit | Over by |\n`;
-    md += `|------|------:|------:|--------:|\n`;
+
+    const headerOver = 'OVER';
+    const headerLines = 'LINES';
+    const headerFile = 'FILE';
+
+    const overWidth = Math.max(
+      headerOver.length,
+      ...largeFiles.map((r) => `+${r.lineCount - r.limits.file}`.length),
+    );
+    const linesWidth = Math.max(
+      headerLines.length,
+      ...largeFiles.map((r) => String(r.lineCount).length),
+    );
+    const fileWidth = Math.min(
+      90,
+      Math.max(headerFile.length, ...largeFiles.map((r) => r.filePath.length)),
+    );
+
+    const padRight = (s, w) => String(s).padEnd(w, ' ');
+    const padLeft = (s, w) => String(s).padStart(w, ' ');
+    const clamp = (s, w) => {
+      const text = String(s);
+      if (text.length <= w) return text;
+      return `…${text.slice(text.length - (w - 1))}`;
+    };
+
+    md += '```text\n';
+    md += `${padRight(headerOver, overWidth)}  ${padRight(headerLines, linesWidth)}  ${padRight(headerFile, fileWidth)}\n`;
+    md += `${'-'.repeat(overWidth)}  ${'-'.repeat(linesWidth)}  ${'-'.repeat(fileWidth)}\n`;
     for (const r of largeFiles) {
-      md += `| \`${r.filePath}\` | ${r.lineCount} | ${r.limits.file} | +${r.lineCount - r.limits.file} |\n`;
+      const overBy = `+${r.lineCount - r.limits.file}`;
+      const fileName = clamp(r.filePath, fileWidth);
+      md += `${padLeft(overBy, overWidth)}  ${padLeft(r.lineCount, linesWidth)}  ${padRight(fileName, fileWidth)}\n`;
     }
+    md += '```\n';
   }
 
   return md;
@@ -208,15 +238,46 @@ function generateParamCountsReport(results) {
     md += `✅ No functions exceed parameter limits!\n`;
   } else {
     md += `## Functions\n\n`;
-    md += `| File | Function | Params | Location |\n`;
-    md += `|------|----------|-------:|----------|\n`;
-    for (const u of allLargeParamUnits) {
-      const label =
-        u.destructuredKeysCount > PARAM_LIMITS.maxDestructuredKeys
-          ? `${u.effectiveParamCount} keys`
-          : `${u.effectiveParamCount}`;
-      md += `| \`${u.filePath}\` | \`${u.name}()\` | ${label} | L${u.startLine}-${u.endLine} |\n`;
+
+    const headerParams = 'PARAMS';
+    const headerFn = 'FUNCTION';
+    const headerFile = 'FILE';
+
+    const labels = allLargeParamUnits.map((u) =>
+      u.destructuredKeysCount > PARAM_LIMITS.maxDestructuredKeys
+        ? `${u.effectiveParamCount} keys`
+        : `${u.effectiveParamCount}`,
+    );
+
+    const paramsWidth = Math.max(headerParams.length, ...labels.map((l) => l.length));
+    const fnWidth = Math.min(
+      48,
+      Math.max(headerFn.length, ...allLargeParamUnits.map((u) => `${u.name}()`.length)),
+    );
+    const fileWidth = Math.min(
+      80,
+      Math.max(headerFile.length, ...allLargeParamUnits.map((u) => u.filePath.length)),
+    );
+
+    const padRight = (s, w) => String(s).padEnd(w, ' ');
+    const padLeft = (s, w) => String(s).padStart(w, ' ');
+    const clamp = (s, w) => {
+      const text = String(s);
+      if (text.length <= w) return text;
+      return `…${text.slice(text.length - (w - 1))}`;
+    };
+
+    md += '```text\n';
+    md += `${padRight(headerParams, paramsWidth)}  ${padRight(headerFn, fnWidth)}  ${padRight(headerFile, fileWidth)}\n`;
+    md += `${'-'.repeat(paramsWidth)}  ${'-'.repeat(fnWidth)}  ${'-'.repeat(fileWidth)}\n`;
+    for (let i = 0; i < allLargeParamUnits.length; i++) {
+      const u = allLargeParamUnits[i];
+      const label = labels[i];
+      const fnName = clamp(`${u.name}()`, fnWidth);
+      const fileName = clamp(u.filePath, fileWidth);
+      md += `${padLeft(label, paramsWidth)}  ${padRight(fnName, fnWidth)}  ${padRight(fileName, fileWidth)}\n`;
     }
+    md += '```\n';
   }
 
   return md;

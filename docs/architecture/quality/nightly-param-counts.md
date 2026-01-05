@@ -11,8 +11,10 @@ Functions with >=6 parameters (blocking threshold)
 
 ## Functions
 
-| File                                              | Function              | Params | Location |
-| ------------------------------------------------- | --------------------- | -----: | -------- |
-| `services/agent-api/src/lib/discovery-scoring.js` | `scoreCandidate()`    |      6 | L52-70   |
-| `services/agent-api/src/lib/discovery-scoring.js` | `processCandidates()` |      6 | L196-224 |
-| `services/agent-api/src/lib/pipeline-tracking.js` | `logFailure()`        |      6 | L179-192 |
+```text
+PARAMS  FUNCTION             FILE
+------  -------------------  -----------------------------------------------
+     6  scoreCandidate()     services/agent-api/src/lib/discovery-scoring.js
+     6  processCandidates()  services/agent-api/src/lib/discovery-scoring.js
+     6  logFailure()         services/agent-api/src/lib/pipeline-tracking.js
+```
