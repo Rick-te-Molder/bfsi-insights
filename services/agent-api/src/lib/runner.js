@@ -1,10 +1,16 @@
 import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
-import { createTrace, traceLLMCall, isTracingEnabled } from './tracing.js';
+import { traceLLMCall } from './tracing.js';
 import * as llm from './llm.js';
+import { insertRun, insertStep, updateStep, insertMetric } from './runner-db.js';
+import { writeEnrichmentMetaToQueue } from './runner-enrichment-meta.js';
+import { runAgentLogic } from './runner-run.js';
 
 // Shared Supabase client
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+const supabase = createClient(
+  process.env.PUBLIC_SUPABASE_URL ?? '',
+  process.env.SUPABASE_SERVICE_KEY ?? '',
+);
 
 export class AgentRunner {
   constructor(agentName) {
@@ -29,18 +35,12 @@ export class AgentRunner {
     if (!this.runId) return null;
 
     this.stepOrder++;
-    const { data, error } = await this.supabase
-      .from('agent_run_step')
-      .insert({
-        run_id: this.runId,
-        step_order: this.stepOrder,
-        step_type: stepType,
-        started_at: new Date().toISOString(),
-        status: 'running',
-        details,
-      })
-      .select()
-      .single();
+    const { data, error } = await insertStep(this.supabase, {
+      runId: this.runId,
+      stepOrder: this.stepOrder,
+      stepType,
+      details,
+    });
 
     if (error) {
       console.warn(`⚠️ Failed to start step: ${error.message}`);
@@ -58,14 +58,7 @@ export class AgentRunner {
   async finishStepSuccess(stepId, details = {}) {
     if (!stepId) return;
 
-    await this.supabase
-      .from('agent_run_step')
-      .update({
-        finished_at: new Date().toISOString(),
-        status: 'success',
-        details,
-      })
-      .eq('id', stepId);
+    await updateStep(this.supabase, stepId, { status: 'success', details });
   }
 
   /**
@@ -76,14 +69,7 @@ export class AgentRunner {
   async finishStepError(stepId, errorMsg) {
     if (!stepId) return;
 
-    await this.supabase
-      .from('agent_run_step')
-      .update({
-        finished_at: new Date().toISOString(),
-        status: 'error',
-        details: { error: errorMsg },
-      })
-      .eq('id', stepId);
+    await updateStep(this.supabase, stepId, { status: 'error', details: { error: errorMsg } });
   }
 
   /**
@@ -95,12 +81,7 @@ export class AgentRunner {
   async addMetric(name, value, metadata = {}) {
     if (!this.runId) return;
 
-    await this.supabase.from('agent_run_metric').insert({
-      run_id: this.runId,
-      metric_name: name,
-      metric_value: value,
-      metadata,
-    });
+    await insertMetric(this.supabase, { runId: this.runId, name, value, metadata });
   }
 
   /**
@@ -138,120 +119,23 @@ export class AgentRunner {
 
     const promptConfig = await this.loadPromptConfig(context);
 
-    // 2. Log Run Start
-    const { data: runLog, error: runError } = await this.supabase
-      .from('agent_run')
-      .insert({
-        agent_name: this.agentName,
-        stage: this.agentName, // For compatibility with old schema
-        prompt_version: promptConfig.version,
-        status: 'running',
-        started_at: new Date().toISOString(),
-        queue_id: context.queueId ?? null,
-        publication_id: context.publicationId || null,
-        agent_metadata: { queue_id: context.queueId },
-      })
-      .select()
-      .single();
+    const { data: runLog, error: runError } = await insertRun(this.supabase, {
+      agentName: this.agentName,
+      promptConfig,
+      context,
+    });
 
     if (runError) console.error('⚠️ Failed to log run start:', runError);
 
     this.runId = runLog?.id;
-    const startTime = Date.now();
-
-    try {
-      // 2.5 Create LangSmith trace if enabled
-      if (isTracingEnabled()) {
-        this.trace = await createTrace({
-          name: this.agentName,
-          runType: 'chain',
-          inputs: {
-            prompt: promptConfig.prompt_text?.substring(0, 500),
-            context: { queueId: context.queueId },
-          },
-          queueId: context.queueId,
-        });
-      }
-
-      // 3. Execute Logic with step helpers available via tools
-      // DEBUG: Check if openai client is available
-      const openaiClient = this.openai;
-      console.log(`🔍 [${this.agentName}] OpenAI client available:`, !!openaiClient);
-      if (!openaiClient) {
-        console.error(
-          `❌ [${this.agentName}] OpenAI client is undefined! Check OPENAI_API_KEY env var.`,
-        );
-      }
-      const result = await logicFn(context, promptConfig.prompt_text, {
-        openai: openaiClient,
-        supabase: this.supabase,
-        // LLM abstraction layer - model from prompt_version
-        llm,
-        model: promptConfig.model_id,
-        promptConfig,
-        // Step helpers for granular logging
-        startStep: (type, details) => this.startStep(type, details),
-        finishStepSuccess: (id, details) => this.finishStepSuccess(id, details),
-        finishStepError: (id, msg) => this.finishStepError(id, msg),
-        addMetric: (name, value, meta) => this.addMetric(name, value, meta),
-        // LangSmith tracing
-        traceLLM: (opts) => this.traceLLMCall(opts),
-        trace: this.trace,
-      });
-
-      // 4. Log Success
-      const duration = Date.now() - startTime;
-      if (this.runId) {
-        await this.supabase
-          .from('agent_run')
-          .update({
-            status: 'success',
-            finished_at: new Date().toISOString(),
-            duration_ms: duration,
-            result: result,
-          })
-          .eq('id', this.runId);
-
-        // Log token usage metrics if available
-        if (result.usage) {
-          await this.addMetric('tokens_total', result.usage.total_tokens, result.usage);
-          await this.addMetric('tokens_prompt', result.usage.prompt_tokens);
-          await this.addMetric('tokens_completion', result.usage.completion_tokens);
-        }
-
-        // Write enrichment_meta to queue item payload for version tracking
-        // Skip if this is a head-to-head comparison (skipEnrichmentMeta flag)
-        if (context.queueId && !context.skipEnrichmentMeta) {
-          await this.writeEnrichmentMeta(context.queueId, promptConfig, result.usage?.model);
-        }
-      }
-
-      // End LangSmith trace
-      if (this.trace) {
-        await this.trace.end({ result: result?.parsed || result });
-      }
-
-      console.log(`✅ [${this.agentName}] Completed in ${duration}ms`);
-      return result;
-    } catch (error) {
-      // 5. Log Failure
-      console.error(`❌ [${this.agentName}] Failed:`, error.message);
-      const duration = Date.now() - startTime;
-
-      if (this.runId) {
-        await this.supabase
-          .from('agent_run')
-          .update({
-            status: 'error',
-            finished_at: new Date().toISOString(),
-            duration_ms: duration,
-            error_message: error.message,
-          })
-          .eq('id', this.runId);
-      }
-
-      throw error;
-    }
+    return runAgentLogic({
+      runner: this,
+      context,
+      promptConfig,
+      logicFn,
+      llm,
+      openaiClient: this.openai,
+    });
   }
 
   /**
@@ -259,13 +143,7 @@ export class AgentRunner {
    * @param {object} options - LLM call details
    */
   async traceLLMCall(options) {
-    if (!isTracingEnabled()) return;
-
-    await traceLLMCall({
-      ...options,
-      queueId: options.queueId,
-      parentRunId: this.trace?.id,
-    });
+    await traceLLMCall({ ...options, queueId: options.queueId, parentRunId: this.trace?.id });
   }
 
   /**
@@ -276,60 +154,19 @@ export class AgentRunner {
    * @param {string} llmModel - LLM model used (from result.usage.model)
    */
   async writeEnrichmentMeta(queueId, promptConfig, llmModel) {
-    // Map agent names to enrichment step keys
-    const agentToStep = {
-      summarizer: 'summarize',
-      tagger: 'tag',
-      'thumbnail-generator': 'thumbnail',
-    };
-
-    const stepKey = agentToStep[this.agentName];
-    if (!stepKey) {
-      // Not an enrichment agent, skip
-      return;
-    }
-
     try {
-      // Fetch current payload
-      const { data: item, error: fetchError } = await this.supabase
-        .from('ingestion_queue')
-        .select('payload')
-        .eq('id', queueId)
-        .single();
+      const res = await writeEnrichmentMetaToQueue({
+        supabase: this.supabase,
+        agentName: this.agentName,
+        queueId,
+        promptConfig,
+        llmModel,
+      });
 
-      if (fetchError) {
-        console.warn(`⚠️ Failed to fetch queue item for enrichment_meta: ${fetchError.message}`);
-        return;
-      }
-
-      // Build enrichment_meta entry
-      const metaEntry = {
-        prompt_version_id: promptConfig.id,
-        prompt_version: promptConfig.version,
-        llm_model: llmModel || promptConfig.model_id || 'unknown',
-        processed_at: new Date().toISOString(),
-      };
-
-      // Merge with existing payload
-      const existingMeta = item.payload?.enrichment_meta || {};
-      const updatedPayload = {
-        ...item.payload,
-        enrichment_meta: {
-          ...existingMeta,
-          [stepKey]: metaEntry,
-        },
-      };
-
-      // Update queue item
-      const { error: updateError } = await this.supabase
-        .from('ingestion_queue')
-        .update({ payload: updatedPayload })
-        .eq('id', queueId);
-
-      if (updateError) {
-        console.warn(`⚠️ Failed to update enrichment_meta: ${updateError.message}`);
-      } else {
-        console.log(`📝 [${this.agentName}] Wrote enrichment_meta.${stepKey} to queue item`);
+      if (res?.stepKey) {
+        console.log(`📝 [${this.agentName}] Wrote enrichment_meta.${res.stepKey} to queue item`);
+      } else if (res?.error) {
+        console.warn(`⚠️ Failed to update enrichment_meta: ${res.error.message}`);
       }
     } catch (err) {
       console.warn(`⚠️ Error writing enrichment_meta: ${err.message}`);
