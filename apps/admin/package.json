@@ -7,7 +7,9 @@
     "prebuild": "cd ../../packages/types && npm run build",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint \"src/**/*.{ts,tsx}\""
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "test": "vitest run --config ../../vitest.config.ts",
+    "test:coverage": "vitest run --config ../../vitest.config.ts --coverage"
   },
   "dependencies": {
     "@bfsi/types": "*",
