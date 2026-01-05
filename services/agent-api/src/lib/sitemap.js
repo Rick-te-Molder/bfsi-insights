@@ -10,6 +10,7 @@ import {
   isUrlAllowed as _isUrlAllowed,
 } from './sitemap-robots.js';
 import { discoverFromSitemap } from './sitemap-discovery.js';
+export { fetchPageMetadata } from './sitemap-metadata.js';
 import { fetchPageMetadata } from './sitemap-metadata.js';
 
 /**
