@@ -37,8 +37,10 @@ export function extractTitleFromUrl(url) {
     const segments = pathname.split('/').filter(Boolean);
     const slug = segments.at(-1) || '';
 
+    if (!slug) return '';
+
     return slug
-      .replaceAll(/\.(html?|php|aspx?)$/i, '')
+      .replace(/\.(html?|php|aspx?)$/i, '')
       .replaceAll(/[-_]/g, ' ')
       .replace(/\b\w/g, (c) => c.toUpperCase())
       .trim();

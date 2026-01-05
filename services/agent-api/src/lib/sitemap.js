@@ -4,7 +4,11 @@
  */
 
 export { triggerRateLimitForTesting, clearRateLimitForTesting } from './sitemap-rate-limit.js';
-import { checkRobotsTxt, isUrlAllowed } from './sitemap-robots.js';
+export { checkRobotsTxt, isUrlAllowed } from './sitemap-robots.js';
+import {
+  checkRobotsTxt as _checkRobotsTxt,
+  isUrlAllowed as _isUrlAllowed,
+} from './sitemap-robots.js';
 import { discoverFromSitemap } from './sitemap-discovery.js';
 import { fetchPageMetadata } from './sitemap-metadata.js';
 
@@ -27,6 +31,6 @@ export async function fetchFromSitemap(source, config = {}) {
 export default {
   fetchFromSitemap,
   fetchPageMetadata,
-  checkRobotsTxt,
-  isUrlAllowed,
+  checkRobotsTxt: _checkRobotsTxt,
+  isUrlAllowed: _isUrlAllowed,
 };
