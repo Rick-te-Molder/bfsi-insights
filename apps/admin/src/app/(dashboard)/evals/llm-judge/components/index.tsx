@@ -22,11 +22,11 @@ export function AgentSelect({
   agents,
   value,
   onChange,
-}: {
+}: Readonly<{
   agents: string[];
   value: string;
   onChange: (v: string) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="judgeAgent" className="block text-sm text-neutral-400 mb-1">
@@ -91,10 +91,10 @@ export function PromptSelect({ prompts, value, onChange, disabled }: Readonly<Pr
 export function CriteriaInput({
   value,
   onChange,
-}: {
+}: Readonly<{
   value: string;
   onChange: (v: string) => void;
-}) {
+}>) {
   return (
     <div>
       <label htmlFor="judgeCriteria" className="block text-sm text-neutral-400 mb-1">
@@ -116,11 +116,11 @@ export function RunButton({
   onClick,
   disabled,
   running,
-}: {
+}: Readonly<{
   onClick: () => void;
   disabled: boolean;
   running: boolean;
-}) {
+}>) {
   return (
     <div className="flex items-end">
       <button

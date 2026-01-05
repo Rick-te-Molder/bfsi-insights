@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { formatDateTime, getStatusColor, truncate } from '@/lib/utils';
-import { bulkReenrichAction, bulkRejectAction, bulkApproveAction } from './actions';
 import type { TaxonomyConfig, TaxonomyData } from '@/components/tags';
 import type { QueueItem } from '@bfsi/types';
+import { SuccessBanner, LoadingIndicator, ItemRow, EmptyState } from './review-list-components';
+import { BulkActionsBar, getActionPermissions } from './review-list-bulk-actions';
+import { useBulkActions } from './review-list-hooks';
 
 interface ReviewListProps {
   items: QueueItem[];
@@ -15,295 +15,71 @@ interface ReviewListProps {
   taxonomyData: TaxonomyData;
 }
 
-const STATUS_LABEL: Record<number, string> = {
-  300: 'pending_review',
-  330: 'approved',
-  500: 'failed',
-  540: 'rejected',
-};
-
-function getStatusLabel(code: number): string {
-  return STATUS_LABEL[code] || String(code);
+function useSelection(items: QueueItem[]) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const toggle = (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const selectAll = () =>
+    setSelected(selected.size === items.length ? new Set() : new Set(items.map((i) => i.id)));
+  return { selected, setSelected, toggle, selectAll };
 }
 
-// Note: taxonomyConfig/taxonomyData available for future inline tag display
+function ItemsList({
+  items,
+  selected,
+  toggle,
+}: Readonly<{
+  items: QueueItem[];
+  selected: Set<string>;
+  toggle: (id: string, e: React.MouseEvent) => void;
+}>) {
+  if (items.length === 0) return <EmptyState />;
+  return (
+    <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 divide-y divide-neutral-800">
+      {items.map((item) => (
+        <ItemRow
+          key={item.id}
+          item={item}
+          isSelected={selected.has(item.id)}
+          onToggle={(e) => toggle(item.id, e)}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function ReviewList({
   items,
   status,
-  taxonomyConfig: _taxonomyConfig,
-  taxonomyData: _taxonomyData,
-}: ReviewListProps) {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  taxonomyConfig: _tc,
+  taxonomyData: _td,
+}: Readonly<ReviewListProps>) {
   const router = useRouter();
-
-  const showSuccess = (message: string) => {
-    setSuccessMessage(message);
-    setTimeout(() => setSuccessMessage(null), 5000);
-  };
-
-  const toggleSelect = (id: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
-  };
-
-  const selectAll = () => {
-    if (selectedIds.size === items.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(items.map((item) => item.id)));
-    }
-  };
-
-  const bulkApprove = async () => {
-    if (selectedIds.size === 0) return;
-    if (!confirm(`Approve ${selectedIds.size} items?`)) return;
-
-    const count = selectedIds.size;
-    setLoading('approve');
-    showSuccess(`⏳ Approving ${count} items...`);
-
-    const result = await bulkApproveAction(Array.from(selectedIds));
-
-    if (!result.success) {
-      showSuccess(`❌ Failed: ${result.error}`);
-    } else {
-      showSuccess(`✅ ${result.count} items approved and published`);
-    }
-
-    setLoading(null);
-    setSelectedIds(new Set());
-    router.refresh();
-  };
-
-  const bulkReject = async () => {
-    if (selectedIds.size === 0) return;
-    const reason = prompt(`Rejection reason for ${selectedIds.size} items:`);
-    if (!reason) return;
-
-    const count = selectedIds.size;
-    setLoading('reject');
-    showSuccess(`⏳ Rejecting ${count} items...`);
-
-    const result = await bulkRejectAction(Array.from(selectedIds), reason);
-
-    if (!result.success) {
-      showSuccess(`❌ Failed: ${result.error}`);
-    } else {
-      showSuccess(`✅ ${result.count} items rejected`);
-    }
-
-    setLoading(null);
-    setSelectedIds(new Set());
-    router.refresh();
-  };
-
-  const bulkReenrich = async () => {
-    if (selectedIds.size === 0) return;
-    if (!confirm(`Re-enrich ${selectedIds.size} items?`)) return;
-
-    const count = selectedIds.size;
-    setLoading('reenrich');
-    showSuccess(`⏳ ${count} items queued, starting enrichment...`);
-
-    const result = await bulkReenrichAction(Array.from(selectedIds));
-
-    if (!result.success) {
-      showSuccess(`❌ Failed to queue items: ${result.error}`);
-    } else {
-      showSuccess(`✅ ${result.queued} items queued for re-enrichment`);
-    }
-
-    setLoading(null);
-    setSelectedIds(new Set());
-    router.refresh();
-  };
-
-  const canBulkApprove = status === 'pending_review';
-  const canBulkReject = ['pending_review', 'failed'].includes(status);
-  const canBulkReenrich = ['pending_review', 'failed', 'rejected', 'dead_letter'].includes(status);
+  const { selected, setSelected, toggle, selectAll } = useSelection(items);
+  const { loading, message, actions } = useBulkActions(selected, setSelected, router);
+  const permissions = getActionPermissions(status);
 
   return (
     <div className="space-y-4">
-      {/* Success/Status Banner */}
-      {successMessage && (
-        <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-4 py-3 text-emerald-400 text-sm font-medium animate-pulse">
-          {successMessage}
-        </div>
-      )}
-
-      {/* Processing Indicator */}
-      {loading && (
-        <div className="rounded-lg bg-sky-500/10 border border-sky-500/20 px-4 py-3 flex items-center gap-3">
-          <div className="animate-spin rounded-full h-4 w-4 border-2 border-sky-500 border-t-transparent"></div>
-          <span className="text-sky-400 text-sm font-medium">
-            {loading === 'approve' && 'Approving...'}
-            {loading === 'reject' && 'Rejecting...'}
-            {loading === 'reenrich' && 'Queuing for re-enrichment...'}
-          </span>
-        </div>
-      )}
-
-      {/* Bulk Actions Bar */}
-      {items.length > 0 && (
-        <div className="flex items-center justify-between rounded-lg bg-neutral-800/50 px-4 py-3">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={selectAll}
-              className="flex items-center gap-2 text-sm text-neutral-300 hover:text-white"
-            >
-              <span
-                className={`h-4 w-4 rounded border ${
-                  selectedIds.size === items.length
-                    ? 'border-sky-500 bg-sky-500'
-                    : 'border-neutral-600'
-                }`}
-              >
-                {selectedIds.size === items.length && (
-                  <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                )}
-              </span>
-              {selectedIds.size === items.length ? 'Deselect All' : 'Select All'}
-            </button>
-            {selectedIds.size > 0 && (
-              <span className="text-sm text-sky-400">{selectedIds.size} selected</span>
-            )}
-          </div>
-
-          {selectedIds.size > 0 && (
-            <div className="flex items-center gap-2">
-              {canBulkApprove && (
-                <button
-                  onClick={bulkApprove}
-                  disabled={loading !== null}
-                  className="rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-                >
-                  {loading === 'approve' ? 'Approving...' : `✓ Approve (${selectedIds.size})`}
-                </button>
-              )}
-              {canBulkReject && (
-                <button
-                  onClick={bulkReject}
-                  disabled={loading !== null}
-                  className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50"
-                >
-                  {loading === 'reject' ? 'Rejecting...' : `✗ Reject (${selectedIds.size})`}
-                </button>
-              )}
-              {canBulkReenrich && (
-                <button
-                  onClick={bulkReenrich}
-                  disabled={loading !== null}
-                  className="rounded-lg bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:opacity-50"
-                >
-                  {loading === 'reenrich' ? 'Queueing...' : `🔄 Re-enrich (${selectedIds.size})`}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Items List */}
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 divide-y divide-neutral-800">
-        {items.length === 0 ? (
-          <div className="p-12 text-center">
-            <p className="text-neutral-400">No items found</p>
-          </div>
-        ) : (
-          items.map((item) => (
-            <div key={item.id} className="flex items-center">
-              {/* Checkbox */}
-              <button
-                onClick={(e) => toggleSelect(item.id, e)}
-                className="p-4 hover:bg-neutral-800/50"
-              >
-                <span
-                  className={`flex h-5 w-5 items-center justify-center rounded border ${
-                    selectedIds.has(item.id)
-                      ? 'border-sky-500 bg-sky-500'
-                      : 'border-neutral-600 hover:border-neutral-500'
-                  }`}
-                >
-                  {selectedIds.has(item.id) && (
-                    <svg className="h-3 w-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  )}
-                </span>
-              </button>
-
-              {/* Item Content */}
-              <Link
-                href={`/items/${item.id}`}
-                className="flex-1 p-4 pl-0 hover:bg-neutral-800/50 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    {/* Title */}
-                    <p className="font-medium text-white truncate">
-                      {item.payload?.title || truncate(item.url, 60)}
-                    </p>
-                    {/* Date */}
-                    {item.payload?.published_at && (
-                      <p className="text-xs text-neutral-400 mt-0.5">
-                        {new Date(item.payload.published_at).toLocaleDateString('en-GB', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </p>
-                    )}
-                    {/* URL */}
-                    <p className="mt-1 text-sm text-neutral-500 truncate">{item.url}</p>
-                    {item.payload?.summary?.short && (
-                      <p className="mt-2 text-sm text-neutral-400 line-clamp-2">
-                        {item.payload.summary.short}
-                      </p>
-                    )}
-                    {item.status_code === 540 && item.payload?.rejection_reason && (
-                      <p className="mt-2 text-sm text-red-400">
-                        Rejected: {item.payload.rejection_reason}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(getStatusLabel(item.status_code))}`}
-                    >
-                      {getStatusLabel(item.status_code)}
-                    </span>
-                    <span className="text-xs text-neutral-500">
-                      {formatDateTime(item.discovered_at)}
-                    </span>
-                    {item.payload?.source_slug && (
-                      <span className="text-xs text-neutral-600">{item.payload.source_slug}</span>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            </div>
-          ))
-        )}
-      </div>
+      <SuccessBanner message={message} />
+      <LoadingIndicator loading={loading} />
+      <BulkActionsBar
+        items={items}
+        selected={selected}
+        loading={loading}
+        selectAll={selectAll}
+        permissions={permissions}
+        actions={actions}
+      />
+      <ItemsList items={items} selected={selected} toggle={toggle} />
     </div>
   );
 }

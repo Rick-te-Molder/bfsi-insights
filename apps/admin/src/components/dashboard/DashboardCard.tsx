@@ -17,7 +17,12 @@ const badgeColorClasses: Record<CardColor, string> = {
   violet: 'text-violet-400',
 };
 
-export function DashboardCard({ title, badge, color = 'emerald', children }: DashboardCardProps) {
+export function DashboardCard({
+  title,
+  badge,
+  color = 'emerald',
+  children,
+}: Readonly<DashboardCardProps>) {
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
       <div className="flex items-center justify-between mb-4">

@@ -28,10 +28,10 @@ interface SourcesContentProps {
 function HeaderSection({
   modal,
   stats,
-}: {
+}: Readonly<{
   modal: SourcesContentProps['modal'];
   stats: ReturnType<typeof calculateStats>;
-}) {
+}>) {
   return (
     <>
       <PageHeader onAdd={modal.openAdd} />
@@ -47,13 +47,13 @@ function TableSection({
   toggleEnabled,
   modal,
   formatTimeAgo,
-}: {
+}: Readonly<{
   filteredSources: Source[];
   healthData: SourcesContentProps['healthData'];
   toggleEnabled: SourcesContentProps['toggleEnabled'];
   modal: SourcesContentProps['modal'];
   formatTimeAgo: SourcesContentProps['formatTimeAgo'];
-}) {
+}>) {
   return (
     <SourceTable
       sources={filteredSources}
@@ -68,7 +68,7 @@ function TableSection({
   );
 }
 
-function ModalSection({ modal }: { modal: SourcesContentProps['modal'] }) {
+function ModalSection({ modal }: Readonly<{ modal: SourcesContentProps['modal'] }>) {
   if (!modal.showModal) return null;
   return (
     <SourceModal
@@ -86,7 +86,7 @@ export function SourcesContent({
   filters,
   modal,
   formatTimeAgo,
-}: SourcesContentProps) {
+}: Readonly<SourcesContentProps>) {
   const filteredSources = filterSources({ sources, healthData, ...filters });
   const categories = [...new Set(sources.map((s) => s.category).filter(Boolean))];
   return (

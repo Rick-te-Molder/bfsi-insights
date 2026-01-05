@@ -111,90 +111,133 @@ function buildFilterUrl(status: string, source: string, time: string, view: stri
   return `/items?${params.toString()}`;
 }
 
+function buildItemsCategories(statusData: ItemsStatusGridProps['statusData']): CategoryData[] {
+  const safeData = statusData || [];
+  return CATEGORY_ORDER.map((key) => {
+    const config = CATEGORY_CONFIG[key];
+    const statuses = safeData.filter((s) => s.category === key).sort((a, b) => a.code - b.code);
+    return {
+      category: key,
+      ...config,
+      statuses,
+      total: statuses.reduce((sum, s) => sum + s.count, 0),
+    };
+  });
+}
+
+function ItemsCategoryHeader({
+  cat,
+  isExpanded,
+  onToggle,
+}: Readonly<{ cat: CategoryData; isExpanded: boolean; onToggle: () => void }>) {
+  return (
+    <button
+      onClick={onToggle}
+      className="w-full flex items-center gap-3 p-3 hover:bg-neutral-800/50 transition-colors"
+    >
+      <span className={cn('font-medium', cat.color)}>{cat.label}</span>
+      <span className={cn('text-xl font-bold ml-auto', cat.color)}>{cat.total}</span>
+      <span className="text-neutral-500 ml-2">
+        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+      </span>
+    </button>
+  );
+}
+
+type FilterContext = {
+  currentStatus: string;
+  currentSource: string;
+  currentTime: string;
+  currentView: string;
+};
+
+function CategoryStatusPill({
+  s,
+  cat,
+  ctx,
+}: Readonly<{
+  s: { code: number; name: string; count: number };
+  cat: CategoryData;
+  ctx: FilterContext;
+}>) {
+  const config = CATEGORY_CONFIG[cat.category];
+  return (
+    <StatusPill
+      key={s.code}
+      code={s.code}
+      name={s.name}
+      count={s.count}
+      color={cat.color}
+      borderColor={cat.borderColor}
+      isActive={ctx.currentStatus === s.name}
+      activeColor={config.activeColor}
+      href={buildFilterUrl(s.name, ctx.currentSource, ctx.currentTime, ctx.currentView)}
+    />
+  );
+}
+
+function ItemsCategoryPills({ cat, ctx }: Readonly<{ cat: CategoryData; ctx: FilterContext }>) {
+  if (cat.statuses.length === 0) return null;
+  return (
+    <div className="px-3 pb-3 pl-10">
+      <div className="flex flex-wrap gap-2">
+        {cat.statuses.map((s) => (
+          <CategoryStatusPill key={s.code} s={s} cat={cat} ctx={ctx} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ItemsCategoryRow({
+  cat,
+  isExpanded,
+  onToggle,
+  ctx,
+}: Readonly<{ cat: CategoryData; isExpanded: boolean; onToggle: () => void; ctx: FilterContext }>) {
+  return (
+    <div className={cn(cat.category === 'terminal' && 'opacity-60')}>
+      <ItemsCategoryHeader cat={cat} isExpanded={isExpanded} onToggle={onToggle} />
+      {isExpanded && <ItemsCategoryPills cat={cat} ctx={ctx} />}
+    </div>
+  );
+}
+
+function useExpandedState() {
+  const [expanded, setExpanded] = useState<Set<string>>(
+    new Set(['enrichment', 'review', 'published', 'terminal']),
+  );
+  const toggle = (c: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(c)) next.delete(c);
+      else next.add(c);
+      return next;
+    });
+  return { expanded, toggle };
+}
+
 export function ItemsStatusGrid({
   statusData,
   currentStatus,
   currentSource,
   currentTime,
   currentView,
-}: ItemsStatusGridProps) {
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(['enrichment', 'review', 'published', 'terminal']),
-  );
-
-  const safeStatusData = statusData || [];
-
-  const categories: CategoryData[] = CATEGORY_ORDER.map((categoryKey) => {
-    const config = CATEGORY_CONFIG[categoryKey];
-    const statuses = safeStatusData
-      .filter((s) => s.category === categoryKey)
-      .sort((a, b) => a.code - b.code);
-    const total = statuses.reduce((sum, s) => sum + s.count, 0);
-
-    return {
-      category: categoryKey,
-      ...config,
-      statuses,
-      total,
-    };
-  });
-
-  const toggleCategory = (category: string) => {
-    setExpandedCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(category)) {
-        next.delete(category);
-      } else {
-        next.add(category);
-      }
-      return next;
-    });
-  };
-
+}: Readonly<ItemsStatusGridProps>) {
+  const { expanded, toggle } = useExpandedState();
+  const categories = buildItemsCategories(statusData);
+  const ctx: FilterContext = { currentStatus, currentSource, currentTime, currentView };
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 divide-y divide-neutral-800">
-      {categories.map((cat) => {
-        const isExpanded = expandedCategories.has(cat.category);
-        const isTerminal = cat.category === 'terminal';
-        const config = CATEGORY_CONFIG[cat.category];
-
-        return (
-          <div key={cat.category} className={cn(isTerminal && 'opacity-60')}>
-            {/* Category Header */}
-            <button
-              onClick={() => toggleCategory(cat.category)}
-              className="w-full flex items-center gap-3 p-3 hover:bg-neutral-800/50 transition-colors"
-            >
-              <span className={cn('font-medium', cat.color)}>{cat.label}</span>
-              <span className={cn('text-xl font-bold ml-auto', cat.color)}>{cat.total}</span>
-              <span className="text-neutral-500 ml-2">
-                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              </span>
-            </button>
-
-            {/* Status Pills - Clickable Links */}
-            {isExpanded && cat.statuses.length > 0 && (
-              <div className="px-3 pb-3 pl-10">
-                <div className="flex flex-wrap gap-2">
-                  {cat.statuses.map((status) => (
-                    <StatusPill
-                      key={status.code}
-                      code={status.code}
-                      name={status.name}
-                      count={status.count}
-                      color={cat.color}
-                      borderColor={cat.borderColor}
-                      isActive={currentStatus === status.name}
-                      activeColor={config.activeColor}
-                      href={buildFilterUrl(status.name, currentSource, currentTime, currentView)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
+      {categories.map((cat) => (
+        <ItemsCategoryRow
+          key={cat.category}
+          cat={cat}
+          isExpanded={expanded.has(cat.category)}
+          onToggle={() => toggle(cat.category)}
+          ctx={ctx}
+        />
+      ))}
     </div>
   );
 }

@@ -89,55 +89,49 @@ const STATUS_COLORS: Record<string, string> = {
 
 const StatusContext = createContext<StatusContextType | null>(null);
 
-export function StatusProvider({ children }: { children: ReactNode }) {
+async function fetchStatuses(): Promise<StatusInfo[] | null> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('status_lookup')
+      .select('code, name, description, category, is_terminal')
+      .order('code');
+    if (error) {
+      console.error('Failed to load status codes:', error.message);
+      return null;
+    }
+    return data?.length ? data : null;
+  } catch (err) {
+    console.error('Error loading status codes:', err);
+    return null;
+  }
+}
+
+function useStatusData() {
   const [statuses, setStatuses] = useState<StatusInfo[]>(FALLBACK_STATUSES);
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
-    async function loadStatuses() {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase
-          .from('status_lookup')
-          .select('code, name, description, category, is_terminal')
-          .order('code');
-
-        if (error) {
-          console.error('Failed to load status codes:', error.message);
-          return;
-        }
-
-        if (data?.length) {
-          setStatuses(data);
-        }
-      } catch (err) {
-        console.error('Error loading status codes:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadStatuses();
+    fetchStatuses().then((data) => {
+      if (data) setStatuses(data);
+      setLoading(false);
+    });
   }, []);
+  return { statuses, loading };
+}
 
-  const getStatusByCode = (code: number): StatusInfo | undefined => {
-    return statuses.find((s) => s.code === code);
-  };
+function useStatusHelpers(statuses: StatusInfo[]) {
+  const getStatusByCode = (code: number) => statuses.find((s) => s.code === code);
+  const getStatusName = (code: number) => getStatusByCode(code)?.name || `status_${code}`;
+  const getStatusColor = (code: number) =>
+    STATUS_COLORS[getStatusName(code)] || 'bg-neutral-500/20 text-neutral-300';
+  return { getStatusByCode, getStatusName, getStatusColor };
+}
 
-  const getStatusName = (code: number): string => {
-    const status = getStatusByCode(code);
-    return status?.name || `status_${code}`;
-  };
-
-  const getStatusColor = (code: number): string => {
-    const name = getStatusName(code);
-    return STATUS_COLORS[name] || 'bg-neutral-500/20 text-neutral-300';
-  };
-
+export function StatusProvider({ children }: Readonly<{ children: ReactNode }>) {
+  const { statuses, loading } = useStatusData();
+  const helpers = useStatusHelpers(statuses);
   return (
-    <StatusContext.Provider
-      value={{ statuses, loading, getStatusName, getStatusColor, getStatusByCode }}
-    >
+    <StatusContext.Provider value={{ statuses, loading, ...helpers }}>
       {children}
     </StatusContext.Provider>
   );

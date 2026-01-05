@@ -39,7 +39,7 @@ interface AudienceScoreTagProps {
   getAudienceLabel: GetAudienceLabelFn;
 }
 
-function AudienceScoreTag({ config, payload, getAudienceLabel }: AudienceScoreTagProps) {
+function AudienceScoreTag({ config, payload, getAudienceLabel }: Readonly<AudienceScoreTagProps>) {
   const score = getPayloadValue(payload, config.payload_field) as number | undefined;
   if (score === undefined || score < (config.score_threshold ?? 0.5)) return null;
   const colors = COLOR_MAP.violet;
@@ -60,7 +60,7 @@ function AudienceWithPercentages({
   audienceConfigs,
   payload,
   getAudienceLabel,
-}: AudienceWithPercentagesProps) {
+}: Readonly<AudienceWithPercentagesProps>) {
   if (!hasAnyAudienceScore(audienceConfigs, payload))
     return <span className="text-neutral-600 italic">—</span>;
   return (
@@ -77,7 +77,7 @@ function AudienceWithPercentages({
   );
 }
 
-function AudienceSimple({ topAudiences }: { topAudiences: AudienceInfo[] }) {
+function AudienceSimple({ topAudiences }: Readonly<{ topAudiences: AudienceInfo[] }>) {
   const colors = COLOR_MAP.violet;
   if (topAudiences.length === 0) return <span className="text-neutral-600 italic">—</span>;
   return (
@@ -105,7 +105,7 @@ function AudienceContent({
   payload,
   getAudienceLabel,
   getTopAudiences,
-}: AudienceContentProps) {
+}: Readonly<AudienceContentProps>) {
   if (showPercentages)
     return (
       <AudienceWithPercentages
@@ -133,7 +133,7 @@ function AudienceRow({
   showPercentages,
   getAudienceLabel,
   getTopAudiences,
-}: AudienceRowProps) {
+}: Readonly<AudienceRowProps>) {
   if (audienceConfigs.length === 0) return null;
   return (
     <div className="flex items-start justify-between gap-2">
@@ -157,7 +157,7 @@ interface GeographyCodeTagProps {
   lookupMap: Map<string, string> | null;
 }
 
-function GeographyCodeTag({ code, colors, lookupMap }: GeographyCodeTagProps) {
+function GeographyCodeTag({ code, colors, lookupMap }: Readonly<GeographyCodeTagProps>) {
   return (
     <span key={code} className={`px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}>
       {lookupMap?.get(code) || code}
@@ -172,7 +172,7 @@ interface GeographyRowProps {
   labelWidth: string;
 }
 
-function GeographyRow({ config, payload, taxonomyData, labelWidth }: GeographyRowProps) {
+function GeographyRow({ config, payload, taxonomyData, labelWidth }: Readonly<GeographyRowProps>) {
   const codes = extractCodes(getPayloadValue(payload, config.payload_field));
   const colors = COLOR_MAP[config.color] || COLOR_MAP.neutral;
   const lookupMap = taxonomyData[config.slug]
@@ -207,7 +207,7 @@ function ConfigRow({
   labelWidth,
   validationLookups,
   showValidation,
-}: ConfigRowProps) {
+}: Readonly<ConfigRowProps>) {
   if (config.slug === 'geography')
     return (
       <GeographyRow
@@ -238,7 +238,7 @@ interface ConfigRowListProps {
   showValidation: boolean;
 }
 
-function ConfigRowList({ configs, ...rowProps }: ConfigRowListProps) {
+function ConfigRowList({ configs, ...rowProps }: Readonly<ConfigRowListProps>) {
   return (
     <>
       {configs.map((config) => (
@@ -248,7 +248,7 @@ function ConfigRowList({ configs, ...rowProps }: ConfigRowListProps) {
   );
 }
 
-export function TableTagDisplay(props: TableTagDisplayProps) {
+export function TableTagDisplay(props: Readonly<TableTagDisplayProps>) {
   const {
     audienceConfigs,
     sortedNonAudienceConfigs,

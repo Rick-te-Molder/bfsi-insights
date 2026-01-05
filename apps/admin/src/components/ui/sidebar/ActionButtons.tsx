@@ -20,6 +20,63 @@ interface ActionButtonsProps {
   onTriggerBuild: () => void;
 }
 
+function StatusMessage({ message }: Readonly<{ message: string | null }>) {
+  if (!message) return null;
+  return <div className="text-xs text-center py-1 text-emerald-400 animate-pulse">{message}</div>;
+}
+
+function ProcessQueueButton({
+  processing,
+  lastRun,
+  onClick,
+}: Readonly<{ processing: boolean; lastRun: string | null; onClick: () => void }>) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={processing}
+      className="flex w-full flex-col items-center justify-center gap-0.5 rounded-lg bg-sky-600 px-3 py-2 text-white hover:bg-sky-500 disabled:opacity-50 transition-colors"
+    >
+      {processing ? (
+        <span className="text-sm font-medium">Processing...</span>
+      ) : (
+        <>
+          <span className="text-sm font-medium">Process Queue</span>
+          {lastRun && (
+            <span className="text-[10px] text-sky-200/70">Last: {formatTimeAgo(lastRun)}</span>
+          )}
+        </>
+      )}
+    </button>
+  );
+}
+
+function TriggerBuildButton({
+  building,
+  lastBuild,
+  onClick,
+}: Readonly<{ building: boolean; lastBuild: string | null; onClick: () => void }>) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={building}
+      className="flex w-full flex-col items-center justify-center gap-0.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 transition-colors"
+    >
+      {building ? (
+        <span className="text-sm font-medium">Building...</span>
+      ) : (
+        <>
+          <span className="text-sm font-medium">Trigger Build</span>
+          {lastBuild && (
+            <span className="text-[10px] text-emerald-400/70">
+              Last: {formatTimeAgo(lastBuild)}
+            </span>
+          )}
+        </>
+      )}
+    </button>
+  );
+}
+
 export function ActionButtons({
   statusMessage,
   processingQueue,
@@ -27,50 +84,20 @@ export function ActionButtons({
   pipelineStatus,
   onProcessQueue,
   onTriggerBuild,
-}: ActionButtonsProps) {
+}: Readonly<ActionButtonsProps>) {
   return (
     <div className="absolute bottom-24 left-0 right-0 border-t border-neutral-800 p-4 space-y-2">
-      {statusMessage && (
-        <div className="text-xs text-center py-1 text-emerald-400 animate-pulse">
-          {statusMessage}
-        </div>
-      )}
-      <button
+      <StatusMessage message={statusMessage} />
+      <ProcessQueueButton
+        processing={processingQueue}
+        lastRun={pipelineStatus?.lastQueueRun ?? null}
         onClick={onProcessQueue}
-        disabled={processingQueue}
-        className="flex w-full flex-col items-center justify-center gap-0.5 rounded-lg bg-sky-600 px-3 py-2 text-white hover:bg-sky-500 disabled:opacity-50 transition-colors"
-      >
-        {processingQueue ? (
-          <span className="text-sm font-medium">Processing...</span>
-        ) : (
-          <>
-            <span className="text-sm font-medium">Process Queue</span>
-            {pipelineStatus?.lastQueueRun && (
-              <span className="text-[10px] text-sky-200/70">
-                Last: {formatTimeAgo(pipelineStatus.lastQueueRun)}
-              </span>
-            )}
-          </>
-        )}
-      </button>
-      <button
+      />
+      <TriggerBuildButton
+        building={triggeringBuild}
+        lastBuild={pipelineStatus?.lastBuildTime ?? null}
         onClick={onTriggerBuild}
-        disabled={triggeringBuild}
-        className="flex w-full flex-col items-center justify-center gap-0.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-emerald-400 hover:bg-emerald-500/20 disabled:opacity-50 transition-colors"
-      >
-        {triggeringBuild ? (
-          <span className="text-sm font-medium">Building...</span>
-        ) : (
-          <>
-            <span className="text-sm font-medium">Trigger Build</span>
-            {pipelineStatus?.lastBuildTime && (
-              <span className="text-[10px] text-emerald-400/70">
-                Last: {formatTimeAgo(pipelineStatus.lastBuildTime)}
-              </span>
-            )}
-          </>
-        )}
-      </button>
+      />
     </div>
   );
 }

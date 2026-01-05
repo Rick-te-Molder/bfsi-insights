@@ -21,7 +21,7 @@ interface TagCategoryRowProps {
   showValidation?: boolean;
 }
 
-function ScoreTag({ score, colors }: { score: number; colors: TagColors }) {
+function ScoreTag({ score, colors }: Readonly<{ score: number; colors: TagColors }>) {
   return (
     <span className={`px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}>
       {(score * 100).toFixed(0)}%
@@ -29,7 +29,7 @@ function ScoreTag({ score, colors }: { score: number; colors: TagColors }) {
   );
 }
 
-function ScoringRow({ config, payload, labelWidth, colors }: ConfigRowProps) {
+function ScoringRow({ config, payload, labelWidth, colors }: Readonly<ConfigRowProps>) {
   const score = getPayloadValue(payload, config.payload_field) as number | undefined;
   const showScore = score !== undefined && score >= (config.score_threshold ?? 0.5);
   return (
@@ -53,7 +53,12 @@ interface ExpandableValueTagProps {
   showValidation: boolean;
 }
 
-function ExpandableValueTag({ name, isKnown, tagClass, showValidation }: ExpandableValueTagProps) {
+function ExpandableValueTag({
+  name,
+  isKnown,
+  tagClass,
+  showValidation,
+}: Readonly<ExpandableValueTagProps>) {
   return (
     <span key={name} className={tagClass} title={isKnown ? undefined : 'Not in reference table'}>
       {name}
@@ -80,7 +85,7 @@ function ExpandableValuesList({
   lookupSet,
   colors,
   showValidation,
-}: ExpandableValuesListProps) {
+}: Readonly<ExpandableValuesListProps>) {
   if (values.length === 0) return <span className="text-neutral-600 italic">—</span>;
   return (
     <>
@@ -107,7 +112,7 @@ function ExpandableRow({
   colors,
   validationLookups,
   showValidation,
-}: ConfigRowWithValidationProps) {
+}: Readonly<ConfigRowWithValidationProps>) {
   const values = extractStrings(getPayloadValue(payload, config.payload_field));
   const lookupSet = showValidation && validationLookups ? validationLookups[config.slug] : null;
   return (
@@ -131,7 +136,7 @@ interface CodeTagProps {
   lookupMap: Map<string, string> | null;
 }
 
-function CodeTag({ code, colors, lookupMap }: CodeTagProps) {
+function CodeTag({ code, colors, lookupMap }: Readonly<CodeTagProps>) {
   return (
     <span key={code} className={`px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}>
       {lookupMap?.get(code) || code}
@@ -145,7 +150,7 @@ interface CodesListProps {
   lookupMap: Map<string, string> | null;
 }
 
-function CodesList({ codes, colors, lookupMap }: CodesListProps) {
+function CodesList({ codes, colors, lookupMap }: Readonly<CodesListProps>) {
   if (codes.length === 0) return <span className="text-neutral-600 italic">—</span>;
   return (
     <>
@@ -162,7 +167,7 @@ function CodeBasedRow({
   taxonomyData,
   labelWidth,
   colors,
-}: ConfigRowWithDataProps) {
+}: Readonly<ConfigRowWithDataProps>) {
   const codes = extractCodes(getPayloadValue(payload, config.payload_field));
   const lookupMap = taxonomyData[config.slug]
     ? new Map(taxonomyData[config.slug].map((i) => [i.code, i.name]))
@@ -184,7 +189,7 @@ export function TagCategoryRow({
   labelWidth = 'w-24',
   validationLookups,
   showValidation = false,
-}: TagCategoryRowProps) {
+}: Readonly<TagCategoryRowProps>) {
   const colors = COLOR_MAP[config.color] || COLOR_MAP.neutral;
   const baseProps = { config, payload, labelWidth, colors };
 

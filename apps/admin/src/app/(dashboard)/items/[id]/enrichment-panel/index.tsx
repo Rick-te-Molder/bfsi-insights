@@ -158,7 +158,7 @@ export function EnrichmentPanel({
   item,
   currentPrompts,
   utilityVersions = [],
-}: EnrichmentPanelProps) {
+}: Readonly<EnrichmentPanelProps>) {
   const actions = useEnrichmentActions(item);
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
