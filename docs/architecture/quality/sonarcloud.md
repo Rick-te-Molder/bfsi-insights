@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.2.0  
+**Version**: 1.3.0  
 **Last updated**: 2026-01-05  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.3.0 (2026-01-05): Added S7781 (prefer replaceAll over replace with global regex).
 - 1.2.0 (2026-01-05): Added S6551 (use type guards before string coercion).
 - 1.1.0 (2026-01-04): Restructured to Prevention Checklist + Lessons Learned + Rule Index (no duplication of SonarSource docs).
 - 1.0.0 (2026-01-04): Initial version.
@@ -45,6 +46,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S6479   | [Do not use Array index in keys](./sonar-lessons/do-not-use-array-index-in-keys.md)                                                                           | `sonar-lessons/do-not-use-array-index-in-keys.md`                                      |
 | S6759   | [Mark React props as read-only](./sonar-lessons/mark-react-props-as-read-only.md)                                                                             | `sonar-lessons/mark-react-props-as-read-only.md`                                       |
 | S6551   | [Will use Object's default stringification format](./sonar-lessons/will-use-objects-default-stringification-format.md)                                        | `sonar-lessons/will-use-objects-default-stringification-format.md`                     |
+| S7781   | [Prefer 'String#replaceAll()' over 'String#replace()'](./sonar-lessons/prefer-string-replaceall-over-string-replace.md)                                       | `sonar-lessons/prefer-string-replaceall-over-string-replace.md`                        |
 
 ---
 
@@ -63,6 +65,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **No code duplication** — Extract shared logic to functions/components
 - [ ] **No overly complex functions** — Keep cyclomatic complexity low
 - [ ] **Use type guards before string coercion** — Check `typeof val === 'string'` before using `unknown` in template literals
+- [ ] **Use replaceAll() for global replacement** — Prefer `.replaceAll()` over `.replace(/pattern/g, ...)`
 
 ---
 
@@ -116,6 +119,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Prefer 'String#replaceAll()' over 'String#replace()'](./sonar-lessons/prefer-string-replaceall-over-string-replace.md) (S7781)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -157,5 +164,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [Objects converted to strings should define a toString method](./sonar-rules/6551_objects-converted-to-strings-should-define-tostring-method.md)
+
+---
+
+## [Strings should use replaceAll instead of replace with global regex](./sonar-rules/7781_strings-should-use-replaceall-instead-of-replace-with-global-regex.md)
 
 ---

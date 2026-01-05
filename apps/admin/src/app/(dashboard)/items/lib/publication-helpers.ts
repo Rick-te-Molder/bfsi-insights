@@ -198,7 +198,7 @@ async function handleCodesArray(
 export function extractDomain(url: string): string {
   try {
     const hostname = new URL(url).hostname;
-    return hostname.replace(/^www\./, '');
+    return hostname.replaceAll(/^www\./, '');
   } catch {
     return 'unknown';
   }
@@ -214,8 +214,8 @@ export function buildPublicStorageUrl(bucket?: string | null, path?: string | nu
 export function generateSlug(title: string): string {
   return title
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
+    .replaceAll(/[^a-z0-9]+/, '-')
+    .replaceAll(/(^-)|(-$)/, '')
     .slice(0, 80);
 }
 

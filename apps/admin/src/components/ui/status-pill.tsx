@@ -66,7 +66,7 @@ function NameSpan({
 }>) {
   return (
     <span className={cn('pr-2 py-1', getNameClass(isActive, activeColor))}>
-      {name.replace(/_/g, ' ')}
+      {name.replaceAll('_', ' ')}
     </span>
   );
 }
