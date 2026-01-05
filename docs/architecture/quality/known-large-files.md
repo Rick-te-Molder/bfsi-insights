@@ -10,7 +10,6 @@ Snapshot of files that exceed the configured file-size limits.
  ----- | ----
  487   | services/agent-api/src/agents/scorer.js
  472   | apps/web/features/publications/publication-filters.ts
- 442   | services/agent-api/src/agents/thumbnailer.js
  405   | services/agent-api/src/agents/improver.js
  391   | services/agent-api/src/lib/content-fetcher.js
  386   | apps/web/features/publications/PublicationCard.astro

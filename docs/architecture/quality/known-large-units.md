@@ -27,7 +27,6 @@ Snapshot of units whose length exceeds the configured unit-size limits.
  104   | services/agent-api/src/lib/evals.js
  99    | services/agent-api/src/scripts/backfill-summaries.js
  93    | apps/admin/src/app/api/enrich-step/route.ts
- 92    | services/agent-api/src/agents/thumbnailer.js
  92    | services/agent-api/src/scripts/backfill-dates.js
  90    | apps/admin/src/app/(auth)/login/page.tsx
  90    | services/agent-api/src/agents/summarizer.js
@@ -54,12 +53,10 @@ Snapshot of units whose length exceeds the configured unit-size limits.
  66    | services/agent-api/src/lib/sitemap.js
  64    | services/agent-api/src/agents/improver.js
  63    | apps/web/features/publications/publication-filters.ts
- 63    | services/agent-api/src/agents/thumbnailer.js
  61    | services/agent-api/src/cli.js
  60    | apps/web/pages/login.astro
  60    | services/agent-api/src/lib/runner.js
  59    | services/agent-api/src/lib/tracing.js
- 57    | services/agent-api/src/agents/thumbnailer.js
  57    | services/agent-api/src/lib/discovery-rss.js
  56    | apps/admin/src/app/(dashboard)/items/search-bar.tsx
  52    | services/agent-api/src/lib/embeddings.js
@@ -89,7 +86,6 @@ Snapshot of units whose length exceeds the configured unit-size limits.
  42    | services/agent-api/src/lib/sitemap.js
  42    | services/agent-api/src/lib/vendor-loader.js
  41    | apps/web/lib/publications-data.ts
- 41    | services/agent-api/src/agents/thumbnailer.js
  41    | services/agent-api/src/lib/discovery-scoring.js
  40    | apps/admin/src/app/(dashboard)/add/handlers/validateForm.ts
  40    | apps/admin/src/app/(dashboard)/page.tsx
@@ -131,14 +127,12 @@ Snapshot of units whose length exceeds the configured unit-size limits.
  34    | services/agent-api/src/routes/evals.js
  33    | apps/admin/src/app/api/process-queue/route.ts
  33    | services/agent-api/src/agents/orchestrator.js
- 33    | services/agent-api/src/agents/thumbnailer.js
  33    | services/agent-api/src/lib/discovery-scoring.js
  32    | apps/admin/src/app/api/queue-item/[id]/route.ts
  32    | services/agent-api/src/lib/premium-handler.js
  32    | services/agent-api/src/lib/quality-scorer.js
  31    | apps/admin/src/components/ui/sidebar/useSidebarEffects.ts
  31    | apps/web/features/publications/publication-filters.ts
- 31    | services/agent-api/src/agents/thumbnailer.js
  31    | services/agent-api/src/lib/llm.js
  31    | services/agent-api/src/lib/prompt-eval.js
 ```
