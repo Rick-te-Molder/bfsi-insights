@@ -124,6 +124,12 @@ function StepLabel({
   );
 }
 
+function getStepButtonText(loading: string | null, stepKey: string, hasRun: boolean): string {
+  if (loading === stepKey) return '...';
+  if (hasRun) return 'Re-run';
+  return 'Run';
+}
+
 function StepButton({
   loading,
   stepKey,
@@ -146,7 +152,7 @@ function StepButton({
       disabled={loading !== null || upToDate}
       className={`shrink-0 rounded px-2.5 py-1 text-xs font-medium transition-colors ${cls} disabled:opacity-50`}
     >
-      {loading === stepKey ? '...' : hasRun ? 'Re-run' : 'Run'}
+      {getStepButtonText(loading, stepKey, hasRun)}
     </button>
   );
 }
