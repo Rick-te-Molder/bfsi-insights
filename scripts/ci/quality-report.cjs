@@ -149,11 +149,41 @@ function generateLargeFunctionsReport(results) {
     md += `✅ No functions exceed size limits!\n`;
   } else {
     md += `## Functions\n\n`;
-    md += `| File | Function | Lines | Limit | Location |\n`;
-    md += `|------|----------|------:|------:|----------|\n`;
+
+    const headerLines = 'LINES';
+    const headerFn = 'FUNCTION';
+    const headerFile = 'FILE';
+
+    const linesWidth = Math.max(
+      headerLines.length,
+      ...allLargeUnits.map((u) => String(u.length).length),
+    );
+    const fnWidth = Math.min(
+      48,
+      Math.max(headerFn.length, ...allLargeUnits.map((u) => `${u.name}()`.length)),
+    );
+    const fileWidth = Math.min(
+      80,
+      Math.max(headerFile.length, ...allLargeUnits.map((u) => u.filePath.length)),
+    );
+
+    const padRight = (s, w) => String(s).padEnd(w, ' ');
+    const padLeft = (s, w) => String(s).padStart(w, ' ');
+    const clamp = (s, w) => {
+      const text = String(s);
+      if (text.length <= w) return text;
+      return `…${text.slice(text.length - (w - 1))}`;
+    };
+
+    md += '```text\n';
+    md += `${padRight(headerLines, linesWidth)}  ${padRight(headerFn, fnWidth)}  ${padRight(headerFile, fileWidth)}\n`;
+    md += `${'-'.repeat(linesWidth)}  ${'-'.repeat(fnWidth)}  ${'-'.repeat(fileWidth)}\n`;
     for (const u of allLargeUnits) {
-      md += `| \`${u.filePath}\` | \`${u.name}()\` | ${u.length} | ${u.limits.unit} | L${u.startLine}-${u.endLine} |\n`;
+      const fnName = clamp(`${u.name}()`, fnWidth);
+      const fileName = clamp(u.filePath, fileWidth);
+      md += `${padLeft(u.length, linesWidth)}  ${padRight(fnName, fnWidth)}  ${padRight(fileName, fileWidth)}\n`;
     }
+    md += '```\n';
   }
 
   return md;
