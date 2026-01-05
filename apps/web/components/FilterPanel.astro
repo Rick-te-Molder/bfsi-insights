@@ -1,4 +1,6 @@
 ---
+import FilterGroup from './FilterGroup.astro';
+import CheckboxChips from './CheckboxChips.astro';
 import HierarchicalFilter from './HierarchicalFilter.astro';
 import type { TaxonomyItem, FilterValue, FilterConfig } from '../lib/publications-data';
 
@@ -64,236 +66,78 @@ const otherFilters = flatFilters.filter(
         <!-- Audience Filter -->
         {
           audienceFilter && audienceValues.length > 0 && (
-            <details
-              class="filter-group filter-group-bg rounded-lg overflow-hidden"
-              data-filter-key="audience"
-              open
-            >
-              <summary class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors">
-                <span class="text-sm font-medium text-primary">Audience</span>
-                <svg
-                  class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </summary>
-              <div class="px-4 py-3 filter-group-content border-t">
-                <div class="flex flex-wrap gap-2">
-                  {audienceValues.map((v) => (
-                    <label class="filter-checkbox cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="filter-audience"
-                        value={v.value}
-                        class="sr-only peer"
-                      />
-                      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm filter-chip transition-all peer-checked:border-amber-500 peer-checked:bg-amber-500/10 peer-checked:text-amber-600 dark:peer-checked:text-amber-300">
-                        {v.label}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </details>
+            <FilterGroup title="Audience" filterKey="audience" open>
+              <CheckboxChips
+                name="filter-audience"
+                values={audienceValues}
+                display="label"
+                checkedClasses="peer-checked:border-amber-500 peer-checked:bg-amber-500/10 peer-checked:text-amber-600 dark:peer-checked:text-amber-300"
+              />
+            </FilterGroup>
           )
         }
 
         <!-- Geography Filter -->
-        <details
-          class="filter-group filter-group-bg rounded-lg overflow-hidden"
-          data-filter-key="geography"
-        >
-          <summary
-            class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors"
-          >
-            <span class="text-sm font-medium text-primary">Geography</span>
-            <svg
-              class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 9l-7 7-7-7"></path>
-            </svg>
-          </summary>
-          <div class="px-4 py-3 filter-group-content border-t">
-            <HierarchicalFilter
-              filterKey="geography"
-              items={geographyWithCounts}
-              color="sky"
-              emptyMessage="No geography tags yet"
-              cascadeClass="geography"
-              flattenRoots={['global']}
-            />
-          </div>
-        </details>
+        <FilterGroup title="Geography" filterKey="geography">
+          <HierarchicalFilter
+            filterKey="geography"
+            items={geographyWithCounts}
+            color="sky"
+            emptyMessage="No geography tags yet"
+            cascadeClass="geography"
+            flattenRoots={['global']}
+          />
+        </FilterGroup>
 
         <!-- Industry Filter -->
-        <details
-          class="filter-group filter-group-bg rounded-lg overflow-hidden"
-          data-filter-key="industry"
-          open
-        >
-          <summary
-            class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors"
-          >
-            <span class="text-sm font-medium text-primary">Industry</span>
-            <svg
-              class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 9l-7 7-7-7"></path>
-            </svg>
-          </summary>
-          <div class="px-4 py-3 filter-group-content border-t">
-            <HierarchicalFilter
-              filterKey="industry"
-              items={industryWithCounts}
-              color="cyan"
-              emptyMessage="No industry tags yet"
-              cascadeClass="industry"
-            />
-          </div>
-        </details>
+        <FilterGroup title="Industry" filterKey="industry" open>
+          <HierarchicalFilter
+            filterKey="industry"
+            items={industryWithCounts}
+            color="cyan"
+            emptyMessage="No industry tags yet"
+            cascadeClass="industry"
+          />
+        </FilterGroup>
 
         <!-- Topic Filter -->
         {
           topicFilter && topicValues.length > 0 && (
-            <details
-              class="filter-group filter-group-bg rounded-lg overflow-hidden"
-              data-filter-key="topic"
-            >
-              <summary class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors">
-                <span class="text-sm font-medium text-primary">Topic</span>
-                <svg
-                  class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </summary>
-              <div class="px-4 py-3 filter-group-content border-t">
-                <div class="flex flex-wrap gap-2">
-                  {topicValues.map((v) => (
-                    <label class="filter-checkbox cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="filter-topic"
-                        value={v.value}
-                        class="sr-only peer"
-                      />
-                      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm filter-chip transition-all peer-checked:border-violet-500 peer-checked:bg-violet-500/10 peer-checked:text-violet-600 dark:peer-checked:text-violet-300">
-                        {v.label}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </details>
+            <FilterGroup title="Topic" filterKey="topic">
+              <CheckboxChips
+                name="filter-topic"
+                values={topicValues}
+                display="label"
+                checkedClasses="peer-checked:border-violet-500 peer-checked:bg-violet-500/10 peer-checked:text-violet-600 dark:peer-checked:text-violet-300"
+              />
+            </FilterGroup>
           )
         }
 
         <!-- Content Type Filter -->
         {
           contentTypeFilter && contentTypeValues.length > 0 && (
-            <details
-              class="filter-group filter-group-bg rounded-lg overflow-hidden"
-              data-filter-key="content_type"
-            >
-              <summary class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors">
-                <span class="text-sm font-medium text-primary">Content Type</span>
-                <svg
-                  class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </summary>
-              <div class="px-4 py-3 filter-group-content border-t">
-                <div class="flex flex-wrap gap-2">
-                  {contentTypeValues.map((v) => (
-                    <label class="filter-checkbox cursor-pointer">
-                      <input
-                        type="checkbox"
-                        name="filter-content_type"
-                        value={v.value}
-                        class="sr-only peer"
-                      />
-                      <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm filter-chip transition-all peer-checked:border-rose-500 peer-checked:bg-rose-500/10 peer-checked:text-rose-600 dark:peer-checked:text-rose-300">
-                        {v.label}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </details>
+            <FilterGroup title="Content Type" filterKey="content_type">
+              <CheckboxChips
+                name="filter-content_type"
+                values={contentTypeValues}
+                display="label"
+                checkedClasses="peer-checked:border-rose-500 peer-checked:bg-rose-500/10 peer-checked:text-rose-600 dark:peer-checked:text-rose-300"
+              />
+            </FilterGroup>
           )
         }
 
         <!-- Process Filter -->
-        <details
-          class="filter-group filter-group-bg rounded-lg overflow-hidden"
-          data-filter-key="process"
-        >
-          <summary
-            class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors"
-          >
-            <span class="text-sm font-medium text-primary">Process</span>
-            <svg
-              class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 9l-7 7-7-7"></path>
-            </svg>
-          </summary>
-          <div class="px-4 py-3 filter-group-content border-t">
-            <HierarchicalFilter
-              filterKey="process"
-              items={processWithCounts}
-              color="emerald"
-              emptyMessage="No process tags yet"
-              cascadeClass="process"
-            />
-          </div>
-        </details>
+        <FilterGroup title="Process" filterKey="process">
+          <HierarchicalFilter
+            filterKey="process"
+            items={processWithCounts}
+            color="emerald"
+            emptyMessage="No process tags yet"
+            cascadeClass="process"
+          />
+        </FilterGroup>
 
         <!-- Other flat filters -->
         {
@@ -301,45 +145,15 @@ const otherFilters = flatFilters.filter(
             const filterValues = values[filter.column_name] || [];
             if (filterValues.length === 0) return null;
             return (
-              <details
-                class="filter-group filter-group-bg rounded-lg overflow-hidden"
-                data-filter-key={filter.column_name}
-              >
-                <summary class="flex items-center justify-between px-4 py-3 cursor-pointer filter-group-header transition-colors">
-                  <span class="text-sm font-medium text-primary">{filter.display_label}</span>
-                  <svg
-                    class="w-4 h-4 text-neutral-500 transition-transform [details[open]>&]:rotate-180"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </summary>
-                <div class="px-4 py-3 filter-group-content border-t">
-                  <div class="flex flex-wrap gap-2">
-                    {filterValues.map((v) => (
-                      <label class="filter-checkbox cursor-pointer">
-                        <input
-                          type="checkbox"
-                          name={`filter-${filter.column_name}`}
-                          value={v.value}
-                          class="sr-only peer"
-                        />
-                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm filter-chip transition-all peer-checked:border-sky-500 peer-checked:bg-sky-500/10 peer-checked:text-sky-600 dark:peer-checked:text-sky-300">
-                          {v.value}
-                          <span class="text-xs filter-chip-count">{v.count}</span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </details>
+              <FilterGroup title={filter.display_label} filterKey={filter.column_name}>
+                <CheckboxChips
+                  name={`filter-${filter.column_name}`}
+                  values={filterValues}
+                  display="value"
+                  showCount
+                  checkedClasses="peer-checked:border-sky-500 peer-checked:bg-sky-500/10 peer-checked:text-sky-600 dark:peer-checked:text-sky-300"
+                />
+              </FilterGroup>
             );
           })
         }
