@@ -1,0 +1,43 @@
+name: Nightly Quality Report
+
+on:
+  schedule:
+    - cron: '30 2 * * *' # daily at 02:30 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-quality
+  cancel-in-progress: false
+
+jobs:
+  quality-report:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate quality reports
+        run: node scripts/ci/quality-report.cjs
+
+      - name: Commit quality reports
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/architecture/quality/nightly-*.md
+          git diff --staged --quiet || git commit -m "docs: update nightly quality reports [skip ci]"
+          git push
