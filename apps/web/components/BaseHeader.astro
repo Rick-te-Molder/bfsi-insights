@@ -1,0 +1,189 @@
+---
+interface NavItem {
+  href: string;
+  label: string;
+}
+
+interface Props {
+  pathname: string;
+}
+
+const { pathname } = Astro.props;
+
+const navItems: NavItem[] = [
+  { href: '/', label: 'Home' },
+  { href: '/publications', label: 'Publications' },
+];
+
+const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
+---
+
+<header class="border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950">
+  <div class="mx-auto max-w-5xl px-4 py-4 flex items-center justify-between">
+    <a href="/" aria-label="BFSI Insights home" class="group inline-flex flex-col items-center">
+      <span class="text-xl font-normal tracking-tight text-neutral-900 dark:text-white">BFSI</span>
+      <span class="-mt-0.5 text-sm font-bold uppercase text-sky-500 dark:text-sky-400"
+        >insights</span
+      >
+    </a>
+
+    <div class="hidden sm:flex items-center gap-4">
+      <nav class="flex items-center gap-1 text-sm" aria-label="Main navigation">
+        {
+          navItems.map((item, idx) => (
+            <>
+              {idx > 0 && <span class="mx-2 text-neutral-300 dark:text-neutral-700">|</span>}
+              <a
+                href={item.href}
+                class:list={[
+                  'px-3 py-1.5 rounded-md transition-colors',
+                  isActive(item.href)
+                    ? 'text-sky-600 dark:text-sky-400 font-medium border-b-2 border-sky-600 dark:border-sky-400'
+                    : 'text-neutral-500 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-800',
+                ]}
+                aria-current={isActive(item.href) ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            </>
+          ))
+        }
+      </nav>
+
+      <button
+        id="theme-toggle"
+        type="button"
+        class="w-9 h-9 flex items-center justify-center rounded-lg text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+        aria-label="Toggle theme"
+      >
+        <svg
+          class="w-5 h-5 hidden dark:block"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <title>Switch to light mode</title>
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+          ></path>
+        </svg>
+        <svg
+          class="w-5 h-5 block dark:hidden"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <title>Switch to dark mode</title>
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+          ></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="sm:hidden flex items-center gap-2">
+      <button
+        id="theme-toggle-mobile"
+        type="button"
+        class="w-10 h-10 flex items-center justify-center rounded-md text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+        aria-label="Toggle theme"
+      >
+        <svg
+          class="w-5 h-5 hidden dark:block"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <title>Switch to light mode</title>
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+          ></path>
+        </svg>
+        <svg
+          class="w-5 h-5 block dark:hidden"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <title>Switch to dark mode</title>
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+          ></path>
+        </svg>
+      </button>
+
+      <button
+        id="mobile-menu-btn"
+        type="button"
+        class="w-10 h-10 flex items-center justify-center rounded-md text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+        aria-label="Open menu"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div id="mobile-menu-overlay" class="fixed inset-0 bg-black/60 z-40 hidden sm:hidden"></div>
+
+    <nav
+      id="mobile-menu"
+      class="fixed top-0 right-0 bottom-0 w-64 bg-neutral-900 border-l border-neutral-800 z-50 translate-x-full transition-transform duration-300 ease-in-out sm:hidden"
+      aria-label="Mobile navigation"
+    >
+      <div class="flex items-center justify-between p-4 border-b border-neutral-800">
+        <span class="text-sm font-medium text-neutral-200">Menu</span>
+        <button
+          id="mobile-menu-close"
+          class="w-8 h-8 flex items-center justify-center rounded-md text-neutral-400 hover:text-white hover:bg-neutral-800 transition-colors"
+          aria-label="Close menu"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="flex flex-col p-4 space-y-1">
+        {
+          navItems.map((item) => (
+            <a
+              href={item.href}
+              class:list={[
+                'px-4 py-3 rounded-md text-sm transition-colors',
+                isActive(item.href)
+                  ? 'bg-sky-400/10 text-sky-400 font-medium'
+                  : 'text-neutral-300 hover:bg-neutral-800 hover:text-white',
+              ]}
+              aria-current={isActive(item.href) ? 'page' : undefined}
+            >
+              {item.label}
+            </a>
+          ))
+        }
+      </div>
+    </nav>
+  </div>
+</header>
