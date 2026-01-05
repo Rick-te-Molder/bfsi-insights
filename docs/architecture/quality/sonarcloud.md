@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.1.0  
-**Last updated**: 2026-01-04  
+**Version**: 1.2.0  
+**Last updated**: 2026-01-05  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.2.0 (2026-01-05): Added S6551 (use type guards before string coercion).
 - 1.1.0 (2026-01-04): Restructured to Prevention Checklist + Lessons Learned + Rule Index (no duplication of SonarSource docs).
 - 1.0.0 (2026-01-04): Initial version.
 
@@ -43,6 +44,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S4624   | [Refactor this code to not use nested template literals](./sonar-lessons/refactor-this-code-to-not-use-nested-template-literals.md)                           | `sonar-lessons/refactor-this-code-to-not-use-nested-template-literals.md`              |
 | S6479   | [Do not use Array index in keys](./sonar-lessons/do-not-use-array-index-in-keys.md)                                                                           | `sonar-lessons/do-not-use-array-index-in-keys.md`                                      |
 | S6759   | [Mark React props as read-only](./sonar-lessons/mark-react-props-as-read-only.md)                                                                             | `sonar-lessons/mark-react-props-as-read-only.md`                                       |
+| S6551   | [Will use Object's default stringification format](./sonar-lessons/will-use-objects-default-stringification-format.md)                                        | `sonar-lessons/will-use-objects-default-stringification-format.md`                     |
 
 ---
 
@@ -60,6 +62,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Use target check for modal backdrops** — `e.target === e.currentTarget` instead of stopPropagation
 - [ ] **No code duplication** — Extract shared logic to functions/components
 - [ ] **No overly complex functions** — Keep cyclomatic complexity low
+- [ ] **Use type guards before string coercion** — Check `typeof val === 'string'` before using `unknown` in template literals
 
 ---
 
@@ -109,6 +112,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Will use Object's default stringification format](./sonar-lessons/will-use-objects-default-stringification-format.md) (S6551)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -146,5 +153,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [React props should be read-only](./sonar-rules/6759_react-props-should-be-read-only.md)
+
+---
+
+## [Objects converted to strings should define a toString method](./sonar-rules/6551_objects-converted-to-strings-should-define-tostring-method.md)
 
 ---

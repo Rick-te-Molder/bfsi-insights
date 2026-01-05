@@ -66,22 +66,31 @@ function ConfidenceSection({ confidence }: Readonly<{ confidence: unknown }>) {
 
 function ReasoningSection({ reasoning }: Readonly<{ reasoning: unknown }>) {
   if (!reasoning) return null;
+  const text = typeof reasoning === 'string' ? reasoning : JSON.stringify(reasoning);
   return (
     <div className="mb-3">
       <div className="text-xs font-medium text-neutral-400 mb-1">Reasoning</div>
-      <div className="text-xs text-neutral-300 italic">{String(reasoning)}</div>
+      <div className="text-xs text-neutral-300 italic">{text}</div>
     </div>
   );
+}
+
+function toNumber(val: unknown): number {
+  return typeof val === 'number' ? val : 0;
 }
 
 function UsageSection({ usage }: Readonly<{ usage: unknown }>) {
   if (!usage || typeof usage !== 'object') return null;
   const u = usage as Record<string, unknown>;
+  const promptTokens = toNumber(u.prompt_tokens);
+  const completionTokens = toNumber(u.completion_tokens);
+  const totalTokens = toNumber(u.total_tokens);
+  const model = typeof u.model === 'string' ? u.model : null;
   return (
     <div className="text-xs text-neutral-500 border-t border-neutral-800 pt-2 mt-2">
-      <span className="font-medium">Tokens:</span> {String(u.prompt_tokens || 0)} in /{' '}
-      {String(u.completion_tokens || 0)} out = {String(u.total_tokens || 0)} total
-      {u.model ? <span className="ml-2">({String(u.model)})</span> : null}
+      <span className="font-medium">Tokens:</span> {promptTokens} in / {completionTokens} out ={' '}
+      {totalTokens} total
+      {model ? <span className="ml-2">({model})</span> : null}
     </div>
   );
 }

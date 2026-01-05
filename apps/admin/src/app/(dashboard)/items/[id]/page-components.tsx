@@ -102,7 +102,7 @@ export function ThumbnailSection({ payload }: Readonly<{ payload: Record<string,
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={thumbnailUrl}
-          alt={`${payload.source_name || 'Source'} preview`}
+          alt={`${typeof payload.source_name === 'string' ? payload.source_name : 'Source'} preview`}
           className="absolute inset-0 w-full h-full object-cover"
         />
       ) : (
