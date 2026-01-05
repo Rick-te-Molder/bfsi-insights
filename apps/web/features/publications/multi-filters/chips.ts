@@ -1,280 +1,28 @@
 import type { FilterState } from '../filter-utils';
+import { getCategoryCounts, shouldCollapse } from './chips-counts';
+export { createChip, createCategoryChipGroup } from './chips-chip';
+export type { ChipGroupConfig } from './chips-chip';
 
-const COLLAPSE_THRESHOLD = 3;
+export { renderAllChips } from './chips-render-all';
+export type { RenderChipsConfig } from './chips-render-all';
 
-export function createChip(label: string, onRemove: () => void): HTMLElement {
-  const chip = document.createElement('button');
-  chip.className =
-    'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-sky-500/10 text-sky-300 border border-sky-500/20 hover:bg-sky-500/20 transition-colors';
-  chip.innerHTML = `
-    ${label}
-    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-    </svg>
-  `;
-  chip.addEventListener('click', onRemove);
-  return chip;
-}
+export { renderCollapsibleSummary } from './chips-summary';
+export type { CollapsibleSummaryConfig } from './chips-summary';
 
-interface ChipGroupConfig {
-  key: string;
-  values: Set<string>;
-  filterState: FilterState;
-  searchQuery: string;
-  applyFilterStateToCheckboxes: (state: FilterState) => void;
-  applyFilters: (state: FilterState, query: string, resetPage: boolean) => number;
-  saveFilters: () => void;
-}
-
-export function createCategoryChipGroup(config: ChipGroupConfig): HTMLElement {
-  const {
-    key,
-    values,
-    filterState,
-    searchQuery,
-    applyFilterStateToCheckboxes,
-    applyFilters,
-    saveFilters,
-  } = config;
-  const group = document.createElement('div');
-  group.className = 'mb-2';
-
-  const label = document.createElement('span');
-  label.className = 'text-xs text-neutral-500 mr-2';
-  label.textContent = `${key}:`;
-  group.appendChild(label);
-
-  const chipsWrapper = document.createElement('span');
-  chipsWrapper.className = 'inline-flex flex-wrap gap-1.5';
-
-  const handleRemoveValue = (value: string) => {
-    filterState[key].delete(value);
-    applyFilterStateToCheckboxes(filterState);
-    applyFilters(filterState, searchQuery, true);
-    saveFilters();
-  };
-
-  values.forEach((value) => {
-    const chip = createChip(value, () => handleRemoveValue(value));
-    chipsWrapper.appendChild(chip);
-  });
-
-  group.appendChild(chipsWrapper);
-  return group;
-}
-
-interface RenderChipsConfig {
+type UpdateFilterChipsArgs = {
   state: FilterState;
   query: string;
   filterChipsEl: HTMLElement | null;
-  qEl: HTMLInputElement | null;
-  filterState: FilterState;
-  searchQuery: string;
-  applyFilterStateToCheckboxes: (state: FilterState) => void;
-  applyFilters: (state: FilterState, query: string, resetPage: boolean) => number;
-  saveFilters: () => void;
-}
-
-export function renderAllChips(config: RenderChipsConfig) {
-  const {
-    state,
-    query,
-    filterChipsEl,
-    qEl,
-    filterState,
-    searchQuery,
-    applyFilterStateToCheckboxes,
-    applyFilters,
-    saveFilters,
-  } = config;
-  if (!filterChipsEl) return;
-
-  const handleClearSearch = () => {
-    if (qEl) qEl.value = '';
-    applyFilters(filterState, '', true);
-  };
-
-  if (query) {
-    const chip = createChip(`search: ${query}`, handleClearSearch);
-    filterChipsEl.appendChild(chip);
-  }
-
-  // Reuse the same handler logic for removing filter values
-  const createRemoveHandler = (key: string, value: string) => () => {
-    filterState[key].delete(value);
-    applyFilterStateToCheckboxes(filterState);
-    applyFilters(filterState, searchQuery, true);
-    saveFilters();
-  };
-
-  for (const [key, values] of Object.entries(state)) {
-    values.forEach((value) => {
-      const chip = createChip(`${key}: ${value}`, createRemoveHandler(key, value));
-      filterChipsEl.appendChild(chip);
-    });
-  }
-}
-
-interface CollapsibleSummaryConfig {
-  state: FilterState;
-  query: string;
-  categoryCounts: Record<string, number>;
-  totalFilters: number;
-  hasSearch: boolean;
   filtersExpanded: boolean;
-  filterChipsEl: HTMLElement | null;
-  qEl: HTMLInputElement | null;
-  filterCheckboxes: NodeListOf<HTMLInputElement>;
-  filterState: FilterState;
-  searchQuery: string;
-  initFilterState: () => void;
-  applyFilterStateToCheckboxes: (state: FilterState) => void;
-  applyFilters: (state: FilterState, query: string, resetPage: boolean) => number;
-  saveFilters: () => void;
-  updateFilterChips: (state: FilterState, query: string) => void;
-  createCategoryChipGroupFn: (key: string, values: Set<string>) => HTMLElement;
-}
+  renderAllChipsFn: () => void;
+  renderCollapsibleSummaryFn: (
+    categoryCounts: Record<string, number>,
+    totalFilters: number,
+    hasSearch: boolean,
+  ) => void;
+};
 
-export function renderCollapsibleSummary(config: CollapsibleSummaryConfig) {
-  const {
-    state,
-    query,
-    categoryCounts,
-    totalFilters,
-    hasSearch,
-    filtersExpanded,
-    filterChipsEl,
-    qEl,
-    filterCheckboxes,
-    filterState,
-    initFilterState,
-    applyFilters,
-    saveFilters,
-    updateFilterChips,
-    createCategoryChipGroupFn,
-  } = config;
-  if (!filterChipsEl) return;
-
-  const categoryLabels: Record<string, string> = {
-    role: 'role',
-    industry: 'industry',
-    topic: 'topic',
-    geography: 'geography',
-    content_type: 'type',
-    regulator: 'regulator',
-    regulation: 'regulation',
-    obligation: 'obligation',
-    process: 'process',
-  };
-
-  const parts: string[] = [];
-  for (const [key, count] of Object.entries(categoryCounts)) {
-    const label = categoryLabels[key] || key;
-    let plural = label;
-    if (count > 1) {
-      plural = label.endsWith('y') ? label.slice(0, -1) + 'ies' : label + 's';
-    }
-    parts.push(`${count} ${plural}`);
-  }
-
-  if (hasSearch) parts.unshift('1 search');
-
-  const totalItems = totalFilters + (hasSearch ? 1 : 0);
-
-  const container = document.createElement('div');
-  container.className = 'w-full';
-
-  const summaryRow = document.createElement('div');
-  summaryRow.className = 'flex items-center justify-between gap-2 flex-wrap';
-
-  const summaryLeft = document.createElement('div');
-  summaryLeft.className = 'flex items-center gap-2 flex-wrap';
-
-  const summaryBadge = document.createElement('span');
-  summaryBadge.className =
-    'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-sky-500/10 text-sky-300 border border-sky-500/20';
-  summaryBadge.innerHTML = `
-    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-    </svg>
-    ${totalItems} filters
-  `;
-
-  const summaryText = document.createElement('span');
-  summaryText.className = 'text-xs text-neutral-400';
-  summaryText.textContent = parts.join(', ');
-
-  summaryLeft.appendChild(summaryBadge);
-  summaryLeft.appendChild(summaryText);
-
-  const actions = document.createElement('div');
-  actions.className = 'flex items-center gap-2';
-
-  const clearBtn = document.createElement('button');
-  clearBtn.className =
-    'text-xs text-neutral-400 hover:text-neutral-200 underline underline-offset-2 transition-colors';
-  clearBtn.textContent = 'Clear all';
-  const handleClearAll = () => {
-    filterCheckboxes.forEach((cb) => (cb.checked = false));
-    initFilterState();
-    if (qEl) qEl.value = '';
-    applyFilters({}, '', true);
-    saveFilters();
-  };
-
-  clearBtn.addEventListener('click', handleClearAll);
-
-  const expandBtn = document.createElement('button');
-  expandBtn.className =
-    'inline-flex items-center gap-1 text-xs text-sky-300 hover:text-sky-200 transition-colors';
-  expandBtn.innerHTML = filtersExpanded
-    ? `Collapse <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>`
-    : `Expand <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>`;
-
-  const handleToggleExpand = () => {
-    updateFilterChips(state, query);
-  };
-
-  expandBtn.addEventListener('click', handleToggleExpand);
-
-  actions.appendChild(clearBtn);
-  actions.appendChild(expandBtn);
-
-  summaryRow.appendChild(summaryLeft);
-  summaryRow.appendChild(actions);
-  container.appendChild(summaryRow);
-
-  if (filtersExpanded) {
-    const expandedContainer = document.createElement('div');
-    expandedContainer.className = 'mt-3 pt-3 border-t border-neutral-800';
-
-    const categories = Object.entries(state).filter(([, values]) => values.size > 0);
-
-    const handleClearSearchExpanded = () => {
-      if (qEl) qEl.value = '';
-      applyFilters(filterState, '', true);
-    };
-
-    if (query) {
-      const searchGroup = document.createElement('div');
-      searchGroup.className = 'mb-2';
-      const searchChip = createChip(`search: ${query}`, handleClearSearchExpanded);
-      searchGroup.appendChild(searchChip);
-      expandedContainer.appendChild(searchGroup);
-    }
-
-    categories.forEach(([key, values]) => {
-      const group = createCategoryChipGroupFn(key, values);
-      expandedContainer.appendChild(group);
-    });
-
-    container.appendChild(expandedContainer);
-  }
-
-  filterChipsEl.appendChild(container);
-}
-
-export function updateFilterChips(
+export type UpdateFilterChipsFn = (
   state: FilterState,
   query: string,
   filterChipsEl: HTMLElement | null,
@@ -285,28 +33,35 @@ export function updateFilterChips(
     totalFilters: number,
     hasSearch: boolean,
   ) => void,
-) {
-  if (!filterChipsEl) return;
+) => void;
 
-  filterChipsEl.innerHTML = '';
+type UpdateFilterChipsCall = Parameters<UpdateFilterChipsFn> | [UpdateFilterChipsArgs];
 
-  const categoryCounts: Record<string, number> = {};
-  let totalFilters = 0;
+function normalizeUpdateArgs(args: UpdateFilterChipsCall): UpdateFilterChipsArgs {
+  if (args.length === 1) return args[0];
 
-  for (const [key, values] of Object.entries(state)) {
-    if (values.size > 0) {
-      categoryCounts[key] = values.size;
-      totalFilters += values.size;
-    }
-  }
+  return {
+    state: args[0],
+    query: args[1],
+    filterChipsEl: args[2],
+    filtersExpanded: args[3],
+    renderAllChipsFn: args[4],
+    renderCollapsibleSummaryFn: args[5],
+  };
+}
 
-  const hasSearch = !!query;
-  const totalItems = totalFilters + (hasSearch ? 1 : 0);
+export const updateFilterChips = (...args: UpdateFilterChipsCall) => {
+  const config = normalizeUpdateArgs(args);
+  if (!config.filterChipsEl) return;
 
-  if (totalItems <= COLLAPSE_THRESHOLD) {
-    renderAllChipsFn();
+  config.filterChipsEl.innerHTML = '';
+  const { categoryCounts, totalFilters } = getCategoryCounts(config.state);
+  const hasSearch = !!config.query;
+
+  if (!shouldCollapse(totalFilters, hasSearch)) {
+    config.renderAllChipsFn();
     return;
   }
 
-  renderCollapsibleSummaryFn(categoryCounts, totalFilters, hasSearch);
-}
+  config.renderCollapsibleSummaryFn(categoryCounts, totalFilters, hasSearch);
+};
