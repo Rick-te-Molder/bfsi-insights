@@ -15,18 +15,12 @@ interface LivePipelineStatusProps {
   pollInterval?: number;
 }
 
-/**
- * KB-277: Live-updating pipeline status grid with polling
- */
-export function LivePipelineStatus({ initialData, pollInterval = 5000 }: LivePipelineStatusProps) {
+function useLivePipelineData(initialData: StatusData[], pollInterval: number) {
   const [statusData, setStatusData] = useState<StatusData[]>(initialData);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-
-  // Set initial timestamp only on client to avoid hydration mismatch
   useEffect(() => {
     setLastUpdated(new Date());
   }, []);
-
   const fetchStats = useCallback(async () => {
     try {
       const res = await fetch('/api/dashboard/stats');
@@ -39,12 +33,19 @@ export function LivePipelineStatus({ initialData, pollInterval = 5000 }: LivePip
       console.error('Failed to fetch dashboard stats:', error);
     }
   }, []);
-
   useEffect(() => {
     const interval = setInterval(fetchStats, pollInterval);
     return () => clearInterval(interval);
   }, [fetchStats, pollInterval]);
+  return { statusData, lastUpdated };
+}
 
+/** KB-277: Live-updating pipeline status grid with polling */
+export function LivePipelineStatus({
+  initialData,
+  pollInterval = 5000,
+}: Readonly<LivePipelineStatusProps>) {
+  const { statusData, lastUpdated } = useLivePipelineData(initialData, pollInterval);
   return (
     <div className="space-y-2">
       <PipelineStatusGrid statusData={statusData} />

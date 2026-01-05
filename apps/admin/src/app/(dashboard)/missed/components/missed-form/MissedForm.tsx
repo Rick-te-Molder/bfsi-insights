@@ -5,7 +5,7 @@ interface MissedFormProps {
   onSuccess: () => void;
 }
 
-export function MissedForm({ onSuccess }: MissedFormProps) {
+export function MissedForm({ onSuccess }: Readonly<MissedFormProps>) {
   const { form, detectedDomain, existingSource, onSubmit } = useMissedFormController(onSuccess);
 
   return (

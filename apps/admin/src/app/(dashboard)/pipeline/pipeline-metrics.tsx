@@ -26,7 +26,10 @@ function getSuccessRateClass(rate: number): string {
   return 'bg-red-500/20 text-red-400';
 }
 
-function RefreshButton({ refreshing, onRefresh }: { refreshing: boolean; onRefresh: () => void }) {
+function RefreshButton({
+  refreshing,
+  onRefresh,
+}: Readonly<{ refreshing: boolean; onRefresh: () => void }>) {
   return (
     <div className="flex justify-end">
       <button
@@ -41,7 +44,7 @@ function RefreshButton({ refreshing, onRefresh }: { refreshing: boolean; onRefre
   );
 }
 
-function StepRow({ stat }: { stat: StepStats }) {
+function StepRow({ stat }: Readonly<{ stat: StepStats }>) {
   const total = stat.success_count + stat.failed_count;
   const successRate = total > 0 ? Math.round((stat.success_count / total) * 100) : 0;
   return (
@@ -61,7 +64,7 @@ function StepRow({ stat }: { stat: StepStats }) {
   );
 }
 
-function StepPerformanceTable({ stepStats }: { stepStats: StepStats[] }) {
+function StepPerformanceTable({ stepStats }: Readonly<{ stepStats: StepStats[] }>) {
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-6">
       <h2 className="text-lg font-semibold mb-4">Step Performance (24h)</h2>
@@ -95,7 +98,7 @@ function EmptyState() {
   );
 }
 
-export function PipelineMetrics({ initialHealth }: { initialHealth: PipelineHealth }) {
+export function PipelineMetrics({ initialHealth }: Readonly<{ initialHealth: PipelineHealth }>) {
   const [health] = useState(initialHealth);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();

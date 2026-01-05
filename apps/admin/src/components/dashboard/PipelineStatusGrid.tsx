@@ -93,82 +93,94 @@ const CATEGORY_CONFIG: Record<
 
 const CATEGORY_ORDER = ['discovery', 'enrichment', 'review', 'published', 'terminal'];
 
-export function PipelineStatusGrid({ statusData }: PipelineStatusGridProps) {
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(['discovery', 'enrichment', 'review']),
-  );
-
-  // Handle null/undefined statusData (RPC function might not exist yet)
-  const safeStatusData = statusData || [];
-
-  // Group status data by category
-  const categories: CategoryData[] = CATEGORY_ORDER.map((categoryKey) => {
-    const config = CATEGORY_CONFIG[categoryKey];
-    const statuses = safeStatusData
-      .filter((s) => s.category === categoryKey)
-      .sort((a, b) => a.code - b.code);
-    const total = statuses.reduce((sum, s) => sum + s.count, 0);
-
+function buildCategories(statusData: PipelineStatusGridProps['statusData']): CategoryData[] {
+  const safeData = statusData || [];
+  return CATEGORY_ORDER.map((key) => {
+    const config = CATEGORY_CONFIG[key];
+    const statuses = safeData.filter((s) => s.category === key).sort((a, b) => a.code - b.code);
     return {
-      category: categoryKey,
+      category: key,
       ...config,
       statuses,
-      total,
+      total: statuses.reduce((sum, s) => sum + s.count, 0),
     };
   });
+}
 
-  const toggleCategory = (category: string) => {
-    setExpandedCategories((prev) => {
+function CategoryHeader({
+  cat,
+  isExpanded,
+  onToggle,
+}: Readonly<{ cat: CategoryData; isExpanded: boolean; onToggle: () => void }>) {
+  return (
+    <button
+      onClick={onToggle}
+      className="w-full flex items-center gap-3 p-3 hover:bg-neutral-800/50 transition-colors"
+    >
+      <span className={cn('font-medium', cat.color)}>{cat.label}</span>
+      <span className={cn('text-xl font-bold ml-auto', cat.color)}>{cat.total}</span>
+      <span className="text-neutral-500 ml-2">
+        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+      </span>
+    </button>
+  );
+}
+
+function CategoryPills({ cat }: Readonly<{ cat: CategoryData }>) {
+  if (cat.statuses.length === 0) return null;
+  return (
+    <div className="px-3 pb-3 pl-10">
+      <div className="flex flex-wrap gap-2">
+        {cat.statuses.map((s) => (
+          <StatusPill
+            key={s.code}
+            code={s.code}
+            name={s.name}
+            count={s.count}
+            color={cat.color}
+            borderColor={cat.borderColor}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CategoryRow({
+  cat,
+  isExpanded,
+  onToggle,
+}: Readonly<{ cat: CategoryData; isExpanded: boolean; onToggle: () => void }>) {
+  return (
+    <div className={cn(cat.category === 'terminal' && 'opacity-60')}>
+      <CategoryHeader cat={cat} isExpanded={isExpanded} onToggle={onToggle} />
+      {isExpanded && <CategoryPills cat={cat} />}
+    </div>
+  );
+}
+
+export function PipelineStatusGrid({ statusData }: Readonly<PipelineStatusGridProps>) {
+  const [expanded, setExpanded] = useState<Set<string>>(
+    new Set(['discovery', 'enrichment', 'review']),
+  );
+  const categories = buildCategories(statusData);
+  const toggle = (c: string) =>
+    setExpanded((prev) => {
       const next = new Set(prev);
-      if (next.has(category)) {
-        next.delete(category);
-      } else {
-        next.add(category);
-      }
+      if (next.has(c)) next.delete(c);
+      else next.add(c);
       return next;
     });
-  };
-
   return (
     <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 divide-y divide-neutral-800">
-      {categories.map((cat) => {
-        const isExpanded = expandedCategories.has(cat.category);
-        const isTerminal = cat.category === 'terminal';
-
-        return (
-          <div key={cat.category} className={cn(isTerminal && 'opacity-60')}>
-            {/* Category Header */}
-            <button
-              onClick={() => toggleCategory(cat.category)}
-              className="w-full flex items-center gap-3 p-3 hover:bg-neutral-800/50 transition-colors"
-            >
-              <span className={cn('font-medium', cat.color)}>{cat.label}</span>
-              <span className={cn('text-xl font-bold ml-auto', cat.color)}>{cat.total}</span>
-              <span className="text-neutral-500 ml-2">
-                {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              </span>
-            </button>
-
-            {/* Status Pills */}
-            {isExpanded && cat.statuses.length > 0 && (
-              <div className="px-3 pb-3 pl-10">
-                <div className="flex flex-wrap gap-2">
-                  {cat.statuses.map((status) => (
-                    <StatusPill
-                      key={status.code}
-                      code={status.code}
-                      name={status.name}
-                      count={status.count}
-                      color={cat.color}
-                      borderColor={cat.borderColor}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
+      {categories.map((cat) => (
+        <CategoryRow
+          key={cat.category}
+          cat={cat}
+          isExpanded={expanded.has(cat.category)}
+          onToggle={() => toggle(cat.category)}
+        />
+      ))}
     </div>
   );
 }

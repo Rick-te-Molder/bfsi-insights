@@ -57,12 +57,12 @@ function InlineView({
   taxonomyData,
   audienceConfigs,
   sortedNonAudienceConfigs,
-}: {
+}: Readonly<{
   payload: TagPayload;
   taxonomyData: TaxonomyData;
   audienceConfigs: TaxonomyConfig[];
   sortedNonAudienceConfigs: TaxonomyConfig[];
-}) {
+}>) {
   return (
     <InlineTagDisplay
       payload={payload}
@@ -93,7 +93,7 @@ function TableView({
   audienceConfigs,
   sortedNonAudienceConfigs,
   variant,
-}: TableViewProps) {
+}: Readonly<TableViewProps>) {
   return (
     <TableTagDisplay
       payload={payload}
@@ -118,7 +118,7 @@ export function TagDisplay({
   labelWidth = 'w-24',
   validationLookups,
   showValidation = false,
-}: TagDisplayProps) {
+}: Readonly<TagDisplayProps>) {
   const { audienceConfigs, sortedNonAudienceConfigs } = useTagDisplayData(taxonomyConfig);
   const viewProps = { payload, taxonomyData, audienceConfigs, sortedNonAudienceConfigs };
 

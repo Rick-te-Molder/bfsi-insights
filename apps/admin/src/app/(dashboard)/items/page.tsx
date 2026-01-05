@@ -19,7 +19,7 @@ export const revalidate = 0;
 
 export default async function ReviewPage({
   searchParams,
-}: {
+}: Readonly<{
   searchParams: Promise<{
     status?: string;
     source?: string;
@@ -29,7 +29,7 @@ export default async function ReviewPage({
     search?: string;
     url?: string;
   }>;
-}) {
+}>) {
   const params = await searchParams;
   const itemId = params.id || '';
   const urlSearch = params.url || '';

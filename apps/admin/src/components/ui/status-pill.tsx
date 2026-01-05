@@ -43,11 +43,11 @@ function CodeSpan({
   code,
   isActive,
   activeColor,
-}: {
+}: Readonly<{
   code: number;
   isActive?: boolean;
   activeColor?: string;
-}) {
+}>) {
   return (
     <span className={cn('pl-2 pr-1 py-1 font-mono', getCodeClass(isActive, activeColor))}>
       {code}
@@ -59,11 +59,11 @@ function NameSpan({
   name,
   isActive,
   activeColor,
-}: {
+}: Readonly<{
   name: string;
   isActive?: boolean;
   activeColor?: string;
-}) {
+}>) {
   return (
     <span className={cn('pr-2 py-1', getNameClass(isActive, activeColor))}>
       {name.replace(/_/g, ' ')}
@@ -76,12 +76,12 @@ function CountSpan({
   color,
   isActive,
   activeColor,
-}: {
+}: Readonly<{
   count: number;
   color: string;
   isActive?: boolean;
   activeColor?: string;
-}) {
+}>) {
   return (
     <span
       className={cn(
@@ -101,7 +101,7 @@ function PillContent({
   color,
   isActive,
   activeColor,
-}: Omit<StatusPillProps, 'borderColor' | 'href'>) {
+}: Readonly<Omit<StatusPillProps, 'borderColor' | 'href'>>) {
   return (
     <>
       <CodeSpan code={code} isActive={isActive} activeColor={activeColor} />
@@ -132,12 +132,12 @@ function PillWrapper({
   className,
   title,
   children,
-}: {
+}: Readonly<{
   href?: string;
   className: string;
   title: string;
   children: React.ReactNode;
-}) {
+}>) {
   if (href)
     return (
       <Link href={href} className={className} title={title}>
@@ -151,7 +151,7 @@ function PillWrapper({
   );
 }
 
-export function StatusPill(props: StatusPillProps) {
+export function StatusPill(props: Readonly<StatusPillProps>) {
   const { code, name, count, color, borderColor, isActive = false, activeColor, href } = props;
   const containerClass = useContainerClass(isActive, count, borderColor, activeColor, href);
   const title = `Code ${code}: ${name} (${count} items)`;

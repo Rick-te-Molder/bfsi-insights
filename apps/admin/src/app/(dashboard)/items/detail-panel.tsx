@@ -79,7 +79,7 @@ function buildViewProps(
   };
 }
 
-export function DetailPanel(props: DetailPanelProps) {
+export function DetailPanel(props: Readonly<DetailPanelProps>) {
   const { item, loading } = useDetailPanelData(props.itemId);
   const { actionLoading, handleAction } = useDetailPanelAction(props.itemId, props.onAction);
   useDetailPanelShortcuts(props, (item as _QueueItem) || null, actionLoading, handleAction);

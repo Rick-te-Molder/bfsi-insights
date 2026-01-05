@@ -147,18 +147,33 @@ function useMasterViewActions(
   return { handleNavigate, handleAction, handleClose };
 }
 
-export function MasterDetailView({ items, taxonomyConfig, taxonomyData }: MasterDetailViewProps) {
+function useMasterView(items: QueueItem[]) {
   const router = useRouter();
-  const { selectedId, listItems, selectedIndex, setSelectedId, setListItems } =
-    useMasterViewState(items);
-  const { handleNavigate, handleAction, handleClose } = useMasterViewActions(
-    listItems,
-    setListItems,
-    setSelectedId,
+  const state = useMasterViewState(items);
+  const actions = useMasterViewActions(
+    state.listItems,
+    state.setListItems,
+    state.setSelectedId,
     router,
-    selectedIndex,
+    state.selectedIndex,
   );
+  return { ...state, ...actions };
+}
 
+export function MasterDetailView({
+  items,
+  taxonomyConfig,
+  taxonomyData,
+}: Readonly<MasterDetailViewProps>) {
+  const {
+    selectedId,
+    listItems,
+    selectedIndex,
+    setSelectedId,
+    handleNavigate,
+    handleAction,
+    handleClose,
+  } = useMasterView(items);
   return (
     <div className="flex h-[calc(100vh-12rem)] gap-4">
       {renderItemList({ listItems, selectedId, setSelectedId, taxonomyConfig, taxonomyData })}

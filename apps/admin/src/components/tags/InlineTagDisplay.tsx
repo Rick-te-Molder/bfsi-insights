@@ -10,7 +10,9 @@ interface InlineTagDisplayProps {
   sortedNonAudienceConfigs: TaxonomyConfig[];
 }
 
-function AudienceTags({ topAudiences }: { topAudiences: { slug: string; name: string }[] }) {
+function AudienceTags({
+  topAudiences,
+}: Readonly<{ topAudiences: { slug: string; name: string }[] }>) {
   const colors = COLOR_MAP.violet;
   return (
     <>
@@ -40,12 +42,12 @@ function InlineCodeTag({
   code,
   colors,
   lookupMap,
-}: {
+}: Readonly<{
   config: TaxonomyConfig;
   code: string;
   colors: { bg: string; text: string };
   lookupMap: Map<string, string> | null;
-}) {
+}>) {
   return (
     <span
       key={`${config.slug}-${code}`}
@@ -60,11 +62,11 @@ function ConfigTags({
   config,
   payload,
   taxonomyData,
-}: {
+}: Readonly<{
   config: TaxonomyConfig;
   payload: TagPayload;
   taxonomyData: TaxonomyData;
-}) {
+}>) {
   const colors = COLOR_MAP[config.color] || COLOR_MAP.neutral;
   const codes = getConfigCodes(config, payload);
   const lookupMap = taxonomyData[config.slug]
@@ -90,7 +92,7 @@ export function InlineTagDisplay({
   taxonomyData,
   topAudiences,
   sortedNonAudienceConfigs,
-}: InlineTagDisplayProps) {
+}: Readonly<InlineTagDisplayProps>) {
   return (
     <div className="flex flex-wrap gap-1">
       <AudienceTags topAudiences={topAudiences} />

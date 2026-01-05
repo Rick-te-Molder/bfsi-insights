@@ -29,7 +29,7 @@ function TableHeader() {
   );
 }
 
-function DomainCell({ item }: { item: MissedDiscovery }) {
+function DomainCell({ item }: Readonly<{ item: MissedDiscovery }>) {
   return (
     <td className="px-4 py-3">
       <a
@@ -45,7 +45,7 @@ function DomainCell({ item }: { item: MissedDiscovery }) {
   );
 }
 
-function SubmitterCell({ item }: { item: MissedDiscovery }) {
+function SubmitterCell({ item }: Readonly<{ item: MissedDiscovery }>) {
   return (
     <td className="px-4 py-3">
       <div className="text-sm text-white">{item.submitter_name || '—'}</div>
@@ -58,7 +58,7 @@ function SubmitterCell({ item }: { item: MissedDiscovery }) {
   );
 }
 
-function MissedRow({ item }: { item: MissedDiscovery }) {
+function MissedRow({ item }: Readonly<{ item: MissedDiscovery }>) {
   return (
     <tr key={item.id} className="hover:bg-neutral-800/30">
       <DomainCell item={item} />
@@ -90,7 +90,7 @@ interface MissedListProps {
   loading: boolean;
 }
 
-export function MissedList({ items, loading }: MissedListProps) {
+export function MissedList({ items, loading }: Readonly<MissedListProps>) {
   if (loading) return <div className="p-8 text-center text-neutral-500">Loading...</div>;
   if (items.length === 0)
     return (
