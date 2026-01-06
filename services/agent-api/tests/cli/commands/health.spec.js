@@ -30,6 +30,8 @@ import { runQueueHealthCmd } from '../../../src/cli/commands/health.js';
 
 describe('Health CLI Command', () => {
   beforeEach(() => {
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'service-key';
     vi.clearAllMocks();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.mocked(utils.getStatusIcon).mockReturnValue('✓');

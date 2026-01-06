@@ -4,15 +4,16 @@
  * Shared clients and configuration for the evals framework.
  */
 
-import process from 'node:process';
-import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import process from 'node:process';
 
-export const supabase = createClient(
-  process.env.PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-);
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
+export function getEvalsSupabase() {
+  return getSupabaseAdminClient();
+}
+
+/** @type {import('openai').default | null} */
 let openai = null;
 
 export function getOpenAI() {

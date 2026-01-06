@@ -3,10 +3,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const fromMock = vi.fn();
 
 vi.mock('../../src/lib/evals-config.js', () => {
+  const supabase = {
+    from: fromMock,
+  };
   return {
-    supabase: {
-      from: fromMock,
-    },
+    getEvalsSupabase: () => supabase,
   };
 });
 

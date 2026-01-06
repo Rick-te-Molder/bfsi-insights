@@ -3,8 +3,8 @@
  * Content fetching logic is in ../lib/content-fetcher.js
  */
 import process from 'node:process';
-import { createClient } from '@supabase/supabase-js';
 import { fetchContent as baseFetchContent } from '../lib/content-fetcher.js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
 // Re-export delay from shared module
 export { delay } from '../lib/content-fetcher.js';
@@ -13,7 +13,7 @@ export { delay } from '../lib/content-fetcher.js';
  * Create Supabase client with service key
  */
 export function createSupabaseClient() {
-  return createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  return getSupabaseAdminClient();
 }
 
 /**
@@ -30,7 +30,8 @@ export function parseCliArgs(defaultLimit = 100) {
 /**
  * Fetch content from URL and extract text (wrapper for backfill scripts)
  */
+/** @param {string} url */
 export async function fetchContent(url) {
   const result = await baseFetchContent(url);
-  return { textContent: result.textContent };
+  return { textContent: 'textContent' in result ? result.textContent : undefined };
 }
