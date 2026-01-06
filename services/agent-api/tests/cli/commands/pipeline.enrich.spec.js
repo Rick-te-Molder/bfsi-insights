@@ -69,6 +69,8 @@ describe('Pipeline CLI Commands (enrich/process)', () => {
     vi.clearAllMocks();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
+    process.env.SUPABASE_URL = 'https://test.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   });
 
   describe('runEnrichCmd', () => {

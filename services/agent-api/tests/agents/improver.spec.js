@@ -63,6 +63,8 @@ describe('Improver Agent', () => {
     vi.clearAllMocks();
     mockResponses = {};
     callCounts = {};
+    process.env.SUPABASE_URL = 'https://test.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   });
 
   describe('MISS_CATEGORIES', () => {
@@ -274,6 +276,8 @@ describe('Edge cases', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockResponses = {};
+    process.env.SUPABASE_URL = 'https://test.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   });
 
   it('should handle null data gracefully in report', async () => {
@@ -299,6 +303,8 @@ describe('Report aggregation logic', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockResponses = {};
+    process.env.SUPABASE_URL = 'https://test.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   });
 
   it('should aggregate domains with urgency flags', async () => {
@@ -337,6 +343,8 @@ describe('Classification branches', () => {
     vi.clearAllMocks();
     mockResponses = {};
     callCounts = {};
+    process.env.SUPABASE_URL = 'https://test.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   });
 
   it('should classify as filter_rejected when status is rejected', async () => {
@@ -583,6 +591,8 @@ describe('Days calculation', () => {
     vi.clearAllMocks();
     mockResponses = {};
     callCounts = {};
+    process.env.SUPABASE_URL = 'https://test.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   });
 
   it('should calculate days_late from published_at', async () => {
@@ -628,6 +638,8 @@ describe('Report with data', () => {
     vi.clearAllMocks();
     mockResponses = {};
     callCounts = {};
+    process.env.SUPABASE_URL = 'https://test.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   });
 
   it('should aggregate domains with critical urgency', async () => {
@@ -704,6 +716,8 @@ describe('Update error handling', () => {
     vi.clearAllMocks();
     mockResponses = {};
     callCounts = {};
+    process.env.SUPABASE_URL = 'https://test.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   });
 
   it('should handle update errors gracefully', async () => {
@@ -717,6 +731,8 @@ describe('Condition branches', () => {
     vi.clearAllMocks();
     mockResponses = {};
     callCounts = {};
+    process.env.SUPABASE_URL = 'https://test.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   });
 
   it('should handle data length check in isSourceTracked - null data', async () => {

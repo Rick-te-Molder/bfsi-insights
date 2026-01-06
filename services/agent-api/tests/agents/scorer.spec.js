@@ -179,6 +179,8 @@ function mockOpenAIResponse(
 describe('scoreRelevance', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.SUPABASE_URL = 'https://test.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   });
 
   describe('OpenAI call parameters', () => {
@@ -404,6 +406,8 @@ describe('scoreRelevance', () => {
 describe('scoreRelevanceBatch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.SUPABASE_URL = 'https://test.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   });
 
   it('processes all candidates and returns correct number of results', async () => {
@@ -528,6 +532,8 @@ describe('isTrustedSource', () => {
 describe('trusted source scoring', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.SUPABASE_URL = 'https://test.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   });
 
   it('auto-passes trusted sources without LLM call', async () => {
@@ -636,6 +642,8 @@ describe('checkStaleIndicators', () => {
 describe('scoreRelevance with staleness checks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.SUPABASE_URL = 'https://test.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   });
 
   it('skips content with staleness indicators even from trusted sources', async () => {
