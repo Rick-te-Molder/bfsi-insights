@@ -80,10 +80,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    env:
-      PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
-      PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -107,8 +103,8 @@ jobs:
       - name: Validate prompt registry (agent-api)
         run: npm run validate:prompts -w services/agent-api
         env:
-          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_URL: ''
+          SUPABASE_SERVICE_KEY: ''
 
       - name: Run agent-api tests
         run: npm run test:coverage -w services/agent-api
@@ -117,8 +113,8 @@ jobs:
         run: timeout 5 npm start -w services/agent-api || [ $? -eq 124 ]
         env:
           PORT: 3000
-          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
-          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_URL: ''
+          SUPABASE_SERVICE_KEY: ''
 
       - name: Build
         if: github.actor != 'dependabot[bot]'

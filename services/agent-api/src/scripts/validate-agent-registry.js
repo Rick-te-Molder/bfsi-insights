@@ -7,6 +7,21 @@ import 'dotenv/config';
 import { env } from '../config/env.js';
 import { getSupabaseAdminClient } from '../clients/supabase.js';
 
+function isGithubActions() {
+  return process.env.GITHUB_ACTIONS === 'true';
+}
+
+/** @param {string} message */
+function emitGithubWarning(message) {
+  if (isGithubActions()) {
+    console.log(`::warning title=validate:prompts::${message}`);
+  }
+}
+
+function isRequireDbMode() {
+  return process.argv.includes('--require-db');
+}
+
 /** @param {string} filePath */
 function readText(filePath) {
   return fs.readFileSync(filePath, 'utf8');
@@ -66,15 +81,18 @@ function processRequiredPromptLine(line, current, required) {
   return current;
 }
 
-function validateEnvVars() {
-  if (!env.SUPABASE_URL) {
-    console.error('CRITICAL: SUPABASE_URL is required');
-    process.exit(1);
-  }
-  if (!env.SUPABASE_SERVICE_KEY) {
-    console.error('CRITICAL: SUPABASE_SERVICE_KEY is required');
-    process.exit(1);
-  }
+function hasSupabaseEnvVars() {
+  return Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_KEY);
+}
+
+/** @param {boolean} requireDb */
+function assertDbEnvVars(requireDb) {
+  if (!requireDb) return;
+  if (hasSupabaseEnvVars()) return;
+  console.error(
+    'CRITICAL: DB validation required but SUPABASE_URL / SUPABASE_SERVICE_KEY are not set',
+  );
+  process.exit(1);
 }
 
 /** @param {any[]} rows */
@@ -146,9 +164,25 @@ function printResults(requiredAgentNames, byAgent) {
 }
 
 async function main() {
+  const requireDb = isRequireDbMode();
   const requiredPrompts = loadManifest();
-  validateEnvVars();
   const requiredAgentNames = requiredPrompts.map((p) => p.agent_name);
+
+  assertDbEnvVars(requireDb);
+
+  if (!hasSupabaseEnvVars()) {
+    const msg =
+      'SUPABASE_URL / SUPABASE_SERVICE_KEY not set. Skipping prompt_version DB validation.';
+    console.warn(`WARNING: ${msg}`);
+    emitGithubWarning(`DB validation skipped (manifest-only): ${msg}`);
+    console.log('✅ Prompt registry validation passed (manifest-only)');
+    const sortedAgents = [...requiredAgentNames].sort((a, b) => a.localeCompare(b));
+    for (const agent of sortedAgents) {
+      console.log(`- ${agent}`);
+    }
+    return;
+  }
+
   const rows = await fetchPromptVersions(requiredAgentNames);
   const byAgent = groupRowsByAgent(rows);
   const problems = findValidationProblems(requiredAgentNames, byAgent);
