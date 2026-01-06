@@ -6,10 +6,11 @@
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { createClient } from '@supabase/supabase-js';
 import process from 'node:process';
 import crypto from 'node:crypto';
 import { Buffer } from 'node:buffer';
+
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,20 +18,13 @@ const __dirname = dirname(__filename);
 // Go up 4 levels: src/lib -> src -> agent-api -> services -> project-root
 const PDF_EXTRACTOR_PATH = join(__dirname, '../../../../scripts/lib/extract-pdf.py');
 
-/** @type {ReturnType<typeof createClient> | null} */
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabase = null;
 
 function getSupabase() {
   if (supabase) return supabase;
 
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase environment variables');
-  }
-
-  supabase = createClient(supabaseUrl, supabaseKey);
+  supabase = getSupabaseAdminClient();
   return supabase;
 }
 
@@ -210,7 +204,7 @@ function extractTitleFromUrl(url) {
   try {
     const u = new URL(url);
     const parts = u.pathname.split('/').filter(Boolean);
-    const lastSegment = parts.length ? parts[parts.length - 1] : '';
+    const lastSegment = parts.at(-1) || '';
     return lastSegment
       .replaceAll('-', ' ')
       .replaceAll('_', ' ')

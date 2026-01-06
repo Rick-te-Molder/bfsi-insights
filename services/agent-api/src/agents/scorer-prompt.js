@@ -5,17 +5,20 @@
  * KB-155: Agentic Discovery System - Phase 1
  */
 
-import { createClient } from '@supabase/supabase-js';
-import process from 'node:process';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabase = null;
+/** @type {string | null} */
 let cachedPrompt = null;
+/** @type {any[] | null} */
 let cachedAudiences = null;
+/** @type {any[] | null} */
 let cachedRejectionPatterns = null;
 
 function getSupabase() {
   if (!supabase) {
-    supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    supabase = getSupabaseAdminClient();
   }
   return supabase;
 }
@@ -67,6 +70,7 @@ export async function getRejectionPatterns() {
 }
 
 /** Format a single audience for the prompt */
+/** @param {any} audience */
 function formatAudienceSection(audience) {
   return `## ${audience.name} (${audience.code})
 ${audience.description}
@@ -82,6 +86,7 @@ ${audience.scoring_guide}`;
 }
 
 /** Build rejection section from patterns */
+/** @param {any[]} patterns */
 function buildRejectionSection(patterns) {
   if (patterns.length === 0) return '';
 
@@ -112,6 +117,7 @@ function buildScoringGuidelines() {
 }
 
 /** Build the response format section */
+/** @param {any[]} audiences */
 function buildResponseFormat(audiences) {
   const scoreFields = audiences.map((a) => `    "${a.code}": <1-10>`).join(',\n');
   return `## RESPONSE FORMAT
@@ -128,6 +134,7 @@ ${scoreFields}
 }
 
 /** Assemble the full system prompt from sections */
+/** @param {string} rejectionSection @param {string} audienceSections @param {any[]} audiences */
 function assemblePrompt(rejectionSection, audienceSections, audiences) {
   const intro = `You are an expert content curator for BFSI (Banking, Financial Services, Insurance) professionals.
 

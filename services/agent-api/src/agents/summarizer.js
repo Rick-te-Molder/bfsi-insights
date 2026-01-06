@@ -1,8 +1,8 @@
 import { AgentRunner } from '../lib/runner.js';
 import { z } from 'zod';
-import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import process from 'node:process';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
 const runner = new AgentRunner('summarizer');
 
@@ -10,9 +10,9 @@ const runner = new AgentRunner('summarizer');
  * Clean title by removing common source suffixes
  * Examples: "Title | OCC", "Title - McKinsey", "Title | Reuters"
  */
+/** @param {string | null | undefined} title */
 function cleanTitle(title) {
   if (!title) return title;
-
   // Use string operations to avoid ReDoS vulnerability
   const separators = [' | ', ' - ', ' – ', ' — ', ' :: '];
 
@@ -34,10 +34,13 @@ function cleanTitle(title) {
   return cleaned.trim();
 }
 
-const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-);
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
+let supabase = null;
+function getSupabase() {
+  if (supabase) return supabase;
+  supabase = getSupabaseAdminClient();
+  return supabase;
+}
 
 // Enhanced schema with structured output
 const SummarySchema = z.object({
@@ -132,7 +135,7 @@ const SummarySchema = z.object({
 
 // Load writing rules from database
 async function loadWritingRules() {
-  const { data: rules } = await supabase
+  const { data: rules } = await getSupabase()
     .from('writing_rules')
     .select('category, rule_name, rule_text')
     .eq('is_active', true)
@@ -141,11 +144,14 @@ async function loadWritingRules() {
   if (!rules?.length) return '';
 
   // Group by category
-  const grouped = rules.reduce((acc, r) => {
-    if (!acc[r.category]) acc[r.category] = [];
-    acc[r.category].push(`• ${r.rule_name}: ${r.rule_text}`);
-    return acc;
-  }, {});
+  const grouped = rules.reduce(
+    (/** @type {Record<string, string[]>} */ acc, /** @type {any} */ r) => {
+      if (!acc[r.category]) acc[r.category] = [];
+      acc[r.category].push(`• ${r.rule_name}: ${r.rule_text}`);
+      return acc;
+    },
+    /** @type {Record<string, string[]>} */ ({}),
+  );
 
   // Format as text
   return Object.entries(grouped)
@@ -181,6 +187,7 @@ Output a JSON object with this exact structure:
 }`;
 
 // Lazy-load Anthropic client
+/** @type {import('@anthropic-ai/sdk').default | null} */
 let _anthropic = null;
 function getAnthropic() {
   if (!_anthropic) {
@@ -192,26 +199,9 @@ function getAnthropic() {
   return _anthropic;
 }
 
-export async function runSummarizer(queueItem, options = {}) {
-  return runner.run(
-    {
-      queueId: queueItem.id,
-      payload: queueItem.payload,
-      promptOverride: options.promptOverride,
-    },
-    async (context, promptTemplate, tools) => {
-      const { payload } = context;
-      const anthropic = getAnthropic();
-      const modelId = tools.model || 'claude-sonnet-4-20250514';
-
-      // Load writing rules dynamically
-      const writingRules = await loadWritingRules();
-
-      // Use full text content if available, otherwise fall back to description
-      const content = payload.textContent || payload.description || payload.title;
-
-      // Combine base prompt with writing rules and JSON schema
-      const fullPrompt = `${promptTemplate}
+/** @param {string} promptTemplate @param {string} writingRules */
+function buildFullPrompt(promptTemplate, writingRules) {
+  return `${promptTemplate}
 
 ---
 WRITING RULES (follow these strictly):
@@ -222,63 +212,88 @@ OUTPUT FORMAT:
 ${JSON_SCHEMA_DESCRIPTION}
 
 Respond with ONLY the JSON object, no markdown code blocks or other text.`;
+}
 
-      const maxTokens = tools.promptConfig?.max_tokens;
-      const message = await anthropic.messages.create({
-        model: modelId,
-        max_tokens: maxTokens,
-        messages: [
-          {
-            role: 'user',
-            content: `${fullPrompt}\n\n---\n\nTitle: ${payload.title}\nURL: ${payload.url || ''}\n\nContent:\n${content}`,
-          },
-        ],
+/** @param {string} responseText */
+function parseClaudeResponse(responseText) {
+  let jsonContent = responseText.trim();
+  if (jsonContent.startsWith('```')) {
+    const endIndex = jsonContent.lastIndexOf('```');
+    const startIndex = jsonContent.indexOf('\n') + 1;
+    if (endIndex > startIndex) {
+      jsonContent = jsonContent.slice(startIndex, endIndex).trim();
+    }
+  }
+  try {
+    return JSON.parse(jsonContent);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    throw new Error(
+      `Failed to parse Claude response as JSON: ${message}\nResponse: ${responseText.substring(0, 500)}`,
+    );
+  }
+}
+
+/** @param {any} result @param {string} modelId @param {any} usage */
+function flattenSummaryResult(result, modelId, usage) {
+  return {
+    title: cleanTitle(result.title),
+    published_at: result.published_at,
+    author: result.authors?.map((a) => a.name).join(', ') || null,
+    authors: result.authors,
+    summary: result.summary,
+    long_summary_sections: result.long_summary_sections,
+    key_takeaways: result.long_summary_sections.key_insights.map((i) => i.insight),
+    key_figures: result.key_figures,
+    entities: result.entities,
+    is_academic: result.is_academic,
+    citations: result.citations,
+    usage: { input_tokens: usage.input_tokens, output_tokens: usage.output_tokens, model: modelId },
+  };
+}
+
+/** @param {{ anthropic: any; modelId: string; maxTokens: number; fullPrompt: string; payload: any; content: string }} opts */
+async function callClaudeAPI(opts) {
+  const { anthropic, modelId, maxTokens, fullPrompt, payload, content } = opts;
+  return await anthropic.messages.create({
+    model: modelId,
+    max_tokens: maxTokens,
+    messages: [
+      {
+        role: 'user',
+        content: `${fullPrompt}\n\n---\n\nTitle: ${payload.title}\nURL: ${payload.url || ''}\n\nContent:\n${content}`,
+      },
+    ],
+  });
+}
+
+/** @param {any} queueItem @param {{ promptOverride?: any }} options */
+export async function runSummarizer(queueItem, options = {}) {
+  return runner.run(
+    { queueId: queueItem.id, payload: queueItem.payload, promptOverride: options.promptOverride },
+    async (
+      /** @type {any} */ context,
+      /** @type {any} */ promptTemplate,
+      /** @type {any} */ tools,
+    ) => {
+      const { payload } = context;
+      const anthropic = getAnthropic();
+      const modelId = tools.model || 'claude-sonnet-4-20250514';
+      const writingRules = await loadWritingRules();
+      const content = payload.textContent || payload.description || payload.title;
+      const fullPrompt = buildFullPrompt(promptTemplate, writingRules);
+      const message = await callClaudeAPI({
+        anthropic,
+        modelId,
+        maxTokens: tools.promptConfig?.max_tokens,
+        fullPrompt,
+        payload,
+        content,
       });
-
-      // Parse JSON response
-      const responseText = message.content[0].text;
-      let parsed;
-      try {
-        // Extract JSON from response, handling optional markdown code blocks
-        let jsonContent = responseText.trim();
-        if (jsonContent.startsWith('```')) {
-          const endIndex = jsonContent.lastIndexOf('```');
-          const startIndex = jsonContent.indexOf('\n') + 1;
-          if (endIndex > startIndex) {
-            jsonContent = jsonContent.slice(startIndex, endIndex).trim();
-          }
-        }
-        parsed = JSON.parse(jsonContent);
-      } catch (e) {
-        throw new Error(
-          `Failed to parse Claude response as JSON: ${e.message}\nResponse: ${responseText.substring(0, 500)}`,
-        );
-      }
-
-      // Validate with Zod schema
+      const responseText = /** @type {any} */ (message.content[0]).text;
+      const parsed = parseClaudeResponse(responseText);
       const result = SummarySchema.parse(parsed);
-
-      const usage = {
-        input_tokens: message.usage.input_tokens,
-        output_tokens: message.usage.output_tokens,
-        model: modelId,
-      };
-
-      // Flatten for backward compatibility
-      return {
-        title: cleanTitle(result.title),
-        published_at: result.published_at,
-        author: result.authors?.map((a) => a.name).join(', ') || null,
-        authors: result.authors,
-        summary: result.summary,
-        long_summary_sections: result.long_summary_sections,
-        key_takeaways: result.long_summary_sections.key_insights.map((i) => i.insight),
-        key_figures: result.key_figures,
-        entities: result.entities,
-        is_academic: result.is_academic,
-        citations: result.citations,
-        usage,
-      };
+      return flattenSummaryResult(result, modelId, message.usage);
     },
   );
 }

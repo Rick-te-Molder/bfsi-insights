@@ -2,17 +2,20 @@
  * CLI: run fetch command
  */
 
-import { createClient } from '@supabase/supabase-js';
-import process from 'node:process';
+import { getSupabaseAdminClient } from '../../clients/supabase.js';
 import { fetchContent } from '../../lib/content-fetcher.js';
 import { transitionByAgent } from '../../lib/queue-update.js';
 import { loadStatusCodes, getStatusCode } from '../../lib/status-codes.js';
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+/** @returns {import('@supabase/supabase-js').SupabaseClient} */
+function getSupabase() {
+  return getSupabaseAdminClient();
+}
 
+/** @param {{ limit?: number }} options */
 async function fetchItems(options) {
   const { limit = 10 } = options;
-  const { data: items, error } = await supabase
+  const { data: items, error } = await getSupabase()
     .from('ingestion_queue')
     .select('*')
     .eq('status_code', getStatusCode('FETCHED'))
@@ -24,16 +27,18 @@ async function fetchItems(options) {
   return items;
 }
 
+/** @param {any} item @param {any} content */
 function buildPayload(item, content) {
   return {
     ...item.payload,
     title: content.title || item.payload?.title,
     description: content.description || item.payload?.description,
-    textContent: content.textContent,
+    textContent: 'textContent' in content ? content.textContent : null,
     published_at: content.date || item.payload?.published_at,
   };
 }
 
+/** @param {any} item */
 async function processItem(item) {
   try {
     const content = await fetchContent(item.url);
@@ -43,19 +48,22 @@ async function processItem(item) {
       changes: { payload, fetched_at: new Date().toISOString() },
     });
 
-    console.log(`   ✅ Fetched (${content.textContent?.length || 0} chars)`);
+    const textLen = 'textContent' in content ? content.textContent?.length || 0 : 0;
+    console.log(`   ✅ Fetched (${textLen} chars)`);
     return { success: true };
   } catch (err) {
-    console.error(`   ❌ Failed: ${err.message}`);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`   ❌ Failed: ${message}`);
     await transitionByAgent(item.id, getStatusCode('FAILED'), 'fetcher', {
       changes: {
-        payload: { ...item.payload, requires_manual_fetch: true, fetch_error: err.message },
+        payload: { ...item.payload, requires_manual_fetch: true, fetch_error: message },
       },
     });
     return { success: false };
   }
 }
 
+/** @param {{ limit?: number }} options */
 export async function runFetchCmd(options) {
   console.log('📥 Running Content Fetch...\n');
   await loadStatusCodes();

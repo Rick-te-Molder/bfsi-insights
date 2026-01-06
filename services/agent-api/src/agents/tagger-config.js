@@ -4,19 +4,21 @@
  * Supabase client and caching utilities for the tagger agent.
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
 // Lazy initialization to avoid crash on import when env vars aren't set
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabase = null;
 
 export function getSupabase() {
   if (!supabase) {
-    supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    supabase = getSupabaseAdminClient();
   }
   return supabase;
 }
 
 // Cache for audiences
+/** @type {any[] | null} */
 let cachedAudiences = null;
 
 /**
@@ -44,6 +46,7 @@ export async function getAudiences() {
 }
 
 /** Check if TLD matches a geography code */
+/** @param {string | null | undefined} tld */
 export async function getGeographyFromTld(tld) {
   if (!tld) return null;
 

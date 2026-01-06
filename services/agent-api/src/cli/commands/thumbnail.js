@@ -2,17 +2,20 @@
  * CLI: run thumbnail command
  */
 
-import { createClient } from '@supabase/supabase-js';
-import process from 'node:process';
+import { getSupabaseAdminClient } from '../../clients/supabase.js';
 import { runThumbnailer } from '../../agents/thumbnailer.js';
 import { transitionByAgent } from '../../lib/queue-update.js';
 import { loadStatusCodes, getStatusCode } from '../../lib/status-codes.js';
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+/** @returns {import('@supabase/supabase-js').SupabaseClient} */
+function getSupabase() {
+  return getSupabaseAdminClient();
+}
 
+/** @param {{ limit?: number }} options */
 async function fetchItems(options) {
   const { limit = 5 } = options;
-  const { data: items, error } = await supabase
+  const { data: items, error } = await getSupabase()
     .from('ingestion_queue')
     .select('*')
     .eq('status_code', getStatusCode('TO_THUMBNAIL'))
@@ -24,6 +27,7 @@ async function fetchItems(options) {
   return items;
 }
 
+/** @param {any} item @param {any} result */
 function buildPayload(item, result) {
   return {
     ...item.payload,
@@ -35,6 +39,7 @@ function buildPayload(item, result) {
   };
 }
 
+/** @param {any} item */
 async function processItem(item) {
   try {
     if (!item.payload.url && !item.payload.source_url && item.url) {
@@ -51,11 +56,13 @@ async function processItem(item) {
     console.log(`   ✅ Uploaded: ${result.publicUrl}`);
     return { success: true };
   } catch (err) {
-    console.error(`   ❌ Error: ${err.message}`);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`   ❌ Error: ${message}`);
     return { success: false };
   }
 }
 
+/** @param {{ limit?: number }} options */
 export async function runThumbnailCmd(options) {
   console.log('📸 Running Thumbnail Agent...\n');
   await loadStatusCodes();

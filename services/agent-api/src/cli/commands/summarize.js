@@ -2,17 +2,20 @@
  * CLI: run summarize command
  */
 
-import { createClient } from '@supabase/supabase-js';
-import process from 'node:process';
+import { getSupabaseAdminClient } from '../../clients/supabase.js';
 import { runSummarizer } from '../../agents/summarizer.js';
 import { transitionByAgent } from '../../lib/queue-update.js';
 import { loadStatusCodes, getStatusCode } from '../../lib/status-codes.js';
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+/** @returns {import('@supabase/supabase-js').SupabaseClient} */
+function getSupabase() {
+  return getSupabaseAdminClient();
+}
 
+/** @param {{ limit?: number }} options */
 async function fetchItems(options) {
   const { limit = 5 } = options;
-  const { data: items, error } = await supabase
+  const { data: items, error } = await getSupabase()
     .from('ingestion_queue')
     .select('*')
     .eq('status_code', getStatusCode('TO_SUMMARIZE'))
@@ -23,6 +26,7 @@ async function fetchItems(options) {
   return items;
 }
 
+/** @param {any} item @param {any} result */
 function buildPayload(item, result) {
   return {
     ...item.payload,
@@ -41,6 +45,7 @@ function buildPayload(item, result) {
   };
 }
 
+/** @param {any} item */
 async function processItem(item) {
   try {
     console.log(`   📝 Summarizing: ${item.payload?.title?.substring(0, 50)}...`);
@@ -53,11 +58,13 @@ async function processItem(item) {
     console.log(`   ✅ Done`);
     return { success: true };
   } catch (err) {
-    console.error(`   ❌ Error: ${err.message}`);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`   ❌ Error: ${message}`);
     return { success: false };
   }
 }
 
+/** @param {{ limit?: number }} options */
 export async function runSummarizeCmd(options) {
   console.log('📝 Running Summarize Agent...\n');
   await loadStatusCodes();

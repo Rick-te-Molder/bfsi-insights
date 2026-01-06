@@ -3,17 +3,25 @@
  * KB-285: Preserve enrichment_meta written by runners
  */
 
-import process from 'node:process';
-import { createClient } from '@supabase/supabase-js';
 import { runRelevanceFilter } from './screener.js';
 import { fetchContent } from '../lib/content-fetcher.js';
 import { transitionByAgent } from '../lib/queue-update.js';
 import { loadStatusCodes, getStatusCode } from '../lib/status-codes.js';
 import { stepSummarize, stepTag, stepThumbnail } from './enrichment-steps.js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
+let supabase = null;
+
+function getSupabase() {
+  if (supabase) return supabase;
+  supabase = getSupabaseAdminClient();
+  return supabase;
+}
+
 const MAX_FETCH_ATTEMPTS = 3;
 
+/** @param {any} queueItem @param {any} content */
 function buildFetchPayload(queueItem, content) {
   return {
     ...queueItem.payload,
@@ -27,6 +35,7 @@ function buildFetchPayload(queueItem, content) {
   };
 }
 
+/** @param {any} queueItem */
 async function stepFetch(queueItem) {
   console.log('   📥 Fetching content...');
   const content = await fetchContent(queueItem.url);
@@ -36,7 +45,7 @@ async function stepFetch(queueItem) {
     changes: { payload, fetched_at: new Date().toISOString() },
   });
 
-  if (content.raw_ref) {
+  if ('raw_ref' in content && content.raw_ref) {
     await transitionByAgent(queueItem.id, getStatusCode('TO_SUMMARIZE'), 'orchestrator', {
       changes: { raw_ref: content.raw_ref },
     });
@@ -45,6 +54,7 @@ async function stepFetch(queueItem) {
   return payload;
 }
 
+/** @param {string} queueId @param {any} payload @param {{ skipRejection?: boolean }} options */
 async function stepFilter(queueId, payload, options = {}) {
   const { skipRejection = false } = options;
   console.log('   🔍 Checking relevance...');
@@ -70,6 +80,7 @@ async function stepFilter(queueId, payload, options = {}) {
   return { rejected: false, filterResult: result };
 }
 
+/** @param {any} queueItem @param {number} currentAttempts @param {Error} error */
 function handleMaxAttempts(queueItem, currentAttempts, error) {
   console.error(`   ⛔ Max attempts (${MAX_FETCH_ATTEMPTS}) reached, marking as FAILED`);
   transitionByAgent(queueItem.id, getStatusCode('FAILED'), 'orchestrator', {
@@ -81,9 +92,10 @@ function handleMaxAttempts(queueItem, currentAttempts, error) {
   return { success: false, error: error.message, permanent: true };
 }
 
+/** @param {any} queueItem @param {number} currentAttempts @param {Error} error */
 function handleRetry(queueItem, currentAttempts, error) {
   console.error(`   ⚠️ Attempt ${currentAttempts}/${MAX_FETCH_ATTEMPTS}, will retry later`);
-  supabase
+  getSupabase()
     .from('ingestion_queue')
     .update({
       payload: { ...queueItem.payload, fetch_attempts: currentAttempts },
@@ -92,57 +104,58 @@ function handleRetry(queueItem, currentAttempts, error) {
   return { success: false, error: error.message, permanent: false };
 }
 
+/** @param {any} queueItem @param {any} payload @param {{ includeThumbnail?: boolean }} options */
+async function runEnrichmentSteps(queueItem, payload, options) {
+  const { includeThumbnail = true } = options;
+  const summarized = await stepSummarize(queueItem.id, payload);
+  const tagged = await stepTag(queueItem.id, summarized);
+  const finalPayload = includeThumbnail ? await stepThumbnail(queueItem.id, tagged) : tagged;
+  await transitionByAgent(queueItem.id, getStatusCode('PENDING_REVIEW'), 'orchestrator', {
+    changes: { payload: finalPayload },
+  });
+}
+
+/** @param {any} queueItem @param {{ includeThumbnail?: boolean; skipRejection?: boolean }} options */
 export async function enrichItem(queueItem, options = {}) {
   const { includeThumbnail = true, skipRejection = false } = options;
   await loadStatusCodes();
-
-  let currentAttempts = (queueItem.payload?.fetch_attempts || 0) + 1;
+  const currentAttempts = (queueItem.payload?.fetch_attempts || 0) + 1;
 
   try {
     const payload = await stepFetch(queueItem);
     const filterResult = await stepFilter(queueItem.id, payload, { skipRejection });
     if (filterResult.rejected) return { success: false, error: filterResult.reason };
-
-    const summarized = await stepSummarize(queueItem.id, payload);
-    const tagged = await stepTag(queueItem.id, summarized);
-
-    let finalPayload = tagged;
-    if (includeThumbnail) {
-      finalPayload = await stepThumbnail(queueItem.id, tagged);
-    }
-
-    await transitionByAgent(queueItem.id, getStatusCode('PENDING_REVIEW'), 'orchestrator', {
-      changes: { payload: finalPayload },
-    });
+    await runEnrichmentSteps(queueItem, payload, { includeThumbnail });
     return { success: true };
   } catch (error) {
-    console.error(`❌ Enrichment failed: ${error.message}`);
-
-    if (currentAttempts >= MAX_FETCH_ATTEMPTS) {
-      return handleMaxAttempts(queueItem, currentAttempts, error);
-    }
-
-    return handleRetry(queueItem, currentAttempts, error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`❌ Enrichment failed: ${message}`);
+    const errObj = error instanceof Error ? error : new Error(message);
+    return currentAttempts >= MAX_FETCH_ATTEMPTS
+      ? handleMaxAttempts(queueItem, currentAttempts, errObj)
+      : handleRetry(queueItem, currentAttempts, errObj);
   }
 }
 
-export async function processQueue(options = {}) {
-  const { limit = 10, includeThumbnail = true } = options;
-  await loadStatusCodes();
-
-  console.log('🔄 Processing queue...\n');
-
-  const { data: items, error } = await supabase
+/** @param {number} limit */
+async function fetchQueueItems(limit) {
+  const { data: items, error } = await getSupabase()
     .from('ingestion_queue')
     .select('*')
     .eq('status_code', getStatusCode('PENDING_ENRICHMENT'))
     .order('discovered_at', { ascending: true })
     .limit(limit);
+  if (error) throw new Error(`Failed to fetch queue: ${error.message}`);
+  return items;
+}
 
-  if (error) {
-    throw new Error(`Failed to fetch queue: ${error.message}`);
-  }
+/** @param {{ limit?: number; includeThumbnail?: boolean }} options */
+export async function processQueue(options = {}) {
+  const { limit = 10, includeThumbnail = true } = options;
+  await loadStatusCodes();
+  console.log('🔄 Processing queue...\n');
 
+  const items = await fetchQueueItems(limit);
   if (!items?.length) {
     console.log('✅ No items in queue');
     return { processed: 0, success: 0, failed: 0 };
@@ -150,7 +163,6 @@ export async function processQueue(options = {}) {
 
   let success = 0;
   let failed = 0;
-
   for (const queueItem of items) {
     const result = await enrichItem(queueItem, { includeThumbnail });
     if (result.success) success++;
