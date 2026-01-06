@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import './env-shim.js';
 import process from 'node:process';
 import express from 'express';
 import { createClient } from '@supabase/supabase-js';
@@ -8,7 +9,10 @@ import discoveryControlRoutes from './routes/discovery-control.js';
 import evalsRoutes from './routes/evals.js';
 import { requireApiKey } from './middleware/auth.js';
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+const supabase = createClient(
+  process.env.PUBLIC_SUPABASE_URL ?? '',
+  process.env.SUPABASE_SERVICE_KEY ?? '',
+);
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -17,7 +21,7 @@ const port = process.env.PORT || 3000;
 app.disable('x-powered-by');
 
 // CORS for frontend requests
-app.use((req, res, next) => {
+app.use((/** @type {any} */ req, /** @type {any} */ res, /** @type {any} */ next) => {
   const allowedOrigins = [
     'https://bfsiinsights.com',
     'https://www.bfsiinsights.com',
@@ -40,7 +44,7 @@ app.use((req, res, next) => {
 app.use(express.json());
 
 // Health check (no auth required)
-app.get('/health', (req, res) => {
+app.get('/health', (/** @type {any} */ req, /** @type {any} */ res) => {
   res.json({
     status: 'ok',
     service: 'bfsi-agent-api',
@@ -50,7 +54,7 @@ app.get('/health', (req, res) => {
 });
 
 // Trigger build (no auth - just triggers Cloudflare rebuild)
-app.post('/api/trigger-build', async (req, res) => {
+app.post('/api/trigger-build', async (/** @type {any} */ req, /** @type {any} */ res) => {
   try {
     const webhookUrl = process.env.CLOUDFLARE_DEPLOY_HOOK;
     if (!webhookUrl) {
@@ -81,7 +85,8 @@ app.post('/api/trigger-build', async (req, res) => {
     console.log('✅ Cloudflare build triggered');
     res.json({ ok: true, message: 'Build triggered', publishedCount });
   } catch (err) {
-    res.status(500).json({ ok: false, message: err.message });
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ ok: false, message });
   }
 });
 
