@@ -2,17 +2,12 @@ import 'dotenv/config';
 import './env-shim.js';
 import process from 'node:process';
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
 import agentRoutes from './routes/agents.js';
 import agentJobRoutes from './routes/agent-jobs.js';
 import discoveryControlRoutes from './routes/discovery-control.js';
 import evalsRoutes from './routes/evals.js';
 import { requireApiKey } from './middleware/auth.js';
-
-const supabase = createClient(
-  process.env.PUBLIC_SUPABASE_URL ?? '',
-  process.env.SUPABASE_SERVICE_KEY ?? '',
-);
+import { getSupabaseAdminClient } from './clients/supabase.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -69,6 +64,7 @@ app.post('/api/trigger-build', async (/** @type {any} */ req, /** @type {any} */
     }
 
     // Update approved items (330) to published (400)
+    const supabase = getSupabaseAdminClient();
     const { data: updated, error: updateError } = await supabase
       .from('ingestion_queue')
       .update({ status_code: 400 })

@@ -33,5 +33,5 @@ export function parseCliArgs(defaultLimit = 100) {
 /** @param {string} url */
 export async function fetchContent(url) {
   const result = await baseFetchContent(url);
-  return { textContent: 'textContent' in result ? result.textContent : undefined };
+  return { textContent: 'textContent' in result ? result.textContent : null };
 }
