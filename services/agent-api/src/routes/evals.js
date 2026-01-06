@@ -1,12 +1,40 @@
-import process from 'node:process';
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
 import { complete } from '../lib/llm.js';
 import { getAgentFunction } from '../lib/agent-registry.js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
 const router = express.Router();
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+/**
+ * @param {object} params
+ * @param {import('@supabase/supabase-js').SupabaseClient} params.supabase
+ * @param {string} params.runId
+ * @param {(item: any, opts?: any) => Promise<any>} params.agentFn
+ * @param {any} params.item
+ * @param {string | undefined} params.criteria
+ */
+async function evaluateOneItem({ supabase, runId, agentFn, item, criteria }) {
+  const output = await agentFn(item);
+
+  const judgment = await judgeOutput(item, output, criteria || 'quality, accuracy, completeness');
+
+  await supabase.from('eval_result').insert({
+    run_id: runId,
+    input: item.payload,
+    actual_output: output,
+    score: judgment.score,
+    judge_reasoning: judgment.reasoning,
+    judge_model: 'gpt-4o-mini',
+    passed: judgment.score >= 0.7,
+  });
+
+  return {
+    itemId: item.id,
+    title: item.payload?.title || item.url,
+    score: judgment.score,
+    reasoning: judgment.reasoning,
+  };
+}
 
 /**
  * POST /api/evals/head-to-head
@@ -14,6 +42,7 @@ const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPAB
  */
 router.post('/head-to-head', async (req, res) => {
   try {
+    const supabase = getSupabaseAdminClient();
     const { agent_name, version_a_id, version_b_id, item_id, use_llm_judge } = req.body;
 
     if (!agent_name || !version_a_id || !version_b_id || !item_id) {
@@ -43,6 +72,10 @@ router.post('/head-to-head', async (req, res) => {
 
     const versionA = versions.find((v) => v.id === version_a_id);
     const versionB = versions.find((v) => v.id === version_b_id);
+
+    if (!versionA || !versionB) {
+      return res.status(404).json({ error: 'Prompt versions not found' });
+    }
 
     // Get agent function
     const agentFn = await getAgentFunction(agent_name);
@@ -80,7 +113,8 @@ router.post('/head-to-head', async (req, res) => {
     res.json({ result });
   } catch (error) {
     console.error('Head-to-head eval error:', error);
-    res.status(500).json({ error: error.message });
+    const message = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: message });
   }
 });
 
@@ -90,6 +124,7 @@ router.post('/head-to-head', async (req, res) => {
  */
 router.post('/llm-judge', async (req, res) => {
   try {
+    const supabase = getSupabaseAdminClient();
     const { prompt_version_id, criteria } = req.body;
 
     if (!prompt_version_id) {
@@ -138,39 +173,23 @@ router.post('/llm-judge', async (req, res) => {
       return res.status(400).json({ error: `Unknown agent: ${version.agent_name}` });
     }
 
+    /** @type {(item: any, opts?: any) => Promise<any>} */
+    const agentFnTyped = /** @type {any} */ (agentFn);
+
     const results = [];
     let totalScore = 0;
 
     for (const item of items) {
       try {
-        // Run agent (note: prompt override not yet supported)
-        const output = await agentFn(item);
-
-        // Judge with LLM
-        const judgment = await judgeOutput(
+        const result = await evaluateOneItem({
+          supabase,
+          runId: run.id,
+          agentFn: agentFnTyped,
           item,
-          output,
-          criteria || 'quality, accuracy, completeness',
-        );
-        totalScore += judgment.score;
-
-        // Store result
-        await supabase.from('eval_result').insert({
-          run_id: run.id,
-          input: item.payload,
-          actual_output: output,
-          score: judgment.score,
-          judge_reasoning: judgment.reasoning,
-          judge_model: 'gpt-4o-mini',
-          passed: judgment.score >= 0.7,
+          criteria,
         });
-
-        results.push({
-          itemId: item.id,
-          title: item.payload?.title || item.url,
-          score: judgment.score,
-          reasoning: judgment.reasoning,
-        });
+        results.push(result);
+        totalScore += result.score;
       } catch (err) {
         console.error(`Error evaluating item ${item.id}:`, err);
       }
@@ -197,10 +216,12 @@ router.post('/llm-judge', async (req, res) => {
     });
   } catch (error) {
     console.error('LLM Judge eval error:', error);
-    res.status(500).json({ error: error.message });
+    const message = error instanceof Error ? error.message : String(error);
+    res.status(500).json({ error: message });
   }
 });
 
+/** @param {any} item @param {any} output @param {string} criteria */
 async function judgeOutput(item, output, criteria) {
   const prompt = `You are evaluating an AI agent's output. Score it from 0.0 to 1.0 based on: ${criteria}
 
@@ -222,6 +243,7 @@ Respond in JSON format: {"score": 0.X, "reasoning": "brief explanation"}`;
   }
 }
 
+/** @param {any} item @param {any} outputA @param {any} outputB */
 async function judgeComparison(item, outputA, outputB) {
   const prompt = `Compare these two AI outputs for the same input. Which is better?
 

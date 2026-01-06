@@ -1,24 +1,109 @@
-import process from 'node:process';
-import { createClient } from '@supabase/supabase-js';
 import { traceLLMCall } from './tracing.js';
 import * as llm from './llm.js';
 import { insertRun, insertStep, updateStep, insertMetric } from './runner-db.js';
 import { writeEnrichmentMetaToQueue } from './runner-enrichment-meta.js';
 import { runAgentLogic } from './runner-run.js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
-// Shared Supabase client
-const supabase = createClient(
-  process.env.PUBLIC_SUPABASE_URL ?? '',
-  process.env.SUPABASE_SERVICE_KEY ?? '',
-);
+/** @param {any} context */
+function getPromptOverride(context) {
+  return context?.promptOverride ?? null;
+}
+
+/**
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {string} agentName
+ */
+async function fetchPromptConfigFromDb(supabase, agentName) {
+  const { data, error } = await supabase
+    .from('prompt_version')
+    .select('*')
+    .eq('agent_name', agentName)
+    .eq('stage', 'PRD')
+    .single();
+
+  if (error || !data) {
+    throw new Error(`❌ Missing active prompt for agent: ${agentName}`);
+  }
+
+  return data;
+}
+
+/**
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {string} agentName
+ * @param {any} promptConfig
+ * @param {any} context
+ */
+async function startRunLog(supabase, agentName, promptConfig, context) {
+  const { data: runLog, error: runError } = await insertRun(supabase, {
+    agentName,
+    promptConfig,
+    context,
+  });
+
+  if (runError) console.error('⚠️ Failed to log run start:', runError);
+  return runLog;
+}
+
+/**
+ * @param {any} options
+ * @param {any} trace
+ */
+function buildTracePayload(options, trace) {
+  return /** @type {any} */ ({
+    ...options,
+    queueId: /** @type {any} */ (options).queueId,
+    parentRunId: trace?.id,
+  });
+}
+
+/**
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {string} agentName
+ * @param {string} queueId
+ * @param {any} promptConfig
+ * @param {string} llmModel
+ */
+async function writeEnrichmentMetaToQueueSafe(
+  supabase,
+  agentName,
+  queueId,
+  promptConfig,
+  llmModel,
+) {
+  try {
+    return await writeEnrichmentMetaToQueue({
+      supabase,
+      agentName,
+      queueId,
+      promptConfig,
+      llmModel,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`⚠️ Error writing enrichment_meta: ${message}`);
+    return null;
+  }
+}
 
 export class AgentRunner {
+  /** @param {string} agentName */
   constructor(agentName) {
     this.agentName = agentName;
-    this.supabase = supabase;
+    /** @type {import('@supabase/supabase-js').SupabaseClient | null} */
+    this._supabase = null;
     this.runId = null;
     this.stepOrder = 0;
+    /** @type {any} */
     this.trace = null; // LangSmith trace
+  }
+
+  get supabase() {
+    if (!this._supabase) {
+      this._supabase = getSupabaseAdminClient();
+    }
+    return this._supabase;
   }
 
   get openai() {
@@ -87,25 +172,15 @@ export class AgentRunner {
   /**
    * Load prompt configuration - either from override or database
    */
+  /** @param {any} context */
   async loadPromptConfig(context) {
-    if (context.promptOverride) {
-      console.log(
-        `🔄 [${this.agentName}] Using prompt override: ${context.promptOverride.version}`,
-      );
-      return context.promptOverride;
+    const promptOverride = getPromptOverride(context);
+    if (promptOverride) {
+      console.log(`🔄 [${this.agentName}] Using prompt override: ${promptOverride.version}`);
+      return promptOverride;
     }
 
-    const { data, error: promptError } = await this.supabase
-      .from('prompt_version')
-      .select('*')
-      .eq('agent_name', this.agentName)
-      .eq('stage', 'PRD')
-      .single();
-
-    if (promptError || !data) {
-      throw new Error(`❌ Missing active prompt for agent: ${this.agentName}`);
-    }
-    return data;
+    return fetchPromptConfigFromDb(this.supabase, this.agentName);
   }
 
   /**
@@ -119,14 +194,7 @@ export class AgentRunner {
 
     const promptConfig = await this.loadPromptConfig(context);
 
-    const { data: runLog, error: runError } = await insertRun(this.supabase, {
-      agentName: this.agentName,
-      promptConfig,
-      context,
-    });
-
-    if (runError) console.error('⚠️ Failed to log run start:', runError);
-
+    const runLog = await startRunLog(this.supabase, this.agentName, promptConfig, context);
     this.runId = runLog?.id;
     return runAgentLogic({
       runner: this,
@@ -143,7 +211,7 @@ export class AgentRunner {
    * @param {object} options - LLM call details
    */
   async traceLLMCall(options) {
-    await traceLLMCall({ ...options, queueId: options.queueId, parentRunId: this.trace?.id });
+    await traceLLMCall(buildTracePayload(options, this.trace));
   }
 
   /**
@@ -154,22 +222,18 @@ export class AgentRunner {
    * @param {string} llmModel - LLM model used (from result.usage.model)
    */
   async writeEnrichmentMeta(queueId, promptConfig, llmModel) {
-    try {
-      const res = await writeEnrichmentMetaToQueue({
-        supabase: this.supabase,
-        agentName: this.agentName,
-        queueId,
-        promptConfig,
-        llmModel,
-      });
+    const res = await writeEnrichmentMetaToQueueSafe(
+      this.supabase,
+      this.agentName,
+      queueId,
+      promptConfig,
+      llmModel,
+    );
 
-      if (res?.stepKey) {
-        console.log(`📝 [${this.agentName}] Wrote enrichment_meta.${res.stepKey} to queue item`);
-      } else if (res?.error) {
-        console.warn(`⚠️ Failed to update enrichment_meta: ${res.error.message}`);
-      }
-    } catch (err) {
-      console.warn(`⚠️ Error writing enrichment_meta: ${err.message}`);
+    if (res?.stepKey) {
+      console.log(`📝 [${this.agentName}] Wrote enrichment_meta.${res.stepKey} to queue item`);
+    } else if (res?.error) {
+      console.warn(`⚠️ Failed to update enrichment_meta: ${res.error.message}`);
     }
   }
 }
