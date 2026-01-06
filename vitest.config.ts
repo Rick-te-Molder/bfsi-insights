@@ -25,12 +25,7 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       reportsDirectory: resolve(__dirname, 'coverage'),
-      include: [
-        'apps/web/**/*.ts',
-        'apps/admin/src/**/*.ts',
-        'apps/admin/src/**/*.tsx',
-        'services/agent-api/src/**/*.js',
-      ],
+      include: ['apps/web/**/*.ts', 'apps/admin/src/**/*.ts', 'apps/admin/src/**/*.tsx'],
       exclude: [
         '**/node_modules/**',
         '**/dist/**',
