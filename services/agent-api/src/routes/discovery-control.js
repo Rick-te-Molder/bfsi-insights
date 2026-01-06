@@ -4,18 +4,25 @@
  */
 
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
-import process from 'node:process';
 import { runDiscovery } from '../agents/discoverer.js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
 const router = express.Router();
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
+let supabase = null;
+
+function getSupabase() {
+  if (supabase) return supabase;
+  supabase = getSupabaseAdminClient();
+  return supabase;
+}
 
 // GET /api/discovery/status - Get discovery enabled status and pending count
-router.get('/status', async (req, res) => {
+router.get('/status', async (/** @type {any} */ req, /** @type {any} */ res) => {
   try {
     // Get discovery enabled flag
-    const { data: config } = await supabase
+    const { data: config } = await getSupabase()
       .from('system_config')
       .select('value')
       .eq('key', 'discovery_enabled')
@@ -24,14 +31,14 @@ router.get('/status', async (req, res) => {
     const enabled = config?.value ?? true;
 
     // Get count of items at discovery stage (status 100-109)
-    const { count: pendingCount } = await supabase
+    const { count: pendingCount } = await getSupabase()
       .from('ingestion_queue')
       .select('*', { count: 'exact', head: true })
       .gte('status_code', 100)
       .lt('status_code', 110);
 
     // Get count of enabled sources
-    const { count: sourceCount } = await supabase
+    const { count: sourceCount } = await getSupabase()
       .from('kb_source')
       .select('*', { count: 'exact', head: true })
       .eq('enabled', true);
@@ -42,13 +49,14 @@ router.get('/status', async (req, res) => {
       sourceCount: sourceCount || 0,
     });
   } catch (err) {
-    console.error('Discovery Status Error:', err);
-    res.status(500).json({ error: err.message });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Discovery Status Error:', message);
+    res.status(500).json({ error: message });
   }
 });
 
 // POST /api/discovery/toggle - Toggle discovery enabled/disabled
-router.post('/toggle', async (req, res) => {
+router.post('/toggle', async (/** @type {any} */ req, /** @type {any} */ res) => {
   try {
     const { enabled } = req.body;
 
@@ -56,7 +64,7 @@ router.post('/toggle', async (req, res) => {
       return res.status(400).json({ error: 'enabled must be a boolean' });
     }
 
-    const { error } = await supabase.from('system_config').upsert({
+    const { error } = await getSupabase().from('system_config').upsert({
       key: 'discovery_enabled',
       value: enabled,
       updated_at: new Date().toISOString(),
@@ -69,13 +77,14 @@ router.post('/toggle', async (req, res) => {
 
     res.json({ enabled, message: `Discovery ${enabled ? 'enabled' : 'disabled'}` });
   } catch (err) {
-    console.error('Discovery Toggle Error:', err);
-    res.status(500).json({ error: err.message });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Discovery Toggle Error:', message);
+    res.status(500).json({ error: message });
   }
 });
 
 // POST /api/discovery/run - Run manual discovery batch
-router.post('/run', async (req, res) => {
+router.post('/run', async (/** @type {any} */ req, /** @type {any} */ res) => {
   try {
     const { limit = 50 } = req.body;
 
@@ -90,8 +99,9 @@ router.post('/run', async (req, res) => {
       skipped: result.skipped || 0,
     });
   } catch (err) {
-    console.error('Discovery Run Error:', err);
-    res.status(500).json({ error: err.message });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Discovery Run Error:', message);
+    res.status(500).json({ error: message });
   }
 });
 

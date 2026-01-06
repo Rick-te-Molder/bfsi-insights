@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock Supabase using vi.hoisted
+// Mock the Supabase client factory using vi.hoisted
 const { mockSupabase } = vi.hoisted(() => {
   const mockSupabase = {
     from: vi.fn(),
@@ -8,8 +8,8 @@ const { mockSupabase } = vi.hoisted(() => {
   return { mockSupabase };
 });
 
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => mockSupabase),
+vi.mock('../../src/clients/supabase.js', () => ({
+  getSupabaseAdminClient: vi.fn(() => mockSupabase),
 }));
 
 // Mock status codes

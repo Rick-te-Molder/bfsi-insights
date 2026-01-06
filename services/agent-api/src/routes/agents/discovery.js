@@ -3,50 +3,37 @@
  * Run discovery agent on queued URLs
  */
 
-import process from 'node:process';
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
 import { runDiscovery } from '../../agents/discoverer.js';
-import { transitionByAgent } from '../../lib/queue-update.js';
-import { loadStatusCodes, getStatusCode } from '../../lib/status-codes.js';
 
 const router = express.Router();
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-router.post('/run/discovery', async (req, res) => {
+router.post('/run/discovery', async (/** @type {any} */ req, /** @type {any} */ res) => {
   try {
-    const { limit = 10, id } = req.body;
-    await loadStatusCodes();
-    let query = supabase
-      .from('ingestion_queue')
-      .select('*')
-      .eq('status_code', getStatusCode('DISCOVERED'));
+    const {
+      source,
+      limit = 10,
+      dryRun = false,
+      agentic = false,
+      hybrid = false,
+      premium = false,
+      skipEnabledCheck = false,
+    } = req.body;
 
-    if (id) query = query.eq('id', id);
-    else query = query.limit(limit);
-
-    const { data: items, error } = await query;
-
-    if (error) throw error;
-    if (!items.length) return res.json({ message: 'No items to discover' });
-
-    const results = [];
-    for (const item of items) {
-      const result = await runDiscovery(item);
-
-      await transitionByAgent(item.id, getStatusCode('FETCHED'), 'discoverer', {
-        changes: {
-          payload: { url: item.url, title: result.title, description: result.description },
-        },
-      });
-
-      results.push({ id: item.id, result });
-    }
-
-    res.json({ processed: results.length, results });
+    const result = await runDiscovery({
+      source,
+      limit,
+      dryRun,
+      agentic,
+      hybrid,
+      premium,
+      skipEnabledCheck,
+    });
+    res.json(result);
   } catch (err) {
-    console.error('Discovery Error:', err);
-    res.status(500).json({ error: err.message });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('Discovery Error:', message);
+    res.status(500).json({ error: message });
   }
 });
 

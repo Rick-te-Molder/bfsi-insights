@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock Supabase with taxonomy data
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => ({
+// Mock the Supabase client factory with taxonomy data
+vi.mock('../../src/clients/supabase.js', () => ({
+  getSupabaseAdminClient: vi.fn(() => ({
     from: vi.fn((tableName) => ({
       select: vi.fn(() => {
         const mockData = {

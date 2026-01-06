@@ -19,8 +19,8 @@ describe('lib/supabase', () => {
     mockCreateClient.mockClear();
   });
 
-  it('throws if PUBLIC_SUPABASE_URL is missing', () => {
-    delete process.env.PUBLIC_SUPABASE_URL;
+  it('throws if SUPABASE_URL is missing', () => {
+    delete process.env.SUPABASE_URL;
     process.env.SUPABASE_SERVICE_KEY = 'service-key';
 
     expect(() => getSupabase()).toThrow('CRITICAL: Supabase env vars missing');
@@ -28,17 +28,17 @@ describe('lib/supabase', () => {
   });
 
   it('throws if no key is available', () => {
-    process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
     delete process.env.SUPABASE_SERVICE_KEY;
-    delete process.env.PUBLIC_SUPABASE_ANON_KEY;
+    delete process.env.SUPABASE_ANON_KEY;
 
     expect(() => getSupabase()).toThrow('CRITICAL: Supabase env vars missing');
     expect(mockCreateClient).not.toHaveBeenCalled();
   });
 
   it('creates and caches a client (prefers service key, falls back to anon)', () => {
-    process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
-    process.env.PUBLIC_SUPABASE_ANON_KEY = 'anon-key';
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_ANON_KEY = 'anon-key';
 
     const first = getSupabase();
     const second = getSupabase();
@@ -49,7 +49,7 @@ describe('lib/supabase', () => {
   });
 
   it('resetSupabaseForTests clears cached client', () => {
-    process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
     process.env.SUPABASE_SERVICE_KEY = 'service-key';
 
     const first = getSupabase();

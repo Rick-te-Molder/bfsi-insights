@@ -21,6 +21,8 @@ const {
   geographyWithCounts,
 } = await loadPublicationsData();
 
+const publicSupabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+
 const expandItemThumb = (t: string | undefined) => {
   if (!t) return [];
   return /\.(webp|png|jpe?g)$/i.test(t) ? [t] : [`${t}.webp`, `${t}.png`, `${t}.jpg`];
@@ -35,7 +37,9 @@ const expandItemThumb = (t: string | undefined) => {
 
       let href = null;
       if (first.thumbnail_path && first.thumbnail_bucket) {
-        href = `${import.meta.env.PUBLIC_SUPABASE_URL}/storage/v1/object/public/${first.thumbnail_bucket}/${first.thumbnail_path}`;
+        if (publicSupabaseUrl) {
+          href = `${publicSupabaseUrl}/storage/v1/object/public/${first.thumbnail_bucket}/${first.thumbnail_path}`;
+        }
       } else if (first.thumbnail) {
         const candidates = expandItemThumb(first.thumbnail);
         href = candidates[0];

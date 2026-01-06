@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import './env-shim.js';
 import process from 'node:process';
 import express from 'express';
 import agentRoutes from './routes/agents.js';
@@ -7,7 +6,6 @@ import agentJobRoutes from './routes/agent-jobs.js';
 import discoveryControlRoutes from './routes/discovery-control.js';
 import evalsRoutes from './routes/evals.js';
 import { requireApiKey } from './middleware/auth.js';
-import { getSupabaseAdminClient } from './clients/supabase.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -63,23 +61,8 @@ app.post('/api/trigger-build', async (/** @type {any} */ req, /** @type {any} */
       return res.status(500).json({ ok: false, message: 'Build hook failed' });
     }
 
-    // Update approved items (330) to published (400)
-    const supabase = getSupabaseAdminClient();
-    const { data: updated, error: updateError } = await supabase
-      .from('ingestion_queue')
-      .update({ status_code: 400 })
-      .eq('status_code', 330)
-      .select('id');
-
-    const publishedCount = updated?.length || 0;
-    if (updateError) {
-      console.warn('⚠️ Failed to update status codes:', updateError.message);
-    } else if (publishedCount > 0) {
-      console.log(`✅ Updated ${publishedCount} items from approved to published`);
-    }
-
     console.log('✅ Cloudflare build triggered');
-    res.json({ ok: true, message: 'Build triggered', publishedCount });
+    res.json({ ok: true, message: 'Build triggered' });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     res.status(500).json({ ok: false, message });

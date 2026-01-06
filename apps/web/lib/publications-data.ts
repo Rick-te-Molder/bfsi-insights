@@ -1,8 +1,7 @@
 /**
  * Data loading and processing for publications page
  */
-import { createClient } from '@supabase/supabase-js';
-import { getAllPublications } from './supabase';
+import { getAllPublications, getSupabaseClient } from './supabase';
 import type { Publication } from './supabase';
 
 export type TaxonomyItem = {
@@ -17,11 +16,6 @@ export type TaxonomyItem = {
 
 export type FilterValue = { value: string; count: number; label: string };
 export type FilterConfig = { column_name: string; display_label: string; sort_order: number };
-
-const supabase = createClient(
-  import.meta.env.PUBLIC_SUPABASE_URL,
-  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-);
 
 export function buildHierarchy(items: TaxonomyItem[] | null): TaxonomyItem[] {
   if (!items) return [];
@@ -49,51 +43,68 @@ export function addCounts(items: TaxonomyItem[], countMap: Map<string, number>):
   }));
 }
 
+/** @param {Map<string, number>} counts @param {string} raw */
+function incrementCount(counts: Map<string, number>, raw: string) {
+  counts.set(raw, (counts.get(raw) || 0) + 1);
+}
+
+/** @param {Publication[]} publications @param {keyof Publication} field */
+function countValues(publications: Publication[], field: keyof Publication) {
+  const counts = new Map<string, number>();
+  for (const p of publications) {
+    const val = p[field];
+    if (Array.isArray(val)) val.forEach((v) => v && incrementCount(counts, String(v)));
+    else if (val) incrementCount(counts, String(val));
+  }
+  return counts;
+}
+
+/** @param {keyof Publication} field @param {FilterValue[]} values */
+function sortFilterValues(field: keyof Publication, values: FilterValue[]) {
+  const audienceOrder = ['executive', 'functional_specialist', 'engineer', 'researcher'];
+  return values.sort((a, b) => {
+    if (field === 'audience') {
+      const ai = audienceOrder.indexOf(a.value.toLowerCase());
+      const bi = audienceOrder.indexOf(b.value.toLowerCase());
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+    }
+    return a.value.localeCompare(b.value);
+  });
+}
+
+/** @param {Map<string, number>} counts */
+function toFilterValues(counts: Map<string, number>) {
+  return Array.from(counts.entries()).map(([value, count]) => {
+    const displayValue = value === 'functional_specialist' ? 'Functional Specialist' : value;
+    return { value, count, label: `${displayValue} (${count})` };
+  });
+}
+
 export function createValuesWithCounts(
   publications: Publication[],
   field: keyof Publication,
 ): FilterValue[] {
-  const counts = new Map<string, number>();
-
-  publications.forEach((p) => {
-    const val = p[field];
-    if (Array.isArray(val)) {
-      val.forEach((v) => {
-        if (v) counts.set(String(v), (counts.get(String(v)) || 0) + 1);
-      });
-    } else if (val) {
-      counts.set(String(val), (counts.get(String(val)) || 0) + 1);
-    }
-  });
-
-  // Custom sort order for audience
-  const audienceOrder = ['executive', 'functional_specialist', 'engineer', 'researcher'];
-
-  return Array.from(counts.entries())
-    .map(([value, count]) => {
-      // Format display name for functional_specialist
-      const displayValue = value === 'functional_specialist' ? 'Functional Specialist' : value;
-      return {
-        value,
-        count,
-        label: `${displayValue} (${count})`,
-      };
-    })
-    .sort((a, b) => {
-      if (field === 'audience') {
-        const aIndex = audienceOrder.indexOf(a.value.toLowerCase());
-        const bIndex = audienceOrder.indexOf(b.value.toLowerCase());
-        if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-        if (aIndex !== -1) return -1;
-        if (bIndex !== -1) return 1;
-      }
-      return a.value.localeCompare(b.value);
-    });
+  return sortFilterValues(field, toFilterValues(countValues(publications, field)));
 }
 
-export async function loadPublicationsData() {
-  const publications = await getAllPublications();
+function emptyPublicationsData() {
+  return {
+    publications: [],
+    filters: [],
+    flatFilters: [],
+    values: {},
+    industryWithCounts: [],
+    processWithCounts: [],
+    geographyWithCounts: [],
+  };
+}
 
+/** @param {NonNullable<ReturnType<typeof getSupabaseClient>>} supabase */
+async function fetchTaxonomyAndFilterData(
+  supabase: NonNullable<ReturnType<typeof getSupabaseClient>>,
+) {
   const [filterConfigRes, industryRes, processRes, geographyRes] = await Promise.all([
     supabase
       .from('ref_filter_config')
@@ -113,45 +124,55 @@ export async function loadPublicationsData() {
       .select('code, name, level, parent_code, sort_order')
       .order('sort_order'),
   ]);
+  return { filterConfigRes, industryRes, processRes, geographyRes };
+}
 
-  const filters = (filterConfigRes.data || []) as FilterConfig[];
-  const flatFilters = filters.filter((f) => !['industry', 'geography'].includes(f.column_name));
-
-  // Build hierarchies
-  const industryHierarchy = buildHierarchy(industryRes.data as TaxonomyItem[] | null);
-  const processHierarchy = buildHierarchy(processRes.data as TaxonomyItem[] | null);
-  const geographyHierarchy = buildHierarchy(geographyRes.data as TaxonomyItem[] | null);
-
-  // Count publications per taxonomy
+/** @param {Publication[]} publications */
+function buildTaxonomyCounts(publications: Publication[]) {
   const countByIndustry = new Map<string, number>();
   const countByProcess = new Map<string, number>();
   const countByGeography = new Map<string, number>();
+  for (const p of publications) {
+    (p.industries || (p.industry ? [p.industry] : [])).forEach(
+      (code: string) => code && incrementCount(countByIndustry, code),
+    );
+    (p.processes || []).forEach((code: string) => code && incrementCount(countByProcess, code));
+    if (p.geography) incrementCount(countByGeography, p.geography);
+  }
+  return { countByIndustry, countByProcess, countByGeography };
+}
 
-  publications.forEach((p) => {
-    (p.industries || (p.industry ? [p.industry] : [])).forEach((code: string) => {
-      if (code) countByIndustry.set(code, (countByIndustry.get(code) || 0) + 1);
-    });
-    (p.processes || []).forEach((code: string) => {
-      if (code) countByProcess.set(code, (countByProcess.get(code) || 0) + 1);
-    });
-    if (p.geography)
-      countByGeography.set(p.geography, (countByGeography.get(p.geography) || 0) + 1);
-  });
-
-  // Build filter values
+/** @param {FilterConfig[]} filters @param {Publication[]} publications */
+function buildValues(filters: FilterConfig[], publications: Publication[]) {
   const values: Record<string, FilterValue[]> = {};
-  filters.forEach((filter) => {
+  for (const filter of filters) {
     values[filter.column_name] = createValuesWithCounts(
       publications,
       filter.column_name as keyof Publication,
     );
-  });
+  }
+  return values;
+}
+
+export async function loadPublicationsData() {
+  const supabase = getSupabaseClient();
+  if (!supabase) return emptyPublicationsData();
+  const publications = await getAllPublications();
+  const { filterConfigRes, industryRes, processRes, geographyRes } =
+    await fetchTaxonomyAndFilterData(supabase);
+  const filters = (filterConfigRes.data || []) as FilterConfig[];
+  const flatFilters = filters.filter((f) => !['industry', 'geography'].includes(f.column_name));
+
+  const industryHierarchy = buildHierarchy(industryRes.data as TaxonomyItem[] | null);
+  const processHierarchy = buildHierarchy(processRes.data as TaxonomyItem[] | null);
+  const geographyHierarchy = buildHierarchy(geographyRes.data as TaxonomyItem[] | null);
+  const { countByIndustry, countByProcess, countByGeography } = buildTaxonomyCounts(publications);
 
   return {
     publications,
     filters,
     flatFilters,
-    values,
+    values: buildValues(filters, publications),
     industryWithCounts: addCounts(industryHierarchy, countByIndustry),
     processWithCounts: addCounts(processHierarchy, countByProcess),
     geographyWithCounts: addCounts(geographyHierarchy, countByGeography),

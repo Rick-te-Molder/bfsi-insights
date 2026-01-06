@@ -4,11 +4,31 @@ import { normalizeAuthors } from './authors';
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+const supabaseRequired =
+  import.meta.env.PUBLIC_SUPABASE_REQUIRED === '1' ||
+  import.meta.env.SUPABASE_REQUIRED === '1' ||
+  (typeof process !== 'undefined' && process.env.SUPABASE_REQUIRED === '1');
+
+let didWarnMissingEnv = false;
+
+/** @param {string} context */
+function warnMissingEnvOnce(context: string) {
+  if (didWarnMissingEnv) return;
+  didWarnMissingEnv = true;
+  console.warn(
+    `WARNING: PUBLIC_SUPABASE_URL / PUBLIC_SUPABASE_ANON_KEY not set. ${context} (set SUPABASE_REQUIRED=1 to enforce).`,
+  );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const hasSupabaseEnvVars = Boolean(supabaseUrl && supabaseAnonKey);
+
+/** @returns {ReturnType<typeof createClient> | null} */
+export function getSupabaseClient() {
+  if (hasSupabaseEnvVars) return createClient(supabaseUrl, supabaseAnonKey);
+  if (supabaseRequired) throw new Error('Missing Supabase environment variables');
+  warnMissingEnvOnce('Skipping Supabase-backed data during build');
+  return null;
+}
 
 // ------------------------------------------------------------
 // Publication type based on kb_publication_pretty view
@@ -68,6 +88,8 @@ function normalizePublication(row: any): Publication {
 // Fetch all published publications
 // ------------------------------------------------------------
 export async function getAllPublications(): Promise<Publication[]> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
   const { data, error } = await supabase
     .from('kb_publication_pretty')
     .select('*')
@@ -86,6 +108,8 @@ export async function getAllPublications(): Promise<Publication[]> {
 // Fetch a single publication by slug
 // ------------------------------------------------------------
 export async function getPublicationBySlug(slug: string): Promise<Publication | null> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return null;
   const { data, error } = await supabase
     .from('kb_publication_pretty')
     .select('*')
@@ -107,6 +131,8 @@ export async function getPublicationBySlug(slug: string): Promise<Publication | 
 export async function getFilteredPublications(
   filters: Record<string, string>,
 ): Promise<Publication[]> {
+  const supabase = getSupabaseClient();
+  if (!supabase) return [];
   let query = supabase.from('kb_publication_pretty').select('*').eq('status', 'published');
 
   for (const [key, value] of Object.entries(filters)) {

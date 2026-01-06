@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+process.env.SUPABASE_URL = 'https://example.supabase.co';
 process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
 
 const { mockSupabase } = vi.hoisted(() => {
@@ -23,8 +23,8 @@ const { mockSupabase } = vi.hoisted(() => {
   return { mockSupabase };
 });
 
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => mockSupabase),
+vi.mock('../../src/clients/supabase.js', () => ({
+  getSupabaseAdminClient: vi.fn(() => mockSupabase),
 }));
 
 import {

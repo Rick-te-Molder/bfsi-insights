@@ -6,12 +6,20 @@
  * BFSI keywords and exclusion patterns.
  */
 
-import process from 'node:process';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
+let supabase = null;
+
+/** @returns {import('@supabase/supabase-js').SupabaseClient} */
+function getSupabase() {
+  if (supabase) return supabase;
+  supabase = getSupabaseAdminClient();
+  return supabase;
+}
 
 // Cache for discovery config
+/** @type {{ keywords: string[]; exclusionPatterns: RegExp[] } | null} */
 let discoveryConfig = null;
 
 /**
@@ -27,78 +35,65 @@ function getDefaultExclusionPatterns() {
   ];
 }
 
-/**
- * Load discovery configuration from database
- * - BFSI keywords derived from bfsi_industry and bfsi_topic labels
- * - Exclusion patterns from discovery_filter prompt
- */
-export async function loadDiscoveryConfig() {
-  if (discoveryConfig) return discoveryConfig;
+/** Load taxonomy labels from a table @param {string} table */
+async function loadTaxonomyLabels(table) {
+  const { data } = await getSupabase().from(table).select('label').order('sort_order');
+  return data || [];
+}
 
-  console.log('   📚 Loading discovery config from database...');
-
-  // 1. Load BFSI keywords from industry taxonomy
-  const { data: industries } = await supabase
-    .from('bfsi_industry')
-    .select('label')
-    .order('sort_order');
-
-  // 2. Load BFSI keywords from topic taxonomy
-  const { data: topics } = await supabase.from('bfsi_topic').select('label').order('sort_order');
-
-  // 3. Load exclusion patterns from prompt_version (discoverer-config)
-  const { data: filterConfig } = await supabase
+/** Load exclusion config from prompt_version */
+async function loadExclusionConfig() {
+  const { data } = await getSupabase()
     .from('prompt_version')
     .select('prompt_text')
     .eq('agent_name', 'discoverer-config')
     .eq('stage', 'PRD')
     .single();
+  return data;
+}
 
-  // Extract keywords from taxonomy labels
-  const keywordsFromTaxonomy = new Set();
-
-  // Add industry labels as keywords
-  for (const ind of industries || []) {
-    const words = ind.label.toLowerCase().split(/[\s&-]+/);
-    words.forEach((w) => {
-      if (w.length > 2) keywordsFromTaxonomy.add(w);
+/** @param {any[]} items Extract keywords from taxonomy label items */
+function extractKeywordsFromLabels(items) {
+  const keywords = new Set();
+  for (const item of items) {
+    const words = item.label.toLowerCase().split(/[\s&-]+/);
+    words.forEach((/** @type {string} */ w) => {
+      if (w.length > 2) keywords.add(w);
     });
   }
+  return keywords;
+}
 
-  // Add topic labels as keywords
-  for (const topic of topics || []) {
-    const words = topic.label.toLowerCase().split(/[\s&-]+/);
-    words.forEach((w) => {
-      if (w.length > 2) keywordsFromTaxonomy.add(w);
-    });
+/** @param {any} filterConfig Parse exclusion patterns from config */
+function parseExclusionPatterns(filterConfig) {
+  if (!filterConfig?.prompt_text) return getDefaultExclusionPatterns();
+  try {
+    const config = JSON.parse(filterConfig.prompt_text);
+    return (config.exclusion_patterns || []).map((/** @type {string} */ p) => new RegExp(p, 'i'));
+  } catch {
+    return getDefaultExclusionPatterns();
   }
+}
 
-  // Add core BFSI terms that might not be in taxonomy labels
-  const coreBfsiTerms = ['bank', 'finance', 'insurance', 'fintech', 'bfsi'];
-  coreBfsiTerms.forEach((t) => keywordsFromTaxonomy.add(t));
+/** Load discovery configuration from database */
+export async function loadDiscoveryConfig() {
+  if (discoveryConfig) return discoveryConfig;
+  console.log('   📚 Loading discovery config from database...');
 
-  // Parse exclusion patterns from prompt config (JSON format expected)
-  let exclusionPatterns = [];
-  if (filterConfig?.prompt_text) {
-    try {
-      const config = JSON.parse(filterConfig.prompt_text);
-      exclusionPatterns = (config.exclusion_patterns || []).map((p) => new RegExp(p, 'i'));
-    } catch {
-      exclusionPatterns = getDefaultExclusionPatterns();
-    }
-  } else {
-    exclusionPatterns = getDefaultExclusionPatterns();
-  }
+  const [industries, topics, filterConfig] = await Promise.all([
+    loadTaxonomyLabels('bfsi_industry'),
+    loadTaxonomyLabels('bfsi_topic'),
+    loadExclusionConfig(),
+  ]);
 
-  discoveryConfig = {
-    keywords: Array.from(keywordsFromTaxonomy),
-    exclusionPatterns,
-  };
+  const keywords = extractKeywordsFromLabels([...industries, ...topics]);
+  ['bank', 'finance', 'insurance', 'fintech', 'bfsi'].forEach((t) => keywords.add(t));
+  const exclusionPatterns = parseExclusionPatterns(filterConfig);
 
+  discoveryConfig = { keywords: Array.from(keywords), exclusionPatterns };
   console.log(
     `   ✅ Loaded ${discoveryConfig.keywords.length} keywords, ${exclusionPatterns.length} exclusion patterns`,
   );
-
   return discoveryConfig;
 }
 
@@ -112,6 +107,7 @@ export function clearDiscoveryConfigCache() {
 /**
  * Check if a title looks like it was extracted from a URL slug (poor quality)
  */
+/** @param {string | null | undefined} title */
 export function isPoorTitle(title) {
   if (!title) return true;
   if (title.length < 10) return true;

@@ -12,7 +12,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock Supabase before importing the module
+// Mock the Supabase client factory
 const mockSelect = vi.fn();
 const mockOrder = vi.fn();
 const mockFrom = vi.fn(() => ({
@@ -21,8 +21,8 @@ const mockFrom = vi.fn(() => ({
   }),
 }));
 
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => ({
+vi.mock('../../src/clients/supabase.js', () => ({
+  getSupabaseAdminClient: vi.fn(() => ({
     from: mockFrom,
   })),
 }));

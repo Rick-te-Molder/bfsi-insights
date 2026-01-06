@@ -5,23 +5,23 @@ export const prerender = true;
 import Base from '../layouts/Base.astro';
 import { getAllPublications } from '../lib/supabase';
 import type { Publication } from '../lib/supabase';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseClient } from '../lib/supabase';
 import PublicationCard from '../features/publications/PublicationCard.astro';
 
 // Fetch enough publications to ensure we have 6 per persona
 const allPublications: Publication[] = await getAllPublications();
 
 // Supabase client for audience metadata
-const supabase = createClient(
-  import.meta.env.PUBLIC_SUPABASE_URL,
-  import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-);
+const supabase = getSupabaseClient();
+const publicSupabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 
 // Load audience types from kb_audience (with fallback for pre-migration builds)
-const { data: audienceData, error: audienceError } = await supabase
-  .from('kb_audience')
-  .select('value, label')
-  .order('sort_order', { ascending: true });
+const { data: audienceData, error: audienceError } = supabase
+  ? await supabase
+      .from('kb_audience')
+      .select('value, label')
+      .order('sort_order', { ascending: true })
+  : { data: null, error: new Error('Missing Supabase env vars') };
 
 // Fallback values if table doesn't exist yet (pre-migration) or returns empty
 const fallbackAudiences = [
@@ -34,11 +34,13 @@ const fallbackAudiences = [
 // Try kb_role as legacy fallback if kb_audience doesn't exist
 let finalAudienceData = audienceData;
 if (audienceError || !audienceData || audienceData.length === 0) {
-  const { data: legacyData } = await supabase
-    .from('kb_role')
-    .select('value, label')
-    .order('sort_order', { ascending: true });
-  finalAudienceData = legacyData;
+  if (supabase) {
+    const { data: legacyData } = await supabase
+      .from('kb_role')
+      .select('value, label')
+      .order('sort_order', { ascending: true });
+    finalAudienceData = legacyData;
+  }
 }
 
 const audienceOptions = (
@@ -86,7 +88,9 @@ const expandItemThumb = (t?: string | null) => {
 
       let href = null;
       if (first.thumbnail_path && first.thumbnail_bucket) {
-        href = `${import.meta.env.PUBLIC_SUPABASE_URL}/storage/v1/object/public/${first.thumbnail_bucket}/${first.thumbnail_path}`;
+        if (publicSupabaseUrl) {
+          href = `${publicSupabaseUrl}/storage/v1/object/public/${first.thumbnail_bucket}/${first.thumbnail_path}`;
+        }
       } else if (first.thumbnail) {
         const candidates = expandItemThumb(first.thumbnail);
         href = candidates[0];
@@ -170,6 +174,25 @@ const expandItemThumb = (t?: string | null) => {
       }
     }
 
+    /** @param {HTMLSelectElement} filterEl @param {string[]} audiences */
+    function applyInitialAudience(filterEl, audiences) {
+      const saved = localStorage.getItem('bfsi-audience-preference');
+      const fallback = 'executive';
+      if (saved && saved !== 'all' && audiences.includes(saved)) return saved;
+      localStorage.setItem('bfsi-audience-preference', fallback);
+      return fallback;
+    }
+
+    /** @param {HTMLElement} gridEl @param {string} audience */
+    function filterCards(gridEl, audience) {
+      /** @type {HTMLElement[]} */
+      const cards = Array.from(gridEl.children).filter((child) => child instanceof HTMLElement);
+      cards.forEach((card) => {
+        const cardAudience = card.getAttribute('data-audience');
+        card.style.display = audience === 'all' || cardAudience === audience ? '' : 'none';
+      });
+    }
+
     function initAudienceFilter() {
       const filterEl = document.getElementById('persona-filter');
       if (!(filterEl instanceof HTMLSelectElement)) return;
@@ -177,31 +200,11 @@ const expandItemThumb = (t?: string | null) => {
       if (!(gridEl instanceof HTMLElement)) return;
 
       const audiences = getValidAudiences();
-      const saved = localStorage.getItem('bfsi-audience-preference');
-      const defaultAudience = 'executive';
-
-      if (saved && saved !== 'all' && audiences.includes(saved)) {
-        filterEl.value = saved;
-      } else {
-        filterEl.value = defaultAudience;
-        localStorage.setItem('bfsi-audience-preference', defaultAudience);
-      }
-
-      const filterPublications = () => {
-        const audience = filterEl.value;
-        /** @type {HTMLElement[]} */
-        const cards = Array.from(gridEl.children).filter((child) => child instanceof HTMLElement);
-        cards.forEach((card) => {
-          const cardAudience = card.getAttribute('data-audience');
-          card.style.display = audience === 'all' || cardAudience === audience ? '' : 'none';
-        });
-      };
-
-      filterPublications();
-
+      filterEl.value = applyInitialAudience(filterEl, audiences);
+      filterCards(gridEl, filterEl.value);
       filterEl.addEventListener('change', () => {
         localStorage.setItem('bfsi-audience-preference', filterEl.value);
-        filterPublications();
+        filterCards(gridEl, filterEl.value);
       });
     }
 
@@ -215,6 +218,29 @@ const expandItemThumb = (t?: string | null) => {
     /**
      * @param {Document | HTMLElement} [root]
      */
+    /** @param {HTMLElement | null} placeholder @param {HTMLImageElement} img */
+    function hidePlaceholderAndShowImage(placeholder, img) {
+      img.classList.remove('opacity-0');
+      if (placeholder) placeholder.style.display = 'none';
+    }
+
+    /** @param {HTMLElement | null} placeholder @param {HTMLImageElement} img */
+    function advanceFallbackImage(placeholder, img) {
+      const n = img.dataset?.next ?? '';
+      if (n) {
+        const parts = n.split('|');
+        const nx = parts.shift();
+        img.dataset.next = parts.join('|');
+        if (nx) {
+          img.src = nx;
+          return;
+        }
+      }
+      img.style.display = 'none';
+      if (placeholder) placeholder.style.display = 'none';
+    }
+
+    /** @param {Document | HTMLElement} [root] */
     function enhanceImages(root) {
       const container = root ?? document;
       /** @type {HTMLImageElement[]} */
@@ -223,35 +249,13 @@ const expandItemThumb = (t?: string | null) => {
       );
 
       imgs.forEach((img) => {
-        const placeholder = img.previousElementSibling;
-
-        const onload = () => {
-          img.classList.remove('opacity-0');
-          if (placeholder && placeholder instanceof HTMLElement) placeholder.style.display = 'none';
-        };
-
-        const onerror = () => {
-          const n = img.dataset?.next ?? '';
-          if (n) {
-            const parts = n.split('|');
-            const nx = parts.shift();
-            img.dataset.next = parts.join('|');
-            if (nx) {
-              img.src = nx;
-              return;
-            }
-          }
-          img.style.display = 'none';
-          if (placeholder && placeholder instanceof HTMLElement) placeholder.style.display = 'none';
-        };
-
+        const placeholder =
+          img.previousElementSibling instanceof HTMLElement ? img.previousElementSibling : null;
+        const onload = () => hidePlaceholderAndShowImage(placeholder, img);
+        const onerror = () => advanceFallbackImage(placeholder, img);
         img.addEventListener('load', onload, { once: true });
         img.addEventListener('error', onerror);
-
-        if (img.complete) {
-          if (img.naturalWidth > 0) onload();
-          else onerror();
-        }
+        if (img.complete) (img.naturalWidth > 0 ? onload : onerror)();
       });
     }
 

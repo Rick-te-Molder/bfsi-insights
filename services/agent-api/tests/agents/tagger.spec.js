@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 
 // Mock environment variables
-vi.stubEnv('PUBLIC_SUPABASE_URL', 'https://test.supabase.co');
+vi.stubEnv('SUPABASE_URL', 'https://test.supabase.co');
 vi.stubEnv('SUPABASE_SERVICE_KEY', 'test-key');
 
-// Mock Supabase before importing - support chained query calls
+// Mock the Supabase client factory - support chained query calls
 // KB-231: Updated to support .eq().not() chain for taxonomy_config queries
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => ({
+vi.mock('../../src/clients/supabase.js', () => ({
+  getSupabaseAdminClient: vi.fn(() => ({
     from: vi.fn((tableName) => ({
       select: vi.fn(() => {
         // Return different data based on table

@@ -3,18 +3,20 @@
  * See docs/architecture/pipeline-status-codes.md for documentation
  */
 
-import process from 'node:process';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabaseClient = null;
 
+/** @returns {import('@supabase/supabase-js').SupabaseClient} */
 function getSupabaseClient() {
   if (supabaseClient) return supabaseClient;
-  supabaseClient = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  supabaseClient = getSupabaseAdminClient();
   return supabaseClient;
 }
 
 // Cached status codes (loaded once at startup)
+/** @type {Record<string, number | undefined> | null} */
 let statusCache = null;
 
 /**
@@ -35,7 +37,7 @@ export async function loadStatusCodes() {
 
   // Convert to object with UPPER_SNAKE_CASE keys
   // e.g., 'pending_enrichment' -> 'PENDING_ENRICHMENT': 200
-  statusCache = {};
+  statusCache = /** @type {Record<string, number | undefined>} */ ({});
   for (const row of data) {
     const key = row.name.toUpperCase().replaceAll('-', '_');
     statusCache[key] = row.code;
@@ -49,6 +51,7 @@ export async function loadStatusCodes() {
  * Get a specific status code by name
  * Throws if status codes not loaded yet
  */
+/** @param {string} name */
 export function getStatusCode(name) {
   if (!statusCache) {
     throw new Error('Status codes not loaded. Call loadStatusCodes() first.');
@@ -78,9 +81,10 @@ export const STATUS = new Proxy(
       if (!statusCache) {
         throw new Error('Status codes not loaded. Call loadStatusCodes() first.');
       }
-      const code = statusCache[prop];
+      const key = typeof prop === 'string' ? prop : String(prop);
+      const code = statusCache[key];
       if (code === undefined) {
-        throw new Error(`Unknown status: ${prop}`);
+        throw new Error(`Unknown status: ${key}`);
       }
       return code;
     },

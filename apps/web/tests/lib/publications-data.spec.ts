@@ -2,6 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock the supabase lib to avoid env var check
 vi.mock('../../lib/supabase', () => ({
+  getSupabaseClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockResolvedValue({ data: [], error: null }),
+    })),
+  })),
   getAllPublications: vi.fn(() => Promise.resolve([])),
 }));
 

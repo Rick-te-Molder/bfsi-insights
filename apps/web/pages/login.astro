@@ -66,12 +66,13 @@ import Base from '../layouts/Base.astro';
   </div>
 
   <script>
+    // @ts-check
     import { createClient } from '@supabase/supabase-js';
 
-    const supabase = createClient(
-      import.meta.env.PUBLIC_SUPABASE_URL,
-      import.meta.env.PUBLIC_SUPABASE_ANON_KEY,
-    );
+    const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+    const supabase =
+      supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
     const form = document.getElementById('login-form');
     const emailInput = document.getElementById('email');
@@ -81,65 +82,81 @@ import Base from '../layouts/Base.astro';
     const btnText = document.getElementById('btn-text');
     const btnLoading = document.getElementById('btn-loading');
 
-    if (form && emailInput && passwordInput && errorDiv && submitBtn && btnText && btnLoading) {
-      function showError(message) {
+    /**
+     * @returns {{
+     *   form: HTMLFormElement;
+     *   emailInput: HTMLInputElement;
+     *   passwordInput: HTMLInputElement;
+     *   errorDiv: HTMLDivElement;
+     *   submitBtn: HTMLButtonElement;
+     *   btnText: HTMLElement;
+     *   btnLoading: HTMLElement;
+     * } | null}
+     */
+    function getLoginElements() {
+      if (!(form instanceof HTMLFormElement)) return null;
+      if (!(emailInput instanceof HTMLInputElement)) return null;
+      if (!(passwordInput instanceof HTMLInputElement)) return null;
+      if (!(errorDiv instanceof HTMLDivElement)) return null;
+      if (!(submitBtn instanceof HTMLButtonElement)) return null;
+      if (!(btnText instanceof HTMLElement)) return null;
+      if (!(btnLoading instanceof HTMLElement)) return null;
+      return { form, emailInput, passwordInput, errorDiv, submitBtn, btnText, btnLoading };
+    }
+
+    const makeErrorFns = (/** @type {HTMLDivElement} */ errorDiv) => ({
+      show: (/** @type {string} */ message) => {
         errorDiv.textContent = message;
         errorDiv.classList.remove('hidden');
-      }
-
-      function hideError() {
+      },
+      hide: () => {
         errorDiv.classList.add('hidden');
         errorDiv.textContent = '';
+      },
+    });
+
+    const setLoading = (
+      /** @type {HTMLButtonElement} */ submitBtn,
+      /** @type {HTMLElement} */ btnText,
+      /** @type {HTMLElement} */ btnLoading,
+      /** @type {boolean} */ isLoading,
+    ) => {
+      submitBtn.disabled = isLoading;
+      btnText.classList.toggle('hidden', isLoading);
+      btnLoading.classList.toggle('hidden', !isLoading);
+    };
+
+    const handleSubmit = async (
+      /** @type {SubmitEvent} */ e,
+      /** @type {NonNullable<ReturnType<typeof getLoginElements>>} */ els,
+      /** @type {{ show: (message: string) => void; hide: () => void }} */ errFns,
+    ) => {
+      e.preventDefault();
+      errFns.hide();
+      setLoading(els.submitBtn, els.btnText, els.btnLoading, true);
+      try {
+        if (!supabase) throw new Error('Supabase is not configured for this build');
+        const email = els.emailInput.value.trim();
+        const password = els.passwordInput.value;
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) return errFns.show(error.message);
+        if (!data.session) return errFns.show('No session returned. Please try again.');
+        const opts = 'path=/; max-age=604800; samesite=lax';
+        document.cookie = `sb-access-token=${data.session.access_token}; ${opts}`;
+        document.cookie = `sb-refresh-token=${data.session.refresh_token}; ${opts}`;
+        window.location.href = 'https://admin.bfsiinsights.com/review';
+      } catch (err) {
+        errFns.show('An unexpected error occurred. Please try again.');
+        console.error('Login error:', err);
+      } finally {
+        setLoading(els.submitBtn, els.btnText, els.btnLoading, false);
       }
+    };
 
-      function setLoading(isLoading) {
-        submitBtn.disabled = isLoading;
-        if (isLoading) {
-          btnText.classList.add('hidden');
-          btnLoading.classList.remove('hidden');
-        } else {
-          btnText.classList.remove('hidden');
-          btnLoading.classList.add('hidden');
-        }
-      }
-
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        hideError();
-        setLoading(true);
-
-        const email = emailInput.value.trim();
-        const password = passwordInput.value;
-
-        try {
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-
-          if (error) {
-            showError(error.message);
-            setLoading(false);
-            return;
-          }
-
-          if (!data.session) {
-            showError('No session returned. Please try again.');
-            setLoading(false);
-            return;
-          }
-
-          const cookieOptions = 'path=/; max-age=604800; samesite=lax';
-          document.cookie = `sb-access-token=${data.session.access_token}; ${cookieOptions}`;
-          document.cookie = `sb-refresh-token=${data.session.refresh_token}; ${cookieOptions}`;
-
-          window.location.href = 'https://admin.bfsiinsights.com/review';
-        } catch (err) {
-          showError('An unexpected error occurred. Please try again.');
-          setLoading(false);
-          console.error('Login error:', err);
-        }
-      });
+    const els = getLoginElements();
+    if (els) {
+      const errFns = makeErrorFns(els.errorDiv);
+      els.form.addEventListener('submit', (e) => handleSubmit(e, els, errFns));
     }
   </script>
 </Base>
