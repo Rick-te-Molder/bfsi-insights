@@ -6,8 +6,8 @@ Functions exceeding size limits (source: 30 lines, test: 50 lines)
 
 ## Summary
 
-- **Total large functions:** 83
-- **Files affected:** 68
+- **Total large functions:** 81
+- **Files affected:** 66
 
 ## Functions
 
@@ -50,8 +50,6 @@ LINES  FUNCTION                      FILE
    47  readFromQuery()               apps/web/features/publications/filters/storage.ts
    46  useComparison()               apps/admin/src/app/(dashboard)/evals/head-to-head/hooks/useComparison.ts
    46  enhanceImages()               apps/web/features/publications/image-enhancement.ts
-   46  runEvalCmd()                  services/agent-api/src/cli/commands/eval.js
-   46  runQueueHealthCmd()           services/agent-api/src/cli/commands/health.js
    45  POST()                        apps/admin/src/app/api/evals/head-to-head/route.ts
    44  updateSession()               apps/admin/src/lib/supabase/middleware.ts
    44  checkExists()                 services/agent-api/src/lib/discovery-queue.js
