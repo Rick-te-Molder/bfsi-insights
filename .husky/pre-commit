@@ -1,7 +1,11 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
-npx lint-staged
+if [ "$ALLOW_EMPTY_COMMIT" = "1" ]; then
+  npx lint-staged --allow-empty
+else
+  npx lint-staged
+fi
 
 # Check for large files in staged changes (BLOCKS commit if new code violates Quality Gate)
 node scripts/ci/check-large-files.cjs
