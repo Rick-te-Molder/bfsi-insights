@@ -11,6 +11,7 @@ export default defineConfig({
     alias: {
       '@': resolve(__dirname, 'apps/admin/src'),
     },
+    dedupe: ['react', 'react-dom'],
   },
   test: {
     environment: 'happy-dom',
