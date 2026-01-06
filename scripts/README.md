@@ -74,6 +74,11 @@ All scripts in `ops/` must include a safety header:
 - `.mjs` - Default for all ESM scripts
 - `.cjs` - Only when CJS is required (e.g., shared with CJS-only tooling)
 
+## Runtime Requirements
+
+Scripts require **Node >= 20** and run as ESM (top-level await supported).
+See `package.json` engines field for exact version constraints.
+
 ## Publishing
 
 ### publish-approved.mjs
