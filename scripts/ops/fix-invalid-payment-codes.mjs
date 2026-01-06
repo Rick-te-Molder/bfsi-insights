@@ -1,6 +1,21 @@
+#!/usr/bin/env node
 /**
- * Remove LLM-generated payment codes from publications
- * These codes don't exist in the bfsi_industry taxonomy
+ * @script fix-invalid-payment-codes.mjs
+ * @safety DANGEROUS - mutates production data
+ * @env    local, staging, prod
+ *
+ * @description
+ * Removes LLM-generated payment codes from publications that don't exist
+ * in the bfsi_industry taxonomy.
+ *
+ * @sideEffects
+ * - UPDATEs kb_publication.industries to remove invalid codes
+ *
+ * @rollback
+ * Manual: restore original industries array from backup or logs
+ *
+ * @usage
+ *   node scripts/ops/fix-invalid-payment-codes.mjs
  */
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
@@ -11,13 +26,13 @@ const supabase = createClient(
 );
 
 // Invalid codes that don't exist in taxonomy
-const invalidCodes = [
+const invalidCodes = new Set([
   'banking-payments-cross-border-payments-remittance',
   'banking-payments-crypto-digital-asset-payments',
   'banking-payments-digital-wallets-e-money',
   'banking-payments-merchant-acquiring-pos-solutions',
   'banking-payments-payment-gateways-api-platforms',
-];
+]);
 
 async function removeInvalidPaymentCodes() {
   console.log('Finding publications with invalid payment codes...\n');
@@ -41,10 +56,10 @@ async function removeInvalidPaymentCodes() {
     if (!pub.industries || !Array.isArray(pub.industries)) continue;
 
     const originalCount = pub.industries.length;
-    const cleanedIndustries = pub.industries.filter((code) => !invalidCodes.includes(code));
+    const cleanedIndustries = pub.industries.filter((code) => !invalidCodes.has(code));
 
     if (cleanedIndustries.length < originalCount) {
-      const removed = pub.industries.filter((code) => invalidCodes.includes(code));
+      const removed = pub.industries.filter((code) => invalidCodes.has(code));
       updates.push({
         id: pub.id,
         title: pub.title,
@@ -98,4 +113,4 @@ async function removeInvalidPaymentCodes() {
   console.log(`  Total: ${updates.length}`);
 }
 
-removeInvalidPaymentCodes().catch(console.error);
+await removeInvalidPaymentCodes().catch(console.error);

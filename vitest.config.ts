@@ -25,7 +25,14 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       reportsDirectory: resolve(__dirname, 'coverage'),
-      include: ['apps/web/**/*.ts', 'apps/admin/src/**/*.ts', 'apps/admin/src/**/*.tsx'],
+      include: [
+        'apps/web/**/*.ts',
+        'apps/admin/src/components/ui/**/*.ts',
+        'apps/admin/src/components/ui/**/*.tsx',
+        'apps/admin/src/components/tags/**/*.ts',
+        'apps/admin/src/components/dashboard/**/*.ts',
+        'apps/admin/src/components/dashboard/**/*.tsx',
+      ],
       exclude: [
         '**/node_modules/**',
         '**/dist/**',

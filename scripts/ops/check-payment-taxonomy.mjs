@@ -1,5 +1,17 @@
+#!/usr/bin/env node
 /**
- * Check if payment-related taxonomy codes exist in the database
+ * @script check-payment-taxonomy.mjs
+ * @safety SAFE - read-only diagnostic
+ * @env    local, staging, prod
+ *
+ * @description
+ * Checks if payment-related taxonomy codes exist in bfsi_industry.
+ * Identifies LLM-generated codes that don't exist in the taxonomy.
+ *
+ * @sideEffects None (read-only)
+ *
+ * @usage
+ *   node scripts/ops/check-payment-taxonomy.mjs
  */
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
@@ -77,4 +89,4 @@ async function checkPaymentTaxonomy() {
   }
 }
 
-checkPaymentTaxonomy().catch(console.error);
+await checkPaymentTaxonomy().catch(console.error);

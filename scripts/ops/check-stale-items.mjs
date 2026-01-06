@@ -1,12 +1,23 @@
 #!/usr/bin/env node
 /**
- * Check for stale items in enrichment pipeline
+ * @script check-stale-items.mjs
+ * @safety SAFE - read-only diagnostic
+ * @env    local, staging, prod
+ *
+ * @description
+ * Check for stale items in enrichment pipeline (status 200-239).
+ * Useful for identifying stuck items that need manual intervention.
+ *
+ * @sideEffects None (read-only)
+ *
+ * @usage
+ *   node scripts/ops/check-stale-items.mjs
  */
 
 import { createClient } from '@supabase/supabase-js';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -62,11 +73,10 @@ async function main() {
     console.log(`  URL: ${item.url?.substring(0, 80)}...`);
     console.log(`  Title: ${item.payload?.title?.substring(0, 60) || 'N/A'}`);
     console.log(`  Age: ${age}h`);
-    console.log(
-      `  Last status change: ${lastChangeAge !== null ? `${lastChangeAge}m ago` : 'N/A'}`,
-    );
+    const lastChangeStr = lastChangeAge === null ? 'N/A' : `${lastChangeAge}m ago`;
+    console.log(`  Last status change: ${lastChangeStr}`);
     console.log('');
   }
 }
 
-main();
+await main();
