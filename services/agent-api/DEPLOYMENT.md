@@ -22,10 +22,12 @@ Hosted agent service for content processing pipeline.
 
    | Variable               | Description                                            |
    | ---------------------- | ------------------------------------------------------ |
-   | `PUBLIC_SUPABASE_URL`  | Your Supabase project URL                              |
+   | `PUBLIC_SUPABASE_URL`  | Your Supabase project URL (legacy name, see note)      |
    | `SUPABASE_SERVICE_KEY` | Service role key (not anon!)                           |
    | `OPENAI_API_KEY`       | OpenAI API key                                         |
    | `AGENT_API_KEY`        | Secret key for API auth (auto-generated or create one) |
+
+   > **Note:** The codebase currently uses `PUBLIC_SUPABASE_URL`. This is a legacy naming convention—backend services should use `SUPABASE_URL` (no `PUBLIC_` prefix). A future refactor will standardize this.
 
 ## API Endpoints
 
@@ -94,14 +96,20 @@ npm run dev
 
 ## Environment Variables
 
-| Variable               | Required  | Description                          |
-| ---------------------- | --------- | ------------------------------------ |
-| `PUBLIC_SUPABASE_URL`  | ✅        | Supabase project URL                 |
-| `SUPABASE_SERVICE_KEY` | ✅        | Service role key for backend access  |
-| `OPENAI_API_KEY`       | ✅        | OpenAI API key for agents            |
-| `AGENT_API_KEY`        | ✅ (prod) | API authentication key               |
-| `PORT`                 | ❌        | Server port (default: 3000)          |
-| `NODE_ENV`             | ❌        | Environment (development/production) |
+| Variable               | Required  | Description                                   |
+| ---------------------- | --------- | --------------------------------------------- |
+| `PUBLIC_SUPABASE_URL`  | ✅        | Supabase project URL (legacy name, see below) |
+| `SUPABASE_SERVICE_KEY` | ✅        | Service role key for backend access           |
+| `OPENAI_API_KEY`       | ✅        | OpenAI API key for agents                     |
+| `ANTHROPIC_API_KEY`    | ❌        | Anthropic API key (optional, for Claude)      |
+| `AGENT_API_KEY`        | ✅ (prod) | API authentication key                        |
+| `PORT`                 | ❌        | Server port (default: 3000)                   |
+| `NODE_ENV`             | ❌        | Environment (development/production)          |
+| `LANGSMITH_API_KEY`    | ❌        | LangSmith API key (optional, for tracing)     |
+| `LANGSMITH_TRACING`    | ❌        | Enable tracing (true/false)                   |
+| `LANGSMITH_PROJECT`    | ❌        | LangSmith project name                        |
+
+> **Note on `PUBLIC_SUPABASE_URL`:** This is a legacy naming convention. Backend services should use `SUPABASE_URL` (no `PUBLIC_` prefix). The codebase will be refactored to use `SUPABASE_URL` in a future PR.
 
 ## Discovery Source Types
 
