@@ -3,16 +3,27 @@
  * Extracted from replay.js to meet Quality Guidelines (< 300 lines per file)
  */
 
-import process from 'node:process';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
+let supabase = null;
+
+function getSupabase() {
+  if (supabase) return supabase;
+  supabase = getSupabaseAdminClient();
+  return supabase;
+}
 
 /**
  * Load pipeline run from database
  */
+/** @param {string} runId */
 export async function loadPipelineRun(runId) {
-  const { data, error } = await supabase.from('pipeline_run').select('*').eq('id', runId).single();
+  const { data, error } = await getSupabase()
+    .from('pipeline_run')
+    .select('*')
+    .eq('id', runId)
+    .single();
 
   if (error) throw new Error(`Failed to load pipeline run: ${error.message}`);
   return data;
@@ -21,8 +32,9 @@ export async function loadPipelineRun(runId) {
 /**
  * Load all step runs for a pipeline run
  */
+/** @param {string} runId */
 export async function loadStepRuns(runId) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('pipeline_step_run')
     .select('*')
     .eq('run_id', runId)
@@ -35,8 +47,9 @@ export async function loadStepRuns(runId) {
 /**
  * Write replay results to database
  */
+/** @param {string} runId @param {any} stateHistory @param {any} validation */
 export async function writeReplayResults(runId, stateHistory, validation) {
-  await supabase
+  await getSupabase()
     .from('pipeline_run')
     .update({
       replay_performed_at: new Date().toISOString(),
@@ -48,8 +61,9 @@ export async function writeReplayResults(runId, stateHistory, validation) {
 /**
  * Get random sample of pipeline runs for testing
  */
+/** @param {number} sampleSize @param {{ status?: string; minDate?: string; maxDate?: string }} filters */
 export async function getRandomSample(sampleSize = 100, filters = {}) {
-  let query = supabase.from('pipeline_run').select('id');
+  let query = getSupabase().from('pipeline_run').select('id');
 
   if (filters.status) query = query.eq('status', filters.status);
   if (filters.minDate) query = query.gte('created_at', filters.minDate);

@@ -3,21 +3,28 @@
  * Run summarizer on items ready for summary
  */
 
-import process from 'node:process';
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
 import { runSummarizer } from '../../agents/summarizer.js';
 import { transitionByAgent } from '../../lib/queue-update.js';
 import { loadStatusCodes, getStatusCode } from '../../lib/status-codes.js';
+import { getSupabaseAdminClient } from '../../clients/supabase.js';
 
 const router = express.Router();
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-router.post('/run/summarize', async (req, res) => {
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
+let supabase = null;
+
+function getSupabase() {
+  if (supabase) return supabase;
+  supabase = getSupabaseAdminClient();
+  return supabase;
+}
+
+router.post('/run/summarize', async (/** @type {any} */ req, /** @type {any} */ res) => {
   try {
     const { limit = 5, id } = req.body;
     await loadStatusCodes();
-    let query = supabase
+    let query = getSupabase()
       .from('ingestion_queue')
       .select('*')
       .eq('status_code', getStatusCode('TO_SUMMARIZE'));
@@ -34,7 +41,7 @@ router.post('/run/summarize', async (req, res) => {
     for (const item of items) {
       const result = await runSummarizer(item);
 
-      const { data: updatedItem } = await supabase
+      const { data: updatedItem } = await getSupabase()
         .from('ingestion_queue')
         .select('payload')
         .eq('id', item.id)
@@ -57,8 +64,9 @@ router.post('/run/summarize', async (req, res) => {
 
     res.json({ processed: results.length, results });
   } catch (err) {
-    console.error('API Error:', err);
-    res.status(500).json({ error: err.message });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('API Error:', message);
+    res.status(500).json({ error: message });
   }
 });
 

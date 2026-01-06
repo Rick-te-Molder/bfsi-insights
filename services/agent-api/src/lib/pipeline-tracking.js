@@ -4,11 +4,18 @@
  * Provides helpers for tracking pipeline runs and step runs
  */
 
-import process from 'node:process';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 import { classifyError, shouldMoveToDLQ, getRetryDelay } from './error-classification.js';
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
+let supabase = null;
+
+/** @returns {import('@supabase/supabase-js').SupabaseClient} */
+function getSupabase() {
+  if (supabase) return supabase;
+  supabase = getSupabaseAdminClient();
+  return supabase;
+}
 
 /**
  * Ensure pipeline_run exists for an item
@@ -17,7 +24,9 @@ const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPAB
 /**
  * Get trigger type from entry type
  */
+/** @param {string} entryType */
 function getTriggerType(entryType) {
+  /** @type {Record<string, string>} */
   const triggerMap = {
     manual: 'manual',
     discovery: 'discovery',
@@ -30,8 +39,9 @@ function getTriggerType(entryType) {
 /**
  * Create new pipeline run
  */
+/** @param {string} itemId @param {string} trigger */
 async function createPipelineRun(itemId, trigger) {
-  const { data: run, error } = await supabase
+  const { data: run, error } = await getSupabase()
     .from('pipeline_run')
     .insert({ queue_id: itemId, trigger, status: 'running', created_by: 'system' })
     .select('id')
@@ -47,6 +57,7 @@ async function createPipelineRun(itemId, trigger) {
 /**
  * Ensure pipeline_run exists for an item
  */
+/** @param {any} item */
 export async function ensurePipelineRun(item) {
   if (item.current_run_id) return item.current_run_id;
 
@@ -54,7 +65,7 @@ export async function ensurePipelineRun(item) {
   const run = await createPipelineRun(item.id, trigger);
   if (!run) return null;
 
-  await supabase.from('ingestion_queue').update({ current_run_id: run.id }).eq('id', item.id);
+  await getSupabase().from('ingestion_queue').update({ current_run_id: run.id }).eq('id', item.id);
   console.log(`   📋 Created pipeline_run ${run.id} for item ${item.id}`);
   return run.id;
 }
@@ -62,8 +73,9 @@ export async function ensurePipelineRun(item) {
 /**
  * Get next attempt number for step
  */
+/** @param {string} runId @param {string} stepName */
 async function getNextAttempt(runId, stepName) {
-  const { data: existing } = await supabase
+  const { data: existing } = await getSupabase()
     .from('pipeline_step_run')
     .select('attempt')
     .eq('run_id', runId)
@@ -76,11 +88,12 @@ async function getNextAttempt(runId, stepName) {
 /**
  * Start a step run (insert with status='running')
  */
+/** @param {string | null} runId @param {string} stepName @param {any} inputSnapshot */
 export async function startStepRun(runId, stepName, inputSnapshot) {
   if (!runId) return null;
 
   const attempt = await getNextAttempt(runId, stepName);
-  const { data: stepRun, error } = await supabase
+  const { data: stepRun, error } = await getSupabase()
     .from('pipeline_step_run')
     .insert({
       run_id: runId,
@@ -103,10 +116,11 @@ export async function startStepRun(runId, stepName, inputSnapshot) {
 /**
  * Complete a step run (update status='success')
  */
+/** @param {string | null} stepRunId @param {any} output */
 export async function completeStepRun(stepRunId, output) {
   if (!stepRunId) return;
 
-  await supabase
+  await getSupabase()
     .from('pipeline_step_run')
     .update({
       status: 'success',
@@ -119,6 +133,7 @@ export async function completeStepRun(stepRunId, output) {
 /**
  * Fail a step run (update status='failed')
  */
+/** @param {string | null} stepRunId @param {any} error */
 export async function failStepRun(stepRunId, error) {
   if (!stepRunId) return;
 
@@ -129,7 +144,7 @@ export async function failStepRun(stepRunId, error) {
     .replaceAll(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, 'UUID')
     .replaceAll(/\d+/g, 'N');
 
-  await supabase
+  await getSupabase()
     .from('pipeline_step_run')
     .update({
       status: 'failed',
@@ -143,10 +158,11 @@ export async function failStepRun(stepRunId, error) {
 /**
  * Skip a step run (for rejected items)
  */
+/** @param {string | null} stepRunId @param {string} reason */
 export async function skipStepRun(stepRunId, reason) {
   if (!stepRunId) return;
 
-  await supabase
+  await getSupabase()
     .from('pipeline_step_run')
     .update({
       status: 'skipped',
@@ -166,6 +182,7 @@ export const AGENT_STEP_NAMES = {
 /**
  * Create normalized error signature for grouping similar errors
  */
+/** @param {string} errorMessage */
 export function createErrorSignature(errorMessage) {
   return errorMessage
     .substring(0, 100)
@@ -175,18 +192,16 @@ export function createErrorSignature(errorMessage) {
 
 /**
  * Log failure message
+ * @param {{ agent: string; itemId: string; moveToDLQ: boolean; classification: any; failureCount: number; retryDelay: number | null }} opts
  */
-function logFailure(agent, itemId, moveToDLQ, classification, newFailureCount, retryDelay) {
+function logFailure(opts) {
+  const { agent, itemId, moveToDLQ, classification, failureCount, retryDelay } = opts;
   if (moveToDLQ) {
-    const failureStatus = classification.retryable
-      ? `${newFailureCount} failures`
-      : 'terminal error';
-    console.log(
-      `   💀 ${agent} ${itemId} → dead_letter (${failureStatus}: ${classification.reason})`,
-    );
+    const status = classification.retryable ? `${failureCount} failures` : 'terminal error';
+    console.log(`   💀 ${agent} ${itemId} → dead_letter (${status}: ${classification.reason})`);
   } else if (retryDelay) {
     console.log(
-      `   🔄 ${agent} ${itemId} → retry in ${(retryDelay / 1000).toFixed(1)}s (attempt ${newFailureCount}, ${classification.reason})`,
+      `   🔄 ${agent} ${itemId} → retry in ${(retryDelay / 1000).toFixed(1)}s (attempt ${failureCount}, ${classification.reason})`,
     );
   }
 }
@@ -194,17 +209,30 @@ function logFailure(agent, itemId, moveToDLQ, classification, newFailureCount, r
 /**
  * Update item with failure info
  */
-async function updateItemFailure({
-  itemId,
-  statusCode,
-  failureCount,
-  stepName,
-  errorMessage,
-  errorSignature,
-  classification,
-  retryDelay,
-}) {
-  await supabase
+/**
+ * @param {{
+ *   itemId: string;
+ *   statusCode: number;
+ *   failureCount: number;
+ *   stepName: string;
+ *   errorMessage: string;
+ *   errorSignature: string;
+ *   classification: any;
+ *   retryDelay: number | null;
+ * }} params
+ */
+async function updateItemFailure(params) {
+  const {
+    itemId,
+    statusCode,
+    failureCount,
+    stepName,
+    errorMessage,
+    errorSignature,
+    classification,
+    retryDelay,
+  } = params;
+  await getSupabase()
     .from('ingestion_queue')
     .update({
       status_code: statusCode,
@@ -220,31 +248,31 @@ async function updateItemFailure({
     .eq('id', itemId);
 }
 
-/**
- * Handle item failure and DLQ logic with error classification
- */
+/** @param {string} itemId @param {string} stepName */
+async function getCurrentFailureState(itemId, stepName) {
+  const { data } = await getSupabase()
+    .from('ingestion_queue')
+    .select('failure_count, last_failed_step')
+    .eq('id', itemId)
+    .single();
+  const isSameStep = data?.last_failed_step === stepName;
+  return isSameStep ? (data?.failure_count || 0) + 1 : 1;
+}
+
+/** Handle item failure and DLQ logic with error classification @param {any} item @param {string} agent @param {string} stepName @param {any} err @param {any} config */
 export async function handleItemFailure(item, agent, stepName, err, config) {
   const errorMessage = err?.message || String(err);
   const errorSignature = createErrorSignature(errorMessage);
   const classification = classifyError(err);
+  const failureCount = await getCurrentFailureState(item.id, stepName);
+  const moveToDLQ = shouldMoveToDLQ(failureCount, classification);
+  const retryDelay = classification.retryable ? getRetryDelay(failureCount, err) : null;
 
-  const { data: currentItem } = await supabase
-    .from('ingestion_queue')
-    .select('failure_count, last_failed_step')
-    .eq('id', item.id)
-    .single();
-
-  const isSameStep = currentItem?.last_failed_step === stepName;
-  const newFailureCount = isSameStep ? (currentItem?.failure_count || 0) + 1 : 1;
-  const moveToDLQ = shouldMoveToDLQ(newFailureCount, classification);
-  const newStatusCode = moveToDLQ ? 599 : config.statusCode();
-  const retryDelay = classification.retryable ? getRetryDelay(newFailureCount, err) : null;
-
-  logFailure(agent, item.id, moveToDLQ, classification, newFailureCount, retryDelay);
+  logFailure({ agent, itemId: item.id, moveToDLQ, classification, failureCount, retryDelay });
   await updateItemFailure({
     itemId: item.id,
-    statusCode: newStatusCode,
-    failureCount: newFailureCount,
+    statusCode: moveToDLQ ? 599 : config.statusCode(),
+    failureCount,
     stepName,
     errorMessage,
     errorSignature,

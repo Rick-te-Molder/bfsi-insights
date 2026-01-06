@@ -5,22 +5,23 @@
  * KB-248: Automated eval runs on prompt version changes
  */
 
-import process from 'node:process';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 import { getAgentFunction } from './agent-registry.js';
-// Note: runGoldenEval and getEvalHistory are available from ./evals.js for future use
 
 // Lazy initialization to avoid crash on import when env vars aren't set
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabase = null;
+
+/** @returns {import('@supabase/supabase-js').SupabaseClient} */
 function getSupabase() {
-  if (!supabase) {
-    supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-  }
+  if (supabase) return supabase;
+  supabase = getSupabaseAdminClient();
   return supabase;
 }
 
 /**
  * Fetch and validate prompt version
+ * @param {string} promptVersionId
  */
 async function fetchPromptVersion(promptVersionId) {
   const { data: promptVersion, error: pvError } = await getSupabase()
@@ -37,6 +38,8 @@ async function fetchPromptVersion(promptVersionId) {
 
 /**
  * Check if golden set exists and handle skip case
+ * @param {string} agentName
+ * @param {string} promptVersionId
  */
 async function checkGoldenSetExists(agentName, promptVersionId) {
   const { data: goldenExamples, error: gsError } = await getSupabase()
@@ -60,6 +63,7 @@ async function checkGoldenSetExists(agentName, promptVersionId) {
 
 /**
  * Get baseline score from previous successful eval
+ * @param {string} agentName
  */
 async function getBaselineScore(agentName) {
   const { data: previousEvals } = await getSupabase()
@@ -72,9 +76,7 @@ async function getBaselineScore(agentName) {
   return previousEvals?.[0]?.score ?? null;
 }
 
-/**
- * Create eval run record
- */
+/** @param {string} agentName @param {any} promptVersion @param {string} promptVersionId @param {string} triggerType @param {number | null} baselineScore */
 async function createEvalRun(
   agentName,
   promptVersion,
@@ -82,7 +84,7 @@ async function createEvalRun(
   triggerType,
   baselineScore,
 ) {
-  const { data: evalRun, error: runError } = await getSupabase()
+  const { data: evalRun, error } = await getSupabase()
     .from('eval_run')
     .insert({
       agent_name: agentName,
@@ -96,36 +98,28 @@ async function createEvalRun(
     })
     .select()
     .single();
-
-  if (runError) throw runError;
-
+  if (error) throw error;
   await getSupabase()
     .from('prompt_version')
     .update({ last_eval_run_id: evalRun.id, last_eval_status: 'running' })
     .eq('id', promptVersionId);
-
   return evalRun;
 }
 
-/**
- * Run examples and collect results
- */
+/** @param {string} agentName @param {string} evalRunId @param {(input: any) => Promise<any>} agentFn */
 async function runExamples(agentName, evalRunId, agentFn) {
   const { data: examples } = await getSupabase()
     .from('eval_golden_set')
     .select('*')
     .eq('agent_name', agentName);
+  let passed = 0,
+    failed = 0;
 
-  let passed = 0;
-  let failed = 0;
-
-  for (const example of examples) {
+  for (const example of examples || []) {
     try {
       const actual = await agentFn(example.input);
       const match = compareResults(example.expected_output, actual);
-      if (match) passed++;
-      else failed++;
-
+      match ? passed++ : failed++;
       await getSupabase()
         .from('eval_result')
         .insert({
@@ -138,59 +132,40 @@ async function runExamples(agentName, evalRunId, agentFn) {
         });
     } catch (err) {
       failed++;
-      console.error(`   ❌ Error on example: ${err.message}`);
+      console.error(`   ❌ Error on example: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
-
-  return { passed, failed, total: examples.length };
+  return { passed, failed, total: (examples || []).length };
 }
 
-/**
- * Calculate and log eval metrics
- */
+/** @param {number} passed @param {number} total @param {number | null} baselineScore */
 function calculateMetrics(passed, total, baselineScore) {
   const score = total > 0 ? passed / total : 0;
   const hasBaseline = baselineScore !== null;
-  const scoreDelta = hasBaseline ? score - baselineScore : null;
-  const regressionDetected = hasBaseline && score < baselineScore - 0.1;
-  return { score, scoreDelta, regressionDetected };
+  return {
+    score,
+    scoreDelta: hasBaseline ? score - baselineScore : null,
+    regressionDetected: hasBaseline && score < baselineScore - 0.1,
+  };
 }
 
-/**
- * Log eval results to console
- */
+/** @param {number} passed @param {number} total @param {number} score @param {number | null} scoreDelta @param {boolean} regressionDetected */
 function logEvalResults(passed, total, score, scoreDelta, regressionDetected) {
   console.log(`\n📊 Eval complete: ${passed}/${total} passed (${(score * 100).toFixed(1)}%)`);
-  if (scoreDelta !== null) {
-    const sign = scoreDelta > 0 ? '+' : '';
-    console.log(`   Delta from baseline: ${sign}${(scoreDelta * 100).toFixed(1)}%`);
-  }
-  if (regressionDetected) {
-    console.log(`   ⚠️ Regression detected!`);
-  }
+  if (scoreDelta !== null)
+    console.log(
+      `   Delta from baseline: ${scoreDelta > 0 ? '+' : ''}${(scoreDelta * 100).toFixed(1)}%`,
+    );
+  if (regressionDetected) console.log(`   ⚠️ Regression detected!`);
 }
 
-/**
- * Run eval for a specific prompt version
- * @param {object} options
- * @param {string} options.agentName - Agent name
- * @param {string} options.promptVersionId - UUID of prompt_version record
- * @param {string} options.triggerType - 'manual' | 'auto_on_change' | 'scheduled'
- */
-export async function runPromptEval(options) {
+/** @param {{ agentName: string; promptVersionId: string; triggerType?: string }} options */
+async function prepareEvalRun(options) {
   const { agentName, promptVersionId, triggerType = 'manual' } = options;
-
-  console.log(`\n🧪 Running prompt eval for ${agentName}`);
-  console.log(`   Prompt version: ${promptVersionId}`);
-  console.log(`   Trigger: ${triggerType}`);
-
+  console.log(`\n🧪 Running prompt eval for ${agentName} (${promptVersionId}, ${triggerType})`);
   const promptVersion = await fetchPromptVersion(promptVersionId);
   const hasGoldenSet = await checkGoldenSetExists(agentName, promptVersionId);
-
-  if (!hasGoldenSet) {
-    return { status: 'skipped', reason: 'No golden set available', agentName, promptVersionId };
-  }
-
+  if (!hasGoldenSet) return null;
   const baselineScore = await getBaselineScore(agentName);
   const evalRun = await createEvalRun(
     agentName,
@@ -199,60 +174,67 @@ export async function runPromptEval(options) {
     triggerType,
     baselineScore,
   );
+  return { agentName, promptVersionId, evalRun, baselineScore };
+}
 
+/** @param {{ agentName: string; promptVersionId: string; triggerType?: string }} options */
+export async function runPromptEval(options) {
+  const prepared = await prepareEvalRun(options);
+  if (!prepared) return { status: 'skipped', reason: 'No golden set available', ...options };
+  const { agentName, promptVersionId, evalRun, baselineScore } = prepared;
   try {
-    const agentFn = await getAgentFunction(agentName);
-    if (!agentFn) throw new Error(`No agent function found for: ${agentName}`);
-
-    const { passed, failed, total } = await runExamples(agentName, evalRun.id, agentFn);
-    const { score, scoreDelta, regressionDetected } = calculateMetrics(
-      passed,
-      total,
-      baselineScore,
-    );
-
-    await getSupabase()
-      .from('eval_run')
-      .update({
-        status: 'success',
-        passed,
-        failed,
-        total_examples: total,
-        score,
-        score_delta: scoreDelta,
-        regression_detected: regressionDetected,
-        finished_at: new Date().toISOString(),
-      })
-      .eq('id', evalRun.id);
-
-    logEvalResults(passed, total, score, scoreDelta, regressionDetected);
-
-    return {
-      status: 'success',
-      evalRunId: evalRun.id,
-      agentName,
-      promptVersionId,
-      score,
-      passed,
-      failed,
-      total,
-      baselineScore,
-      scoreDelta,
-      regressionDetected,
-    };
+    const result = await executeAndRecordEval(agentName, evalRun.id, baselineScore);
+    return { status: 'success', evalRunId: evalRun.id, agentName, promptVersionId, ...result };
   } catch (err) {
-    await getSupabase()
-      .from('eval_run')
-      .update({ status: 'failed', finished_at: new Date().toISOString() })
-      .eq('id', evalRun.id);
+    await markEvalRunFailed(evalRun.id);
     throw err;
   }
 }
 
-// getAgentFunction imported from ./agent-registry.js
+/** @param {string} agentName @param {string} evalRunId @param {number | null} baselineScore */
+async function executeAndRecordEval(agentName, evalRunId, baselineScore) {
+  const agentFn = await getAgentFunction(agentName);
+  if (!agentFn) throw new Error(`No agent function found for: ${agentName}`);
+  const { passed, failed, total } = await runExamples(
+    agentName,
+    evalRunId,
+    /** @type {(input: any) => Promise<any>} */ (agentFn),
+  );
+  const metrics = calculateMetrics(passed, total, baselineScore);
+  await updateEvalRunSuccess(evalRunId, passed, failed, total, metrics);
+  logEvalResults(passed, total, metrics.score, metrics.scoreDelta, metrics.regressionDetected);
+  return { passed, failed, total, baselineScore, ...metrics };
+}
+
+/** @param {string} evalRunId @param {number} passed @param {number} failed @param {number} total @param {{ score: number; scoreDelta: number | null; regressionDetected: boolean }} metrics */
+async function updateEvalRunSuccess(evalRunId, passed, failed, total, metrics) {
+  await getSupabase()
+    .from('eval_run')
+    .update({
+      status: 'success',
+      passed,
+      failed,
+      total_examples: total,
+      score: metrics.score,
+      score_delta: metrics.scoreDelta,
+      regression_detected: metrics.regressionDetected,
+      finished_at: new Date().toISOString(),
+    })
+    .eq('id', evalRunId);
+}
+
+/** @param {string} evalRunId */
+async function markEvalRunFailed(evalRunId) {
+  await getSupabase()
+    .from('eval_run')
+    .update({ status: 'failed', finished_at: new Date().toISOString() })
+    .eq('id', evalRunId);
+}
 
 /**
  * Simple comparison of expected vs actual output
+ * @param {any} expected
+ * @param {any} actual
  */
 function compareResults(expected, actual) {
   if (!expected || !actual) return false;
@@ -281,6 +263,7 @@ function compareResults(expected, actual) {
 
 /**
  * Get eval status for an agent
+ * @param {string} agentName
  */
 export async function getPromptEvalStatus(agentName) {
   const { data, error } = await getSupabase()

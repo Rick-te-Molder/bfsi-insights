@@ -3,21 +3,28 @@
  * Run relevance filter on fetched items
  */
 
-import process from 'node:process';
 import express from 'express';
-import { createClient } from '@supabase/supabase-js';
 import { runRelevanceFilter } from '../../agents/screener.js';
 import { transitionByAgent } from '../../lib/queue-update.js';
 import { loadStatusCodes, getStatusCode } from '../../lib/status-codes.js';
+import { getSupabaseAdminClient } from '../../clients/supabase.js';
 
 const router = express.Router();
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-router.post('/run/filter', async (req, res) => {
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
+let supabase = null;
+
+function getSupabase() {
+  if (supabase) return supabase;
+  supabase = getSupabaseAdminClient();
+  return supabase;
+}
+
+router.post('/run/filter', async (/** @type {any} */ req, /** @type {any} */ res) => {
   try {
     const { limit = 10, id } = req.body;
     await loadStatusCodes();
-    let query = supabase
+    let query = getSupabase()
       .from('ingestion_queue')
       .select('*')
       .eq('status_code', getStatusCode('FETCHED'));
@@ -47,8 +54,9 @@ router.post('/run/filter', async (req, res) => {
 
     res.json({ processed: results.length, results });
   } catch (err) {
-    console.error('API Error:', err);
-    res.status(500).json({ error: err.message });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('API Error:', message);
+    res.status(500).json({ error: message });
   }
 });
 

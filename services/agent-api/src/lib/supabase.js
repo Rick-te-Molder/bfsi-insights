@@ -19,7 +19,7 @@ export function getSupabase() {
 
   if (!env.SUPABASE_URL || !key) {
     throw new Error(
-      'CRITICAL: Supabase env vars missing. Required: PUBLIC_SUPABASE_URL and (SUPABASE_SERVICE_KEY or PUBLIC_SUPABASE_ANON_KEY).',
+      'CRITICAL: Supabase env vars missing. Required: SUPABASE_URL and (SUPABASE_SERVICE_KEY or SUPABASE_ANON_KEY).',
     );
   }
 

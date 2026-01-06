@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock Supabase
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: vi.fn(() => ({
+// Mock the Supabase client factory
+vi.mock('../../src/clients/supabase.js', () => ({
+  getSupabaseAdminClient: vi.fn(() => ({
     from: vi.fn(() => ({
       select: vi.fn(() => ({
         order: vi.fn(() =>
@@ -80,8 +80,8 @@ describe('vendor-loader', () => {
   describe('loadVendors error handling', () => {
     it('returns empty result on database error', async () => {
       // Re-mock with error
-      vi.doMock('@supabase/supabase-js', () => ({
-        createClient: vi.fn(() => ({
+      vi.doMock('../../src/clients/supabase.js', () => ({
+        getSupabaseAdminClient: vi.fn(() => ({
           from: vi.fn(() => ({
             select: vi.fn(() => ({
               order: vi.fn(() =>

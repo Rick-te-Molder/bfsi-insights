@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { mockCreateClient, mockRpc } = vi.hoisted(() => ({
+const { mockGetSupabaseAdminClient, mockRpc } = vi.hoisted(() => ({
   mockRpc: vi.fn(),
-  mockCreateClient: vi.fn(() => ({
+  mockGetSupabaseAdminClient: vi.fn(() => ({
     rpc: mockRpc,
   })),
 }));
 
-vi.mock('@supabase/supabase-js', () => ({
-  createClient: mockCreateClient,
+vi.mock('../../src/clients/supabase.js', () => ({
+  getSupabaseAdminClient: mockGetSupabaseAdminClient,
 }));
 
 describe('lib/queue-update', () => {
@@ -16,16 +16,16 @@ describe('lib/queue-update', () => {
 
   beforeEach(() => {
     process.env = { ...originalEnv };
-    delete process.env.PUBLIC_SUPABASE_URL;
+    delete process.env.SUPABASE_URL;
     delete process.env.SUPABASE_SERVICE_KEY;
 
     mockRpc.mockReset();
-    mockCreateClient.mockClear();
+    mockGetSupabaseAdminClient.mockClear();
     vi.resetModules();
   });
 
   it('throws if required args are missing', async () => {
-    process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
     process.env.SUPABASE_SERVICE_KEY = 'service-key';
 
     const { transitionItemStatus } = await import('../../src/lib/queue-update.js');
@@ -39,16 +39,20 @@ describe('lib/queue-update', () => {
   });
 
   it('throws if Supabase env vars are missing', async () => {
+    // Make the factory throw when env vars are missing
+    mockGetSupabaseAdminClient.mockImplementationOnce(() => {
+      throw new Error('Missing Supabase environment variables');
+    });
+
     const { transitionItemStatus } = await import('../../src/lib/queue-update.js');
 
     await expect(transitionItemStatus('id', 123)).rejects.toThrow(
       'Missing Supabase environment variables',
     );
-    expect(mockCreateClient).not.toHaveBeenCalled();
   });
 
   it('calls transition_status RPC with expected payload', async () => {
-    process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
     process.env.SUPABASE_SERVICE_KEY = 'service-key';
 
     mockRpc.mockResolvedValue({ error: null });
@@ -61,7 +65,7 @@ describe('lib/queue-update', () => {
       isManual: true,
     });
 
-    expect(mockCreateClient).toHaveBeenCalledTimes(1);
+    expect(mockGetSupabaseAdminClient).toHaveBeenCalledTimes(1);
     expect(mockRpc).toHaveBeenCalledWith('transition_status', {
       p_queue_id: 'queue-1',
       p_new_status: 200,
@@ -72,7 +76,7 @@ describe('lib/queue-update', () => {
   });
 
   it('wraps RPC errors with queueId and status', async () => {
-    process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
     process.env.SUPABASE_SERVICE_KEY = 'service-key';
 
     mockRpc.mockResolvedValue({ error: { message: 'boom' } });
@@ -85,7 +89,7 @@ describe('lib/queue-update', () => {
   });
 
   it('transitionByAgent infers changedBy from agentName', async () => {
-    process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
     process.env.SUPABASE_SERVICE_KEY = 'service-key';
 
     mockRpc.mockResolvedValue({ error: null });
@@ -104,7 +108,7 @@ describe('lib/queue-update', () => {
   });
 
   it('transitionByUser marks the transition as manual', async () => {
-    process.env.PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
     process.env.SUPABASE_SERVICE_KEY = 'service-key';
 
     mockRpc.mockResolvedValue({ error: null });

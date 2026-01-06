@@ -6,27 +6,31 @@
  * All transitions must go through this module to ensure consistency.
  */
 
-import process from 'node:process';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 import { loadStatusCodes, getStatusCodes } from './status-codes.js';
 import { buildMermaidDiagram } from './state-machine.mermaid.js';
 
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabaseClient = null;
 
 function getSupabaseClient() {
   if (supabaseClient) return supabaseClient;
-  supabaseClient = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  supabaseClient = getSupabaseAdminClient();
   return supabaseClient;
 }
 
 // Cached state transitions (loaded from database)
+/** @type {any[] | null} */
 let transitionsCache = null;
-let normalTransitions = {}; // from_status -> [to_status, ...]
-let manualTransitions = {}; // from_status -> [to_status, ...]
+/** @type {Record<number, number[]>} */
+let normalTransitions = {};
+/** @type {Record<number, number[]>} */
+let manualTransitions = {};
 
 // Working states that should auto-transition on failure
 const WORKING_STATES = [111, 121, 211, 221, 231]; // fetching, scoring, summarizing, tagging, thumbnailing
 
+/** @param {import('@supabase/supabase-js').SupabaseClient} supabase */
 async function fetchTransitions(supabase) {
   const { data, error } = await supabase
     .from('state_transitions')
@@ -41,11 +45,16 @@ async function fetchTransitions(supabase) {
   return data;
 }
 
+/**
+ * @param {Record<number, number[]>} map
+ * @param {number} key
+ */
 function ensureArray(map, key) {
   if (!map[key]) map[key] = [];
   return map[key];
 }
 
+/** @param {any[]} data */
 function buildTransitionMaps(data) {
   normalTransitions = {};
   manualTransitions = {};
@@ -153,8 +162,7 @@ export function getValidNextStates(currentState, includeManual = false) {
  * Validate and execute a state transition
  * @param {number} fromState - Current status code
  * @param {number} toState - Target status code
- * @param {object} options - Transition options
- * @param {boolean} options.isManual - Whether this is a manual override
+ * @param {{ isManual?: boolean }} options - Transition options
  * @throws {Error} - If transition is invalid
  */
 export function validateTransition(fromState, toState, options = {}) {
@@ -162,7 +170,7 @@ export function validateTransition(fromState, toState, options = {}) {
 
   // Validate transition
   if (!isValidTransition(fromState, toState, isManual)) {
-    const statusCodes = getStatusCodes();
+    const statusCodes = getStatusCodes() || {};
     const fromName =
       Object.keys(statusCodes).find((k) => statusCodes[k] === fromState) || fromState;
     const toName = Object.keys(statusCodes).find((k) => statusCodes[k] === toState) || toState;
@@ -213,6 +221,7 @@ export function isTerminalState(statusCode) {
  */
 export function getRetryState(failedState, originalState) {
   // Map working states back to their "ready" state
+  /** @type {Record<number, number>} */
   const retryMap = {
     111: 110, // fetching → to_fetch
     121: 120, // scoring → to_score

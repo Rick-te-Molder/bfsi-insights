@@ -9,10 +9,13 @@
 
 import OpenAI from 'openai';
 import process from 'node:process';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
+import { loadStatusCodes, getStatusCode } from './status-codes.js';
 
 // Lazy-load clients to avoid error at import time when env vars are missing
+/** @type {any} */
 let openai = null;
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabase = null;
 
 function getOpenAI() {
@@ -23,9 +26,8 @@ function getOpenAI() {
 }
 
 function getSupabase() {
-  if (!supabase) {
-    supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-  }
+  if (supabase) return supabase;
+  supabase = getSupabaseAdminClient();
   return supabase;
 }
 
@@ -39,6 +41,7 @@ const LOW_RELEVANCE_THRESHOLD = 0.45; // Definitely not relevant, skip
 const UNCERTAIN_ZONE = { min: 0.45, max: 0.75 }; // Needs LLM scoring
 
 // Cache for reference embedding (computed once per session)
+/** @type {number[] | null} */
 let referenceEmbeddingCache = null;
 
 /**
@@ -75,7 +78,7 @@ export async function generateEmbeddings(texts) {
   });
 
   return {
-    embeddings: response.data.map((d) => d.embedding),
+    embeddings: response.data.map((/** @type {any} */ d) => d.embedding),
     tokens: response.usage.total_tokens,
   };
 }
@@ -105,63 +108,52 @@ export function cosineSimilarity(a, b) {
   return magnitude === 0 ? 0 : dotProduct / magnitude;
 }
 
-/**
- * Build reference embedding from approved publications
- * This represents "what good executive-relevant content looks like"
- * @param {number} limit - Max publications to use
- * @returns {Promise<{embedding: number[], count: number, tokens: number}>}
- */
-export async function buildReferenceEmbedding(limit = 50) {
-  console.log('   📊 Building reference embedding from approved publications...');
-
-  // Get approved publications with good content
-  const { data: publications, error } = await getSupabase()
+/** @param {number} limit */
+async function fetchApprovedPublications(limit) {
+  await loadStatusCodes();
+  const { data, error } = await getSupabase()
     .from('ingestion_queue')
     .select('payload')
-    .eq('status_code', 330)
+    .eq('status_code', getStatusCode('PUBLISHED'))
     .not('payload->summary->short', 'is', null)
     .order('reviewed_at', { ascending: false })
     .limit(limit);
+  if (error) throw new Error(`Failed to load approved publications: ${error.message}`);
+  return data || [];
+}
 
-  if (error) {
-    throw new Error(`Failed to load approved publications: ${error.message}`);
-  }
-
-  if (!publications || publications.length === 0) {
-    console.log('   ⚠️ No approved publications found for reference embedding');
-    return null;
-  }
-
-  // Build text representations
-  const texts = publications
+/** @param {any[]} publications */
+function extractPublicationTexts(publications) {
+  return publications
     .map((p) => {
       const payload = p.payload;
       return `${payload.title || ''}\n${payload.summary?.short || ''}\n${payload.description || ''}`.trim();
     })
     .filter((t) => t.length > 0);
+}
 
-  if (texts.length === 0) {
+/** @param {number[][]} embeddings */
+function averageEmbeddings(embeddings) {
+  const avg = new Array(EMBEDDING_DIMENSIONS).fill(0);
+  for (const emb of embeddings) {
+    for (let i = 0; i < EMBEDDING_DIMENSIONS; i++) avg[i] += emb[i] / embeddings.length;
+  }
+  return avg;
+}
+
+/** Build reference embedding from approved publications @param {number} limit */
+export async function buildReferenceEmbedding(limit = 50) {
+  console.log('   📊 Building reference embedding from approved publications...');
+  const publications = await fetchApprovedPublications(limit);
+  if (publications.length === 0) {
+    console.log('   ⚠️ No approved publications found');
     return null;
   }
-
-  // Generate embeddings for all texts
+  const texts = extractPublicationTexts(publications);
+  if (texts.length === 0) return null;
   const { embeddings, tokens } = await generateEmbeddings(texts);
-
-  // Average the embeddings to create reference
-  const referenceEmbedding = new Array(EMBEDDING_DIMENSIONS).fill(0);
-  for (const emb of embeddings) {
-    for (let i = 0; i < EMBEDDING_DIMENSIONS; i++) {
-      referenceEmbedding[i] += emb[i] / embeddings.length;
-    }
-  }
-
   console.log(`   ✅ Built reference from ${texts.length} publications (${tokens} tokens)`);
-
-  return {
-    embedding: referenceEmbedding,
-    count: texts.length,
-    tokens,
-  };
+  return { embedding: averageEmbeddings(embeddings), count: texts.length, tokens };
 }
 
 /**
@@ -190,7 +182,7 @@ export function clearReferenceCache() {
 
 /**
  * Score a candidate's relevance using embedding similarity
- * @param {Object} candidate - { title, description }
+ * @param {{ title?: string; description?: string }} candidate - { title, description }
  * @param {number[]} referenceEmbedding - Reference embedding
  * @returns {Promise<{similarity: number, action: 'accept'|'reject'|'llm', tokens: number}>}
  */
@@ -204,6 +196,7 @@ export async function scoreWithEmbedding(candidate, referenceEmbedding) {
   const { embedding, tokens } = await generateEmbedding(text);
   const similarity = cosineSimilarity(embedding, referenceEmbedding);
 
+  /** @type {'accept' | 'reject' | 'llm'} */
   let action;
   if (similarity >= HIGH_RELEVANCE_THRESHOLD) {
     action = 'accept'; // High confidence relevant
@@ -216,40 +209,22 @@ export async function scoreWithEmbedding(candidate, referenceEmbedding) {
   return { similarity, action, tokens };
 }
 
-/**
- * Batch score candidates with embeddings
- * @param {Array} candidates - Array of { title, description }
- * @param {number[]} referenceEmbedding - Reference embedding
- * @returns {Promise<{results: Array, totalTokens: number}>}
- */
+/** @param {number} similarity @returns {'accept' | 'reject' | 'llm'} */
+function determineAction(similarity) {
+  if (similarity >= HIGH_RELEVANCE_THRESHOLD) return 'accept';
+  if (similarity < LOW_RELEVANCE_THRESHOLD) return 'reject';
+  return 'llm';
+}
+
+/** Batch score candidates with embeddings @param {Array<{ title?: string; description?: string }>} candidates @param {number[]} referenceEmbedding */
 export async function batchScoreWithEmbeddings(candidates, referenceEmbedding) {
-  if (candidates.length === 0) {
-    return { results: [], totalTokens: 0 };
-  }
-
+  if (candidates.length === 0) return { results: [], totalTokens: 0 };
   const texts = candidates.map((c) => `${c.title || ''}\n${c.description || ''}`.trim());
-
   const { embeddings, tokens } = await generateEmbeddings(texts);
-
   const results = embeddings.map((emb, i) => {
     const similarity = cosineSimilarity(emb, referenceEmbedding);
-
-    let action;
-    if (similarity >= HIGH_RELEVANCE_THRESHOLD) {
-      action = 'accept';
-    } else if (similarity < LOW_RELEVANCE_THRESHOLD) {
-      action = 'reject';
-    } else {
-      action = 'llm';
-    }
-
-    return {
-      ...candidates[i],
-      similarity,
-      action,
-    };
+    return { ...candidates[i], similarity, action: determineAction(similarity) };
   });
-
   return { results, totalTokens: tokens };
 }
 

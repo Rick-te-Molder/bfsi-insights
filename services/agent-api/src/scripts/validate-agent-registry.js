@@ -68,7 +68,7 @@ function processRequiredPromptLine(line, current, required) {
 
 function validateEnvVars() {
   if (!env.SUPABASE_URL) {
-    console.error('CRITICAL: SUPABASE_URL (or PUBLIC_SUPABASE_URL via shim) is required');
+    console.error('CRITICAL: SUPABASE_URL is required');
     process.exit(1);
   }
   if (!env.SUPABASE_SERVICE_KEY) {
