@@ -4,17 +4,14 @@
  * Use this instead of direct .update({ status_code }) calls.
  */
 
-import process from 'node:process';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabaseClient = null;
 
 function getSupabaseClient() {
   if (supabaseClient) return supabaseClient;
-  if (!process.env.PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
-    throw new Error('Missing Supabase environment variables');
-  }
-  supabaseClient = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+  supabaseClient = getSupabaseAdminClient();
   return supabaseClient;
 }
 
