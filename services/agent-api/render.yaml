@@ -11,8 +11,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: SUPABASE_URL
+        sync: false # Preferred (shim will copy to PUBLIC_SUPABASE_URL for legacy code paths)
       - key: PUBLIC_SUPABASE_URL
-        sync: false # Set manually in Render dashboard
+        sync: false # Legacy (deprecated)
       - key: SUPABASE_SERVICE_KEY
         sync: false
       - key: OPENAI_API_KEY
