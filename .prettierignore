@@ -1,4 +1,15 @@
+# Build output
 dist/
-.astro/
+**/dist/
+**/.astro/
+**/.next/
+
+# Artifacts
+artifacts/
+
+# Legacy artifact paths
 reports/
-node_modules
+coverage/
+
+# Dependencies
+node_modules/

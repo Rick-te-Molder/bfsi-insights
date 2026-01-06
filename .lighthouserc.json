@@ -38,7 +38,7 @@
     },
     "upload": {
       "target": "filesystem",
-      "outputDir": "./reports/lhci"
+      "outputDir": "./artifacts/perf/lighthouse"
     }
   }
 }

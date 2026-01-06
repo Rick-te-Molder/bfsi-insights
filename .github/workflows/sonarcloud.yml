@@ -37,11 +37,11 @@ jobs:
       - name: Debug coverage output
         run: |
           echo "=== Main coverage files ==="
-          ls -la coverage/ || echo "No coverage folder"
+          ls -la artifacts/test/coverage/ || echo "No coverage folder"
           echo "=== Agent-api coverage files ==="
           ls -la services/agent-api/coverage/ || echo "No agent-api coverage folder"
           echo "=== First 20 lines of main lcov.info ==="
-          head -20 coverage/lcov.info || echo "No main lcov.info"
+          head -20 artifacts/test/coverage/lcov.info || echo "No main lcov.info"
           echo "=== First 20 lines of agent-api lcov.info ==="
           head -20 services/agent-api/coverage/lcov.info || echo "No agent-api lcov.info"
 

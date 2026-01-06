@@ -1,39 +1,72 @@
-# build output
-dist/
-# generated types
-.astro/
+# ============================================================================
+# BFSI Insights - .gitignore
+# ============================================================================
+# Organized by: Dependencies → Build → Artifacts → Environment → IDE/OS
+# ============================================================================
 
-# dependencies
+# ----------------------------------------------------------------------------
+# Dependencies
+# ----------------------------------------------------------------------------
 node_modules/
 
-# logs
+# ----------------------------------------------------------------------------
+# Build output (monorepo-safe)
+# ----------------------------------------------------------------------------
+dist/
+**/dist/
+**/.astro/
+**/.next/
+**/out/
+.vercel/
+
+# ----------------------------------------------------------------------------
+# Artifacts (all generated/transient output)
+# ----------------------------------------------------------------------------
+# Unified artifacts directory
+artifacts/
+
+# Legacy paths (in case tools bypass artifacts/)
+coverage/
+playwright-report/
+test-results/
+.playwright/
+.lighthouseci/
+reports/
+
+# ----------------------------------------------------------------------------
+# Logs
+# ----------------------------------------------------------------------------
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-
-# environment variables
+# ----------------------------------------------------------------------------
+# Environment files
+# ----------------------------------------------------------------------------
 .env
+.env.local
+.env.*.local
 .env.production
+!.env.example
 
-# macOS-specific files
-.DS_Store
-
-# jetbrains setting folder
+# ----------------------------------------------------------------------------
+# IDE / Editor (allowlist approach for .vscode)
+# ----------------------------------------------------------------------------
 .idea/
-.lighthouseci/
-reports/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
 
-# Test artifacts
-playwright-report/
-test-results/
-.playwright/
-coverage/
+# ----------------------------------------------------------------------------
+# OS-specific
+# ----------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+
+# ----------------------------------------------------------------------------
+# Project-specific transient files
+# ----------------------------------------------------------------------------
 summaries-review.json
 public/thumbs/
-.env*.local
-
-**/.next/
-**/out/
-.vercel/
