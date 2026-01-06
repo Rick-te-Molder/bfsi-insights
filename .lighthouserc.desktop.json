@@ -14,6 +14,6 @@
         "categories:seo": ["error", { "minScore": 0.95 }]
       }
     },
-    "upload": { "target": "filesystem", "outputDir": "./reports/lhci" }
+    "upload": { "target": "filesystem", "outputDir": "./artifacts/perf/lighthouse" }
   }
 }

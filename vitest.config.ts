@@ -24,7 +24,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov'],
-      reportsDirectory: resolve(__dirname, 'coverage'),
+      reportsDirectory: resolve(__dirname, 'artifacts/test/coverage'),
       include: [
         'apps/web/**/*.ts',
         'apps/admin/src/components/ui/**/*.ts',
