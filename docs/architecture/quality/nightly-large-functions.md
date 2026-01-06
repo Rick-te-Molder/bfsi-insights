@@ -1,23 +1,19 @@
 # Large Functions Report
 
-> Auto-generated on 2026-01-05 by nightly quality workflow
+> Auto-generated on 2026-01-06 by nightly quality workflow
 
 Functions exceeding size limits (source: 30 lines, test: 50 lines)
 
 ## Summary
 
-- **Total large functions:** 85
-- **Files affected:** 70
+- **Total large functions:** 83
+- **Files affected:** 68
 
 ## Functions
 
 ```text
 LINES  FUNCTION                      FILE
 -----  ----------------------------  --------------------------------------------------------------------------------
-  207  ABTestsPage()                 apps/admin/src/app/(dashboard)/evals/ab-tests/page.tsx
-  201  useAddArticle()               apps/admin/src/app/(dashboard)/add/hooks/useAddArticle.ts
-  152  AgentsPage()                  apps/admin/src/app/(dashboard)/agents/page.tsx
-  142  DiscoveryControlCard()        apps/admin/src/components/dashboard/DiscoveryControlCard.tsx
   135  createApplyFiltersFunction()  apps/web/features/publications/multi-select-filters.apply.ts
   132  loadTaxonomies()              services/agent-api/src/lib/taxonomy-loader.js
   107  scrapeWebsite()               services/agent-api/src/lib/scrapers.js
@@ -45,6 +41,7 @@ LINES  FUNCTION                      FILE
    59  createTrace()                 services/agent-api/src/lib/tracing.js
    57  parseRSS()                    services/agent-api/src/lib/discovery-rss.js
    56  SearchBar()                   apps/admin/src/app/(dashboard)/items/search-bar.tsx
+   52  AgentsPage()                  apps/admin/src/app/(dashboard)/agents/page.tsx
    52  buildReferenceEmbedding()     services/agent-api/src/lib/embeddings.js
    51  usePipelineActions()          apps/admin/src/components/ui/sidebar/usePipelineActions.ts
    51  main()                        services/agent-api/src/scripts/backfill-tags.js
@@ -96,6 +93,7 @@ LINES  FUNCTION                      FILE
    32  GET()                         apps/admin/src/app/api/queue-item/[id]/route.ts
    32  extractRssPreview()           services/agent-api/src/lib/premium-handler.js
    32  enrichWithCitations()         services/agent-api/src/lib/quality-scorer.js
+   31  useAgentCoverageStats()       apps/admin/src/app/(dashboard)/agents/use-agent-coverage-stats.ts
    31  useSidebarEffects()           apps/admin/src/components/ui/sidebar/useSidebarEffects.ts
    31  completeOpenAI()              services/agent-api/src/lib/llm.js
    31  createEvalRun()               services/agent-api/src/lib/prompt-eval.js
