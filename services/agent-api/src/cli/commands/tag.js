@@ -2,17 +2,20 @@
  * CLI: run tag command
  */
 
-import { createClient } from '@supabase/supabase-js';
-import process from 'node:process';
+import { getSupabaseAdminClient } from '../../clients/supabase.js';
 import { runTagger } from '../../agents/tagger.js';
 import { transitionByAgent } from '../../lib/queue-update.js';
 import { loadStatusCodes, getStatusCode } from '../../lib/status-codes.js';
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+/** @returns {import('@supabase/supabase-js').SupabaseClient} */
+function getSupabase() {
+  return getSupabaseAdminClient();
+}
 
+/** @param {{ limit?: number }} options */
 async function fetchItems(options) {
   const { limit = 5 } = options;
-  const { data: items, error } = await supabase
+  const { data: items, error } = await getSupabase()
     .from('ingestion_queue')
     .select('*')
     .eq('status_code', getStatusCode('TO_TAG'))
@@ -23,10 +26,12 @@ async function fetchItems(options) {
   return items;
 }
 
+/** @param {any[]} arr */
 function extractCodes(arr) {
   return (arr || []).map((item) => item.code || item).filter(Boolean);
 }
 
+/** @param {any} item @param {any} result */
 function buildPayload(item, result) {
   return {
     ...item.payload,
@@ -49,6 +54,7 @@ function buildPayload(item, result) {
   };
 }
 
+/** @param {any} item */
 async function processItem(item) {
   try {
     console.log(`   🏷️  Tagging: ${item.payload?.title?.substring(0, 50)}...`);
@@ -63,11 +69,13 @@ async function processItem(item) {
     );
     return { success: true };
   } catch (err) {
-    console.error(`   ❌ Error: ${err.message}`);
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`   ❌ Error: ${message}`);
     return { success: false };
   }
 }
 
+/** @param {{ limit?: number }} options */
 export async function runTagCmd(options) {
   console.log('🏷️  Running Tag Agent...\n');
   await loadStatusCodes();

@@ -1,14 +1,17 @@
-import process from 'node:process';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
-const supabase = createClient(
-  process.env.PUBLIC_SUPABASE_URL ?? '',
-  process.env.SUPABASE_SERVICE_KEY ?? '',
-);
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
+let supabase = null;
+
+function getSupabase() {
+  if (supabase) return supabase;
+  supabase = getSupabaseAdminClient();
+  return supabase;
+}
 
 /** @param {number} limit */
 export async function loadUndiscoveredClassics(limit) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('classic_papers')
     .select('*')
     .eq('discovered', false)
@@ -21,7 +24,7 @@ export async function loadUndiscoveredClassics(limit) {
 
 /** @param {string} classicId @param {string} semanticScholarId */
 export async function markClassicDiscovered(classicId, semanticScholarId) {
-  await supabase
+  await getSupabase()
     .from('classic_papers')
     .update({
       discovered: true,
@@ -33,7 +36,7 @@ export async function markClassicDiscovered(classicId, semanticScholarId) {
 
 /** @param {string} classicId @param {number} citationCount */
 export async function updateClassicCitations(classicId, citationCount) {
-  await supabase
+  await getSupabase()
     .from('classic_papers')
     .update({ citation_count: citationCount })
     .eq('id', classicId);
@@ -43,7 +46,7 @@ export async function updateClassicCitations(classicId, citationCount) {
 export async function urlExists(url) {
   if (!url) return true;
 
-  const { data: queueItem } = await supabase
+  const { data: queueItem } = await getSupabase()
     .from('ingestion_queue')
     .select('id')
     .eq('url', url)
@@ -51,11 +54,15 @@ export async function urlExists(url) {
 
   if (queueItem) return true;
 
-  const { data: pub } = await supabase.from('kb_publication').select('id').eq('url', url).single();
+  const { data: pub } = await getSupabase()
+    .from('kb_publication')
+    .select('id')
+    .eq('url', url)
+    .single();
   return !!pub;
 }
 
 /** @param {Record<string, any>} row */
 export async function insertQueueItem(row) {
-  return supabase.from('ingestion_queue').insert(row).select('id').single();
+  return getSupabase().from('ingestion_queue').insert(row).select('id').single();
 }

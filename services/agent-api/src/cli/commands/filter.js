@@ -2,17 +2,20 @@
  * CLI: run filter command
  */
 
-import { createClient } from '@supabase/supabase-js';
-import process from 'node:process';
+import { getSupabaseAdminClient } from '../../clients/supabase.js';
 import { runRelevanceFilter } from '../../agents/screener.js';
 import { transitionByAgent } from '../../lib/queue-update.js';
 import { loadStatusCodes, getStatusCode } from '../../lib/status-codes.js';
 
-const supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+/** @returns {import('@supabase/supabase-js').SupabaseClient} */
+function getSupabase() {
+  return getSupabaseAdminClient();
+}
 
+/** @param {{ limit?: number }} options */
 async function fetchItems(options) {
   const { limit = 10 } = options;
-  const { data: items, error } = await supabase
+  const { data: items, error } = await getSupabase()
     .from('ingestion_queue')
     .select('*')
     .eq('status_code', getStatusCode('FETCHED'))
@@ -23,6 +26,7 @@ async function fetchItems(options) {
   return items;
 }
 
+/** @param {any} item */
 async function processItem(item) {
   const result = await runRelevanceFilter(item);
   const nextStatusCode = result.relevant
@@ -36,6 +40,7 @@ async function processItem(item) {
   return { item, result };
 }
 
+/** @param {any} item @param {any} result */
 function logResult(item, result) {
   if (result.relevant) {
     console.log(`   ✅ Filtered: ${item.payload?.title?.substring(0, 50)}...`);
@@ -44,6 +49,7 @@ function logResult(item, result) {
   }
 }
 
+/** @param {{ limit?: number }} options */
 export async function runFilterCmd(options) {
   console.log('🔍 Running Relevance Filter Agent...\n');
   await loadStatusCodes();
@@ -66,7 +72,8 @@ export async function runFilterCmd(options) {
       if (result.relevant) filtered++;
       else rejected++;
     } catch (err) {
-      console.error(`   ❌ Error: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`   ❌ Error: ${message}`);
     }
   }
 

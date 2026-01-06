@@ -5,15 +5,15 @@
  * KB-214: User Feedback Reinforcement System - Phase 2
  */
 
-import { createClient } from '@supabase/supabase-js';
-import process from 'node:process';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
 
 // Lazy-load Supabase client
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabase = null;
 
 export function getSupabase() {
   if (!supabase) {
-    supabase = createClient(process.env.PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+    supabase = getSupabaseAdminClient();
   }
   return supabase;
 }
@@ -31,6 +31,7 @@ export const MISS_CATEGORIES = {
 };
 
 /** Extract domain from URL */
+/** @param {string} url */
 export function extractDomain(url) {
   try {
     const urlObj = new URL(url);
@@ -41,14 +42,16 @@ export function extractDomain(url) {
 }
 
 /** Calculate days between two dates */
+/** @param {string | Date} date1 @param {string | Date} date2 */
 export function daysBetween(date1, date2) {
   const d1 = new Date(date1);
   const d2 = new Date(date2);
-  const diffTime = Math.abs(d2 - d1);
+  const diffTime = Math.abs(d2.getTime() - d1.getTime());
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
 /** Check if a domain is tracked in kb_source */
+/** @param {string} domain */
 export async function isSourceTracked(domain) {
   const { data } = await getSupabase()
     .from('kb_source')
@@ -60,6 +63,7 @@ export async function isSourceTracked(domain) {
 }
 
 /** Check if URL was ever in ingestion_queue */
+/** @param {string} urlNorm */
 export async function checkIngestionHistory(urlNorm) {
   const { data } = await getSupabase()
     .from('ingestion_queue')
