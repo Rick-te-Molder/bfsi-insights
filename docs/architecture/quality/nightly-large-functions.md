@@ -6,8 +6,8 @@ Functions exceeding size limits (source: 30 lines, test: 50 lines)
 
 ## Summary
 
-- **Total large functions:** 81
-- **Files affected:** 66
+- **Total large functions:** 76
+- **Files affected:** 62
 
 ## Functions
 
@@ -22,9 +22,7 @@ LINES  FUNCTION                      FILE
    93  POST()                        apps/admin/src/app/api/enrich-step/route.ts
    92  main()                        services/agent-api/src/scripts/backfill-dates.js
    90  LoginPage()                   apps/admin/src/app/(auth)/login/page.tsx
-   90  runSummarizer()               services/agent-api/src/agents/summarizer.js
    85  AgentDetailPage()             apps/admin/src/app/(dashboard)/agents/[agent]/page.tsx
-   80  main()                        services/agent-api/src/scripts/validate-agent-registry.js
    77  initMultiSelectFilters()      apps/web/features/publications/multi-select-filters.impl.ts
    73  Sidebar()                     apps/admin/src/components/ui/sidebar.tsx
    72  usePromptActions()            apps/admin/src/app/(dashboard)/agents/[agent]/hooks/usePromptActions.ts
@@ -82,11 +80,8 @@ LINES  FUNCTION                      FILE
    34  useAgentPrompts()             apps/admin/src/app/(dashboard)/agents/[agent]/hooks/useAgentPrompts.ts
    34  initHierarchyCascade()        apps/web/features/publications/hierarchy-cascade.ts
    34  initAudienceFilter()          apps/web/pages/index.astro
-   34  processQueue()                services/agent-api/src/agents/orchestrator.js
    34  runExamples()                 services/agent-api/src/lib/prompt-eval.js
-   34  for()                         services/agent-api/src/routes/evals.js
    33  POST()                        apps/admin/src/app/api/process-queue/route.ts
-   33  enrichItem()                  services/agent-api/src/agents/orchestrator.js
    33  processCandidate()            services/agent-api/src/lib/discovery-scoring.js
    32  GET()                         apps/admin/src/app/api/queue-item/[id]/route.ts
    32  extractRssPreview()           services/agent-api/src/lib/premium-handler.js
