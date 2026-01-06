@@ -44,8 +44,13 @@ const expandItemThumb = (t?: string): string[] => {
 
 let thumbCandidates: string[] = [];
 if (item.thumbnail_path && item.thumbnail_bucket) {
-  const url = `${import.meta.env.PUBLIC_SUPABASE_URL}/storage/v1/object/public/${item.thumbnail_bucket}/${item.thumbnail_path}`;
-  thumbCandidates = [url];
+  const publicSupabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
+  if (publicSupabaseUrl) {
+    const url = `${publicSupabaseUrl}/storage/v1/object/public/${item.thumbnail_bucket}/${item.thumbnail_path}`;
+    thumbCandidates = [url];
+  } else {
+    thumbCandidates = [];
+  }
 } else if (item.thumbnail) {
   if (item.thumbnail.startsWith('http') || item.thumbnail.startsWith('/')) {
     thumbCandidates = [item.thumbnail];

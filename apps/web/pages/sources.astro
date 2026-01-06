@@ -2,17 +2,23 @@
 export const prerender = true;
 
 import Base from '../layouts/Base.astro';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClient } from '../lib/supabase';
 
 // ------------------------------------------------------------
 // Load data
 // ------------------------------------------------------------
-const { data: sources, error } = await supabase
-  .from('kb_source')
-  .select('name, domain, description, category, tier')
-  .eq('show_on_external_page', true)
-  .order('tier', { ascending: false }) // premium / high-value first
-  .order('name');
+const supabase = getSupabaseClient();
+const { data: sources, error } = supabase
+  ? await supabase
+      .from('kb_source')
+      .select('name, domain, description, category, tier')
+      .eq('show_on_external_page', true)
+      .order('tier', { ascending: false }) // premium / high-value first
+      .order('name')
+  : {
+      data: [],
+      error: null,
+    };
 
 if (error) {
   console.error('Failed to fetch external sources:', error);

@@ -165,3 +165,6 @@ jobs:
       - name: Build
         if: github.actor != 'dependabot[bot]'
         run: npm run build --if-present
+        env:
+          SUPABASE_REQUIRED: '1'
+          PUBLIC_SUPABASE_REQUIRED: '1'
