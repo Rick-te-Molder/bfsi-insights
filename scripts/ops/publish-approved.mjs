@@ -1,13 +1,26 @@
 #!/usr/bin/env node
-
 /**
- * Publish Approved Items
+ * @script publish-approved.mjs
+ * @safety DANGEROUS - mutates production data
+ * @env    local, staging, prod (requires --confirm-prod for production)
  *
+ * @description
  * Moves approved rows from ingestion_queue → kb_publication
  * and populates all junction tables (industry, topic, vendor, org, process).
  *
- * Usage:
- *   node scripts/ops/publish-approved.mjs [--dry-run] [--limit=10]
+ * @sideEffects
+ * - INSERTs into kb_publication
+ * - INSERTs into junction tables (kb_publication_bfsi_*)
+ * - UPDATEs ingestion_queue.status to 'published'
+ * - May INSERT new vendors/organizations if not found
+ *
+ * @rollback
+ * 1. DELETE FROM kb_publication WHERE origin_queue_id IN (<affected_ids>)
+ * 2. UPDATE ingestion_queue SET status = 'approved' WHERE id IN (<affected_ids>)
+ *
+ * @usage
+ *   node scripts/ops/publish-approved.mjs --dry-run --limit=10
+ *   node scripts/ops/publish-approved.mjs --limit=5
  */
 
 import dotenv from 'dotenv';

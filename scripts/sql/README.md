@@ -4,12 +4,16 @@ This folder contains **operational SQL** and **one-time SQL** that is intentiona
 
 ## Categories
 
-- `ops/`
-  - For recurring operational queries/actions.
-  - Treat as potentially production-impacting.
+| Folder      | Mutations    | Purpose                                   |
+| ----------- | ------------ | ----------------------------------------- |
+| `ops/`      | ❌ Read-only | Recurring checks, diagnostics, validation |
+| `one-time/` | ✅ Allowed   | Scripts executed once, kept for audit     |
 
-- `one-time/`
-  - For scripts that were executed once and kept for audit/history.
+**Hard rules:**
+
+- `ops/` must be **read-only** (`SELECT`, `EXPLAIN`, `WITH ... SELECT`)
+- `one-time/` may contain `INSERT`, `UPDATE`, `DELETE`, or DDL
+- If a mutation script needs to run regularly, it belongs in `one-time/` with clear naming and must include rollback steps
 
 ## How to run safely
 

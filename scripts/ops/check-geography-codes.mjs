@@ -1,5 +1,17 @@
+#!/usr/bin/env node
 /**
- * Check geography codes in database
+ * @script check-geography-codes.mjs
+ * @safety SAFE - read-only diagnostic
+ * @env    local, staging, prod
+ *
+ * @description
+ * Lists all geography codes from kb_geography table, grouped by level.
+ * Useful for verifying taxonomy consistency.
+ *
+ * @sideEffects None (read-only)
+ *
+ * @usage
+ *   node scripts/ops/check-geography-codes.mjs
  */
 import { createClient } from '@supabase/supabase-js';
 import 'dotenv/config';
@@ -33,7 +45,7 @@ async function checkGeographyCodes() {
   });
 
   Object.keys(byLevel)
-    .sort()
+    .sort((a, b) => a.localeCompare(b))
     .forEach((level) => {
       console.log(`\nLevel ${level}:`);
       byLevel[level].forEach((item) => {
@@ -42,4 +54,4 @@ async function checkGeographyCodes() {
     });
 }
 
-checkGeographyCodes().catch(console.error);
+await checkGeographyCodes().catch(console.error);
