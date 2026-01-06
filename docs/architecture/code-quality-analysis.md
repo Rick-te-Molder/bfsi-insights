@@ -397,7 +397,7 @@ describe('Error Classification', () => {
 
 #### 10. **Establish Code Review Standards**
 
-**Document in `docs/contributing.md`:**
+**Document in `.github/CONTRIBUTING.md`:**
 
 - Security review required for crypto, auth, data handling
 - Performance review for database queries, loops
