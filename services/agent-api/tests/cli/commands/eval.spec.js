@@ -28,6 +28,8 @@ vi.mock('@supabase/supabase-js', () => ({
 
 describe('Eval CLI Commands', () => {
   beforeEach(() => {
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_SERVICE_KEY = 'service-key';
     vi.clearAllMocks();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
