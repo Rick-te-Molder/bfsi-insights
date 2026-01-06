@@ -242,7 +242,7 @@ npm run check:links       # Link checker
 
 ## 9. Security
 
-See [SECURITY.md](SECURITY.md) for policies and vulnerability reporting.
+See [.github/SECURITY.md](.github/SECURITY.md) for policies and vulnerability reporting.
 
 - **Auth**: Supabase Auth for admin users
 - **RLS**: All tables protected; RPCs verify admin status
@@ -298,7 +298,7 @@ See [`services/agent-api/DEPLOYMENT.md`](services/agent-api/DEPLOYMENT.md) for f
 
 ## 13. Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
 ---
 
