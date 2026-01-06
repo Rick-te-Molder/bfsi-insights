@@ -37,6 +37,7 @@ export default defineConfig({
         '**/*.spec.ts',
         '**/*.spec.tsx',
         '**/*.test.ts',
+        '**/*.test.js',
         '**/scripts/**',
         '**/cli.js',
         '**/*.config.{js,ts}',
