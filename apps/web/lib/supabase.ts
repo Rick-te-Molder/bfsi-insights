@@ -30,8 +30,6 @@ export function getSupabaseClient() {
   return null;
 }
 
-export const supabase = getSupabaseClient();
-
 // ------------------------------------------------------------
 // Publication type based on kb_publication_pretty view
 // ------------------------------------------------------------
@@ -90,6 +88,7 @@ function normalizePublication(row: any): Publication {
 // Fetch all published publications
 // ------------------------------------------------------------
 export async function getAllPublications(): Promise<Publication[]> {
+  const supabase = getSupabaseClient();
   if (!supabase) return [];
   const { data, error } = await supabase
     .from('kb_publication_pretty')
@@ -109,6 +108,7 @@ export async function getAllPublications(): Promise<Publication[]> {
 // Fetch a single publication by slug
 // ------------------------------------------------------------
 export async function getPublicationBySlug(slug: string): Promise<Publication | null> {
+  const supabase = getSupabaseClient();
   if (!supabase) return null;
   const { data, error } = await supabase
     .from('kb_publication_pretty')
@@ -131,6 +131,7 @@ export async function getPublicationBySlug(slug: string): Promise<Publication | 
 export async function getFilteredPublications(
   filters: Record<string, string>,
 ): Promise<Publication[]> {
+  const supabase = getSupabaseClient();
   if (!supabase) return [];
   let query = supabase.from('kb_publication_pretty').select('*').eq('status', 'published');
 
