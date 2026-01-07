@@ -6,19 +6,14 @@ Functions exceeding size limits (source: 30 lines, test: 50 lines)
 
 ## Summary
 
-- **Total large functions:** 55
-- **Files affected:** 47
+- **Total large functions:** 50
+- **Files affected:** 42
 
 ## Functions
 
 ```text
 LINES  FUNCTION                  FILE
 -----  ------------------------  --------------------------------------------------------------------------------
-   90  LoginPage()               apps/admin/src/app/(auth)/login/page.tsx
-   85  AgentDetailPage()         apps/admin/src/app/(dashboard)/agents/[agent]/page.tsx
-   77  initMultiSelectFilters()  apps/web/features/publications/multi-select-filters.impl.ts
-   73  Sidebar()                 apps/admin/src/components/ui/sidebar.tsx
-   72  usePromptActions()        apps/admin/src/app/(dashboard)/agents/[agent]/hooks/usePromptActions.ts
    71  MissedDiscoveryPage()     apps/admin/src/app/(dashboard)/missed/page.tsx
    71  applyFilters()            apps/web/features/publications/filters/apply.ts
    69  useKeyboardShortcuts()    …admin/src/app/(dashboard)/items/components/detail-panel/useKeyboardShortcuts.ts
