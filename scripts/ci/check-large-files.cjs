@@ -9,139 +9,15 @@
  * - "Building Maintainable Software" by Joost Visser
  */
 const { execSync } = require('node:child_process');
-const fs = require('node:fs');
-const path = require('node:path');
-const { findUnits } = require('../lib/unit-detector.cjs');
-
-// 300/30 size limits per language
-const LANGUAGE_LIMITS = {
-  js: { file: 300, unit: 30, unitExcellent: 15 },
-  ts: { file: 300, unit: 30, unitExcellent: 15 },
-  tsx: { file: 300, unit: 30, unitExcellent: 15 },
-  jsx: { file: 300, unit: 30, unitExcellent: 15 },
-  astro: { file: 300, unit: 30, unitExcellent: 15 },
-  py: { file: 250, unit: 25, unitExcellent: 15 },
-  java: { file: 300, unit: 30, unitExcellent: 15 },
-  default: { file: 300, unit: 30, unitExcellent: 15 },
-};
-
-// Relaxed limits for test files (allow longer test tables/fixtures)
-const TEST_LIMITS = {
-  js: { file: 500, unit: 50, unitExcellent: 30 },
-  ts: { file: 500, unit: 50, unitExcellent: 30 },
-  tsx: { file: 500, unit: 50, unitExcellent: 30 },
-  jsx: { file: 500, unit: 50, unitExcellent: 30 },
-  default: { file: 500, unit: 50, unitExcellent: 30 },
-};
-
-const PARAM_LIMITS = {
-  optimal: 3,
-  warn: 5,
-  block: 6,
-  maxDestructuredKeys: 7,
-};
-
-// Allowed file extensions and path prefixes
-const ALLOWED_EXT = new Set(['.ts', '.js', '.tsx', '.jsx', '.astro']);
-const ALLOWED_PREFIXES = [
-  'apps/web/',
-  'apps/admin/src/',
-  'services/agent-api/', // includes src/ and __tests__/
-];
+const { PARAM_LIMITS } = require('../lib/quality-limits.cjs');
+const { isTestFile, matchesPattern } = require('../lib/quality-utils.cjs');
+const { analyzeFile } = require('../lib/file-analyzer.cjs');
 
 /**
- * Normalize path for cross-platform compatibility
+ * Analyze file with moderate unit tracking enabled (for pre-commit warnings)
  */
-function normalizePath(p) {
-  return p.replaceAll('\\', '/');
-}
-
-/**
- * Check if file is a test file
- */
-function isTestFile(filePath) {
-  const f = normalizePath(filePath);
-  return (
-    f.includes('__tests__/') || f.includes('.test.') || f.includes('.spec.') || /\/tests?\//.test(f)
-  );
-}
-
-/**
- * Get language-specific limits
- */
-function getLimits(filePath) {
-  const ext = path.extname(filePath).slice(1).toLowerCase();
-  const limits = isTestFile(filePath) ? TEST_LIMITS : LANGUAGE_LIMITS;
-  return limits[ext] || limits.default;
-}
-
-/**
- * Analyze a single file
- */
-function analyzeFile(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
-  const lines = content.split('\n');
-  const lineCount = lines.length;
-  const limits = getLimits(filePath);
-
-  const units = findUnits(content);
-
-  const unitsWithParams = units.map((u) => {
-    const paramCount = Number.isFinite(u.paramCount) ? u.paramCount : 0;
-    const destructuredKeysCount = Number.isFinite(u.destructuredKeysCount)
-      ? u.destructuredKeysCount
-      : 0;
-    const effectiveParamCount =
-      destructuredKeysCount > PARAM_LIMITS.maxDestructuredKeys ? destructuredKeysCount : paramCount;
-    return { ...u, paramCount, destructuredKeysCount, effectiveParamCount };
-  });
-
-  // Filter units by severity
-  const largeUnits = unitsWithParams.filter((u) => u.length > limits.unit);
-  const moderateUnits = unitsWithParams.filter(
-    (u) => u.length > limits.unitExcellent && u.length <= limits.unit,
-  );
-
-  const largeParamUnits = unitsWithParams.filter(
-    (u) => u.effectiveParamCount >= PARAM_LIMITS.block,
-  );
-  const moderateParamUnits = unitsWithParams.filter(
-    (u) =>
-      u.effectiveParamCount >= PARAM_LIMITS.optimal + 1 &&
-      u.effectiveParamCount <= PARAM_LIMITS.warn,
-  );
-
-  return {
-    filePath,
-    lineCount,
-    limits,
-    units: {
-      all: unitsWithParams,
-      large: largeUnits, // > 30 lines (poor)
-      moderate: moderateUnits, // 15-30 lines (good but could be better)
-      largeParams: largeParamUnits,
-      moderateParams: moderateParamUnits,
-    },
-    exceedsFileLimit: lineCount > limits.file,
-  };
-}
-
-/**
- * Check if file matches our criteria (extension + path prefix)
- */
-function matchesPattern(file) {
-  const f = normalizePath(file);
-  const ext = path.extname(f).toLowerCase();
-  if (!ALLOWED_EXT.has(ext)) return false;
-  // Exclude generated/build folders
-  if (
-    f.includes('dist/') ||
-    f.includes('build/') ||
-    f.includes('.astro/') ||
-    f.includes('node_modules/')
-  )
-    return false;
-  return ALLOWED_PREFIXES.some((prefix) => f.startsWith(prefix));
+function analyzeFileWithModerate(filePath) {
+  return analyzeFile(filePath, { includeModerate: true });
 }
 
 /**
@@ -181,7 +57,7 @@ try {
 
   // Check ALL staged files - no exceptions
   // If you touch it, you must clean it
-  const results = stagedFiles.map(analyzeFile);
+  const results = stagedFiles.map(analyzeFileWithModerate);
 
   // Separate results by severity
   const filesExceedingLimit = results.filter((r) => r.exceedsFileLimit);

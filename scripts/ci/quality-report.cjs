@@ -13,95 +13,15 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { execSync } = require('node:child_process');
-const { findUnits } = require('../lib/unit-detector.cjs');
+const { PARAM_LIMITS } = require('../lib/quality-limits.cjs');
+const { matchesPattern, padRight, padLeft, clamp } = require('../lib/quality-utils.cjs');
+const { analyzeFile } = require('../lib/file-analyzer.cjs');
 
-const LANGUAGE_LIMITS = {
-  js: { file: 300, unit: 30, unitExcellent: 15 },
-  ts: { file: 300, unit: 30, unitExcellent: 15 },
-  tsx: { file: 300, unit: 30, unitExcellent: 15 },
-  jsx: { file: 300, unit: 30, unitExcellent: 15 },
-  astro: { file: 300, unit: 30, unitExcellent: 15 },
-  default: { file: 300, unit: 30, unitExcellent: 15 },
-};
-
-const TEST_LIMITS = {
-  js: { file: 500, unit: 50, unitExcellent: 30 },
-  ts: { file: 500, unit: 50, unitExcellent: 30 },
-  tsx: { file: 500, unit: 50, unitExcellent: 30 },
-  jsx: { file: 500, unit: 50, unitExcellent: 30 },
-  default: { file: 500, unit: 50, unitExcellent: 30 },
-};
-
-const PARAM_LIMITS = { optimal: 3, warn: 5, block: 6, maxDestructuredKeys: 7 };
-const ALLOWED_EXT = new Set(['.ts', '.js', '.tsx', '.jsx', '.astro']);
-const ALLOWED_PREFIXES = ['apps/web/', 'apps/admin/src/', 'services/agent-api/'];
 const OUTPUT_DIR = 'docs/architecture/quality';
-
-function normalizePath(p) {
-  return p.replaceAll('\\', '/');
-}
-
-function isTestFile(filePath) {
-  const f = normalizePath(filePath);
-  return (
-    f.includes('__tests__/') || f.includes('.test.') || f.includes('.spec.') || /\/tests?\//.test(f)
-  );
-}
-
-function getLimits(filePath) {
-  const ext = path.extname(filePath).slice(1).toLowerCase();
-  const limits = isTestFile(filePath) ? TEST_LIMITS : LANGUAGE_LIMITS;
-  return limits[ext] || limits.default;
-}
-
-function matchesPattern(file) {
-  const f = normalizePath(file);
-  const ext = path.extname(f).toLowerCase();
-  if (!ALLOWED_EXT.has(ext)) return false;
-  if (
-    f.includes('dist/') ||
-    f.includes('build/') ||
-    f.includes('.astro/') ||
-    f.includes('node_modules/')
-  )
-    return false;
-  return ALLOWED_PREFIXES.some((prefix) => f.startsWith(prefix));
-}
 
 function getAllFiles() {
   const output = execSync('git ls-files', { encoding: 'utf8' });
   return output.trim().split('\n').filter(Boolean).filter(matchesPattern);
-}
-
-function analyzeFile(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
-  const lines = content.split('\n');
-  const lineCount = lines.length;
-  const limits = getLimits(filePath);
-  const units = findUnits(content);
-
-  const unitsWithParams = units.map((u) => {
-    const paramCount = Number.isFinite(u.paramCount) ? u.paramCount : 0;
-    const destructuredKeysCount = Number.isFinite(u.destructuredKeysCount)
-      ? u.destructuredKeysCount
-      : 0;
-    const effectiveParamCount =
-      destructuredKeysCount > PARAM_LIMITS.maxDestructuredKeys ? destructuredKeysCount : paramCount;
-    return { ...u, paramCount, destructuredKeysCount, effectiveParamCount };
-  });
-
-  const largeUnits = unitsWithParams.filter((u) => u.length > limits.unit);
-  const largeParamUnits = unitsWithParams.filter(
-    (u) => u.effectiveParamCount >= PARAM_LIMITS.block,
-  );
-
-  return {
-    filePath,
-    lineCount,
-    limits,
-    units: { all: unitsWithParams, large: largeUnits, largeParams: largeParamUnits },
-    exceedsFileLimit: lineCount > limits.file,
-  };
 }
 
 function generateLargeFilesReport(results) {
@@ -137,14 +57,6 @@ function generateLargeFilesReport(results) {
       90,
       Math.max(headerFile.length, ...largeFiles.map((r) => r.filePath.length)),
     );
-
-    const padRight = (s, w) => String(s).padEnd(w, ' ');
-    const padLeft = (s, w) => String(s).padStart(w, ' ');
-    const clamp = (s, w) => {
-      const text = String(s);
-      if (text.length <= w) return text;
-      return `…${text.slice(text.length - (w - 1))}`;
-    };
 
     md += '```text\n';
     md += `${padRight(headerOver, overWidth)}  ${padRight(headerLines, linesWidth)}  ${padRight(headerFile, fileWidth)}\n`;
@@ -196,14 +108,6 @@ function generateLargeFunctionsReport(results) {
       80,
       Math.max(headerFile.length, ...allLargeUnits.map((u) => u.filePath.length)),
     );
-
-    const padRight = (s, w) => String(s).padEnd(w, ' ');
-    const padLeft = (s, w) => String(s).padStart(w, ' ');
-    const clamp = (s, w) => {
-      const text = String(s);
-      if (text.length <= w) return text;
-      return `…${text.slice(text.length - (w - 1))}`;
-    };
 
     md += '```text\n';
     md += `${padRight(headerLines, linesWidth)}  ${padRight(headerFn, fnWidth)}  ${padRight(headerFile, fileWidth)}\n`;
@@ -258,14 +162,6 @@ function generateParamCountsReport(results) {
       80,
       Math.max(headerFile.length, ...allLargeParamUnits.map((u) => u.filePath.length)),
     );
-
-    const padRight = (s, w) => String(s).padEnd(w, ' ');
-    const padLeft = (s, w) => String(s).padStart(w, ' ');
-    const clamp = (s, w) => {
-      const text = String(s);
-      if (text.length <= w) return text;
-      return `…${text.slice(text.length - (w - 1))}`;
-    };
 
     md += '```text\n';
     md += `${padRight(headerParams, paramsWidth)}  ${padRight(headerFn, fnWidth)}  ${padRight(headerFile, fileWidth)}\n`;
