@@ -75,7 +75,7 @@ The file does not tell agents:
 
 ### 3.2 Discovery Problem
 
-Even though `docs/architecture/quality/sonarcloud.md` has a "Quick Lookup (for AI assistants)" section, agents won't find it because:
+Even though `docs/engineering/sonar/sonarcloud.md` has a "Quick Lookup (for AI assistants)" section, agents won't find it because:
 
 1. **No directive to read it**: `.windsurfrules` doesn't mention it
 2. **Grep finds too much**: Searching for "S3358" finds 9 matches across 4 files—agents may not prioritize the documentation files
@@ -112,22 +112,22 @@ Add the following section to `.windsurfrules` after the "Pre-commit & Local Veri
 ### Before fixing any SonarCloud issue
 
 1. **Extract the Rule ID** from the issue (e.g., S3358, S6759)
-2. **Consult the Quick Lookup table** in `docs/architecture/quality/sonarcloud.md`
+2. **Consult the Quick Lookup table** in `docs/engineering/sonar/sonarcloud.md`
 3. **Read the linked Lesson file** for project-specific fix patterns
 4. **Apply the documented pattern**, not a generic fix
 
 ### Documentation structure
 
-- **Quick Lookup**: `docs/architecture/quality/sonarcloud.md` (Rule ID → Lesson mapping)
-- **Lessons**: `docs/architecture/quality/sonar-lessons/*.md` (How we fix issues in this codebase)
-- **Rules**: `docs/architecture/quality/sonar-rules/*.md` (Links to SonarSource docs)
+- **Quick Lookup**: `docs/engineering/sonar/sonarcloud.md` (Rule ID → Lesson mapping)
+- **Lessons**: `docs/engineering/sonar/lessons/*.md` (How we fix issues in this codebase)
+- **Rules**: `docs/engineering/sonar/rules/*.md` (Links to SonarSource docs)
 
 ### If no lesson exists
 
 1. Fix the issue using best practices
-2. **Create a new lesson** in `docs/architecture/quality/sonar-lessons/`
+2. **Create a new lesson** in `docs/engineering/sonar/lessons/`
 3. **Add to Quick Lookup table** in `sonarcloud.md`
-4. **Add rule file** in `docs/architecture/quality/sonar-rules/`
+4. **Add rule file** in `docs/engineering/sonar/rules/`
 ```
 
 **Copy-paste location**: Insert after line 129 (after the "Pre-commit & Local Verification" section, before "Prompt Engineering")
