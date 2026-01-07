@@ -1,5 +1,31 @@
 import { chromium } from 'playwright';
 
+/** @typedef {import('playwright').Browser} Browser */
+/** @typedef {import('playwright').Page} Page */
+/** @typedef {{ type: 'loadMore'|'scroll', selector?: string, maxPages?: number }} PaginationConfig */
+/**
+ * @typedef {{
+ *   article: string,
+ *   title: string,
+ *   link: string,
+ *   date?: string,
+ *   description?: string
+ * }} ScraperSelectors
+ */
+/**
+ * @typedef {{
+ *   url: string,
+ *   selectors: ScraperSelectors,
+ *   waitFor?: string,
+ *   waitMs?: number,
+ *   limit?: number,
+ *   pagination?: PaginationConfig,
+ *   extractors?: Record<string, string>
+ * }} ScraperConfig
+ */
+
+/** @typedef {{ scraper_config?: ScraperConfig }} SourceWithScraperConfig */
+
 /**
  * Scrape articles from a website using Playwright
  *
@@ -16,13 +42,32 @@ import { chromium } from 'playwright';
  * - pagination: { type: 'loadMore'|'scroll', selector: '.load-more', maxPages: 3 }
  * - extractors: { title: 'text'|'attr:data-title', url: 'href'|'attr:data-url' }
  */
+/** @param {SourceWithScraperConfig} source */
 export async function scrapeWebsite(source) {
   if (!source.scraper_config) return [];
 
+  /** @type {ScraperConfig} */
   const config = source.scraper_config;
 
+  const browser = await createBrowser();
+  try {
+    const page = await createPage(browser);
+    await addStealthSettings(page);
+    return await scrapePage(page, config);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Scraping failed: ${message}`);
+  } finally {
+    await browser.close();
+  }
+}
+
+/**
+ * @returns {Promise<Browser>}
+ */
+function createBrowser() {
   // Use stealth settings to bypass bot detection
-  const browser = await chromium.launch({
+  return chromium.launch({
     headless: true,
     args: [
       '--disable-blink-features=AutomationControlled',
@@ -30,7 +75,13 @@ export async function scrapeWebsite(source) {
       '--disable-dev-shm-usage',
     ],
   });
+}
 
+/**
+ * @param {Browser} browser
+ * @returns {Promise<Page>}
+ */
+async function createPage(browser) {
   const context = await browser.newContext({
     userAgent:
       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -38,94 +89,168 @@ export async function scrapeWebsite(source) {
     locale: 'en-US',
     timezoneId: 'America/New_York',
   });
+  return context.newPage();
+}
 
-  const page = await context.newPage();
-
+/**
+ * @param {Page} page
+ */
+async function addStealthSettings(page) {
   // Hide automation indicators
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'webdriver', { get: () => false });
   });
+}
 
-  try {
-    await page.goto(config.url, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30000,
-    });
+/**
+ * @param {Page} page
+ * @param {ScraperConfig} config
+ */
+async function scrapePage(page, config) {
+  await gotoAndWait(page, config);
 
-    // Wait for specific selector if configured
-    if (config.waitFor) {
-      await page.waitForSelector(config.waitFor, { timeout: 10000 }).catch(() => {
-        // Continue even if selector not found
-      });
-    }
-
-    // Wait for content to load
-    const waitMs = config.waitMs ?? 2000;
-    await new Promise((r) => setTimeout(r, waitMs));
-
-    // Handle pagination if configured
-    if (config.pagination) {
-      await handlePagination(page, config.pagination);
-    }
-
-    // Extract articles with extended options
-    const articles = await page.$$eval(
-      config.selectors.article,
-      (elements, opts) => {
-        const { selectors, extractors = {}, limit } = opts;
-
-        // Helper to extract value based on extractor config
-        const extract = (el, selector, extractor = 'text') => {
-          const target = el.querySelector(selector);
-          if (!target) return null;
-
-          if (extractor === 'text') {
-            return target.textContent?.trim();
-          } else if (extractor === 'href') {
-            return target.href;
-          } else if (extractor.startsWith('attr:')) {
-            const attr = extractor.replace('attr:', '');
-            return target.getAttribute(attr);
-          }
-          return target.textContent?.trim();
-        };
-
-        let results = elements.map((el) => ({
-          title: extract(el, selectors.title, extractors.title || 'text'),
-          url: extract(el, selectors.link, extractors.url || 'href'),
-          date: selectors.date ? extract(el, selectors.date, extractors.date || 'text') : null,
-          description: selectors.description
-            ? extract(el, selectors.description, extractors.description || 'text')
-            : null,
-        }));
-
-        // Filter valid articles
-        results = results.filter((a) => a.title && a.url);
-
-        // Apply limit if configured
-        if (limit && limit > 0) {
-          results = results.slice(0, limit);
-        }
-
-        return results;
-      },
-      {
-        selectors: config.selectors,
-        extractors: config.extractors || {},
-        limit: config.limit,
-      },
-    );
-
-    return articles;
-  } catch (error) {
-    throw new Error(`Scraping failed: ${error.message}`);
-  } finally {
-    await browser.close();
+  // Handle pagination if configured
+  if (config.pagination) {
+    await handlePagination(page, config.pagination);
   }
+
+  // Extract articles with extended options
+  return extractArticles(page, config);
+}
+
+/**
+ * @param {Page} page
+ * @param {ScraperConfig} config
+ */
+async function gotoAndWait(page, config) {
+  await page.goto(config.url, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30000,
+  });
+
+  // Wait for specific selector if configured
+  await waitForConfiguredSelector(page, config.waitFor);
+
+  // Wait for content to load
+  const waitMs = config.waitMs ?? 2000;
+  await delay(waitMs);
+}
+
+/**
+ * @param {Page} page
+ * @param {string | undefined} selector
+ */
+async function waitForConfiguredSelector(page, selector) {
+  if (!selector) return;
+  await page.waitForSelector(selector, { timeout: 10000 }).catch(() => {
+    // Continue even if selector not found
+  });
+}
+
+/** @param {number} ms */
+function delay(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/** @param {ScraperConfig} config */
+function buildExtractionOptions(config) {
+  return {
+    selectors: config.selectors,
+    extractors: config.extractors || {},
+    limit: config.limit,
+  };
+}
+
+/**
+ * @param {Page} page
+ * @param {ScraperConfig} config
+ */
+async function extractArticles(page, config) {
+  const opts = buildExtractionOptions(config);
+  const elements = await page.$$(opts.selectors.article);
+  const articles = await readArticles(elements, opts);
+  return applyLimit(articles, opts.limit);
+}
+
+/**
+ * @typedef {{
+ *   title: string | null,
+ *   url: string | null,
+ *   date: string | null,
+ *   description: string | null
+ * }} ScrapedArticle
+ */
+
+/**
+ * @param {import('playwright').ElementHandle[]} elements
+ * @param {{ selectors: ScraperSelectors, extractors?: Record<string, string>, limit?: number }} opts
+ * @returns {Promise<ScrapedArticle[]>}
+ */
+async function readArticles(elements, opts) {
+  const articles = [];
+  for (const el of elements) {
+    const article = await readArticle(el, opts);
+    if (article.title && article.url) articles.push(article);
+  }
+  return articles;
+}
+
+/**
+ * @param {import('playwright').ElementHandle} el
+ * @param {{ selectors: ScraperSelectors, extractors?: Record<string, string> }} opts
+ */
+async function readArticle(el, opts) {
+  const { selectors, extractors = {} } = opts;
+  return {
+    title: await readField(el, selectors.title, extractors.title || 'text'),
+    url: await readField(el, selectors.link, extractors.url || 'href'),
+    date: selectors.date ? await readField(el, selectors.date, extractors.date || 'text') : null,
+    description: selectors.description
+      ? await readField(el, selectors.description, extractors.description || 'text')
+      : null,
+  };
+}
+
+/**
+ * @param {import('playwright').ElementHandle} el
+ * @param {string} selector
+ * @param {string} extractor
+ */
+async function readField(el, selector, extractor) {
+  const target = await el.$(selector);
+  if (!target) return null;
+
+  if (extractor === 'text') {
+    return (await target.textContent())?.trim() || null;
+  }
+
+  if (extractor === 'href') {
+    return (await target.getAttribute('href')) || null;
+  }
+
+  if (extractor.startsWith('attr:')) {
+    const attr = extractor.replace('attr:', '');
+    return (await target.getAttribute(attr)) || null;
+  }
+
+  return (await target.textContent())?.trim() || null;
+}
+
+/**
+ * @param {ScrapedArticle[]} articles
+ * @param {number | undefined} limit
+ */
+function applyLimit(articles, limit) {
+  if (!limit || limit <= 0) return articles;
+  return articles.slice(0, limit);
 }
 
 /**
  * Handle pagination (load more button or infinite scroll)
+ */
+/**
+ * @param {Page} page
+ * @param {PaginationConfig} pagination
  */
 async function handlePagination(page, pagination) {
   const { type, selector, maxPages = 2 } = pagination;
@@ -136,10 +261,10 @@ async function handlePagination(page, pagination) {
       if (!loadMoreBtn) break;
 
       await loadMoreBtn.click();
-      await new Promise((r) => setTimeout(r, 1500));
+      await delay(1500);
     } else if (type === 'scroll') {
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      await new Promise((r) => setTimeout(r, 1500));
+      await delay(1500);
     }
   }
 }
