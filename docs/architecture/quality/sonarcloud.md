@@ -52,6 +52,16 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 
 ---
 
+# Pre-Commit Pattern Check
+
+A lightweight pre-commit check (`scripts/ci/check-sonar-patterns.cjs`) warns when staged files contain patterns we've documented as Sonar lessons. This catches regressions before CI.
+
+**Checked patterns**: S3358, S6479, S4624, S7781, S7735, S6848, S6819, S2301, S6551, S6759
+
+**Behavior**: Warns but does not block (use `--strict` to block)
+
+---
+
 # Prevention Checklist
 
 Quick checks before committing. If you're about to write any of these patterns, stop and refactor.
