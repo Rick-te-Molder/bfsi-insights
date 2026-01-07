@@ -15,3 +15,6 @@ node scripts/ci/check-sonar-patterns.cjs
 
 # Check if schema.md needs updating after migration changes
 node scripts/ci/check-schema-sync.cjs
+
+# Check for new dependencies (WARNS - dependency hygiene reminder)
+node scripts/ci/check-new-dependencies.cjs

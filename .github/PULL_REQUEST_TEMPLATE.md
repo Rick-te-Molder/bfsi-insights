@@ -10,6 +10,14 @@
 - [ ] Documentation
 - [ ] CI/build
 
+## AI Assistance (if applicable)
+
+<!-- If AI tools were used, document the collaboration -->
+
+- **AI tool used**: <!-- Windsurf / Cursor / Copilot / None -->
+- **Prompt summary**: <!-- Brief description of what you asked AI to do -->
+- **Human verification**: <!-- What you manually verified beyond AI output -->
+
 ## Evidence
 
 <!-- Required: paste command output or CI log excerpts -->
@@ -26,9 +34,18 @@
 - [ ] No hardcoded values that should come from config/DB
 - [ ] Touched files improved to current standards (Boy Scout Rule - C1)
 
+### Security (C12) - Required for auth/data/crypto changes
+
+- [ ] No hardcoded secrets
+- [ ] Input validated (Zod/schemas)
+- [ ] Output encoded appropriately
+- [ ] Authentication checked on protected routes
+- [ ] Authorization verified server-side
+- [ ] Errors don't expose internals
+
 ### SonarCloud fixes (if applicable)
 
-- [ ] Updated `docs/architecture/quality/sonarcloud.md`:
+- [ ] Updated `docs/engineering/sonar/sonarcloud.md`:
   - [ ] Prevention Checklist item added (if new pattern)
   - [ ] Lessons Learned entry added
   - [ ] Rule Index entry added with link
@@ -42,6 +59,16 @@
 
 - [ ] Migration added in `supabase/migrations/`
 - [ ] Agent declared in `docs/agents/manifest.yaml`
+
+### New Dependencies (if applicable)
+
+- [ ] Justified: why needed, alternatives considered
+- [ ] Evaluated: actively maintained, no known vulnerabilities
+- [ ] License compatible (MIT, Apache, etc.)
+
+## Rollback Plan
+
+<!-- How to revert if issues arise, or "Standard revert" -->
 
 ## Remaining risks / unverified
 
