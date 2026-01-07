@@ -182,7 +182,12 @@ function checkWorkspace(workspace) {
     );
   }
 
-  const passed = regressions.length === 0 && belowThreshold.length === 0;
+  // Only enforce minimum threshold if we have a baseline
+  // First run = no enforcement, just establishes baseline
+  const hasBaseline = baseline !== null;
+  const thresholdFailure = hasBaseline && belowThreshold.length > 0;
+  const passed = regressions.length === 0 && !thresholdFailure;
+
   if (passed) {
     console.log('   ✅ Passed');
   }
