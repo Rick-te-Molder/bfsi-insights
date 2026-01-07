@@ -1,15 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { useSidebarState } from './sidebar/useSidebarState';
 import { useSidebarEffects } from './sidebar/useSidebarEffects';
 import { usePipelineStatus } from './sidebar/usePipelineStatus';
 import { usePipelineActions } from './sidebar/usePipelineActions';
 import { MobileHeader } from './sidebar/MobileHeader';
-import { PipelineStatusBadge } from './sidebar/PipelineStatusBadge';
-import { Navigation } from './sidebar/Navigation';
-import { ActionButtons } from './sidebar/ActionButtons';
+import { SidebarContent } from './sidebar/SidebarContent';
 
 type NavItem = {
   href: string;
@@ -50,7 +47,91 @@ const navItems: NavItem[] = [
   { href: '/add', label: 'Add Article', icon: '➕' },
 ];
 
-export function Sidebar() {
+type SidebarOverlayProps = {
+  isOpen: boolean;
+  onClose: () => void;
+};
+
+function SidebarOverlay({ isOpen, onClose }: Readonly<SidebarOverlayProps>) {
+  if (!isOpen) return null;
+  return (
+    <div
+      className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
+      onClick={onClose}
+      aria-hidden="true"
+    />
+  );
+}
+
+function SignOutButton() {
+  return (
+    <div className="absolute bottom-0 left-0 right-0 border-t border-neutral-800 p-4">
+      <form action="/auth/signout" method="post">
+        <button
+          type="submit"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800/50 hover:text-white"
+        >
+          <span>🚪</span>
+          <span>Sign Out</span>
+        </button>
+      </form>
+    </div>
+  );
+}
+
+type SidebarAsideProps = {
+  isOpen: boolean;
+  pipelineStatus: ReturnType<typeof usePipelineStatus>;
+  expandedMenus: ReturnType<typeof useSidebarState>['expandedMenus'];
+  pathname: string;
+  toggleMenu: ReturnType<typeof useSidebarState>['toggleMenu'];
+  statusMessage: string | null;
+  processingQueue: boolean;
+  triggeringBuild: boolean;
+  onProcessQueue: () => void;
+  onTriggerBuild: () => void;
+};
+
+function AsideShell({
+  isOpen,
+  children,
+}: Readonly<{ isOpen: boolean; children: React.ReactNode }>) {
+  return (
+    <aside
+      className={cn(
+        'fixed left-0 top-0 z-40 h-screen w-64 border-r border-neutral-800 bg-neutral-950 transition-transform duration-300 ease-in-out',
+        'md:translate-x-0',
+        isOpen ? 'translate-x-0' : '-translate-x-full',
+        'pt-14 md:pt-0',
+      )}
+    >
+      {children}
+    </aside>
+  );
+}
+
+function SidebarAside(props: Readonly<SidebarAsideProps>) {
+  return (
+    <AsideShell isOpen={props.isOpen}>
+      <SidebarContent
+        items={navItems}
+        pipelineStatus={props.pipelineStatus}
+        expandedMenus={props.expandedMenus}
+        pathname={props.pathname}
+        toggleMenu={props.toggleMenu}
+        statusMessage={props.statusMessage}
+        processingQueue={props.processingQueue}
+        triggeringBuild={props.triggeringBuild}
+        onProcessQueue={props.onProcessQueue}
+        onTriggerBuild={props.onTriggerBuild}
+      >
+        <SignOutButton />
+      </SidebarContent>
+    </AsideShell>
+  );
+}
+
+function useSidebarData() {
   const { isOpen, setIsOpen, expandedMenus, toggleMenu, toggleSidebar, pathname } =
     useSidebarState(navItems);
   const pipelineStatus = usePipelineStatus();
@@ -64,62 +145,43 @@ export function Sidebar() {
 
   useSidebarEffects(isOpen, setIsOpen, pathname);
 
+  return {
+    isOpen,
+    setIsOpen,
+    expandedMenus,
+    toggleMenu,
+    toggleSidebar,
+    pathname,
+    pipelineStatus,
+    processingQueue,
+    triggeringBuild,
+    statusMessage,
+    handleProcessQueue,
+    handleTriggerBuild,
+  };
+}
+
+export function Sidebar() {
+  const sidebar = useSidebarData();
+
   return (
     <>
-      <MobileHeader isOpen={isOpen} onToggle={toggleSidebar} />
+      <MobileHeader isOpen={sidebar.isOpen} onToggle={sidebar.toggleSidebar} />
 
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
-          onClick={() => setIsOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+      <SidebarOverlay isOpen={sidebar.isOpen} onClose={() => sidebar.setIsOpen(false)} />
 
-      <aside
-        className={cn(
-          'fixed left-0 top-0 z-40 h-screen w-64 border-r border-neutral-800 bg-neutral-950 transition-transform duration-300 ease-in-out',
-          'md:translate-x-0',
-          isOpen ? 'translate-x-0' : '-translate-x-full',
-          'pt-14 md:pt-0',
-        )}
-      >
-        <div className="hidden md:flex h-16 items-center justify-between border-b border-neutral-800 px-4">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <span className="text-lg font-normal tracking-tight text-white">BFSI</span>
-            <span className="text-xs font-bold uppercase text-sky-400">Admin</span>
-          </Link>
-          {pipelineStatus && <PipelineStatusBadge status={pipelineStatus} />}
-        </div>
-
-        <Navigation
-          items={navItems}
-          pathname={pathname}
-          expandedMenus={expandedMenus}
-          onToggleMenu={toggleMenu}
-        />
-
-        <ActionButtons
-          statusMessage={statusMessage}
-          processingQueue={processingQueue}
-          triggeringBuild={triggeringBuild}
-          pipelineStatus={pipelineStatus}
-          onProcessQueue={handleProcessQueue}
-          onTriggerBuild={handleTriggerBuild}
-        />
-
-        <div className="absolute bottom-0 left-0 right-0 border-t border-neutral-800 p-4">
-          <form action="/auth/signout" method="post">
-            <button
-              type="submit"
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800/50 hover:text-white"
-            >
-              <span>🚪</span>
-              <span>Sign Out</span>
-            </button>
-          </form>
-        </div>
-      </aside>
+      <SidebarAside
+        isOpen={sidebar.isOpen}
+        pipelineStatus={sidebar.pipelineStatus}
+        expandedMenus={sidebar.expandedMenus}
+        pathname={sidebar.pathname}
+        toggleMenu={sidebar.toggleMenu}
+        statusMessage={sidebar.statusMessage}
+        processingQueue={sidebar.processingQueue}
+        triggeringBuild={sidebar.triggeringBuild}
+        onProcessQueue={sidebar.handleProcessQueue}
+        onTriggerBuild={sidebar.handleTriggerBuild}
+      />
     </>
   );
 }
