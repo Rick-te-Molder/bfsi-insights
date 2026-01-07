@@ -17,7 +17,7 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov'],
+      reporter: ['text', 'lcov', 'json-summary'],
       reportsDirectory: 'services/agent-api/coverage',
       include: ['services/agent-api/src/**/*.js'],
       exclude: [

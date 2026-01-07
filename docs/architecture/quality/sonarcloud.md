@@ -52,11 +52,37 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 
 ---
 
+# ESLint Rules Matching Sonar Patterns
+
+The following ESLint rules are enabled to catch common Sonar issues at lint time (faster than full Sonar analysis):
+
+| Sonar Rule | ESLint Rule                                  | Package                       | Severity |
+| ---------- | -------------------------------------------- | ----------------------------- | -------- |
+| S3358      | `no-nested-ternary`                          | built-in                      | warn     |
+| S7735      | `no-negated-condition`                       | built-in                      | warn     |
+| S7781      | `unicorn/prefer-string-replace-all`          | eslint-plugin-unicorn         | warn     |
+| S6479      | `react/no-array-index-key`                   | eslint-plugin-react           | warn     |
+| S1116      | `no-empty`                                   | built-in                      | warn     |
+| S1186      | `no-empty-function`                          | built-in                      | warn     |
+| S1481      | `no-unused-vars`                             | built-in                      | warn     |
+| S1854      | `no-unused-expressions`                      | built-in                      | warn     |
+| S3776      | `max-depth`                                  | built-in                      | warn (4) |
+| S1117      | `no-shadow` / `@typescript-eslint/no-shadow` | built-in / @typescript-eslint | warn     |
+| S4144      | `no-dupe-else-if`                            | built-in                      | error    |
+| S1871      | `no-duplicate-case`                          | built-in                      | error    |
+
+**Configuration files**:
+
+- Root: `eslint.config.js`
+- Admin app: `apps/admin/eslint.config.mjs`
+
+---
+
 # Pre-Commit Pattern Check
 
-A lightweight pre-commit check (`scripts/ci/check-sonar-patterns.cjs`) warns when staged files contain patterns we've documented as Sonar lessons. This catches regressions before CI.
+A lightweight pre-commit check (`scripts/ci/check-sonar-patterns.cjs`) warns when staged files contain patterns we've documented as Sonar lessons/rules. This catches regressions before CI.
 
-**Checked patterns**: S3358, S6479, S4624, S7781, S7735, S6848, S6819, S2301, S6551, S6759
+**Checked patterns**: S2301, S3358, S4624, S6479, S6551, S6759, S6819, S6842, S6847, S6848, S7735, S7781
 
 **Behavior**: Warns but does not block (use `--strict` to block)
 
