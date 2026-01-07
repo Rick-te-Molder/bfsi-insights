@@ -26,7 +26,10 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString();
 }
 
-function ProgressBar({ processed, sampleSize }: { processed: number; sampleSize: number }) {
+function ProgressBar({
+  processed,
+  sampleSize,
+}: Readonly<{ processed: number; sampleSize: number }>) {
   const ratio = sampleSize > 0 ? processed / sampleSize : 0;
   const width = Math.max(0, Math.min(100, ratio * 100));
 
@@ -42,7 +45,7 @@ function ProgressBar({ processed, sampleSize }: { processed: number; sampleSize:
   );
 }
 
-function WinnerCell({ winner }: { winner: PromptABTest['winner'] }) {
+function WinnerCell({ winner }: Readonly<{ winner: PromptABTest['winner'] }>) {
   if (!winner) return <span className="text-neutral-500">-</span>;
   const className = winner === 'a' ? 'text-emerald-400' : 'text-amber-400';
   return <span className={`font-medium ${className}`}>Variant {winner.toUpperCase()}</span>;
@@ -73,7 +76,7 @@ function TableHeader() {
   );
 }
 
-function VariantsCell({ test }: { test: PromptABTest }) {
+function VariantsCell({ test }: Readonly<{ test: PromptABTest }>) {
   return (
     <td className="px-4 py-3">
       <div className="text-xs">
@@ -86,7 +89,7 @@ function VariantsCell({ test }: { test: PromptABTest }) {
   );
 }
 
-function TestInfoCell({ test }: { test: PromptABTest }) {
+function TestInfoCell({ test }: Readonly<{ test: PromptABTest }>) {
   return (
     <td className="px-4 py-3">
       <div className="font-medium text-white">{formatTestName(test)}</div>
@@ -95,7 +98,7 @@ function TestInfoCell({ test }: { test: PromptABTest }) {
   );
 }
 
-function ProgressCell({ test }: { test: PromptABTest }) {
+function ProgressCell({ test }: Readonly<{ test: PromptABTest }>) {
   return (
     <td className="px-4 py-3">
       <ProgressBar processed={test.items_processed || 0} sampleSize={test.sample_size} />
@@ -103,7 +106,7 @@ function ProgressCell({ test }: { test: PromptABTest }) {
   );
 }
 
-function StatusCell({ status }: { status: string }) {
+function StatusCell({ status }: Readonly<{ status: string }>) {
   return (
     <td className="px-4 py-3">
       <span className={`rounded-full px-2 py-0.5 text-xs ${getStatusColor(status)}`}>{status}</span>
@@ -111,7 +114,7 @@ function StatusCell({ status }: { status: string }) {
   );
 }
 
-function ActionCell({ onClick }: { onClick: () => void }) {
+function ActionCell({ onClick }: Readonly<{ onClick: () => void }>) {
   return (
     <td className="px-4 py-3">
       <button onClick={onClick} className="text-sky-400 hover:text-sky-300 text-sm">
@@ -124,10 +127,10 @@ function ActionCell({ onClick }: { onClick: () => void }) {
 function TestRow({
   test,
   onSelect,
-}: {
+}: Readonly<{
   test: PromptABTest;
   onSelect: (test: PromptABTest) => void;
-}) {
+}>) {
   return (
     <tr key={test.id} className="hover:bg-neutral-800/50">
       <TestInfoCell test={test} />

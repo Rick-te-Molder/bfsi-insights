@@ -166,7 +166,7 @@ function LoginForm({
   onSubmit,
   onEmailChange,
   onPasswordChange,
-}: LoginFormProps) {
+}: Readonly<LoginFormProps>) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <LoginFields
