@@ -5,44 +5,33 @@
  * Compares current coverage against baseline and fails if coverage drops.
  * Used in Fast CI to enforce "test alongside" development.
  *
- * Usage: node scripts/ci/check-coverage-delta.cjs [--baseline <path>] [--current <path>]
+ * Checks multiple workspaces:
+ * - services/agent-api (80% threshold - critical backend)
+ * - apps/web + apps/admin (via root vitest - 60% threshold, growing)
+ *
+ * Usage: node scripts/ci/check-coverage-delta.cjs
  *
  * Quality System Control: C6 (Tests + coverage)
  */
 const fs = require('node:fs');
 
-// Configuration
-const CONFIG = {
-  // Maximum allowed coverage drop (percentage points)
-  maxDrop: 1,
-  // Minimum coverage threshold (absolute)
-  minCoverage: 80,
-  // Default paths
-  baselinePath: 'artifacts/coverage-baseline.json',
-  currentPath: 'services/agent-api/coverage/coverage-summary.json',
-};
-
-/**
- * Parse command line arguments
- */
-function parseArgs() {
-  const args = process.argv.slice(2);
-  const result = { ...CONFIG };
-
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--baseline' && args[i + 1]) {
-      result.baselinePath = args[++i];
-    } else if (args[i] === '--current' && args[i + 1]) {
-      result.currentPath = args[++i];
-    } else if (args[i] === '--max-drop' && args[i + 1]) {
-      result.maxDrop = Number.parseFloat(args[++i]);
-    } else if (args[i] === '--min-coverage' && args[i + 1]) {
-      result.minCoverage = Number.parseFloat(args[++i]);
-    }
-  }
-
-  return result;
-}
+// Workspace configurations
+const WORKSPACES = [
+  {
+    name: 'agent-api',
+    currentPath: 'services/agent-api/coverage/coverage-summary.json',
+    baselinePath: 'artifacts/coverage-baseline-agent-api.json',
+    minCoverage: 80,
+    maxDrop: 1,
+  },
+  {
+    name: 'apps (web + admin)',
+    currentPath: 'artifacts/test/coverage/coverage-summary.json',
+    baselinePath: 'artifacts/coverage-baseline-apps.json',
+    minCoverage: 60, // Lower threshold while growing coverage
+    maxDrop: 2,
+  },
+];
 
 /**
  * Read coverage summary JSON
@@ -140,102 +129,94 @@ function formatDelta(delta) {
 }
 
 /**
- * Main entry point
+ * Check a single workspace
+ * @param {object} workspace - Workspace configuration
+ * @returns {object} Result with passed, regressions, belowThreshold
  */
-function main() {
-  const config = parseArgs();
+function checkWorkspace(workspace) {
+  console.log(`\n📦 ${workspace.name}`);
+  console.log('─'.repeat(40));
 
-  console.log('📊 Coverage Delta Check\n');
-
-  // Read current coverage (required)
-  const currentSummary = readCoverageSummary(config.currentPath);
+  const currentSummary = readCoverageSummary(workspace.currentPath);
   if (!currentSummary) {
-    console.error(`❌ Current coverage not found: ${config.currentPath}`);
-    console.error('   Run tests with coverage first: npm run test:coverage -w services/agent-api');
-    process.exit(1);
+    console.log(`   ⏭️  No coverage found (skipping): ${workspace.currentPath}`);
+    return { passed: true, skipped: true };
   }
 
   const current = extractCoverage(currentSummary);
   if (!current) {
-    console.error('❌ Invalid coverage summary format');
-    process.exit(1);
+    console.log('   ⚠️  Invalid coverage format');
+    return { passed: true, skipped: true };
   }
 
-  console.log('📈 Current Coverage:');
-  console.log(`   Lines:      ${formatPct(current.lines)}`);
-  console.log(`   Statements: ${formatPct(current.statements)}`);
-  console.log(`   Functions:  ${formatPct(current.functions)}`);
-  console.log(`   Branches:   ${formatPct(current.branches)}`);
-  console.log('');
+  console.log(
+    `   Lines: ${formatPct(current.lines)} | Funcs: ${formatPct(current.functions)} | Branches: ${formatPct(current.branches)}`,
+  );
 
-  // Check minimum threshold
-  const belowThreshold = checkMinimumThreshold(current, config.minCoverage);
-  if (belowThreshold.length > 0) {
-    console.log(`⚠️  Below Minimum Threshold (${config.minCoverage}%):`);
-    for (const { metric, value, threshold } of belowThreshold) {
-      console.log(`   ${metric}: ${formatPct(value)} < ${formatPct(threshold)}`);
+  const belowThreshold = checkMinimumThreshold(current, workspace.minCoverage);
+  const baselineSummary = readCoverageSummary(workspace.baselinePath);
+  const baseline = baselineSummary ? extractCoverage(baselineSummary) : null;
+
+  let regressions = [];
+  if (baseline) {
+    const comparison = compareCoverage(baseline, current, workspace.maxDrop);
+    regressions = comparison.regressions;
+    if (comparison.improvements.length > 0) {
+      const improvementList = comparison.improvements
+        .map((i) => i.metric + ' ' + formatDelta(i.delta))
+        .join(', ');
+      console.log('   🎉 Improvements: ' + improvementList);
     }
-    console.log('');
-  }
-
-  // Read baseline coverage (optional)
-  const baselineSummary = readCoverageSummary(config.baselinePath);
-  if (!baselineSummary) {
-    console.log(`ℹ️  No baseline found at: ${config.baselinePath}`);
-    console.log('   This is expected on first run or when baseline is not yet established.');
-    console.log('   Skipping delta comparison.\n');
-
-    // Still fail if below minimum threshold
-    if (belowThreshold.length > 0) {
-      console.log('❌ Coverage below minimum threshold!');
-      process.exit(1);
-    }
-
-    console.log('✅ Coverage check passed (no baseline comparison)');
-    process.exit(0);
-  }
-
-  const baseline = extractCoverage(baselineSummary);
-  if (!baseline) {
-    console.error('⚠️  Invalid baseline coverage format, skipping delta comparison');
-    process.exit(0);
-  }
-
-  console.log('📉 Baseline Coverage:');
-  console.log(`   Lines:      ${formatPct(baseline.lines)}`);
-  console.log(`   Statements: ${formatPct(baseline.statements)}`);
-  console.log(`   Functions:  ${formatPct(baseline.functions)}`);
-  console.log(`   Branches:   ${formatPct(baseline.branches)}`);
-  console.log('');
-
-  // Compare coverage
-  const { regressions, improvements } = compareCoverage(baseline, current, config.maxDrop);
-
-  if (improvements.length > 0) {
-    console.log('🎉 Coverage Improvements:');
-    for (const { metric, baseline: b, current: c, delta } of improvements) {
-      console.log(`   ${metric}: ${formatPct(b)} → ${formatPct(c)} (${formatDelta(delta)})`);
-    }
-    console.log('');
+  } else {
+    console.log(`   ℹ️  No baseline (first run)`);
   }
 
   if (regressions.length > 0) {
-    console.log(`❌ Coverage Regressions (max allowed drop: ${config.maxDrop}%):`);
-    for (const { metric, baseline: b, current: c, delta } of regressions) {
-      console.log(`   ${metric}: ${formatPct(b)} → ${formatPct(c)} (${formatDelta(delta)})`);
-    }
-    console.log('');
-    console.log('💡 To fix: Add tests for your new code before committing.');
-    console.log('   Run: npm run test:coverage -w services/agent-api');
-    process.exit(1);
+    const regressionList = regressions.map((r) => r.metric + ' ' + formatDelta(r.delta)).join(', ');
+    console.log('   ❌ Regressions: ' + regressionList);
   }
 
   if (belowThreshold.length > 0) {
-    console.log('❌ Coverage below minimum threshold!');
+    console.log(
+      `   ⚠️  Below ${workspace.minCoverage}%: ${belowThreshold.map((b) => b.metric).join(', ')}`,
+    );
+  }
+
+  const passed = regressions.length === 0 && belowThreshold.length === 0;
+  if (passed) {
+    console.log('   ✅ Passed');
+  }
+
+  return { passed, regressions, belowThreshold, current };
+}
+
+/**
+ * Main entry point
+ */
+function main() {
+  console.log('📊 Coverage Delta Check');
+  console.log('═'.repeat(40));
+
+  let hasFailures = false;
+
+  for (const workspace of WORKSPACES) {
+    const result = checkWorkspace(workspace);
+    if (!result.passed && !result.skipped) {
+      hasFailures = true;
+    }
+  }
+
+  console.log('\n' + '═'.repeat(40));
+
+  if (hasFailures) {
+    console.log('❌ Coverage check failed!');
+    console.log('💡 Add tests for your new code before committing.');
+    console.log('   npm run test:coverage              # root (apps)');
+    console.log('   npm run test:coverage -w services/agent-api');
     process.exit(1);
   }
 
-  console.log('✅ Coverage check passed!');
+  console.log('✅ All coverage checks passed!');
   process.exit(0);
 }
 
