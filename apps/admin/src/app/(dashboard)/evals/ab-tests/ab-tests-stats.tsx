@@ -10,11 +10,11 @@ function StatCard({
   label,
   value,
   valueClassName,
-}: {
+}: Readonly<{
   label: string;
   value: string | number;
   valueClassName?: string;
-}) {
+}>) {
   return (
     <div className="rounded-lg bg-neutral-800/50 p-4 text-center">
       <div className={valueClassName || 'text-2xl font-bold text-white'}>{value}</div>
