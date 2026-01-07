@@ -14,98 +14,176 @@ import 'dotenv/config';
 import { runSummarizer } from '../agents/summarizer.js';
 import { createSupabaseClient, parseCliArgs, fetchContent, delay } from './utils.js';
 
+/**
+ * @typedef {{
+ *   id: string,
+ *   slug?: string,
+ *   title?: string,
+ *   source_url: string
+ * }} PublicationRow
+ */
+
+/**
+ * @typedef {{
+ *   short?: string,
+ *   medium?: string,
+ *   long?: unknown
+ * }} SummaryFields
+ */
+
+/**
+ * @typedef {{
+ *   summary?: SummaryFields,
+ *   published_at?: string,
+ *   author?: string,
+ *   authors?: unknown,
+ *   long_summary_sections?: unknown,
+ *   key_figures?: unknown,
+ *   entities?: unknown,
+ *   is_academic?: unknown,
+ *   citations?: unknown,
+ *   key_takeaways?: unknown
+ * }} SummarizerResult
+ */
+
 const supabase = createSupabaseClient();
 const { dryRun, limit } = parseCliArgs(1000);
 
-async function main() {
+/**
+ * @param {boolean} dryRunMode
+ * @param {number} limitCount
+ */
+function logHeader(dryRunMode, limitCount) {
   console.log('📝 Backfill Summaries with v2\n');
-  console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}`);
-  console.log(`Limit: ${limit}\n`);
+  console.log(`Mode: ${dryRunMode ? 'DRY RUN' : 'LIVE'}`);
+  console.log(`Limit: ${limitCount}\n`);
+}
 
+/** @param {number} limitCount */
+async function fetchPublications(limitCount) {
   // Get all published articles
-  const { data: pubs, error } = await supabase
+  return supabase
     .from('kb_publication')
     .select('id, slug, title, source_url')
     .eq('status', 'published')
-    .limit(limit);
+    .limit(limitCount);
+}
 
-  if (error) {
-    console.error('❌ Error fetching publications:', error.message);
-    process.exit(1);
+/** @param {{ message: string }} error */
+function handleFetchError(error) {
+  console.error('❌ Error fetching publications:', error.message);
+  process.exit(1);
+}
+
+/** @param {PublicationRow[]} pubs */
+function logDryRun(pubs) {
+  pubs.forEach((p) => console.log(`  - ${p.title?.substring(0, 60)}...`));
+  console.log('\n🔍 Dry run - no changes will be made');
+}
+
+/**
+ * @param {PublicationRow} pub
+ * @param {string} textContent
+ */
+function createMockQueueItem(pub, textContent) {
+  return {
+    id: pub.id,
+    payload: {
+      title: pub.title,
+      url: pub.source_url,
+      textContent,
+    },
+  };
+}
+
+/** @param {SummarizerResult} result */
+function buildSummaryStructured(result) {
+  return {
+    authors: result.authors,
+    long_summary_sections: result.long_summary_sections,
+    key_figures: result.key_figures,
+    entities: result.entities,
+    is_academic: result.is_academic,
+    citations: result.citations,
+    key_takeaways: result.key_takeaways,
+  };
+}
+
+/** @param {SummarizerResult} result */
+function buildUpdateData(result) {
+  // Build update object
+  return {
+    // Core fields (backward compatible)
+    summary_short: result.summary?.short || null,
+    summary_medium: result.summary?.medium || null,
+    summary_long:
+      typeof result.summary?.long === 'string'
+        ? result.summary.long
+        : JSON.stringify(result.summary?.long),
+    date_published: result.published_at || null,
+    author: result.author || null,
+
+    // Store full structured data in JSONB field
+    summary_structured: buildSummaryStructured(result),
+  };
+}
+
+/**
+ * @param {string} pubId
+ * @param {Record<string, unknown>} updateData
+ */
+async function updatePublication(pubId, updateData) {
+  // Update publication
+  return supabase.from('kb_publication').update(updateData).eq('id', pubId);
+}
+
+/**
+ * @param {number} index
+ * @param {number} total
+ * @param {string | undefined} title
+ */
+function logProgress(index, total, title) {
+  console.log(`\n[${index}/${total}] ${title?.substring(0, 50)}...`);
+}
+
+/** @param {PublicationRow} pub */
+async function processPublication(pub) {
+  // Fetch content from source URL
+  console.log('   📥 Fetching content...');
+  const { textContent } = await fetchContent(pub.source_url);
+
+  // Run summarizer v2
+  console.log('   🤖 Running summarizer v2...');
+  /** @type {SummarizerResult} */
+  const result = await runSummarizer(createMockQueueItem(pub, textContent));
+
+  const updateData = buildUpdateData(result);
+  const { error: updateError } = await updatePublication(pub.id, updateData);
+
+  if (updateError) {
+    console.log(`   ❌ Update failed: ${updateError.message}`);
+    return { ok: false };
   }
 
-  console.log(`Found ${pubs.length} publications to re-summarize\n`);
+  console.log(`   ✅ Updated (date: ${result.published_at || 'none'})`);
+  return { ok: true };
+}
 
-  if (dryRun) {
-    pubs.forEach((p) => console.log(`  - ${p.title?.substring(0, 60)}...`));
-    console.log('\n🔍 Dry run - no changes will be made');
-    return;
-  }
-
+/** @param {PublicationRow[]} pubs */
+async function processPublications(pubs) {
   let updated = 0;
   let failed = 0;
 
   for (const pub of pubs) {
-    console.log(`\n[${updated + failed + 1}/${pubs.length}] ${pub.title?.substring(0, 50)}...`);
+    logProgress(updated + failed + 1, pubs.length, pub.title);
 
     try {
-      // Fetch content from source URL
-      console.log(`   📥 Fetching content...`);
-      const { textContent } = await fetchContent(pub.source_url);
-
-      // Create mock queue item for summarizer
-      const mockQueueItem = {
-        id: pub.id,
-        payload: {
-          title: pub.title,
-          url: pub.source_url,
-          textContent,
-        },
-      };
-
-      // Run summarizer v2
-      console.log('   🤖 Running summarizer v2...');
-      const result = await runSummarizer(mockQueueItem);
-
-      // Build update object
-      const updateData = {
-        // Core fields (backward compatible)
-        summary_short: result.summary?.short || null,
-        summary_medium: result.summary?.medium || null,
-        summary_long:
-          typeof result.summary?.long === 'string'
-            ? result.summary.long
-            : JSON.stringify(result.summary?.long),
-        date_published: result.published_at || null,
-        author: result.author || null,
-
-        // Store full structured data in JSONB field
-        summary_structured: {
-          authors: result.authors,
-          long_summary_sections: result.long_summary_sections,
-          key_figures: result.key_figures,
-          entities: result.entities,
-          is_academic: result.is_academic,
-          citations: result.citations,
-          key_takeaways: result.key_takeaways,
-        },
-      };
-
-      // Update publication
-      const { error: updateError } = await supabase
-        .from('kb_publication')
-        .update(updateData)
-        .eq('id', pub.id);
-
-      if (updateError) {
-        console.log(`   ❌ Update failed: ${updateError.message}`);
-        failed++;
-      } else {
-        console.log(`   ✅ Updated (date: ${result.published_at || 'none'})`);
-        updated++;
-      }
+      const { ok } = await processPublication(pub);
+      if (ok) updated++;
+      else failed++;
     } catch (err) {
-      console.log(`   ❌ Error: ${err.message}`);
+      const message = err instanceof Error ? err.message : String(err);
+      console.log(`   ❌ Error: ${message}`);
       failed++;
     }
 
@@ -113,13 +191,41 @@ async function main() {
     await delay(2000);
   }
 
+  return { updated, failed };
+}
+
+/**
+ * @param {number} updated
+ * @param {number} failed
+ */
+function logResults(updated, failed) {
   console.log('\n' + '='.repeat(50));
   console.log(`📊 Results: ${updated} updated, ${failed} failed`);
+}
+
+async function main() {
+  logHeader(dryRun, limit);
+
+  const { data: pubs, error } = await fetchPublications(limit);
+  if (error) handleFetchError(error);
+
+  const safePubs = pubs || [];
+
+  console.log(`Found ${safePubs.length} publications to re-summarize\n`);
+
+  if (dryRun) {
+    logDryRun(safePubs);
+    return;
+  }
+
+  const { updated, failed } = await processPublications(safePubs);
+  logResults(updated, failed);
 }
 
 try {
   await main();
 } catch (err) {
-  console.error('Fatal error:', err);
+  const message = err instanceof Error ? err.message : String(err);
+  console.error('Fatal error:', message);
   process.exit(1);
 }
