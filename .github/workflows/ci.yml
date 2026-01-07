@@ -106,8 +106,26 @@ jobs:
           SUPABASE_URL: ''
           SUPABASE_SERVICE_KEY: ''
 
-      - name: Run agent-api tests
+      - name: Run agent-api tests with coverage
         run: npm run test:coverage -w services/agent-api
+
+      - name: Download baseline coverage (if exists)
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-baseline
+          path: artifacts
+        continue-on-error: true
+
+      - name: Check coverage delta
+        run: node scripts/ci/check-coverage-delta.cjs
+
+      - name: Upload coverage as baseline for future PRs
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-baseline
+          path: services/agent-api/coverage/coverage-summary.json
+          retention-days: 30
 
       - name: Smoke test agent-api startup
         run: timeout 5 npm start -w services/agent-api || [ $? -eq 124 ]
