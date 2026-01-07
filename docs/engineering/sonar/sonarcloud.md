@@ -34,21 +34,21 @@ https://rules.sonarsource.com/githubactions/ | 26 rules
 
 When you see a SonarCloud issue, extract the Rule ID and find the matching lesson:
 
-| Rule ID | Lesson                                                                                                                                                        | File                                                                                   |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| S3358   | [Extract nested ternary operations](./sonar-lessons/extract-nested-ternary-operations-into-helper-functions.md)                                               | `sonar-lessons/extract-nested-ternary-operations-into-helper-functions.md`             |
-| S3358   | [Extract this nested ternary operation into an independent statement](./sonar-lessons/extract-this-nested-ternary-operation-into-an-independent-statement.md) | `sonar-lessons/extract-this-nested-ternary-operation-into-an-independent-statement.md` |
-| S2301   | [Provide multiple methods instead of boolean selectors](./sonar-lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md)                   | `sonar-lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md`     |
-| S6848   | [Add role and keyboard handling to interactive divs](./sonar-lessons/add-role-and-keyboard-handling-to-interactive-divs.md)                                   | `sonar-lessons/add-role-and-keyboard-handling-to-interactive-divs.md`                  |
-| S6842   | [Do not add interactive ARIA roles to non-interactive elements](./sonar-lessons/use-native-interactive-elements-or-add-proper-aria-roles.md)                  | `sonar-lessons/use-native-interactive-elements-or-add-proper-aria-roles.md`            |
-| S6819   | [Use native HTML elements instead of ARIA roles](./sonar-lessons/use-native-html-elements-instead-of-aria-roles.md)                                           | `sonar-lessons/use-native-html-elements-instead-of-aria-roles.md`                      |
-| S6847   | [Use role presentation for non-interactive event handlers](./sonar-lessons/use-role-presentation-for-non-interactive-event-handlers.md)                       | `sonar-lessons/use-role-presentation-for-non-interactive-event-handlers.md`            |
-| S4624   | [Refactor this code to not use nested template literals](./sonar-lessons/refactor-this-code-to-not-use-nested-template-literals.md)                           | `sonar-lessons/refactor-this-code-to-not-use-nested-template-literals.md`              |
-| S6479   | [Do not use Array index in keys](./sonar-lessons/do-not-use-array-index-in-keys.md)                                                                           | `sonar-lessons/do-not-use-array-index-in-keys.md`                                      |
-| S6759   | [Mark React props as read-only](./sonar-lessons/mark-react-props-as-read-only.md)                                                                             | `sonar-lessons/mark-react-props-as-read-only.md`                                       |
-| S6551   | [Will use Object's default stringification format](./sonar-lessons/will-use-objects-default-stringification-format.md)                                        | `sonar-lessons/will-use-objects-default-stringification-format.md`                     |
-| S7781   | [Prefer 'String#replaceAll()' over 'String#replace()'](./sonar-lessons/prefer-string-replaceall-over-string-replace.md)                                       | `sonar-lessons/prefer-string-replaceall-over-string-replace.md`                        |
-| S7735   | [Unexpected negated condition](./sonar-lessons/unexpected-negated-condition.md)                                                                               | `sonar-lessons/unexpected-negated-condition.md`                                        |
+| Rule ID | Lesson                                                                                                                                                  | File                                                                             |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| S3358   | [Extract nested ternary operations](./lessons/extract-nested-ternary-operations-into-helper-functions.md)                                               | `lessons/extract-nested-ternary-operations-into-helper-functions.md`             |
+| S3358   | [Extract this nested ternary operation into an independent statement](./lessons/extract-this-nested-ternary-operation-into-an-independent-statement.md) | `lessons/extract-this-nested-ternary-operation-into-an-independent-statement.md` |
+| S2301   | [Provide multiple methods instead of boolean selectors](./lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md)                   | `lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md`     |
+| S6848   | [Add role and keyboard handling to interactive divs](./lessons/add-role-and-keyboard-handling-to-interactive-divs.md)                                   | `lessons/add-role-and-keyboard-handling-to-interactive-divs.md`                  |
+| S6842   | [Do not add interactive ARIA roles to non-interactive elements](./lessons/use-native-interactive-elements-or-add-proper-aria-roles.md)                  | `lessons/use-native-interactive-elements-or-add-proper-aria-roles.md`            |
+| S6819   | [Use native HTML elements instead of ARIA roles](./lessons/use-native-html-elements-instead-of-aria-roles.md)                                           | `lessons/use-native-html-elements-instead-of-aria-roles.md`                      |
+| S6847   | [Use role presentation for non-interactive event handlers](./lessons/use-role-presentation-for-non-interactive-event-handlers.md)                       | `lessons/use-role-presentation-for-non-interactive-event-handlers.md`            |
+| S4624   | [Refactor this code to not use nested template literals](./lessons/refactor-this-code-to-not-use-nested-template-literals.md)                           | `lessons/refactor-this-code-to-not-use-nested-template-literals.md`              |
+| S6479   | [Do not use Array index in keys](./lessons/do-not-use-array-index-in-keys.md)                                                                           | `lessons/do-not-use-array-index-in-keys.md`                                      |
+| S6759   | [Mark React props as read-only](./lessons/mark-react-props-as-read-only.md)                                                                             | `lessons/mark-react-props-as-read-only.md`                                       |
+| S6551   | [Will use Object's default stringification format](./lessons/will-use-objects-default-stringification-format.md)                                        | `lessons/will-use-objects-default-stringification-format.md`                     |
+| S7781   | [Prefer 'String#replaceAll()' over 'String#replace()'](./lessons/prefer-string-replaceall-over-string-replace.md)                                       | `lessons/prefer-string-replaceall-over-string-replace.md`                        |
+| S7735   | [Unexpected negated condition](./lessons/unexpected-negated-condition.md)                                                                               | `lessons/unexpected-negated-condition.md`                                        |
 
 ---
 
@@ -114,55 +114,55 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
-## [Extract nested ternary operations into helper functions](./sonar-lessons/extract-nested-ternary-operations-into-helper-functions.md) (S3358)
+## [Extract nested ternary operations into helper functions](./lessons/extract-nested-ternary-operations-into-helper-functions.md) (S3358)
 
 ---
 
-## [Extract this nested ternary operation into an independent statement](./sonar-lessons/extract-this-nested-ternary-operation-into-an-independent-statement.md) (S3358)
+## [Extract this nested ternary operation into an independent statement](./lessons/extract-this-nested-ternary-operation-into-an-independent-statement.md) (S3358)
 
 ---
 
-## [Provide multiple methods instead of boolean selector parameters](./sonar-lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md) (S2301)
+## [Provide multiple methods instead of boolean selector parameters](./lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md) (S2301)
 
 ---
 
-## [Add role and keyboard handling to interactive divs](./sonar-lessons/add-role-and-keyboard-handling-to-interactive-divs.md) (S6848)
+## [Add role and keyboard handling to interactive divs](./lessons/add-role-and-keyboard-handling-to-interactive-divs.md) (S6848)
 
 ---
 
-## [Do not add interactive ARIA roles to non-interactive elements](./sonar-lessons/use-native-interactive-elements-or-add-proper-aria-roles.md) (S6842)
+## [Do not add interactive ARIA roles to non-interactive elements](./lessons/use-native-interactive-elements-or-add-proper-aria-roles.md) (S6842)
 
 ---
 
-## [Use native HTML elements instead of ARIA roles](./sonar-lessons/use-native-html-elements-instead-of-aria-roles.md) (S6819)
+## [Use native HTML elements instead of ARIA roles](./lessons/use-native-html-elements-instead-of-aria-roles.md) (S6819)
 
 ---
 
-## [Use role presentation for non-interactive event handlers](./sonar-lessons/use-role-presentation-for-non-interactive-event-handlers.md) (S6847)
+## [Use role presentation for non-interactive event handlers](./lessons/use-role-presentation-for-non-interactive-event-handlers.md) (S6847)
 
 ---
 
-## [Refactor this code to not use nested template literals](./sonar-lessons/refactor-this-code-to-not-use-nested-template-literals.md) (S4624)
+## [Refactor this code to not use nested template literals](./lessons/refactor-this-code-to-not-use-nested-template-literals.md) (S4624)
 
 ---
 
-## [Do not use Array index in keys](./sonar-lessons/do-not-use-array-index-in-keys.md) (S6479)
+## [Do not use Array index in keys](./lessons/do-not-use-array-index-in-keys.md) (S6479)
 
 ---
 
-## [Mark React props as read-only](./sonar-lessons/mark-react-props-as-read-only.md) (S6759)
+## [Mark React props as read-only](./lessons/mark-react-props-as-read-only.md) (S6759)
 
 ---
 
-## [Will use Object's default stringification format](./sonar-lessons/will-use-objects-default-stringification-format.md) (S6551)
+## [Will use Object's default stringification format](./lessons/will-use-objects-default-stringification-format.md) (S6551)
 
 ---
 
-## [Prefer 'String#replaceAll()' over 'String#replace()'](./sonar-lessons/prefer-string-replaceall-over-string-replace.md) (S7781)
+## [Prefer 'String#replaceAll()' over 'String#replace()'](./lessons/prefer-string-replaceall-over-string-replace.md) (S7781)
 
 ---
 
-## [Unexpected negated condition](./sonar-lessons/unexpected-negated-condition.md) (S7735)
+## [Unexpected negated condition](./lessons/unexpected-negated-condition.md) (S7735)
 
 ---
 
@@ -170,50 +170,50 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
 
-## [Ternary operators should not be nested](./sonar-rules/3358_ternary-operators-should-not-be-nested.md)
+## [Ternary operators should not be nested](./rules/3358_ternary-operators-should-not-be-nested.md)
 
 ---
 
-## [Methods should not contain selector parameters](./sonar-rules/2301_methods-should-not-contain-selector-parameters.md)
+## [Methods should not contain selector parameters](./rules/2301_methods-should-not-contain-selector-parameters.md)
 
 ---
 
-## [Non-interactive elements should not have interactive handlers](./sonar-rules/6848_non-interactive-elements-should-not-have-interactive-handlers.md)
+## [Non-interactive elements should not have interactive handlers](./rules/6848_non-interactive-elements-should-not-have-interactive-handlers.md)
 
 ---
 
-## [Non-interactive DOM elements should not have interactive ARIA roles](./sonar-rules/6842_non-interactive-dom-elements-should-not-have-interactive-aria-roles.md)
+## [Non-interactive DOM elements should not have interactive ARIA roles](./rules/6842_non-interactive-dom-elements-should-not-have-interactive-aria-roles.md)
 
 ---
 
-## [Prefer tag over ARIA role](./sonar-rules/6819_prefer-tag-over-aria-role.md)
+## [Prefer tag over ARIA role](./rules/6819_prefer-tag-over-aria-role.md)
 
 ---
 
-## [Non-interactive elements shouldn't have event handlers](./sonar-rules/6847_non-interactive-elements-shouldnt-have-event-handlers.md)
+## [Non-interactive elements shouldn't have event handlers](./rules/6847_non-interactive-elements-shouldnt-have-event-handlers.md)
 
 ---
 
-## [Template literals should not be nested](./sonar-rules/4624_template-literals-should-not-be-nested.md)
+## [Template literals should not be nested](./rules/4624_template-literals-should-not-be-nested.md)
 
 ---
 
-## [JSX list components should not use array indexes as key](./sonar-rules/6479_jsx-list-components-should-not-use-array-indexes-as-key.md)
+## [JSX list components should not use array indexes as key](./rules/6479_jsx-list-components-should-not-use-array-indexes-as-key.md)
 
 ---
 
-## [React props should be read-only](./sonar-rules/6759_react-props-should-be-read-only.md)
+## [React props should be read-only](./rules/6759_react-props-should-be-read-only.md)
 
 ---
 
-## [Objects converted to strings should define a toString method](./sonar-rules/6551_objects-converted-to-strings-should-define-tostring-method.md)
+## [Objects converted to strings should define a toString method](./rules/6551_objects-converted-to-strings-should-define-tostring-method.md)
 
 ---
 
-## [Strings should use replaceAll instead of replace with global regex](./sonar-rules/7781_strings-should-use-replaceall-instead-of-replace-with-global-regex.md)
+## [Strings should use replaceAll instead of replace with global regex](./rules/7781_strings-should-use-replaceall-instead-of-replace-with-global-regex.md)
 
 ---
 
-## [Negated conditions should be avoided when else clause is present](./sonar-rules/7735_negated-conditions-should-be-avoided-when-else-clause-is-present.md)
+## [Negated conditions should be avoided when else clause is present](./rules/7735_negated-conditions-should-be-avoided-when-else-clause-is-present.md)
 
 ---

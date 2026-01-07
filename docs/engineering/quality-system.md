@@ -440,7 +440,7 @@ Every new or updated standard must include:
 
 - [x] Create `docs/architecture/quality-system.md` (this file)
 - [x] Create folder `docs/architecture/quality/`
-- [x] Create `docs/architecture/quality/sonarcloud.md` (comprehensive version with Lessons Learned + Rules)
+- [x] Create `docs/engineering/sonar/sonarcloud.md` (comprehensive version with Lessons Learned + Rules)
 - [x] Create `docs/architecture/quality/exceptions.md` (empty tracker)
 - [x] Create `docs/architecture/quality/lessons-learned.md` (general patterns from incidents)
 - [ ] Update `/.windsurfrules` references to match canonical paths and control IDs
@@ -452,7 +452,7 @@ Every new or updated standard must include:
 
 - Keep docs short, link-rich, and explicit about "source of truth".
 - Put fast-changing "flags and fixes" in:
-  - `docs/architecture/quality/sonarcloud.md`
+  - `docs/engineering/sonar/sonarcloud.md`
   - `docs/architecture/quality/lessons-learned.md`
 - Keep principle docs stable:
   - `docs/architecture/coding-practices.md`

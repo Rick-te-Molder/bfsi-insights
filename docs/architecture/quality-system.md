@@ -168,7 +168,7 @@ Controls are the system of checks that keep quality stable.
 |  C4 | Data consistency controls                             | Prevent           | "Single source of truth" patterns (status codes, query parity, taxonomy_config) | `docs/architecture/**` + code references                    | code diffs + tests                      |
 |  C5 | Lint: zero errors + zero warnings                     | Detect            | Lint gate locally + CI                                                          | workspace scripts (e.g., `apps/admin`)                      | command output / CI logs                |
 |  C6 | Tests + coverage (critical areas)                     | Detect            | Unit tests + coverage gates in Fast CI                                          | workspace scripts (e.g., `services/agent-api`)              | command output / CI logs                |
-|  C7 | Static analysis (SonarCloud)                          | Detect + Prevent  | Continuous scanning + documented lesson lookup before fixing                    | `docs/architecture/quality/sonarcloud.md`                   | SonarCloud report + lesson file ref     |
+|  C7 | Static analysis (SonarCloud)                          | Detect + Prevent  | Continuous scanning + documented lesson lookup before fixing                    | `docs/engineering/sonar/sonarcloud.md`                      | SonarCloud report + lesson file ref     |
 |  C8 | CI tiering (Fast vs Slow)                             | Prevent           | Deterministic merge gates; move flaky steps to Slow CI                          | `.github/workflows/**`                                      | workflow diff + CI run                  |
 |  C9 | Evidence policy ("no claims without proof")           | Prevent           | Required completion format and claim-to-evidence mapping                        | `/.windsurfrules` + this document (Section 8.3)             | PR comments                             |
 | C10 | Prompt governance (manifest, migrations, fail-fast)   | Prevent + Detect  | CI validates prompt coverage; migrations for changes                            | `docs/agents/manifest.yaml`, `infra/supabase/migrations/**` | CI + migration diff                     |
@@ -240,7 +240,7 @@ Entry point for quality governance, controls, and evidence.
 
 **Current**:
 
-- `docs/architecture/sonarcloud-rules.md` (planned move to `docs/architecture/quality/sonarcloud.md`)
+- `docs/architecture/sonarcloud-rules.md` (planned move to `docs/engineering/sonar/sonarcloud.md`)
 
 **Planned** (tracked in repo work):
 
@@ -250,7 +250,7 @@ Entry point for quality governance, controls, and evidence.
 - `docs/architecture/quality/performance.md`
 - `docs/architecture/quality/testing.md`
 - `docs/architecture/quality/ci-quality-gates.md`
-- `docs/architecture/quality/sonarcloud.md`
+- `docs/engineering/sonar/sonarcloud.md`
 - `docs/architecture/quality/lessons-learned.md`
 - `docs/architecture/quality/exceptions.md`
 
@@ -328,6 +328,7 @@ Required reporting format:
 - The Boy Scout rule does not define standards.
 - The Boy Scout rule remains unchanged even when standards evolve.
 - Standards are defined in `docs/architecture/quality/**` documents and enforced by automated gates where applicable.
+- SonarCloud standards and fix patterns are defined in `docs/engineering/sonar/**` and enforced via lint + the pre-commit Sonar pattern check.
 
 ### C2 — Automated local gate(s) (pre-commit)
 

@@ -6,7 +6,7 @@
  * we've documented as Sonar lessons/rules. This catches regressions before CI.
  *
  * Patterns are DYNAMICALLY LOADED from:
- * - docs/architecture/quality/sonar-lessons/*.md (YAML frontmatter)
+ * - docs/engineering/sonar/lessons/*.md (YAML frontmatter)
  *
  * When you add a new lesson with frontmatter, it's automatically included.
  *
@@ -18,10 +18,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execSync } = require('node:child_process');
 
-const PATTERN_DIRS = [
-  'docs/architecture/quality/sonar-lessons',
-  'docs/architecture/quality/sonar-rules',
-];
+const PATTERN_DIRS = ['docs/engineering/sonar/lessons', 'docs/engineering/sonar/rules'];
 
 /**
  * Parse YAML frontmatter from markdown file

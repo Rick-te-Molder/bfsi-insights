@@ -19,7 +19,7 @@ This document captures lessons learned from bugs, incidents, and code review fee
 - An incident has a generalizable root cause
 - Review feedback indicates unclear expectations
 
-**Note**: SonarCloud-specific lessons are in `docs/architecture/quality/sonarcloud.md`.
+**Note**: SonarCloud-specific lessons are in `docs/engineering/sonar/sonarcloud.md`.
 
 ---
 
