@@ -1,3 +1,10 @@
+---
+id: S7735
+name: Negated condition with else clause
+pattern: "if\\s*\\(\\s*!\\s*\\w+[^)]*\\)\\s*\\{[^}]*\\}\\s*else\\s*\\{"
+extensions: ['.ts', '.tsx', '.js', '.jsx']
+---
+
 # Unexpected negated condition
 
 **Sonar Rule**: S7735  

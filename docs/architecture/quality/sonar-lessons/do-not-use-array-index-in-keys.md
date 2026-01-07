@@ -1,3 +1,10 @@
+---
+id: S6479
+name: Array index used as React key
+pattern: "key\\s*=\\s*\\{[^}]*\\b(i|idx|index)\\b[^}]*\\}"
+extensions: ['.tsx', '.jsx']
+---
+
 # Do not use Array index in keys
 
 **Rule ID**: typescript:S6479  

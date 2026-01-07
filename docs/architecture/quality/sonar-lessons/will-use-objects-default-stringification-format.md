@@ -1,3 +1,10 @@
+---
+id: S6551
+name: Object in template literal without toString
+pattern: "`[^`]*\\$\\{[^}]*\\b(error|err|e)\\b[^}]*\\}[^`]*`"
+extensions: ['.ts', '.tsx', '.js', '.jsx']
+---
+
 # Will use Object's default stringification format (S6551)
 
 **Rule**: S6551 - Objects and classes converted or coerced to strings should define a "toString()" method

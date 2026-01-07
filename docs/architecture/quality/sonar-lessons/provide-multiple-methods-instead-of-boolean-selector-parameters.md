@@ -1,3 +1,10 @@
+---
+id: S2301
+name: Boolean selector parameter
+pattern: "function\\s+\\w+\\s*\\([^)]*:\\s*boolean[^)]*\\)\\s*\\{[^}]*if\\s*\\(\\s*\\w+\\s*\\)"
+extensions: ['.ts', '.tsx', '.js', '.jsx']
+---
+
 # Provide multiple methods instead of boolean selector parameters
 
 **Rule ID**: typescript:S2301  

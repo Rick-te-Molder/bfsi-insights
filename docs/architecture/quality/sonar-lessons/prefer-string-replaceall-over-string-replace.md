@@ -1,3 +1,10 @@
+---
+id: S7781
+name: Use replaceAll instead of replace with /g
+pattern: \\.replace\\s*\\(\\s*/[^/]+/g\\s*,
+extensions: ['.ts', '.tsx', '.js', '.jsx']
+---
+
 # Prefer 'String#replaceAll()' over 'String#replace()'
 
 **Sonar Rule**: S7781  
