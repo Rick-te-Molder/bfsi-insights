@@ -10,5 +10,8 @@ fi
 # Check for large files in staged changes (BLOCKS commit if new code violates Quality Gate)
 node scripts/ci/check-large-files.cjs
 
+# Check for known Sonar patterns (WARNS but does not block - shift left)
+node scripts/ci/check-sonar-patterns.cjs
+
 # Check if schema.md needs updating after migration changes
 node scripts/ci/check-schema-sync.cjs

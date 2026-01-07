@@ -1,3 +1,10 @@
+---
+id: S3358
+name: Nested ternary operator
+pattern: "\\?[^?:]*\\?"
+extensions: ['.ts', '.tsx', '.js', '.jsx']
+---
+
 # Extract Nested Ternary Operations into Helper Functions
 
 **Rule ID**: typescript:S3358  

@@ -1,3 +1,10 @@
+---
+id: S4624
+name: Nested template literal
+pattern: "`[^`]*\\$\\{[^}]*`[^`]*`[^}]*\\}[^`]*`"
+extensions: ['.ts', '.tsx', '.js', '.jsx']
+---
+
 # Refactor this code to not use nested template literals
 
 **Rule ID**: typescript:S4624  

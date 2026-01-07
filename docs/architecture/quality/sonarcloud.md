@@ -78,6 +78,16 @@ The following ESLint rules are enabled to catch common Sonar issues at lint time
 
 ---
 
+# Pre-Commit Pattern Check
+
+A lightweight pre-commit check (`scripts/ci/check-sonar-patterns.cjs`) warns when staged files contain patterns we've documented as Sonar lessons/rules. This catches regressions before CI.
+
+**Checked patterns**: S2301, S3358, S4624, S6479, S6551, S6759, S6819, S6842, S6847, S6848, S7735, S7781
+
+**Behavior**: Warns but does not block (use `--strict` to block)
+
+---
+
 # Prevention Checklist
 
 Quick checks before committing. If you're about to write any of these patterns, stop and refactor.

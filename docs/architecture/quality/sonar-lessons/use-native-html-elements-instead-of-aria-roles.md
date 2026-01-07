@@ -1,3 +1,10 @@
+---
+id: S6819
+name: ARIA role instead of native element
+pattern: "<div[^>]*role\\s*=\\s*[\"'](button|link|checkbox|radio)[\"'][^>]*>"
+extensions: ['.tsx', '.jsx']
+---
+
 # Use native HTML elements instead of ARIA roles
 
 **Rule ID**: typescript:S6819  

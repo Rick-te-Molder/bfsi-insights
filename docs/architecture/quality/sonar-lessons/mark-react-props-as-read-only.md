@@ -1,3 +1,11 @@
+---
+id: S6759
+name: React props interface not using Readonly
+pattern: "interface\\s+\\w+Props\\s*\\{"
+extensions: ['.tsx']
+advisory: true
+---
+
 # Lesson: Mark React Props as Read-Only
 
 **Rule:** [S6759 - React props should be read-only](../sonar-rules/6759_react-props-should-be-read-only.md)

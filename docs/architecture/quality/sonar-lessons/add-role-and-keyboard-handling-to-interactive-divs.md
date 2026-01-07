@@ -1,3 +1,10 @@
+---
+id: S6848
+name: onClick on non-interactive element (div/span)
+pattern: "<(div|span)[^>]*\\bonClick\\b[^>]*>"
+extensions: ['.tsx', '.jsx']
+---
+
 # Add role and keyboard handling to interactive divs
 
 **Rule ID**: typescript:S6848  
