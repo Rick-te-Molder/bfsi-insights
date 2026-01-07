@@ -70,12 +70,12 @@ export default async function ReviewPage({
 
   // Build URL with current filters
   const buildFilterUrl = (newParams: Record<string, string>) => {
-    const searchParams = new URLSearchParams();
+    const qsParams = new URLSearchParams();
     const merged = { status, source, time: timeWindow, view: viewMode, ...newParams };
     Object.entries(merged).forEach(([key, value]) => {
-      if (value && value !== 'card') searchParams.set(key, value); // card is default
+      if (value && value !== 'card') qsParams.set(key, value); // card is default
     });
-    return `/items?${searchParams.toString()}`;
+    return `/items?${qsParams.toString()}`;
   };
 
   return (
