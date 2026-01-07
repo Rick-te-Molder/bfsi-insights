@@ -1,3 +1,10 @@
+---
+id: S6847
+name: Event handler on non-interactive element
+pattern: <(div|span)[^>]*\bon(MouseDown|MouseUp|KeyDown|KeyUp)\b[^>]*>
+extensions: ['.tsx', '.jsx']
+---
+
 # Use role presentation for non-interactive event handlers
 
 **Rule ID**: typescript:S6847  

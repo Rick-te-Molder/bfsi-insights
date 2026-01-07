@@ -18,7 +18,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { execSync } = require('node:child_process');
 
-const LESSONS_DIR = 'docs/architecture/quality/sonar-lessons';
+const PATTERN_DIRS = [
+  'docs/architecture/quality/sonar-lessons',
+  'docs/architecture/quality/sonar-rules',
+];
 
 /**
  * Parse YAML frontmatter from markdown file
@@ -69,42 +72,49 @@ function parseFrontmatter(content) {
 }
 
 /**
- * Load patterns from lesson files with YAML frontmatter
+ * Load patterns from markdown files with YAML frontmatter
  * @returns {object[]} Array of pattern definitions
  */
-function loadPatternsFromLessons() {
+function loadPatternsFromDocs() {
   const patterns = [];
+  const seenIds = new Set();
 
-  try {
-    const files = fs.readdirSync(LESSONS_DIR);
+  for (const dir of PATTERN_DIRS) {
+    try {
+      const files = fs.readdirSync(dir);
 
-    for (const file of files) {
-      if (!file.endsWith('.md')) continue;
+      for (const file of files) {
+        if (!file.endsWith('.md')) continue;
 
-      const filePath = path.join(LESSONS_DIR, file);
-      const content = fs.readFileSync(filePath, 'utf8');
-      const frontmatter = parseFrontmatter(content);
+        const filePath = path.join(dir, file);
+        const content = fs.readFileSync(filePath, 'utf8');
+        const frontmatter = parseFrontmatter(content);
 
-      if (!frontmatter || !frontmatter.id || !frontmatter.pattern) continue;
+        if (!frontmatter || !frontmatter.id || !frontmatter.pattern) continue;
 
-      patterns.push({
-        id: frontmatter.id,
-        name: frontmatter.name || frontmatter.id,
-        pattern: new RegExp(frontmatter.pattern),
-        extensions: frontmatter.extensions || ['.ts', '.tsx', '.js', '.jsx'],
-        lesson: filePath,
-        advisory: frontmatter.advisory || false,
-      });
+        // Skip duplicates (lessons take precedence over rules)
+        if (seenIds.has(frontmatter.id)) continue;
+        seenIds.add(frontmatter.id);
+
+        patterns.push({
+          id: frontmatter.id,
+          name: frontmatter.name || frontmatter.id,
+          pattern: new RegExp(frontmatter.pattern),
+          extensions: frontmatter.extensions || ['.ts', '.tsx', '.js', '.jsx'],
+          lesson: filePath,
+          advisory: frontmatter.advisory || false,
+        });
+      }
+    } catch {
+      // Directory may not exist, that's OK
     }
-  } catch (err) {
-    console.error('Warning: Could not load patterns from lessons:', err.message);
   }
 
   return patterns;
 }
 
-// Load patterns dynamically from lesson files
-const PATTERNS = loadPatternsFromLessons();
+// Load patterns dynamically from docs
+const PATTERNS = loadPatternsFromDocs();
 
 /**
  * Get staged files from git

@@ -1,3 +1,10 @@
+---
+id: S6842
+name: Interactive ARIA role without keyboard support
+pattern: <div[^>]*role\s*=\s*["'](button|link)["'][^>]*>
+extensions: ['.tsx', '.jsx']
+---
+
 # Do not add interactive ARIA roles to non-interactive elements
 
 **Rule ID**: typescript:S6842  
