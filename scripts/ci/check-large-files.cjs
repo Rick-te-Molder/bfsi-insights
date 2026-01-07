@@ -41,56 +41,6 @@ const PARAM_LIMITS = {
   maxDestructuredKeys: 7,
 };
 
-// Files with known violations (for tracking purposes only - NOT used for filtering)
-// TODO(KB-151): Gradually refactor and remove entries from this list.
-//
-// NOTE: This allow-list is INFORMATIONAL ONLY; it does NOT affect enforcement.
-// All staged files are checked regardless of whether they're on this list.
-//
-// BOY SCOUT RULE: If you touch any file, it MUST meet Quality Guidelines before commit.
-//
-// Known violations as of 2026-01-02:
-// - 31 files > 300 lines
-// - ~117 additional files with functions > 30 lines
-//
-// When you modify a file on this list, you must refactor it to pass checks.
-// Leave the code cleaner than you found it.
-//
-const ALLOW_LIST = new Set([
-  // Files > 300 lines (31 files) - must be refactored when touched
-  'services/agent-api/src/agents/scorer.js',
-  'apps/web/features/publications/publication-filters.ts',
-  'apps/admin/src/app/(dashboard)/items/page.tsx',
-  'services/agent-api/src/routes/agents.js',
-  'apps/web/features/publications/multi-select-filters.ts',
-  'services/agent-api/src/agents/thumbnailer.js',
-  'services/agent-api/src/routes/agent-jobs.js',
-  'services/agent-api/src/agents/improver.js',
-  'services/agent-api/src/lib/content-fetcher.js',
-  'apps/web/features/publications/PublicationCard.astro',
-  'apps/admin/src/app/(dashboard)/evals/golden-sets/page.tsx',
-  'services/agent-api/src/agents/tagger.js',
-  'apps/admin/src/app/(dashboard)/missed/components/MissedForm.tsx',
-  'services/agent-api/src/lib/evals.js',
-  'apps/admin/src/components/tags/TagDisplay.tsx',
-  'apps/web/components/FilterPanel.astro',
-  'services/agent-api/src/lib/sitemap.js',
-  'apps/web/layouts/Base.astro',
-  'services/agent-api/src/cli/commands/pipeline.js',
-  'services/agent-api/src/agents/discoverer.js',
-  'apps/admin/src/app/(dashboard)/items/[id]/page.tsx',
-  'services/agent-api/src/lib/runner.js',
-  'apps/admin/src/app/(dashboard)/items/[id]/enrichment-panel.tsx',
-  'apps/admin/src/app/(dashboard)/items/actions.ts',
-  'apps/admin/src/app/(dashboard)/items/[id]/evaluation-panel.tsx',
-  'services/agent-api/src/lib/semantic-scholar.js',
-  'apps/web/features/publications/multi-filters/chips.ts',
-  'services/agent-api/src/agents/orchestrator.js',
-  'apps/admin/src/app/(dashboard)/items/review-list.tsx',
-  'services/agent-api/src/agents/discover-classics.js',
-  'apps/admin/src/app/(dashboard)/items/[id]/actions.tsx',
-]);
-
 // Allowed file extensions and path prefixes
 const ALLOWED_EXT = new Set(['.ts', '.js', '.tsx', '.jsx', '.astro']);
 const ALLOWED_PREFIXES = [
@@ -251,7 +201,10 @@ try {
   if (filesExceedingLimit.length > 0) {
     hasErrors = true;
     console.error('\n🔴 FILES EXCEEDING SIZE LIMIT:\n');
-    for (const result of filesExceedingLimit.sort((a, b) => b.lineCount - a.lineCount)) {
+    const sortedFilesExceedingLimit = [...filesExceedingLimit].sort(
+      (a, b) => b.lineCount - a.lineCount,
+    );
+    for (const result of sortedFilesExceedingLimit) {
       console.error(`  ❌ ${result.filePath}`);
       console.error(`     ${result.lineCount} lines (limit: ${result.limits.file})`);
       console.error(`     Exceeds by: ${result.lineCount - result.limits.file} lines\n`);
@@ -264,9 +217,10 @@ try {
     console.error('\n🔴 FILES WITH TOO MANY PARAMETERS (>= 6):\n');
     for (const result of filesWithLargeParamUnits) {
       console.error(`  ❌ ${result.filePath}`);
-      for (const unit of result.units.largeParams.sort(
+      const sortedLargeParamUnits = [...result.units.largeParams].sort(
         (a, b) => b.effectiveParamCount - a.effectiveParamCount,
-      )) {
+      );
+      for (const unit of sortedLargeParamUnits) {
         const label =
           unit.destructuredKeysCount > PARAM_LIMITS.maxDestructuredKeys
             ? `${unit.effectiveParamCount} keys`
@@ -285,7 +239,8 @@ try {
       const isTest = isTestFile(result.filePath);
       const limit = isTest ? 'test files: >50 lines' : 'source files: >30 lines';
       console.error(`  ❌ ${result.filePath} (${limit})`);
-      for (const unit of result.units.large.sort((a, b) => b.length - a.length)) {
+      const sortedLargeUnits = [...result.units.large].sort((a, b) => b.length - a.length);
+      for (const unit of sortedLargeUnits) {
         console.error(
           `     - ${unit.name}(): ${unit.length} lines (lines ${unit.startLine}-${unit.endLine})`,
         );
@@ -302,7 +257,8 @@ try {
     for (const result of filesWithModerateUnits.slice(0, 10)) {
       // Limit to top 10
       console.warn(`  ⚠️  ${result.filePath}`);
-      const topUnits = result.units.moderate.sort((a, b) => b.length - a.length).slice(0, 3);
+      const sortedModerateUnits = [...result.units.moderate].sort((a, b) => b.length - a.length);
+      const topUnits = sortedModerateUnits.slice(0, 3);
       for (const unit of topUnits) {
         console.warn(`     - ${unit.name}(): ${unit.length} lines`);
       }
@@ -320,9 +276,10 @@ try {
     for (const result of filesWithModerateParamUnits.slice(0, 10)) {
       // Limit to top 10
       console.warn(`  ⚠️  ${result.filePath}`);
-      const topUnits = result.units.moderateParams
-        .sort((a, b) => b.effectiveParamCount - a.effectiveParamCount)
-        .slice(0, 3);
+      const sortedModerateParamUnits = [...result.units.moderateParams].sort(
+        (a, b) => b.effectiveParamCount - a.effectiveParamCount,
+      );
+      const topUnits = sortedModerateParamUnits.slice(0, 3);
       for (const unit of topUnits) {
         const label =
           unit.destructuredKeysCount > PARAM_LIMITS.maxDestructuredKeys
@@ -338,32 +295,25 @@ try {
   }
 
   // Summary
-  const knownViolators = stagedFiles.filter((f) => ALLOW_LIST.has(f));
+  const stagedViolationCount =
+    filesExceedingLimit.length + filesWithLargeUnits.length + filesWithLargeParamUnits.length;
 
   if (!hasErrors && !hasWarnings) {
     console.log(`✅ All staged files meet Quality Guidelines!`);
     console.log(`   Checked: ${results.length} file(s)`);
-    if (knownViolators.length > 0) {
-      console.log(
-        `   🎉 Cleaned up: ${knownViolators.length} file(s) that previously had violations`,
-      );
-      console.log(`   Remove from ALLOW_LIST: ${knownViolators.map((f) => f).join(', ')}`);
-    }
     console.log(`\n🧹 Boy Scout Rule in action - code left cleaner than found!\n`);
   } else {
     console.error('\n📊 SUMMARY:');
-    console.error(`   ❌ Violations in staged files:`);
+
+    if (stagedViolationCount === 0) {
+      console.error(`   ✅ No violations in staged files:`);
+    } else {
+      console.error(`   ❌ Violations in staged files:`);
+    }
+
     console.error(`      Files exceeding size limit: ${filesExceedingLimit.length}`);
     console.error(`      Files with large units: ${filesWithLargeUnits.length}`);
     console.error(`      Files with too many parameters: ${filesWithLargeParamUnits.length}`);
-    if (knownViolators.length > 0) {
-      console.error(`\n   📋 ${knownViolators.length} file(s) on known violations list:`);
-      knownViolators.forEach((f) => console.error(`      - ${f}`));
-      console.error(`   These files must be refactored before commit (Boy Scout Rule)`);
-    }
-    console.error(
-      `\n   📋 Total known violations: ${ALLOW_LIST.size} file(s) (tracked for cleanup)`,
-    );
     console.error('\n💡 Quality Gate Requirements (enforced for ALL touched files):');
     console.error('   Source files: <300 lines, functions <30 lines');
     console.error('   Test files: <500 lines, functions <50 lines (relaxed for fixtures/tables)');
