@@ -1,41 +1,29 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
+// Mock data
+const mockPublication = {
+  id: '1',
+  slug: 'test-article',
+  title: 'Test Article',
+  authors: ['Author One'],
+  url: 'https://example.com/article',
+  status: 'published',
+};
+
+// Create a chainable query mock that supports multiple .eq() calls
+function createChainableMock() {
+  const chainable: Record<string, unknown> = {};
+  chainable.eq = vi.fn(() => chainable);
+  chainable.order = vi.fn(() => Promise.resolve({ data: [mockPublication], error: null }));
+  chainable.single = vi.fn(() => Promise.resolve({ data: mockPublication, error: null }));
+  return chainable;
+}
+
 // Mock the createClient from supabase
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => ({
     from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          order: vi.fn(() =>
-            Promise.resolve({
-              data: [
-                {
-                  id: '1',
-                  slug: 'test-article',
-                  title: 'Test Article',
-                  authors: ['Author One'],
-                  url: 'https://example.com/article',
-                  status: 'published',
-                },
-              ],
-              error: null,
-            }),
-          ),
-          single: vi.fn(() =>
-            Promise.resolve({
-              data: {
-                id: '1',
-                slug: 'test-article',
-                title: 'Test Article',
-                authors: ['Author One'],
-                url: 'https://example.com/article',
-                status: 'published',
-              },
-              error: null,
-            }),
-          ),
-        })),
-      })),
+      select: vi.fn(() => createChainableMock()),
     })),
   })),
 }));
