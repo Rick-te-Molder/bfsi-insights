@@ -2,9 +2,9 @@
 
 ---
 
-**Version**: 1.1.0  
+**Version**: 1.2.0  
 **Last updated**: 2026-01-08  
-**Quality System Controls**: C11-C18  
+**Quality System Controls**: C11-C22  
 **Applies to**: All AI coding assistants (Windsurf, Cursor, Copilot) and human developers using AI tools
 
 ---
@@ -76,6 +76,25 @@ These guidelines address failure modes observed in "vibe coding" — where AI ou
 ✅ Good: Contract test fails; PR includes migration or compat shim
 ```
 
+**🚨 HARD RULE: Boundary Validation Gate (C20)**
+
+> **No new public surface (HTTP endpoint, webhook, CLI command) may be merged without schema validation AND negative tests.**
+
+- **Requirement**: Every boundary surface must have Zod schema validation
+- **Enforcement**: PR checklist item; CI schema coverage check (planned)
+- **Pattern**: Validation at entry point, reject early with structured errors
+- **Tests**: At least one "malicious/invalid payload" test per endpoint
+
+```typescript
+// ✅ Required pattern: validate at boundary
+const schema = z.object({ id: z.string().uuid(), limit: z.number().int().positive() });
+export async function handler(req: Request) {
+  const result = schema.safeParse(await req.json());
+  if (!result.success) return Response.json({ error: result.error }, { status: 400 });
+  // ... proceed with validated data
+}
+```
+
 #### Guideline 4: Documentation Coherence
 
 **Risk**: AI accelerates code changes but not documentation; system becomes untraceable.
@@ -114,6 +133,62 @@ These guidelines address failure modes observed in "vibe coding" — where AI ou
 ```
 ❌ Bad: AI writes innerHTML without sanitization
 ✅ Good: Uses DOMPurify, CSP headers, output encoding
+```
+
+**🚨 HARD RULE: SQL Safety Gate (C19)**
+
+> **No dynamic SQL without parameterization. String-concatenated SQL is a merge blocker.**
+
+- **Banned**: Template literals or string concatenation in SQL context (`... ${userInput} ...`)
+- **Required**: Parameterized queries via Supabase client, prepared statements, or vetted query builder
+- **Enforcement**: Semgrep/ESLint rules flag SQL injection patterns; CI blocks on detection
+- **Review**: Any raw SQL requires explicit security review approval
+
+```typescript
+// ❌ BANNED - merge blocker
+const query = `SELECT * FROM users WHERE name = '${userInput}'`;
+
+// ✅ REQUIRED - parameterized via Supabase
+const { data } = await supabase.from('users').select('*').eq('name', userInput);
+
+// ✅ ALLOWED - parameterized prepared statement (if raw SQL needed)
+const { data } = await supabase.rpc('search_users', { search_term: userInput });
+```
+
+**🚨 HARD RULE: Secrets Gate (C21)**
+
+> **Secret scanning is a merge gate. No exceptions. Hardcoded credentials block the PR.**
+
+- **Banned**: API keys, passwords, tokens, connection strings in source code
+- **Required**: Secrets via environment variables or secret manager only
+- **Enforcement**: Pre-commit secret scanning + CI secret detection blocks merge
+- **Pattern**: Config module reads env; runtime fails fast if missing
+
+```typescript
+// ❌ BANNED - merge blocker
+const API_KEY = 'sk-1234567890abcdef';
+const supabase = createClient(url, 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+
+// ✅ REQUIRED - env-based config
+const API_KEY = process.env.API_KEY;
+if (!API_KEY) throw new Error('API_KEY environment variable is required');
+```
+
+**Safe Config Pattern** (use this template):
+
+```typescript
+// lib/config.ts - sanctioned pattern for all secrets
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required environment variable: ${name}`);
+  return value;
+}
+
+export const config = {
+  supabaseUrl: requireEnv('SUPABASE_URL'),
+  supabaseKey: requireEnv('SUPABASE_ANON_KEY'),
+  openaiKey: requireEnv('OPENAI_API_KEY'),
+} as const;
 ```
 
 #### Guideline 6: Data Safety & Migration Discipline
@@ -251,6 +326,41 @@ _Note: Also strongly relates to Category 5 (Evidence & Accountability)._
 ✅ Good: Choose vetted library; document why; add to approved list
 ```
 
+**🚨 HARD RULE: Dependency Governance Gate (C22)**
+
+> **No new dependency without justification checklist AND deterministic install proof.**
+
+- **Banned**: AI silently adding packages; hallucinated package names
+- **Required**: Justification (why needed, alternatives considered, maintenance status, license)
+- **Enforcement**: CI fails if `package.json` changed without lockfile update; `npm ci` must succeed
+- **Pattern**: AI proposes dependency; human reviews and approves before adding
+
+**Dependency Addition Checklist** (required in PR):
+
+```markdown
+## New Dependency: [package-name]
+
+- [ ] **Why needed**: [specific use case]
+- [ ] **Alternatives considered**: [what else was evaluated]
+- [ ] **Maintenance**: [last release date, weekly downloads, open issues]
+- [ ] **License**: [license type, compatible with project]
+- [ ] **Security**: [no known vulnerabilities, npm audit clean]
+- [ ] **Size impact**: [bundle size delta]
+```
+
+**CI Enforcement**:
+
+```yaml
+# Dependency hygiene check
+- name: Verify lockfile
+  run: |
+    if git diff --name-only HEAD~1 | grep -q 'package.json'; then
+      git diff --name-only HEAD~1 | grep -q 'package-lock.json' || exit 1
+    fi
+- name: Clean install
+  run: npm ci # Fails if lockfile doesn't match package.json
+```
+
 #### Guideline 13: Prompt & Toolchain Governance
 
 **Risk**: AI runs sweeping commands, deletes files, changes configs without review.
@@ -299,16 +409,20 @@ _Note: Guideline 11 (Reviewability & Change Control) also strongly supports this
 
 These guardrails are operationalized as Quality System controls:
 
-| ID  | Control                 | Type    | Enforcement                  |
-| --- | ----------------------- | ------- | ---------------------------- |
-| C11 | Plan-first prompting    | Prevent | `.windsurfrules` + PR review |
-| C12 | Security-by-default     | Prevent | PR template + pre-commit     |
-| C13 | Dependency hygiene      | Detect  | Pre-commit + CI              |
-| C14 | Prompt governance       | Prevent | `.windsurfrules`             |
-| C15 | Architecture boundaries | Detect  | CI (planned)                 |
-| C16 | PR diff budget          | Detect  | CI (planned)                 |
-| C17 | ADR requirement         | Prevent | PR review                    |
-| C18 | Feature flag guidance   | Prevent | PR review                    |
+| ID  | Control                      | Type    | Enforcement                  |
+| --- | ---------------------------- | ------- | ---------------------------- |
+| C11 | Plan-first prompting         | Prevent | `.windsurfrules` + PR review |
+| C12 | Security-by-default          | Prevent | PR template + pre-commit     |
+| C13 | Dependency hygiene           | Detect  | Pre-commit + CI              |
+| C14 | Prompt governance            | Prevent | `.windsurfrules`             |
+| C15 | Architecture boundaries      | Detect  | CI (planned)                 |
+| C16 | PR diff budget               | Detect  | CI (planned)                 |
+| C17 | ADR requirement              | Prevent | PR review                    |
+| C18 | Feature flag guidance        | Prevent | PR review                    |
+| C19 | **SQL Safety Gate**          | Block   | Semgrep/ESLint + CI          |
+| C20 | **Boundary Validation Gate** | Block   | PR checklist + CI (planned)  |
+| C21 | **Secrets Gate**             | Block   | Pre-commit + CI              |
+| C22 | **Dependency Governance**    | Block   | CI lockfile + npm ci         |
 
 ---
 
@@ -374,6 +488,13 @@ The following changes **require explicit security review**:
 
 ```markdown
 ## Security Review
+
+### 🚨 Mandatory Security Gates (merge blockers)
+
+- [ ] **C19 SQL Safety**: No string-concatenated SQL; all queries parameterized
+- [ ] **C20 Boundary Validation**: New endpoints have Zod schemas + negative tests
+- [ ] **C21 Secrets**: No hardcoded credentials; secrets via env only
+- [ ] **C22 Dependencies**: New deps have justification; lockfile updated
 
 ### Code Review
 
@@ -523,16 +644,20 @@ AI assistants must follow `.windsurfrules`:
 
 ## 9. Implementation Status
 
-| Control                     | Status         | Enforcement      |
-| --------------------------- | -------------- | ---------------- |
-| C11 Plan-first              | ✅ Implemented | `.windsurfrules` |
-| C12 Security checklist      | ✅ Implemented | PR template      |
-| C13 Dependency check        | ✅ Implemented | Pre-commit       |
-| C14 Prompt governance       | ✅ Implemented | `.windsurfrules` |
-| C15 Architecture boundaries | 🔲 Planned     | CI               |
-| C16 PR diff budget          | 🔲 Planned     | CI               |
-| C17 ADR requirement         | 🔲 Planned     | PR review        |
-| C18 Feature flags           | 🔲 Planned     | PR review        |
+| Control                          | Status         | Enforcement       |
+| -------------------------------- | -------------- | ----------------- |
+| C11 Plan-first                   | ✅ Implemented | `.windsurfrules`  |
+| C12 Security checklist           | ✅ Implemented | PR template       |
+| C13 Dependency check             | ✅ Implemented | Pre-commit        |
+| C14 Prompt governance            | ✅ Implemented | `.windsurfrules`  |
+| C15 Architecture boundaries      | 🔲 Planned     | CI                |
+| C16 PR diff budget               | 🔲 Planned     | CI                |
+| C17 ADR requirement              | 🔲 Planned     | PR review         |
+| C18 Feature flags                | 🔲 Planned     | PR review         |
+| **C19 SQL Safety Gate**          | 🔲 Planned     | Semgrep/ESLint+CI |
+| **C20 Boundary Validation Gate** | 🔲 Planned     | PR checklist + CI |
+| **C21 Secrets Gate**             | ✅ Implemented | Pre-commit + CI   |
+| **C22 Dependency Governance**    | ✅ Implemented | Pre-commit + CI   |
 
 ---
 
@@ -563,6 +688,12 @@ This framework addresses risks documented in:
 ┌─────────────────────────────────────────────────────────────┐
 │              AI-ASSISTED DEVELOPMENT CHECKLIST              │
 ├─────────────────────────────────────────────────────────────┤
+│ 🚨 MANDATORY SECURITY GATES (merge blockers)                 │
+│ ■ C19: No string-concatenated SQL (parameterize all)        │
+│ ■ C20: New endpoints have schema validation + negative tests │
+│ ■ C21: No hardcoded secrets (env vars only)                  │
+│ ■ C22: New deps have justification + lockfile updated        │
+├─────────────────────────────────────────────────────────────┤
 │ BEFORE PROMPTING                                            │
 │ □ Write spec: goal, non-goals, acceptance criteria          │
 │ □ Identify files to change                                  │
@@ -590,7 +721,8 @@ This framework addresses risks documented in:
 
 ## Appendix B: Change History
 
-| Version | Date       | Changes                                                          |
-| ------- | ---------- | ---------------------------------------------------------------- |
-| 1.1.0   | 2026-01-08 | Reorganize 14 dimensions into 5 categories; rename to guidelines |
-| 1.0.0   | 2026-01-07 | Initial version with 14 dimensions, controls C11-C18             |
+| Version | Date       | Changes                                                                  |
+| ------- | ---------- | ------------------------------------------------------------------------ |
+| 1.2.0   | 2026-01-08 | Add 4 mandatory security gates (C19-C22): SQL, secrets, validation, deps |
+| 1.1.0   | 2026-01-08 | Reorganize 14 dimensions into 5 categories; rename to guidelines         |
+| 1.0.0   | 2026-01-07 | Initial version with 14 dimensions, controls C11-C18                     |
