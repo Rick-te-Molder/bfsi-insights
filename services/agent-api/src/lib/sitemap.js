@@ -15,9 +15,9 @@ import { fetchPageMetadata } from './sitemap-metadata.js';
 
 /**
  * Discover articles from a sitemap URL
- * @param {Object} source - Source with sitemap_url
- * @param {Object} config - Discovery config with keywords
- * @returns {Array} Array of candidate articles
+ * @param {any} source - Source with sitemap_url
+ * @param {any} config - Discovery config with keywords
+ * @returns {Promise<any[]>} Array of candidate articles
  */
 export async function fetchFromSitemap(source, config = {}) {
   if (!source.sitemap_url) return [];
