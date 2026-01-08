@@ -32,8 +32,8 @@ export function suggestNextVersion(currentVersion: string): string {
   // Extract version numbers
   const match = currentVersion.match(/v?(\d+)\.?(\d*)/);
   if (match) {
-    const major = parseInt(match[1]);
-    const minor = match[2] ? parseInt(match[2]) + 1 : 1;
+    const major = Number.parseInt(match[1], 10);
+    const minor = match[2] ? Number.parseInt(match[2], 10) + 1 : 1;
     const newVersion = `v${major}.${minor}`;
     return prefix ? `${prefix}-${newVersion}` : newVersion;
   }
