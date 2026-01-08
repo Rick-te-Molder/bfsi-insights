@@ -14,13 +14,11 @@ import {
   createEvalRun,
   updateEvalRun,
   storeEvalResult,
-  addGoldenExample,
-  getEvalHistory,
 } from './evals-db.js';
 import { judgeWithLLM, compareWithLLM } from './evals-judge.js';
 
 // Re-export for backwards compatibility
-export { addGoldenExample, getEvalHistory };
+export { addGoldenExample, getEvalHistory } from './evals-db.js';
 
 /** Log golden eval start */
 function logGoldenStart(agentName, examplesCount) {
@@ -55,7 +53,8 @@ async function processGoldenExamples(examples, agentFn, runId) {
   for (const example of examples) {
     try {
       const result = await processGoldenExample(example, agentFn, runId);
-      result.match ? passed++ : failed++;
+      if (result.match) passed++;
+      else failed++;
       results.push(result);
     } catch (err) {
       failed++;
