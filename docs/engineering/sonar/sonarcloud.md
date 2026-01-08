@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.12.0  
+**Version**: 1.13.0  
 **Last updated**: 2026-01-08  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.13.0 (2026-01-08): Added S6644 (use logical OR instead of ternary for default values).
 - 1.12.0 (2026-01-08): Fix S4662 docs to use sonar.issue.ignore.multicriteria for Tailwind v4 at-rules in globals.css.
 - 1.11.0 (2026-01-08): Added S6481 (wrap Context Provider value in useMemo).
 - 1.10.0 (2026-01-08): Added S4662 (configure Tailwind CSS at-rules in sonar-project.properties).
@@ -64,6 +65,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S7772   | [Prefer node: protocol for Node.js built-in imports](./lessons/prefer-node-protocol-for-builtins.md)                                                                              | `lessons/prefer-node-protocol-for-builtins.md`                                                |
 | S4662   | [Configure Tailwind CSS at-rules for SonarCloud](./lessons/configure-tailwind-css-at-rules.md)                                                                                    | `lessons/configure-tailwind-css-at-rules.md`                                                  |
 | S6481   | [Wrap Context Provider value in useMemo](./lessons/wrap-context-provider-value-in-usememo.md)                                                                                     | `lessons/wrap-context-provider-value-in-usememo.md`                                           |
+| S6644   | [Use logical OR instead of ternary for default values](./lessons/use-logical-or-instead-of-ternary-for-default-values.md)                                                         | `lessons/use-logical-or-instead-of-ternary-for-default-values.md`                             |
 
 ---
 
@@ -127,6 +129,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Use node: protocol for built-ins** — Import Node.js modules with `node:fs`, `node:path`, etc.
 - [ ] **Configure Tailwind CSS at-rules** — Ignore `css:S4662` for `apps/admin/src/app/globals.css` via `sonar.issue.ignore.multicriteria` in sonar-project.properties
 - [ ] **Wrap Context Provider values in useMemo** — Memoize object values passed to React Context Providers
+- [ ] **Use || or ?? instead of ternary for defaults** — Replace `x ? x : y` with `x || y`
 
 ---
 
@@ -216,6 +219,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Use logical OR instead of ternary for default values](./lessons/use-logical-or-instead-of-ternary-for-default-values.md) (S6644)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -293,5 +300,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [React Context Provider values should have stable identities](./rules/6481_react-context-provider-values-should-have-stable-identities.md)
+
+---
+
+## [Ternary operator should not be used instead of simpler alternatives](./rules/6644_ternary-operator-should-not-be-used-instead-of-simpler-alternatives.md)
 
 ---
