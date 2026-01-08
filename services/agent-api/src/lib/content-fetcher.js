@@ -4,12 +4,7 @@
  */
 
 import { isPdfUrl, fetchPdfContent } from './pdf-extractor.js';
-import {
-  extractTextContent,
-  extractTitleFromUrl,
-  parseHtml,
-  formatFetchResult,
-} from './content-fetcher-html.js';
+import { formatFetchResult } from './content-fetcher-html.js';
 import {
   requiresPlaywright,
   fetchWithPlaywright,
@@ -18,7 +13,8 @@ import {
 import { delay, FETCH_HEADERS, attemptFetch } from './content-fetcher-http.js';
 
 // Re-export for backwards compatibility
-export { delay, extractTextContent, extractTitleFromUrl, parseHtml };
+export { extractTextContent, extractTitleFromUrl, parseHtml } from './content-fetcher-html.js';
+export { delay } from './content-fetcher-http.js';
 
 /** Fetch from protected domain with Playwright, fallback to Google Cache */
 async function fetchProtectedContent(url, parseResult) {

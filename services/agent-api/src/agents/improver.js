@@ -116,7 +116,7 @@ export async function analyzeAllPendingMisses() {
 }
 
 // Re-export from modules
-export { generateImprovementReport };
+export { generateImprovementReport } from './improver-report.js';
 
 export default {
   analyzeMissedDiscovery,
