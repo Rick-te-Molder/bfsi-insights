@@ -71,7 +71,9 @@ const formatHierarchical = (data, parentCol = 'parent_code') =>
   data
     ?.map((/** @type {any} */ i) => {
       const indent = '  '.repeat((i.level || 1) - 1);
-      return `${indent}${i.code}: ${i.name} ${i.level ? `[L${i.level}]` : ''}${i[parentCol] ? ` (parent: ${i[parentCol]})` : ''}`;
+      const levelLabel = i.level ? `[L${i.level}]` : '';
+      const parentLabel = i[parentCol] ? ` (parent: ${i[parentCol]})` : '';
+      return `${indent}${i.code}: ${i.name} ${levelLabel}${parentLabel}`;
     })
     .join('\n') || '';
 
