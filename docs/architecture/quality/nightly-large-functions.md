@@ -6,18 +6,14 @@ Functions exceeding size limits (source: 30 lines, test: 50 lines)
 
 ## Summary
 
-- **Total large functions:** 41
-- **Files affected:** 34
+- **Total large functions:** 37
+- **Files affected:** 30
 
 ## Functions
 
 ```text
 LINES  FUNCTION                  FILE
 -----  ------------------------  --------------------------------------------------------------------------------
-   71  MissedDiscoveryPage()     apps/admin/src/app/(dashboard)/missed/page.tsx
-   56  SearchBar()               apps/admin/src/app/(dashboard)/items/search-bar.tsx
-   52  AgentsPage()              apps/admin/src/app/(dashboard)/agents/page.tsx
-   51  usePipelineActions()      apps/admin/src/components/ui/sidebar/usePipelineActions.ts
    49  parseStructured()         services/agent-api/src/lib/llm.js
    48  completeAnthropic()       services/agent-api/src/lib/llm.js
    47  readFromQuery()           apps/web/features/publications/filters/storage.ts
