@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.10.0  
+**Version**: 1.11.0  
 **Last updated**: 2026-01-08  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.11.0 (2026-01-08): Added S6481 (wrap Context Provider value in useMemo).
 - 1.10.0 (2026-01-08): Added S4662 (configure Tailwind CSS at-rules in sonar-project.properties).
 - 1.9.0 (2026-01-08): Added S7772 (prefer node: protocol for Node.js built-in imports).
 - 1.8.0 (2026-01-08): Added S6772 (spacing between inline elements should be explicit).
@@ -61,6 +62,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S6772   | [Ambiguous spacing after previous element](./lessons/ambiguous-spacing-after-previous-element.md)                                                                                 | `lessons/ambiguous-spacing-after-previous-element.md`                                         |
 | S7772   | [Prefer node: protocol for Node.js built-in imports](./lessons/prefer-node-protocol-for-builtins.md)                                                                              | `lessons/prefer-node-protocol-for-builtins.md`                                                |
 | S4662   | [Configure Tailwind CSS at-rules for SonarCloud](./lessons/configure-tailwind-css-at-rules.md)                                                                                    | `lessons/configure-tailwind-css-at-rules.md`                                                  |
+| S6481   | [Wrap Context Provider value in useMemo](./lessons/wrap-context-provider-value-in-usememo.md)                                                                                     | `lessons/wrap-context-provider-value-in-usememo.md`                                           |
 
 ---
 
@@ -123,6 +125,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Use explicit JSX spacing** — Add `{' '}` between inline elements and text on separate lines
 - [ ] **Use node: protocol for built-ins** — Import Node.js modules with `node:fs`, `node:path`, etc.
 - [ ] **Configure Tailwind CSS at-rules** — Add `plugin,theme` to `sonar.css.at-rule.S4662.ignoreAtRules` in sonar-project.properties
+- [ ] **Wrap Context Provider values in useMemo** — Memoize object values passed to React Context Providers
 
 ---
 
@@ -208,6 +211,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Wrap Context Provider value in useMemo](./lessons/wrap-context-provider-value-in-usememo.md) (S6481)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -281,5 +288,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## ["@at-rules" should be valid](./rules/4662_at-rules-should-be-valid.md)
+
+---
+
+## [React Context Provider values should have stable identities](./rules/6481_react-context-provider-values-should-have-stable-identities.md)
 
 ---

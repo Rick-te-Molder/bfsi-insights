@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, ReactNode } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 interface StatusInfo {
@@ -130,11 +130,8 @@ function useStatusHelpers(statuses: StatusInfo[]) {
 export function StatusProvider({ children }: Readonly<{ children: ReactNode }>) {
   const { statuses, loading } = useStatusData();
   const helpers = useStatusHelpers(statuses);
-  return (
-    <StatusContext.Provider value={{ statuses, loading, ...helpers }}>
-      {children}
-    </StatusContext.Provider>
-  );
+  const value = useMemo(() => ({ statuses, loading, ...helpers }), [statuses, loading, helpers]);
+  return <StatusContext.Provider value={value}>{children}</StatusContext.Provider>;
 }
 
 export function useStatus() {
