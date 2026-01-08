@@ -22,10 +22,12 @@ function normalizeArgs(
 
 function createDeleteHandler(
   selected: PromptVersion | null,
-  deleteVersion: (p: PromptVersion) => void,
+  deleteVersion: (p: PromptVersion) => void | Promise<void>,
 ) {
   return () => {
-    if (selected) deleteVersion(selected);
+    if (selected) {
+      deleteVersion(selected);
+    }
   };
 }
 
@@ -42,7 +44,7 @@ function createCompareHandler(
 
 function createPromoteHandler(
   selected: PromptVersion | null,
-  promoteVersion: (p: PromptVersion) => void,
+  promoteVersion: (p: PromptVersion) => void | Promise<void>,
 ) {
   return () => {
     if (!selected) return;
@@ -53,8 +55,8 @@ function createPromoteHandler(
 export function createAgentDetailHandlers(args: {
   selectedVersion: PromptVersion | null | undefined;
   currentPrompt: PromptVersion | null | undefined;
-  deleteVersion: (p: PromptVersion) => void;
-  promoteVersion: (p: PromptVersion) => void;
+  deleteVersion: (p: PromptVersion) => void | Promise<void>;
+  promoteVersion: (p: PromptVersion) => void | Promise<void>;
   setTestingPrompt: (p: PromptVersion | null) => void;
   setEditingPrompt: (p: PromptVersion | null) => void;
   setCreatingNewVersion: (p: PromptVersion | null) => void;
