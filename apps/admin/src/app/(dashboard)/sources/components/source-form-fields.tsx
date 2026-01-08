@@ -197,7 +197,7 @@ export function CheckboxFields({
           checked={formData.enabled || false}
           onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
           className="rounded border-neutral-700 bg-neutral-800"
-        />
+        />{' '}
         Enabled
       </label>
       <label className="flex items-center gap-2 text-sm text-neutral-400">
@@ -206,7 +206,7 @@ export function CheckboxFields({
           checked={formData.show_on_external_page || false}
           onChange={(e) => setFormData({ ...formData, show_on_external_page: e.target.checked })}
           className="rounded border-neutral-700 bg-neutral-800"
-        />
+        />{' '}
         Show on external page
       </label>
     </div>

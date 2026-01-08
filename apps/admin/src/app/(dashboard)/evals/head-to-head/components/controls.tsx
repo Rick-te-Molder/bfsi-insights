@@ -11,7 +11,7 @@ function LLMJudgeCheckbox({
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
         className="rounded border-neutral-700 bg-neutral-800"
-      />
+      />{' '}
       Use LLM Judge (experimental)
     </label>
   );
