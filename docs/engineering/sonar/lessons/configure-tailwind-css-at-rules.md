@@ -28,11 +28,12 @@ These are valid Tailwind directives but not standard W3C CSS at-rules, so SonarC
 
 ## Fix
 
-Configure SonarCloud to ignore these at-rules in `sonar-project.properties`:
+Configure SonarCloud to ignore this rule for `apps/admin/src/app/globals.css` in `sonar-project.properties`:
 
 ```properties
-# CSS settings - ignore Tailwind CSS v4 specific at-rules (S4662)
-sonar.css.at-rule.S4662.ignoreAtRules=plugin,theme
+sonar.issue.ignore.multicriteria=css1
+sonar.issue.ignore.multicriteria.css1.ruleKey=css:S4662
+sonar.issue.ignore.multicriteria.css1.resourceKey=apps/admin/src/app/globals.css
 ```
 
 ## Why This Approach
