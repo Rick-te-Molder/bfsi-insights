@@ -17,55 +17,41 @@ export async function processCandidate(candidate, sourceName, dryRun, scoringCon
   if (existsStatus === 'skip') return { action: 'skip' };
 
   const titlePreview = candidate.title.substring(0, 60);
-
-  // Handle retries
   if (existsStatus === 'retry') {
-    if (dryRun) {
-      console.log(`   [DRY] Would retry: ${titlePreview}...`);
-      return { action: 'dry-run' };
-    }
+    if (dryRun) return logDryRun('retry', titlePreview);
     return processRetry(candidate, sourceName, titlePreview);
   }
 
-  // Score relevance
-  const relevanceResult = await scoreCandidate(
-    candidate,
-    sourceName,
-    titlePreview,
-    scoringConfig,
-    stats,
-    dryRun,
-  );
+  const scoringOpts = { candidate, sourceName, titlePreview, scoringConfig, stats, dryRun };
+  const relevanceResult = await scoreCandidate(scoringOpts);
   if (relevanceResult.skip) return relevanceResult.result;
-
-  if (dryRun) {
-    console.log(`   [DRY] Would add: ${titlePreview}...`);
-    return { action: 'dry-run' };
-  }
-
+  if (dryRun) return logDryRun('add', titlePreview);
   return processNewItem(candidate, sourceName, titlePreview, relevanceResult.data);
+}
+
+function logDryRun(action, titlePreview) {
+  console.log(`   [DRY] Would ${action}: ${titlePreview}...`);
+  return { action: 'dry-run' };
 }
 
 /**
  * Score candidate using embeddings and/or LLM
  */
-async function scoreCandidate(candidate, sourceName, titlePreview, scoringConfig, stats, dryRun) {
+async function scoreCandidate(opts) {
+  const { candidate, sourceName, titlePreview, scoringConfig, stats, dryRun } = opts;
   let relevanceResult = null;
 
-  // Hybrid mode: embeddings first, LLM for uncertain
   if (scoringConfig.mode === 'hybrid' && scoringConfig.referenceEmbedding) {
     const embedResult = await handleEmbeddingScoring(candidate, titlePreview, scoringConfig, stats);
     if (embedResult.done) return embedResult;
     relevanceResult = embedResult.relevanceResult;
   }
 
-  // Agentic mode or hybrid uncertain: LLM scoring
   if (scoringConfig.mode === 'agentic' || (scoringConfig.mode === 'hybrid' && !relevanceResult)) {
     const llmResult = await handleLlmScoring(candidate, sourceName, titlePreview, stats, dryRun);
     if (llmResult.skip) return llmResult;
     relevanceResult = llmResult.relevanceResult;
   }
-
   return { skip: false, data: relevanceResult };
 }
 
@@ -77,34 +63,41 @@ async function handleEmbeddingScoring(candidate, titlePreview, scoringConfig, st
   stats.embeddingTokens += embeddingResult.tokens;
 
   if (embeddingResult.action === 'accept') {
-    stats.embeddingAccepts++;
-    console.log(
-      `   ✅ Embed accept (${embeddingResult.similarity.toFixed(2)}): ${titlePreview}...`,
-    );
-    return {
-      done: false,
-      relevanceResult: {
-        relevance_score: Math.round(embeddingResult.similarity * 10),
-        executive_summary: 'High embedding similarity - auto-accepted',
-        skip_reason: null,
-        should_queue: true,
-      },
-    };
+    return handleEmbeddingAccept(embeddingResult, titlePreview, stats);
   }
 
   if (embeddingResult.action === 'reject') {
-    stats.embeddingRejects++;
-    console.log(
-      `   ⏭️  Embed reject (${embeddingResult.similarity.toFixed(2)}): ${titlePreview}...`,
-    );
-    return {
-      done: true,
-      skip: true,
-      result: { action: 'skipped-relevance', reason: 'Low embedding similarity' },
-    };
+    return handleEmbeddingReject(embeddingResult, titlePreview, stats);
   }
 
-  // Uncertain - need LLM
+  return handleEmbeddingUncertain(embeddingResult, titlePreview);
+}
+
+function handleEmbeddingAccept(embeddingResult, titlePreview, stats) {
+  stats.embeddingAccepts++;
+  console.log(`   ✅ Embed accept (${embeddingResult.similarity.toFixed(2)}): ${titlePreview}...`);
+  return {
+    done: false,
+    relevanceResult: {
+      relevance_score: Math.round(embeddingResult.similarity * 10),
+      executive_summary: 'High embedding similarity - auto-accepted',
+      skip_reason: null,
+      should_queue: true,
+    },
+  };
+}
+
+function handleEmbeddingReject(embeddingResult, titlePreview, stats) {
+  stats.embeddingRejects++;
+  console.log(`   ⏭️  Embed reject (${embeddingResult.similarity.toFixed(2)}): ${titlePreview}...`);
+  return {
+    done: true,
+    skip: true,
+    result: { action: 'skipped-relevance', reason: 'Low embedding similarity' },
+  };
+}
+
+function handleEmbeddingUncertain(embeddingResult, titlePreview) {
   console.log(
     `   🔍 Embed uncertain (${embeddingResult.similarity.toFixed(2)}): ${titlePreview}...`,
   );
@@ -115,28 +108,41 @@ async function handleEmbeddingScoring(candidate, titlePreview, scoringConfig, st
  * Handle LLM-based scoring
  */
 async function handleLlmScoring(candidate, sourceName, titlePreview, stats, dryRun) {
-  const relevanceResult = await scoreRelevance({
+  const relevanceResult = await scoreRelevance(buildScoringInput(candidate, sourceName));
+
+  if (relevanceResult.stale_content) {
+    return handleStaleContent(relevanceResult, stats);
+  }
+
+  if (relevanceResult.trusted_source) {
+    return handleTrustedSource(relevanceResult, titlePreview, stats);
+  }
+
+  return handleLlmResult(relevanceResult, titlePreview, stats, dryRun);
+}
+
+function buildScoringInput(candidate, sourceName) {
+  return {
     title: candidate.title,
     description: candidate.description || '',
     source: sourceName,
     publishedDate: candidate.publishedDate || candidate.published_date || null,
     url: candidate.url || '',
-  });
+  };
+}
 
-  // Track stale content skips
-  if (relevanceResult.stale_content) {
-    stats.staleSkips = (stats.staleSkips || 0) + 1;
-    return { skip: true, result: { action: 'skipped-stale', relevanceResult } };
-  }
+function handleStaleContent(relevanceResult, stats) {
+  stats.staleSkips = (stats.staleSkips || 0) + 1;
+  return { skip: true, result: { action: 'skipped-stale', relevanceResult } };
+}
 
-  // Trusted source - no LLM needed
-  if (relevanceResult.trusted_source) {
-    stats.trustedSourcePasses++;
-    console.log(`   ✅ Trusted source: ${titlePreview}...`);
-    return { skip: false, relevanceResult };
-  }
+function handleTrustedSource(relevanceResult, titlePreview, stats) {
+  stats.trustedSourcePasses++;
+  console.log(`   ✅ Trusted source: ${titlePreview}...`);
+  return { skip: false, relevanceResult };
+}
 
-  // LLM scoring
+function handleLlmResult(relevanceResult, titlePreview, stats, dryRun) {
   stats.llmCalls++;
   if (relevanceResult.usage) {
     stats.llmTokens += relevanceResult.usage.total_tokens;
@@ -192,15 +198,16 @@ async function processNewItem(candidate, sourceName, titlePreview, relevanceResu
 
 /**
  * Process batch of candidates
+ * @param {object} opts - Processing options
+ * @param {Array} opts.candidates - Candidates to process
+ * @param {string} opts.sourceName - Source name
+ * @param {boolean} opts.dryRun - Dry run flag
+ * @param {number} opts.limit - Max items to process
+ * @param {object} opts.stats - Stats object
+ * @param {object} opts.scoringConfig - Scoring configuration
  */
-export async function processCandidates(
-  candidates,
-  sourceName,
-  dryRun,
-  limit,
-  stats,
-  scoringConfig,
-) {
+export async function processCandidates(opts) {
+  const { candidates, sourceName, dryRun, limit, stats, scoringConfig } = opts;
   const results = [];
 
   for (const candidate of candidates) {
@@ -208,17 +215,20 @@ export async function processCandidates(
 
     stats.found++;
     const outcome = await processCandidate(candidate, sourceName, dryRun, scoringConfig, stats);
-
-    if (outcome.action === 'skip') continue;
-    if (outcome.action === 'skipped-relevance' || outcome.action === 'skipped-stale') {
-      stats.skipped++;
-      continue;
-    }
-
-    stats.new++;
-    if (outcome.action === 'retry') stats.retried++;
-    if (outcome.result) results.push(outcome.result);
+    processOutcome(outcome, stats, results);
   }
 
   return results;
+}
+
+function processOutcome(outcome, stats, results) {
+  if (outcome.action === 'skip') return;
+  if (outcome.action === 'skipped-relevance' || outcome.action === 'skipped-stale') {
+    stats.skipped++;
+    return;
+  }
+
+  stats.new++;
+  if (outcome.action === 'retry') stats.retried++;
+  if (outcome.result) results.push(outcome.result);
 }

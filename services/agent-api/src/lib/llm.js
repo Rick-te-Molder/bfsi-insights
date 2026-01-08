@@ -87,23 +87,15 @@ export async function complete(options) {
  */
 async function completeOpenAI({ model, messages, maxTokens, temperature, responseFormat }) {
   const openai = getOpenAI();
-
-  const params = {
-    model,
-    messages,
-    max_tokens: maxTokens,
-  };
-
-  if (temperature !== undefined) {
-    params.temperature = temperature;
-  }
-
-  if (responseFormat) {
-    params.response_format = responseFormat;
-  }
+  const params = { model, messages, max_tokens: maxTokens };
+  if (temperature !== undefined) params.temperature = temperature;
+  if (responseFormat) params.response_format = responseFormat;
 
   const response = await openai.chat.completions.create(params);
+  return formatOpenAIResponse(response, model);
+}
 
+function formatOpenAIResponse(response, model) {
   return {
     content: response.choices[0]?.message?.content || '',
     usage: {
@@ -118,14 +110,11 @@ async function completeOpenAI({ model, messages, maxTokens, temperature, respons
 }
 
 /**
- * Anthropic completion
+ * Convert OpenAI message format to Anthropic format
+ * OpenAI: [{ role: 'system', content: '...' }, { role: 'user', content: '...' }]
+ * Anthropic: system param + messages array without system role
  */
-async function completeAnthropic({ model, messages, maxTokens, temperature }) {
-  const anthropic = getAnthropic();
-
-  // Convert OpenAI message format to Anthropic format
-  // OpenAI: [{ role: 'system', content: '...' }, { role: 'user', content: '...' }]
-  // Anthropic: system param + messages array without system role
+function convertToAnthropicFormat(messages) {
   let systemPrompt = '';
   const anthropicMessages = [];
 
@@ -133,35 +122,75 @@ async function completeAnthropic({ model, messages, maxTokens, temperature }) {
     if (msg.role === 'system') {
       systemPrompt += (systemPrompt ? '\n' : '') + msg.content;
     } else {
-      anthropicMessages.push({
-        role: msg.role,
-        content: msg.content,
-      });
+      anthropicMessages.push({ role: msg.role, content: msg.content });
     }
   }
 
-  const params = {
-    model,
-    max_tokens: maxTokens,
-    messages: anthropicMessages,
-  };
+  return { systemPrompt, anthropicMessages };
+}
 
-  if (systemPrompt) {
-    params.system = systemPrompt;
-  }
+function buildAnthropicParams(model, maxTokens, anthropicMessages, systemPrompt, temperature) {
+  const params = { model, max_tokens: maxTokens, messages: anthropicMessages };
+  if (systemPrompt) params.system = systemPrompt;
+  if (temperature !== undefined) params.temperature = temperature;
+  return params;
+}
 
-  if (temperature !== undefined) {
-    params.temperature = temperature;
-  }
-
-  const response = await anthropic.messages.create(params);
-
+function formatAnthropicResponse(response, model) {
   return {
     content: response.content[0]?.text || '',
     usage: {
       input_tokens: response.usage?.input_tokens,
       output_tokens: response.usage?.output_tokens,
       total_tokens: (response.usage?.input_tokens || 0) + (response.usage?.output_tokens || 0),
+      model,
+    },
+    model,
+    raw: response,
+  };
+}
+
+/**
+ * Anthropic completion
+ */
+async function completeAnthropic({ model, messages, maxTokens, temperature }) {
+  const anthropic = getAnthropic();
+  const { systemPrompt, anthropicMessages } = convertToAnthropicFormat(messages);
+  const params = buildAnthropicParams(
+    model,
+    maxTokens,
+    anthropicMessages,
+    systemPrompt,
+    temperature,
+  );
+  const response = await anthropic.messages.create(params);
+  return formatAnthropicResponse(response, model);
+}
+
+function buildStructuredParams(model, messages, responseFormat, maxTokens, temperature) {
+  const params = { model, messages, response_format: responseFormat, max_tokens: maxTokens };
+  if (temperature !== undefined) params.temperature = temperature;
+  return params;
+}
+
+function parseJsonContent(content) {
+  if (!content) return null;
+  try {
+    return JSON.parse(content);
+  } catch {
+    console.warn('Failed to parse structured output as JSON:', content);
+    return null;
+  }
+}
+
+function formatStructuredResponse(response, model, parsed, content) {
+  return {
+    parsed,
+    content,
+    usage: {
+      input_tokens: response.usage?.prompt_tokens,
+      output_tokens: response.usage?.completion_tokens,
+      total_tokens: response.usage?.total_tokens,
       model,
     },
     model,
@@ -191,43 +220,12 @@ export async function parseStructured(options) {
   }
 
   const openai = getOpenAI();
-
-  // Use non-beta API with response_format - openai.beta.chat is undefined in SDK v6
-  const params = {
-    model,
-    messages,
-    response_format: responseFormat,
-    max_tokens: maxTokens,
-  };
-  if (temperature !== undefined) {
-    params.temperature = temperature;
-  }
-
+  const params = buildStructuredParams(model, messages, responseFormat, maxTokens, temperature);
   const response = await openai.chat.completions.create(params);
-
-  // Parse the JSON content manually since we're not using the beta parse method
   const content = response.choices[0]?.message?.content;
-  let parsed = null;
-  if (content) {
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      console.warn('Failed to parse structured output as JSON:', content);
-    }
-  }
+  const parsed = parseJsonContent(content);
 
-  return {
-    parsed,
-    content,
-    usage: {
-      input_tokens: response.usage?.prompt_tokens,
-      output_tokens: response.usage?.completion_tokens,
-      total_tokens: response.usage?.total_tokens,
-      model,
-    },
-    model,
-    raw: response,
-  };
+  return formatStructuredResponse(response, model, parsed, content);
 }
 
 // Export clients for direct access when needed
