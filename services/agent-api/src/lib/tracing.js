@@ -64,6 +64,38 @@ async function getLangSmithClient() {
  * @param {string} options.parentRunId - Parent run ID for nesting
  * @returns {Promise<object|null>} Run object with id and methods
  */
+function buildRunConfig(runId, opts) {
+  const { name, runType, inputs, queueId, parentRunId } = opts;
+  return {
+    id: runId,
+    name,
+    run_type: runType,
+    inputs,
+    start_time: new Date().toISOString(),
+    parent_run_id: parentRunId,
+    extra: { metadata: { queue_id: queueId, project: 'bfsi-insights' } },
+    project_name: process.env.LANGSMITH_PROJECT || 'bfsi-insights',
+  };
+}
+
+function createTraceEndHandler(client, runId) {
+  return async (outputs, error = null) => {
+    try {
+      await client.updateRun(runId, {
+        outputs,
+        error: error?.message,
+        end_time: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.warn('⚠️ Failed to end trace:', e.message);
+    }
+  };
+}
+
+function createChildTraceHandler(runId, queueId) {
+  return (childOptions) => createTrace({ ...childOptions, parentRunId: runId, queueId });
+}
+
 export async function createTrace(options) {
   const client = await getLangSmithClient();
   if (!client) return null;
@@ -72,51 +104,12 @@ export async function createTrace(options) {
 
   try {
     const runId = crypto.randomUUID();
-
-    await client.createRun({
-      id: runId,
-      name,
-      run_type: runType,
-      inputs,
-      start_time: new Date().toISOString(),
-      parent_run_id: parentRunId,
-      extra: {
-        metadata: {
-          queue_id: queueId,
-          project: 'bfsi-insights',
-        },
-      },
-      project_name: process.env.LANGSMITH_PROJECT || 'bfsi-insights',
-    });
+    await client.createRun(buildRunConfig(runId, { name, runType, inputs, queueId, parentRunId }));
 
     return {
       id: runId,
-
-      /**
-       * End the trace with outputs
-       */
-      async end(outputs, error = null) {
-        try {
-          await client.updateRun(runId, {
-            outputs,
-            error: error?.message,
-            end_time: new Date().toISOString(),
-          });
-        } catch (e) {
-          console.warn('⚠️ Failed to end trace:', e.message);
-        }
-      },
-
-      /**
-       * Create a child trace (for nested LLM calls)
-       */
-      async createChild(childOptions) {
-        return createTrace({
-          ...childOptions,
-          parentRunId: runId,
-          queueId,
-        });
-      },
+      end: createTraceEndHandler(client, runId),
+      createChild: createChildTraceHandler(runId, queueId),
     };
   } catch (error) {
     console.warn('⚠️ Failed to create trace:', error.message);
@@ -136,38 +129,40 @@ export async function createTrace(options) {
  * @param {string} options.queueId - Queue item ID
  * @param {string} options.parentRunId - Parent trace ID
  */
+function buildLLMRunConfig(options) {
+  const { name, model, messages, response, usage, durationMs, queueId, parentRunId, error } =
+    options;
+  const startTime = new Date(Date.now() - durationMs);
+
+  return {
+    id: crypto.randomUUID(),
+    name: name || `llm_call_${model}`,
+    run_type: 'llm',
+    inputs: { messages },
+    outputs: error ? undefined : { response },
+    error: error?.message,
+    start_time: startTime.toISOString(),
+    end_time: new Date().toISOString(),
+    parent_run_id: parentRunId,
+    extra: {
+      metadata: {
+        queue_id: queueId,
+        model,
+        tokens_prompt: usage?.prompt_tokens,
+        tokens_completion: usage?.completion_tokens,
+        tokens_total: usage?.total_tokens,
+      },
+    },
+    project_name: process.env.LANGSMITH_PROJECT || 'bfsi-insights',
+  };
+}
+
 export async function traceLLMCall(options) {
   const client = await getLangSmithClient();
   if (!client) return;
 
-  const { name, model, messages, response, usage, durationMs, queueId, parentRunId, error } =
-    options;
-
   try {
-    const runId = crypto.randomUUID();
-    const startTime = new Date(Date.now() - durationMs);
-
-    await client.createRun({
-      id: runId,
-      name: name || `llm_call_${model}`,
-      run_type: 'llm',
-      inputs: { messages },
-      outputs: error ? undefined : { response },
-      error: error?.message,
-      start_time: startTime.toISOString(),
-      end_time: new Date().toISOString(),
-      parent_run_id: parentRunId,
-      extra: {
-        metadata: {
-          queue_id: queueId,
-          model,
-          tokens_prompt: usage?.prompt_tokens,
-          tokens_completion: usage?.completion_tokens,
-          tokens_total: usage?.total_tokens,
-        },
-      },
-      project_name: process.env.LANGSMITH_PROJECT || 'bfsi-insights',
-    });
+    await client.createRun(buildLLMRunConfig(options));
   } catch (e) {
     console.warn('⚠️ Failed to trace LLM call:', e.message);
   }
