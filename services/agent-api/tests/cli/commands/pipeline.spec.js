@@ -11,9 +11,9 @@ vi.mock('../../../src/agents/orchestrator.js', () => ({
 }));
 
 vi.mock('../../../src/lib/queue-update.js', () => ({
-  transitionItemStatus: vi.fn(async () => {}),
-  transitionByAgent: vi.fn(async () => {}),
-  transitionByUser: vi.fn(async () => {}),
+  transitionItemStatus: vi.fn(async () => undefined),
+  transitionByAgent: vi.fn(async () => undefined),
+  transitionByUser: vi.fn(async () => undefined),
 }));
 
 // Mock STATUS proxy to prevent module-level initialization errors
@@ -30,7 +30,7 @@ vi.mock('../../../src/lib/status-codes.js', () => ({
 }));
 
 const { mockSupabase } = vi.hoisted(() => {
-  const mockSupabase = {
+  const supabaseMock = {
     from: vi.fn(() => ({
       select: vi.fn(() => ({
         eq: vi.fn(() => ({
@@ -54,7 +54,7 @@ const { mockSupabase } = vi.hoisted(() => {
       })),
     })),
   };
-  return { mockSupabase };
+  return { mockSupabase: supabaseMock };
 });
 
 vi.mock('@supabase/supabase-js', () => ({
@@ -66,14 +66,13 @@ import {
   runFilterCmd,
   runSummarizeCmd,
   runTagCmd,
-  runThumbnailCmd,
 } from '../../../src/cli/commands/pipeline.js';
 
 describe('Pipeline CLI Commands', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
     process.env.SUPABASE_URL = 'https://test.supabase.co';
     process.env.SUPABASE_SERVICE_KEY = 'test-service-key';
   });
@@ -381,121 +380,5 @@ describe('Pipeline CLI Commands', () => {
     });
   });
 
-  describe('runThumbnailCmd', () => {
-    it('should return early if no items need thumbnails', async () => {
-      // Mock the query chain: .select().eq().is().order().limit()
-      mockSupabase.from.mockReturnValue({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            is: vi.fn(() => ({
-              order: vi.fn(() => ({
-                limit: vi.fn(() => ({ data: [], error: null })),
-              })),
-            })),
-          })),
-        })),
-      });
-
-      const result = await runThumbnailCmd({ limit: 10 });
-
-      expect(result).toEqual({ processed: 0 });
-    });
-
-    it('should generate thumbnails successfully', async () => {
-      const mockItems = [
-        { id: '1', payload: { title: 'Article 1', url: 'https://example.com' } },
-        { id: '2', payload: { title: 'Article 2', url: 'https://example.com' } },
-      ];
-
-      mockSupabase.from.mockReturnValue({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            is: vi.fn(() => ({
-              order: vi.fn(() => ({
-                limit: vi.fn(() => ({ data: mockItems, error: null })),
-              })),
-            })),
-          })),
-        })),
-        update: vi.fn(() => ({
-          eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        })),
-      });
-
-      const { runThumbnailer } = await import('../../../src/agents/thumbnailer.js');
-      vi.mocked(runThumbnailer).mockResolvedValue({
-        publicUrl: 'https://storage.example.com/thumb.jpg',
-        bucket: 'thumbnails',
-        path: 'thumb.jpg',
-      });
-
-      const result = await runThumbnailCmd({ limit: 10 });
-
-      expect(result).toEqual({ processed: 2, success: 2 });
-    });
-
-    it('should handle thumbnail errors gracefully', async () => {
-      const mockItems = [{ id: '1', payload: { title: 'Test', url: 'https://example.com' } }];
-
-      mockSupabase.from.mockReturnValue({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            is: vi.fn(() => ({
-              order: vi.fn(() => ({
-                limit: vi.fn(() => ({ data: mockItems, error: null })),
-              })),
-            })),
-          })),
-        })),
-        update: vi.fn(() => ({
-          eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        })),
-      });
-
-      const { runThumbnailer } = await import('../../../src/agents/thumbnailer.js');
-      vi.mocked(runThumbnailer).mockRejectedValue(new Error('Thumbnail failed'));
-
-      const result = await runThumbnailCmd({ limit: 10 });
-
-      expect(result).toEqual({ processed: 1, success: 0 });
-      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Thumbnail failed'));
-    });
-
-    it('should handle items with missing url in payload', async () => {
-      const mockItems = [
-        {
-          id: '1',
-          url: 'https://example.com/article',
-          payload: { title: 'Test Article' },
-        },
-      ];
-
-      mockSupabase.from.mockReturnValue({
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            is: vi.fn(() => ({
-              order: vi.fn(() => ({
-                limit: vi.fn(() => ({ data: mockItems, error: null })),
-              })),
-            })),
-          })),
-        })),
-        update: vi.fn(() => ({
-          eq: vi.fn(() => Promise.resolve({ data: null, error: null })),
-        })),
-      });
-
-      const { runThumbnailer } = await import('../../../src/agents/thumbnailer.js');
-      vi.mocked(runThumbnailer).mockResolvedValue({
-        publicUrl: 'https://storage.example.com/thumb.jpg',
-        bucket: 'thumbnails',
-        path: 'thumb.jpg',
-      });
-
-      const result = await runThumbnailCmd({ limit: 10 });
-
-      expect(result).toEqual({ processed: 1, success: 1 });
-      expect(mockItems[0].payload.url).toBe('https://example.com/article');
-    });
-  });
+  // runThumbnailCmd tests are in pipeline-thumbnail.spec.js
 });

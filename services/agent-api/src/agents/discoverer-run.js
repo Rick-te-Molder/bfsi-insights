@@ -87,7 +87,14 @@ async function processSource({ supabase, src, config, dryRun, limit, stats, scor
     });
   }
 
-  return processCandidates(candidates, src.name, dryRun, limit, stats, scoringConfig);
+  return processCandidates({
+    candidates,
+    sourceName: src.name,
+    dryRun,
+    limit,
+    stats,
+    scoringConfig,
+  });
 }
 
 async function loadDiscoveryRunInputs(supabase, sourceSlug, premium) {
