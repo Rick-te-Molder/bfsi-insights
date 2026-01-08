@@ -1,10 +1,11 @@
 import { useEffect } from 'react';
 
-interface KeyboardShortcutsParams {
-  itemId: string | null;
-  actionLoading: string | null;
+interface NavigationState {
   canNavigatePrev: boolean;
   canNavigateNext: boolean;
+}
+
+interface ShortcutActions {
   onNavigate: (direction: 'prev' | 'next') => void;
   onClose: () => void;
   onApprove: () => void;
@@ -13,72 +14,49 @@ interface KeyboardShortcutsParams {
   onViewFull: () => void;
 }
 
-export function useKeyboardShortcuts(params: KeyboardShortcutsParams) {
-  const {
-    itemId,
-    actionLoading,
-    canNavigatePrev,
-    canNavigateNext,
-    onNavigate,
-    onClose,
-    onApprove,
-    onReject,
-    onReenrich,
-    onViewFull,
-  } = params;
+interface KeyboardShortcutsParams {
+  itemId: string | null;
+  actionLoading: string | null;
+  navigation: NavigationState;
+  actions: ShortcutActions;
+}
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!itemId || actionLoading) return;
+function isInputElement(target: EventTarget | null): boolean {
+  return target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement;
+}
 
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+function createKeyHandler(params: KeyboardShortcutsParams) {
+  const { itemId, actionLoading, navigation, actions } = params;
 
-      switch (e.key) {
-        case 'ArrowUp':
-        case 'k':
-          e.preventDefault();
-          if (canNavigatePrev) onNavigate('prev');
-          break;
-        case 'ArrowDown':
-        case 'j':
-          e.preventDefault();
-          if (canNavigateNext) onNavigate('next');
-          break;
-        case 'Escape':
-          e.preventDefault();
-          onClose();
-          break;
-        case 'a':
-          e.preventDefault();
-          onApprove();
-          break;
-        case 'r':
-          e.preventDefault();
-          onReject();
-          break;
-        case 'e':
-          e.preventDefault();
-          onReenrich();
-          break;
-        case 'v':
-          e.preventDefault();
-          onViewFull();
-          break;
-      }
+  return (e: KeyboardEvent) => {
+    if (!itemId || actionLoading || isInputElement(e.target)) return;
+
+    const keyActions: Record<string, () => void> = {
+      ArrowUp: () => navigation.canNavigatePrev && actions.onNavigate('prev'),
+      k: () => navigation.canNavigatePrev && actions.onNavigate('prev'),
+      ArrowDown: () => navigation.canNavigateNext && actions.onNavigate('next'),
+      j: () => navigation.canNavigateNext && actions.onNavigate('next'),
+      Escape: actions.onClose,
+      a: actions.onApprove,
+      r: actions.onReject,
+      e: actions.onReenrich,
+      v: actions.onViewFull,
     };
 
+    const action = keyActions[e.key];
+    if (action) {
+      e.preventDefault();
+      action();
+    }
+  };
+}
+
+export function useKeyboardShortcuts(params: KeyboardShortcutsParams) {
+  const { itemId, actionLoading, navigation, actions } = params;
+
+  useEffect(() => {
+    const handleKeyDown = createKeyHandler(params);
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [
-    itemId,
-    actionLoading,
-    canNavigatePrev,
-    canNavigateNext,
-    onNavigate,
-    onClose,
-    onApprove,
-    onReject,
-    onReenrich,
-    onViewFull,
-  ]);
+  }, [itemId, actionLoading, navigation, actions, params]);
 }

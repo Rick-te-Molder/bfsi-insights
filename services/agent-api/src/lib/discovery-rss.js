@@ -37,59 +37,63 @@ export async function fetchRSS(source, config) {
 /**
  * Parse RSS/Atom XML into candidate objects
  */
-export function parseRSS(xml, source, config) {
-  const items = [];
-  const itemRegex = /<(?:item|entry)[^>]*>([\s\S]*?)<\/(?:item|entry)>/gi;
-  const titleRegex = /<title>(?:<!\[CDATA\[)?([^\]<]+)(?:\]\]>)?<\/title>/i;
-  const linkRegex =
-    /<link[^>]*>(?:<!\[CDATA\[)?([^\]<]+)(?:\]\]>)?<\/link>|<link[^>]*href=["']([^"']+)["']/i;
-  const dateRegex =
-    /<(?:pubDate|published|dc:date|updated|date)>([^<]+)<\/(?:pubDate|published|dc:date|updated|date)>/i;
-  const descRegex =
-    /<(?:description|summary)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:description|summary)>/i;
+const RSS_PATTERNS = {
+  item: /<(?:item|entry)[^>]*>([\s\S]*?)<\/(?:item|entry)>/gi,
+  title: /<title>(?:<!\[CDATA\[)?([^\]<]+)(?:\]\]>)?<\/title>/i,
+  link: /<link[^>]*>(?:<!\[CDATA\[)?([^\]<]+)(?:\]\]>)?<\/link>|<link[^>]*href=["']([^"']+)["']/i,
+  date: /<(?:pubDate|published|dc:date|updated|date)>([^<]+)<\/(?:pubDate|published|dc:date|updated|date)>/i,
+  desc: /<(?:description|summary)>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/(?:description|summary)>/i,
+};
 
+function extractItemFields(itemXml) {
+  const titleMatch = RSS_PATTERNS.title.exec(itemXml);
+  const linkMatch = RSS_PATTERNS.link.exec(itemXml);
+  const dateMatch = RSS_PATTERNS.date.exec(itemXml);
+  const descMatch = RSS_PATTERNS.desc.exec(itemXml);
+
+  if (!titleMatch || !linkMatch) return null;
+
+  const title = titleMatch[1].trim();
+  const url = (linkMatch[1] || linkMatch[2] || '').trim();
+  const description = descMatch ? descMatch[1].trim().substring(0, 500) : '';
+
+  if (!url?.startsWith('http')) return null;
+
+  return { title, url, description, dateStr: dateMatch?.[1] };
+}
+
+function passesRelevanceFilter(text, config, skipKeywordFilter) {
   const { keywords, exclusionPatterns } = config;
 
-  // Premium regulator sources bypass keyword filtering (always BFSI-relevant)
+  // Check exclusion patterns first (always apply)
+  const hasExclusion = exclusionPatterns.some((pattern) => pattern.test(text));
+  if (hasExclusion) return false;
+
+  // Check for BFSI keywords (skip for premium regulator sources)
+  if (!skipKeywordFilter) {
+    const hasBfsiKeyword = keywords.some((kw) => text.includes(kw));
+    if (!hasBfsiKeyword) return false;
+  }
+  return true;
+}
+
+export function parseRSS(xml, source, config) {
+  const items = [];
   const skipKeywordFilter = source.tier === 'premium' && source.category === 'regulator';
 
   let match;
-  while ((match = itemRegex.exec(xml)) !== null) {
-    const itemXml = match[1];
-    const titleMatch = titleRegex.exec(itemXml);
-    const linkMatch = linkRegex.exec(itemXml);
-    const dateMatch = dateRegex.exec(itemXml);
-    const descMatch = descRegex.exec(itemXml);
+  while ((match = RSS_PATTERNS.item.exec(xml)) !== null) {
+    const fields = extractItemFields(match[1]);
+    if (!fields) continue;
 
-    if (!titleMatch || !linkMatch) continue;
-
-    const title = titleMatch[1].trim();
-    const url = (linkMatch[1] || linkMatch[2] || '').trim();
-    const description = descMatch ? descMatch[1].trim().substring(0, 500) : '';
-
-    if (!url?.startsWith('http')) continue;
-
-    // BFSI Relevance Check (using database-driven config)
-    const text = (title + ' ' + description).toLowerCase();
-
-    // Check exclusion patterns first (always apply)
-    const hasExclusion = exclusionPatterns.some((pattern) => pattern.test(text));
-    if (hasExclusion) continue;
-
-    // Check for BFSI keywords (skip for premium regulator sources)
-    if (!skipKeywordFilter) {
-      const hasBfsiKeyword = keywords.some((kw) => text.includes(kw));
-      if (!hasBfsiKeyword) continue;
-    }
-
-    // Extract date with arXiv fallback
-    const publishedAt = extractDate(dateMatch?.[1], url, source.name);
+    const text = (fields.title + ' ' + fields.description).toLowerCase();
+    if (!passesRelevanceFilter(text, config, skipKeywordFilter)) continue;
 
     items.push({
-      title,
-      url,
-      published_at: publishedAt,
-      description,
+      title: fields.title,
+      url: fields.url,
+      published_at: extractDate(fields.dateStr, fields.url, source.name),
+      description: fields.description,
     });
   }
   return items;

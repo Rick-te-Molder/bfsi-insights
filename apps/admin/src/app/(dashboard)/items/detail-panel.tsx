@@ -44,14 +44,18 @@ function useDetailPanelShortcuts(
   useKeyboardShortcuts({
     itemId: props.itemId,
     actionLoading,
-    canNavigatePrev: props.canNavigatePrev,
-    canNavigateNext: props.canNavigateNext,
-    onNavigate: props.onNavigate,
-    onClose: props.onClose,
-    onApprove: () => item?.status_code === 300 && handleAction('approve'),
-    onReject: () => [300, 500].includes(item?.status_code || 0) && handleAction('reject'),
-    onReenrich: () => handleAction('reenrich'),
-    onViewFull: () => router.push(`/items/${props.itemId}`),
+    navigation: {
+      canNavigatePrev: props.canNavigatePrev,
+      canNavigateNext: props.canNavigateNext,
+    },
+    actions: {
+      onNavigate: props.onNavigate,
+      onClose: props.onClose,
+      onApprove: () => item?.status_code === 300 && handleAction('approve'),
+      onReject: () => [300, 500].includes(item?.status_code || 0) && handleAction('reject'),
+      onReenrich: () => handleAction('reenrich'),
+      onViewFull: () => router.push(`/items/${props.itemId}`),
+    },
   });
 }
 

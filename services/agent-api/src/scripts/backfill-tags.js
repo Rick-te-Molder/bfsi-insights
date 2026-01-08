@@ -103,12 +103,8 @@ async function processPublication(pub) {
   console.log(`   ✅ Tagged: industry=${ind || '—'}, topic=${top || '—'}`);
 }
 
-async function main() {
-  console.log('🏷️  Backfill Missing Tags\n');
-  console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}`);
-  console.log(`Limit: ${limit}\n`);
-
-  const { data: pubs, error } = await supabase
+async function fetchMissingTagPubs() {
+  const { data, error } = await supabase
     .from('kb_publication_pretty')
     .select('id, title, source_url, summary_short, summary_medium, industry')
     .eq('status', 'published')
@@ -119,21 +115,16 @@ async function main() {
     console.error('❌ Error fetching publications:', error.message);
     process.exit(1);
   }
+  return data || [];
+}
 
-  if (!pubs?.length) {
-    console.log('✅ No publications missing tags!');
-    return;
-  }
-
+function logPublicationList(pubs) {
   console.log(`Found ${pubs.length} publications missing tags:\n`);
   pubs.forEach((p) => console.log(`  - ${p.title?.substring(0, 60)}...`));
   console.log();
+}
 
-  if (dryRun) {
-    console.log('🔍 Dry run - no changes will be made');
-    return;
-  }
-
+async function processAllPublications(pubs) {
   let updated = 0;
   let failed = 0;
 
@@ -153,6 +144,28 @@ async function main() {
 
   console.log('\n' + '='.repeat(50));
   console.log(`📊 Results: ${updated} updated, ${failed} failed`);
+}
+
+async function main() {
+  console.log('🏷️  Backfill Missing Tags\n');
+  console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}`);
+  console.log(`Limit: ${limit}\n`);
+
+  const pubs = await fetchMissingTagPubs();
+
+  if (!pubs.length) {
+    console.log('✅ No publications missing tags!');
+    return;
+  }
+
+  logPublicationList(pubs);
+
+  if (dryRun) {
+    console.log('🔍 Dry run - no changes will be made');
+    return;
+  }
+
+  await processAllPublications(pubs);
 }
 
 try {
