@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.11.0  
+**Version**: 1.12.0  
 **Last updated**: 2026-01-08  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.12.0 (2026-01-08): Fix S4662 docs to use sonar.issue.ignore.multicriteria for Tailwind v4 at-rules in globals.css.
 - 1.11.0 (2026-01-08): Added S6481 (wrap Context Provider value in useMemo).
 - 1.10.0 (2026-01-08): Added S4662 (configure Tailwind CSS at-rules in sonar-project.properties).
 - 1.9.0 (2026-01-08): Added S7772 (prefer node: protocol for Node.js built-in imports).
@@ -124,7 +125,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Use Number.parseInt() over parseInt()** — Prefer `Number.parseInt()` and `Number.parseFloat()` over global equivalents
 - [ ] **Use explicit JSX spacing** — Add `{' '}` between inline elements and text on separate lines
 - [ ] **Use node: protocol for built-ins** — Import Node.js modules with `node:fs`, `node:path`, etc.
-- [ ] **Configure Tailwind CSS at-rules** — Add `plugin,theme` to `sonar.css.at-rule.S4662.ignoreAtRules` in sonar-project.properties
+- [ ] **Configure Tailwind CSS at-rules** — Ignore `css:S4662` for `apps/admin/src/app/globals.css` via `sonar.issue.ignore.multicriteria` in sonar-project.properties
 - [ ] **Wrap Context Provider values in useMemo** — Memoize object values passed to React Context Providers
 
 ---
