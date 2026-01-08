@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { readFileSync } from 'fs';
+import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
-import { join } from 'path';
+import { join } from 'node:path';
 
 export interface ManifestAgent {
   name: string;
