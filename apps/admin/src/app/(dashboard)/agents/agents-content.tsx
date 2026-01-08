@@ -44,11 +44,11 @@ function AgentsHeaderSection({
   prompts,
   agents,
   manifest,
-}: {
+}: Readonly<{
   prompts: PromptVersion[];
   agents: string[];
   manifest: AgentManifest | null;
-}) {
+}>) {
   const coverageStats = useAgentCoverageStats({ manifest, prompts });
   return (
     <AgentsHeader
@@ -64,12 +64,12 @@ function AgentsFilterSection({
   promptsByAgent,
   agentFilter,
   setAgentFilter,
-}: {
+}: Readonly<{
   agents: string[];
   promptsByAgent: PromptsByAgent;
   agentFilter: AgentFilter;
   setAgentFilter: (f: AgentFilter) => void;
-}) {
+}>) {
   return (
     <AgentFilterTabs
       agents={agents}
@@ -86,13 +86,13 @@ function AgentsTableContent({
   filter,
   onEdit,
   onTest,
-}: {
+}: Readonly<{
   agents: string[];
   promptsByAgent: PromptsByAgent;
   filter: AgentFilter;
   onEdit: (p: PromptVersion | null) => void;
   onTest: (p: PromptVersion | null) => void;
-}) {
+}>) {
   const filteredAgents = useFilteredAgents({ agents, promptsByAgent, filter });
   return (
     <AgentsTableSection
@@ -107,10 +107,10 @@ function AgentsTableContent({
 function AgentsModalsSection({
   pageState,
   handleSaveEdit,
-}: {
+}: Readonly<{
   pageState: PageState;
   handleSaveEdit: () => Promise<void>;
-}) {
+}>) {
   return (
     <AgentsModals
       editingPrompt={pageState.editingPrompt}

@@ -1,7 +1,7 @@
 ---
 id: S6759
-name: React props interface not using Readonly
-pattern: "interface\\s+\\w+Props\\s*\\{"
+name: React inline props missing Readonly wrapper
+pattern: "\\}:\\s*\\{"
 extensions: ['.tsx']
 advisory: true
 ---
