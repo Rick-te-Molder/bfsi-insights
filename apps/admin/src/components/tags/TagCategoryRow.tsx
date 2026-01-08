@@ -67,10 +67,12 @@ function ExpandableValueTag({
   );
 }
 
-function getExpandableTagClass(isKnown: boolean, colors: TagColors): string {
-  return isKnown
-    ? `px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`
-    : 'px-1.5 py-0.5 rounded bg-red-500/30 text-red-300 border border-red-500/50';
+function getKnownTagClass(colors: TagColors): string {
+  return `px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`;
+}
+
+function getUnknownTagClass(): string {
+  return 'px-1.5 py-0.5 rounded bg-red-500/30 text-red-300 border border-red-500/50';
 }
 
 interface ExpandableValuesListProps {
@@ -96,7 +98,7 @@ function ExpandableValuesList({
             key={name}
             name={name}
             isKnown={isKnown}
-            tagClass={getExpandableTagClass(isKnown, colors)}
+            tagClass={isKnown ? getKnownTagClass(colors) : getUnknownTagClass()}
             showValidation={showValidation}
           />
         );
