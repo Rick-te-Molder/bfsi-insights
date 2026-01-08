@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.4.0  
-**Last updated**: 2026-01-05  
+**Version**: 1.5.0  
+**Last updated**: 2026-01-08  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.5.0 (2026-01-08): Added S6544 (promises should not be misused).
 - 1.4.0 (2026-01-05): Added S7735 (avoid negated conditions with else clause).
 - 1.3.0 (2026-01-05): Added S7781 (prefer replaceAll over replace with global regex).
 - 1.2.0 (2026-01-05): Added S6551 (use type guards before string coercion).
@@ -34,21 +35,22 @@ https://rules.sonarsource.com/githubactions/ | 26 rules
 
 When you see a SonarCloud issue, extract the Rule ID and find the matching lesson:
 
-| Rule ID | Lesson                                                                                                                                                  | File                                                                             |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| S3358   | [Extract nested ternary operations](./lessons/extract-nested-ternary-operations-into-helper-functions.md)                                               | `lessons/extract-nested-ternary-operations-into-helper-functions.md`             |
-| S3358   | [Extract this nested ternary operation into an independent statement](./lessons/extract-this-nested-ternary-operation-into-an-independent-statement.md) | `lessons/extract-this-nested-ternary-operation-into-an-independent-statement.md` |
-| S2301   | [Provide multiple methods instead of boolean selectors](./lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md)                   | `lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md`     |
-| S6848   | [Add role and keyboard handling to interactive divs](./lessons/add-role-and-keyboard-handling-to-interactive-divs.md)                                   | `lessons/add-role-and-keyboard-handling-to-interactive-divs.md`                  |
-| S6842   | [Do not add interactive ARIA roles to non-interactive elements](./lessons/use-native-interactive-elements-or-add-proper-aria-roles.md)                  | `lessons/use-native-interactive-elements-or-add-proper-aria-roles.md`            |
-| S6819   | [Use native HTML elements instead of ARIA roles](./lessons/use-native-html-elements-instead-of-aria-roles.md)                                           | `lessons/use-native-html-elements-instead-of-aria-roles.md`                      |
-| S6847   | [Use role presentation for non-interactive event handlers](./lessons/use-role-presentation-for-non-interactive-event-handlers.md)                       | `lessons/use-role-presentation-for-non-interactive-event-handlers.md`            |
-| S4624   | [Refactor this code to not use nested template literals](./lessons/refactor-this-code-to-not-use-nested-template-literals.md)                           | `lessons/refactor-this-code-to-not-use-nested-template-literals.md`              |
-| S6479   | [Do not use Array index in keys](./lessons/do-not-use-array-index-in-keys.md)                                                                           | `lessons/do-not-use-array-index-in-keys.md`                                      |
-| S6759   | [Mark React props as read-only](./lessons/mark-react-props-as-read-only.md)                                                                             | `lessons/mark-react-props-as-read-only.md`                                       |
-| S6551   | [Will use Object's default stringification format](./lessons/will-use-objects-default-stringification-format.md)                                        | `lessons/will-use-objects-default-stringification-format.md`                     |
-| S7781   | [Prefer 'String#replaceAll()' over 'String#replace()'](./lessons/prefer-string-replaceall-over-string-replace.md)                                       | `lessons/prefer-string-replaceall-over-string-replace.md`                        |
-| S7735   | [Unexpected negated condition](./lessons/unexpected-negated-condition.md)                                                                               | `lessons/unexpected-negated-condition.md`                                        |
+| Rule ID | Lesson                                                                                                                                                                            | File                                                                                          |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| S3358   | [Extract nested ternary operations](./lessons/extract-nested-ternary-operations-into-helper-functions.md)                                                                         | `lessons/extract-nested-ternary-operations-into-helper-functions.md`                          |
+| S3358   | [Extract this nested ternary operation into an independent statement](./lessons/extract-this-nested-ternary-operation-into-an-independent-statement.md)                           | `lessons/extract-this-nested-ternary-operation-into-an-independent-statement.md`              |
+| S2301   | [Provide multiple methods instead of boolean selectors](./lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md)                                             | `lessons/provide-multiple-methods-instead-of-boolean-selector-parameters.md`                  |
+| S6848   | [Add role and keyboard handling to interactive divs](./lessons/add-role-and-keyboard-handling-to-interactive-divs.md)                                                             | `lessons/add-role-and-keyboard-handling-to-interactive-divs.md`                               |
+| S6842   | [Do not add interactive ARIA roles to non-interactive elements](./lessons/use-native-interactive-elements-or-add-proper-aria-roles.md)                                            | `lessons/use-native-interactive-elements-or-add-proper-aria-roles.md`                         |
+| S6819   | [Use native HTML elements instead of ARIA roles](./lessons/use-native-html-elements-instead-of-aria-roles.md)                                                                     | `lessons/use-native-html-elements-instead-of-aria-roles.md`                                   |
+| S6847   | [Use role presentation for non-interactive event handlers](./lessons/use-role-presentation-for-non-interactive-event-handlers.md)                                                 | `lessons/use-role-presentation-for-non-interactive-event-handlers.md`                         |
+| S4624   | [Refactor this code to not use nested template literals](./lessons/refactor-this-code-to-not-use-nested-template-literals.md)                                                     | `lessons/refactor-this-code-to-not-use-nested-template-literals.md`                           |
+| S6479   | [Do not use Array index in keys](./lessons/do-not-use-array-index-in-keys.md)                                                                                                     | `lessons/do-not-use-array-index-in-keys.md`                                                   |
+| S6759   | [Mark React props as read-only](./lessons/mark-react-props-as-read-only.md)                                                                                                       | `lessons/mark-react-props-as-read-only.md`                                                    |
+| S6551   | [Will use Object's default stringification format](./lessons/will-use-objects-default-stringification-format.md)                                                                  | `lessons/will-use-objects-default-stringification-format.md`                                  |
+| S7781   | [Prefer 'String#replaceAll()' over 'String#replace()'](./lessons/prefer-string-replaceall-over-string-replace.md)                                                                 | `lessons/prefer-string-replaceall-over-string-replace.md`                                     |
+| S7735   | [Unexpected negated condition](./lessons/unexpected-negated-condition.md)                                                                                                         | `lessons/unexpected-negated-condition.md`                                                     |
+| S6544   | [Promise-returning function provided to property where a void return was expected](./lessons/promise-returning-function-provided-to-property-where-a-void-return-was-expected.md) | `lessons/promise-returning-function-provided-to-property-where-a-void-return-was-expected.md` |
 
 ---
 
@@ -82,7 +84,7 @@ The following ESLint rules are enabled to catch common Sonar issues at lint time
 
 A lightweight pre-commit check (`scripts/ci/check-sonar-patterns.cjs`) warns when staged files contain patterns we've documented as Sonar lessons/rules. This catches regressions before CI.
 
-**Checked patterns**: S2301, S3358, S4624, S6479, S6551, S6759, S6819, S6842, S6847, S6848, S7735, S7781
+**Checked patterns**: S2301, S3358, S4624, S6479, S6544, S6551, S6759, S6819, S6842, S6847, S6848, S7735, S7781
 
 **Behavior**: Warns but does not block (use `--strict` to block)
 
@@ -105,6 +107,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Use type guards before string coercion** — Check `typeof val === 'string'` before using `unknown` in template literals
 - [ ] **Use replaceAll() for global replacement** — Prefer `.replaceAll()` over `.replace(/pattern/g, ...)`
 - [ ] **Avoid negated conditions with else** — Use positive conditions: `if (valid)` not `if (!invalid)`
+- [ ] **Don't return Promises where void expected** — Use block body `() => { asyncFn(); }` not `() => asyncFn()`
 
 ---
 
@@ -166,6 +169,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Promise-returning function provided to property where a void return was expected](./lessons/promise-returning-function-provided-to-property-where-a-void-return-was-expected.md) (S6544)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -215,5 +222,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [Negated conditions should be avoided when else clause is present](./rules/7735_negated-conditions-should-be-avoided-when-else-clause-is-present.md)
+
+---
+
+## [Promises should not be misused](./rules/6544_promises-should-not-be-misused.md)
 
 ---
