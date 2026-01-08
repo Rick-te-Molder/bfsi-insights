@@ -59,7 +59,7 @@ function getSuggestedAudiencesValue(suggestedAudiences: string[]) {
 
 function trimOrNull(value: string) {
   const trimmed = value.trim();
-  return trimmed ? trimmed : null;
+  return trimmed || null;
 }
 
 async function updateMissedDiscovery(ctx: SubmitCtx) {
