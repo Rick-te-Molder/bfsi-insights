@@ -21,12 +21,10 @@ import { fetchPageMetadata } from './sitemap-metadata.js';
  */
 export async function fetchFromSitemap(source, config = {}) {
   if (!source.sitemap_url) return [];
-  try {
-    return await discoverFromSitemap(source, config);
-  } catch (err) {
+  return discoverFromSitemap(source, config).catch((err) => {
     const message = err instanceof Error ? err.message : String(err);
     throw new Error(`Sitemap parsing failed: ${message}`);
-  }
+  });
 }
 
 export default {
