@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.9.0  
+**Version**: 1.10.0  
 **Last updated**: 2026-01-08  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.10.0 (2026-01-08): Added S4662 (configure Tailwind CSS at-rules in sonar-project.properties).
 - 1.9.0 (2026-01-08): Added S7772 (prefer node: protocol for Node.js built-in imports).
 - 1.8.0 (2026-01-08): Added S6772 (spacing between inline elements should be explicit).
 - 1.7.0 (2026-01-08): Added S7773 (prefer Number.parseInt over parseInt).
@@ -59,6 +60,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S7773   | [Prefer `Number.parseInt` over `parseInt`](./lessons/prefer-number-parseint-over-parseint.md)                                                                                     | `lessons/prefer-number-parseint-over-parseint.md`                                             |
 | S6772   | [Ambiguous spacing after previous element](./lessons/ambiguous-spacing-after-previous-element.md)                                                                                 | `lessons/ambiguous-spacing-after-previous-element.md`                                         |
 | S7772   | [Prefer node: protocol for Node.js built-in imports](./lessons/prefer-node-protocol-for-builtins.md)                                                                              | `lessons/prefer-node-protocol-for-builtins.md`                                                |
+| S4662   | [Configure Tailwind CSS at-rules for SonarCloud](./lessons/configure-tailwind-css-at-rules.md)                                                                                    | `lessons/configure-tailwind-css-at-rules.md`                                                  |
 
 ---
 
@@ -120,6 +122,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Use Number.parseInt() over parseInt()** — Prefer `Number.parseInt()` and `Number.parseFloat()` over global equivalents
 - [ ] **Use explicit JSX spacing** — Add `{' '}` between inline elements and text on separate lines
 - [ ] **Use node: protocol for built-ins** — Import Node.js modules with `node:fs`, `node:path`, etc.
+- [ ] **Configure Tailwind CSS at-rules** — Add `plugin,theme` to `sonar.css.at-rule.S4662.ignoreAtRules` in sonar-project.properties
 
 ---
 
@@ -201,6 +204,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Configure Tailwind CSS at-rules for SonarCloud](./lessons/configure-tailwind-css-at-rules.md) (S4662)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -270,5 +277,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [Node.js built-in modules should use node: protocol](./rules/7772_prefer-node-protocol-for-builtins.md)
+
+---
+
+## ["@at-rules" should be valid](./rules/4662_at-rules-should-be-valid.md)
 
 ---
