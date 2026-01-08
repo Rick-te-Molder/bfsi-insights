@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.5.0  
+**Version**: 1.6.0  
 **Last updated**: 2026-01-08  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.6.0 (2026-01-08): Added S4123 (await should only be used with promises).
 - 1.5.0 (2026-01-08): Added S6544 (promises should not be misused).
 - 1.4.0 (2026-01-05): Added S7735 (avoid negated conditions with else clause).
 - 1.3.0 (2026-01-05): Added S7781 (prefer replaceAll over replace with global regex).
@@ -51,6 +52,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S7781   | [Prefer 'String#replaceAll()' over 'String#replace()'](./lessons/prefer-string-replaceall-over-string-replace.md)                                                                 | `lessons/prefer-string-replaceall-over-string-replace.md`                                     |
 | S7735   | [Unexpected negated condition](./lessons/unexpected-negated-condition.md)                                                                                                         | `lessons/unexpected-negated-condition.md`                                                     |
 | S6544   | [Promise-returning function provided to property where a void return was expected](./lessons/promise-returning-function-provided-to-property-where-a-void-return-was-expected.md) | `lessons/promise-returning-function-provided-to-property-where-a-void-return-was-expected.md` |
+| S4123   | [Unexpected `await` of a non-Promise (non-"Thenable") value](./lessons/unexpected-await-of-non-promise.md)                                                                        | `lessons/unexpected-await-of-non-promise.md`                                                  |
 
 ---
 
@@ -84,7 +86,7 @@ The following ESLint rules are enabled to catch common Sonar issues at lint time
 
 A lightweight pre-commit check (`scripts/ci/check-sonar-patterns.cjs`) warns when staged files contain patterns we've documented as Sonar lessons/rules. This catches regressions before CI.
 
-**Checked patterns**: S2301, S3358, S4624, S6479, S6544, S6551, S6759, S6819, S6842, S6847, S6848, S7735, S7781
+**Checked patterns**: S2301, S3358, S4123, S4624, S6479, S6544, S6551, S6759, S6819, S6842, S6847, S6848, S7735, S7781
 
 **Behavior**: Warns but does not block (use `--strict` to block)
 
@@ -108,6 +110,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Use replaceAll() for global replacement** — Prefer `.replaceAll()` over `.replace(/pattern/g, ...)`
 - [ ] **Avoid negated conditions with else** — Use positive conditions: `if (valid)` not `if (!invalid)`
 - [ ] **Don't return Promises where void expected** — Use block body `() => { asyncFn(); }` not `() => asyncFn()`
+- [ ] **Don't `await` non-Promises** — Ensure the value is a Promise/thenable, or remove the redundant `await`
 
 ---
 
@@ -173,6 +176,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Unexpected `await` of a non-Promise (non-"Thenable") value](./lessons/unexpected-await-of-non-promise.md) (S4123)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -226,5 +233,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [Promises should not be misused](./rules/6544_promises-should-not-be-misused.md)
+
+---
+
+## ["await" should only be used with promises](./rules/4123_await-should-only-be-used-with-promises.md)
 
 ---
