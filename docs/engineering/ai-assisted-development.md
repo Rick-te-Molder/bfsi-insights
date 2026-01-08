@@ -2,8 +2,8 @@
 
 ---
 
-**Version**: 1.0.0  
-**Last updated**: 2026-01-07  
+**Version**: 1.1.0  
+**Last updated**: 2026-01-08  
 **Quality System Controls**: C11-C18  
 **Applies to**: All AI coding assistants (Windsurf, Cursor, Copilot) and human developers using AI tools
 
@@ -15,11 +15,17 @@ AI-assisted coding accelerates development but introduces risks: architecture dr
 
 **Core principle**: AI is a pair programmer, not an autonomous developer. Human judgment remains accountable for all merged code.
 
-## 2. The 14 Dimensions of AI-Assisted Development
+## 2. The 14 Guidelines for AI-Assisted Development
 
-These dimensions address failure modes observed in "vibe coding" — where AI output feels productive but quietly degrades system quality.
+These guidelines address failure modes observed in "vibe coding" — where AI output feels productive but quietly degrades system quality. They are organized into five categories.
 
-### Dimension 1: Requirements Integrity
+---
+
+### Category 1: Intent & Design Control
+
+**Focus**: Prevent scope drift and architectural erosion.
+
+#### Guideline 1: Requirements Integrity
 
 **Risk**: AI "confidently drifts" beyond the stated requirement, touching unrelated code.
 
@@ -36,7 +42,7 @@ These dimensions address failure modes observed in "vibe coding" — where AI ou
 ✅ Good: "Add vendor import; do NOT touch auth; acceptance: rejects invalid CSV"
 ```
 
-### Dimension 2: Architecture Integrity
+#### Guideline 2: Architecture Integrity
 
 **Risk**: AI creates working code that violates layer boundaries, creating tight coupling.
 
@@ -53,7 +59,7 @@ These dimensions address failure modes observed in "vibe coding" — where AI ou
 ✅ Good: Component → Server Action → Service → Supabase client
 ```
 
-### Dimension 3: API & Contract Stability
+#### Guideline 3: API & Contract Stability
 
 **Risk**: AI "refactors" a function and silently changes return shape, breaking callers.
 
@@ -70,7 +76,30 @@ These dimensions address failure modes observed in "vibe coding" — where AI ou
 ✅ Good: Contract test fails; PR includes migration or compat shim
 ```
 
-### Dimension 4: Security by Default
+#### Guideline 4: Documentation Coherence
+
+**Risk**: AI accelerates code changes but not documentation; system becomes untraceable.
+
+**Guardrails**:
+
+- Require Architecture Decision Records (ADR) for architectural choices
+- Update runbooks when touching operations
+- README updates in same PR as structure changes
+
+**Example**:
+
+```
+❌ Bad: System works but nobody knows "what connects to what"
+✅ Good: ADR explains why; runbook explains how to debug
+```
+
+---
+
+### Category 2: Safety & Risk Control
+
+**Focus**: Security, privacy, data integrity, and production blast radius.
+
+#### Guideline 5: Security by Default
 
 **Risk**: AI generates "working" code that is insecure (XSS, injection, auth bypass).
 
@@ -87,7 +116,7 @@ These dimensions address failure modes observed in "vibe coding" — where AI ou
 ✅ Good: Uses DOMPurify, CSP headers, output encoding
 ```
 
-### Dimension 5: Data Safety & Migration Discipline
+#### Guideline 6: Data Safety & Migration Discipline
 
 **Risk**: AI makes destructive schema changes in one PR, bricking the database.
 
@@ -104,126 +133,7 @@ These dimensions address failure modes observed in "vibe coding" — where AI ou
 ✅ Good: Add new column → dual-write → backfill → switch reads → remove old
 ```
 
-### Dimension 6: Code Health Controls
-
-**Risk**: AI produces large PRs that nobody fully understands; review becomes ineffective.
-
-**Guardrails**:
-
-- Hard limits: files < 300 lines, functions < 30 lines
-- PR diff budget: warn > 500 lines, block > 1000 lines
-- "Refactor or explain" for new patterns
-
-**Example**:
-
-```
-❌ Bad: 1000-line PR with mixed concerns
-✅ Good: Split into focused PRs; each adds tests + docs
-```
-
-### Dimension 7: Dependency Hygiene
-
-**Risk**: AI adds unmaintained or vulnerable packages without justification.
-
-**Guardrails**:
-
-- New dependencies require justification in PR
-- npm audit / Snyk in CI blocks high/critical vulns
-- License compliance checked
-
-**Example**:
-
-```
-❌ Bad: AI adds random CSV parser with no maintenance
-✅ Good: Choose vetted library; document why; add to approved list
-```
-
-### Dimension 8: Test Strategy
-
-**Risk**: AI breaks edge cases; "it ran locally once" is not verification.
-
-**Guardrails**:
-
-- Test-first for features: write failing test → implement → verify green
-- Coverage delta check prevents regression
-- At least one test type per PR (unit/integration/e2e)
-
-**Example**:
-
-```
-❌ Bad: "Tests pass" without new tests for new code
-✅ Good: Failing test added first; PR shows it turning green
-```
-
-### Dimension 9: Deterministic Build
-
-**Risk**: AI introduces build steps that only work in its environment.
-
-**Guardrails**:
-
-- Pin Node/tool versions in repo
-- CI uses same scripts as local
-- Document environment setup
-
-**Example**:
-
-```
-❌ Bad: Works locally but fails in CI due to env mismatch
-✅ Good: CI and local use identical commands; no hidden prerequisites
-```
-
-### Dimension 10: Reviewability
-
-**Risk**: Huge AI PRs shift review burden; reviewers rubber-stamp without understanding.
-
-**Guardrails**:
-
-- PR template with intent, risk, test evidence
-- Diff budget enforced (see Dimension 6)
-- Reviewers must be able to reason about changes in 15-30 minutes
-
-**Example**:
-
-```
-❌ Bad: 2000-line PR with "AI did it"
-✅ Good: 200-line PR with clear intent and verification
-```
-
-### Dimension 11: Evidence-Based Development
-
-**Risk**: "AI made changes; looks fine" — no traceability of intent or verification.
-
-**Guardrails**:
-
-- Store prompt summary in PR description
-- Required "What I verified" section
-- Link to tests run, manual checks performed
-
-**Example**:
-
-```
-❌ Bad: "Refactored per AI suggestion"
-✅ Good: "Prompt: extract helper; files: A/B; tests: T1/T2; verified: behavior X"
-```
-
-### Dimension 12: Prompt Governance
-
-**Risk**: AI runs sweeping commands, deletes files, changes configs without review.
-
-**Guardrails**:
-
-- Approved prompt templates in `.windsurf/workflows/`
-- Tool restrictions: read-only by default; explicit allow for destructive ops
-- AI proposes commands; human executes
-
-**Example**:
-
-```
-❌ Bad: AI runs `rm -rf` or modifies .env
-✅ Good: AI proposes changes; human reviews and executes
-```
-
-### Dimension 13: Operational Safety
+#### Guideline 7: Operational Safety
 
 **Risk**: AI ships risky changes directly to production.
 
@@ -240,22 +150,148 @@ These dimensions address failure modes observed in "vibe coding" — where AI ou
 ✅ Good: Flag-gated; gradual rollout; auto-rollback on error budget breach
 ```
 
-### Dimension 14: Documentation Coherence
+#### Guideline 8: Deterministic Build
 
-**Risk**: AI accelerates code changes but not documentation; system becomes untraceable.
+**Risk**: AI introduces build steps that only work in its environment.
 
 **Guardrails**:
 
-- Require ADR for architectural choices
-- Update runbooks when touching operations
-- README updates in same PR as structure changes
+- Pin Node/tool versions in repo
+- CI uses same scripts as local
+- Document environment setup
 
 **Example**:
 
 ```
-❌ Bad: System works but nobody knows "what connects to what"
-✅ Good: ADR explains why; runbook explains how to debug
+❌ Bad: Works locally but fails in CI due to env mismatch
+✅ Good: CI and local use identical commands; no hidden prerequisites
 ```
+
+_Note: Also relates to Category 3 (Quality & Maintainability)._
+
+---
+
+### Category 3: Quality & Maintainability
+
+**Focus**: Keep codebase healthy under high change volume.
+
+#### Guideline 9: Code Health Controls
+
+**Risk**: AI produces large PRs that nobody fully understands; review becomes ineffective.
+
+**Guardrails**:
+
+- Hard limits: files < 300 lines, functions < 30 lines
+- PR diff budget: warn > 500 lines, block > 1000 lines
+- "Refactor or explain" for new patterns
+
+**Example**:
+
+```
+❌ Bad: 1000-line PR with mixed concerns
+✅ Good: Split into focused PRs; each adds tests + docs
+```
+
+#### Guideline 10: Test Strategy
+
+**Risk**: AI breaks edge cases; "it ran locally once" is not verification.
+
+**Guardrails**:
+
+- Test-first for features: write failing test → implement → verify green
+- Coverage delta check prevents regression
+- At least one test type per PR (unit/integration/e2e)
+
+**Example**:
+
+```
+❌ Bad: "Tests pass" without new tests for new code
+✅ Good: Failing test added first; PR shows it turning green
+```
+
+#### Guideline 11: Reviewability & Change Control
+
+**Risk**: Huge AI PRs shift review burden; reviewers rubber-stamp without understanding.
+
+**Guardrails**:
+
+- PR template with intent, risk, test evidence
+- Diff budget enforced (see Guideline 9)
+- Reviewers must be able to reason about changes in 15-30 minutes
+
+**Example**:
+
+```
+❌ Bad: 2000-line PR with "AI did it"
+✅ Good: 200-line PR with clear intent and verification
+```
+
+_Note: Also strongly relates to Category 5 (Evidence & Accountability)._
+
+---
+
+### Category 4: Integrity of Inputs (Dependencies & Tooling)
+
+**Focus**: Prevent supply-chain and agent-tool misuse.
+
+#### Guideline 12: Dependency & Supply-Chain Hygiene
+
+**Risk**: AI adds unmaintained or vulnerable packages without justification.
+
+**Guardrails**:
+
+- New dependencies require justification in PR
+- npm audit / Snyk in CI blocks high/critical vulns
+- License compliance checked
+
+**Example**:
+
+```
+❌ Bad: AI adds random CSV parser with no maintenance
+✅ Good: Choose vetted library; document why; add to approved list
+```
+
+#### Guideline 13: Prompt & Toolchain Governance
+
+**Risk**: AI runs sweeping commands, deletes files, changes configs without review.
+
+**Guardrails**:
+
+- Approved prompt templates in `.windsurf/workflows/`
+- Tool restrictions: read-only by default; explicit allow for destructive ops
+- AI proposes commands; human executes
+
+**Example**:
+
+```
+❌ Bad: AI runs `rm -rf` or modifies .env
+✅ Good: AI proposes changes; human reviews and executes
+```
+
+---
+
+### Category 5: Evidence & Accountability
+
+**Focus**: Prove what changed, why, and that it's safe.
+
+#### Guideline 14: Evidence-Based Development
+
+**Risk**: "AI made changes; looks fine" — no traceability of intent or verification.
+
+**Guardrails**:
+
+- Store prompt summary in PR description
+- Required "What I verified" section
+- Link to tests run, manual checks performed
+
+**Example**:
+
+```
+❌ Bad: "Refactored per AI suggestion"
+✅ Good: "Prompt: extract helper; files: A/B; tests: T1/T2; verified: behavior X"
+```
+
+_Note: Guideline 11 (Reviewability & Change Control) also strongly supports this category._
 
 ---
 
@@ -554,6 +590,7 @@ This framework addresses risks documented in:
 
 ## Appendix B: Change History
 
-| Version | Date       | Changes                                              |
-| ------- | ---------- | ---------------------------------------------------- |
-| 1.0.0   | 2026-01-07 | Initial version with 14 dimensions, controls C11-C18 |
+| Version | Date       | Changes                                                          |
+| ------- | ---------- | ---------------------------------------------------------------- |
+| 1.1.0   | 2026-01-08 | Reorganize 14 dimensions into 5 categories; rename to guidelines |
+| 1.0.0   | 2026-01-07 | Initial version with 14 dimensions, controls C11-C18             |
