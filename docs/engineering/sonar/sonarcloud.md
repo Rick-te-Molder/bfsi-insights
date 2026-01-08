@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.6.0  
+**Version**: 1.7.0  
 **Last updated**: 2026-01-08  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.7.0 (2026-01-08): Added S7773 (prefer Number.parseInt over parseInt).
 - 1.6.0 (2026-01-08): Added S4123 (await should only be used with promises).
 - 1.5.0 (2026-01-08): Added S6544 (promises should not be misused).
 - 1.4.0 (2026-01-05): Added S7735 (avoid negated conditions with else clause).
@@ -53,6 +54,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S7735   | [Unexpected negated condition](./lessons/unexpected-negated-condition.md)                                                                                                         | `lessons/unexpected-negated-condition.md`                                                     |
 | S6544   | [Promise-returning function provided to property where a void return was expected](./lessons/promise-returning-function-provided-to-property-where-a-void-return-was-expected.md) | `lessons/promise-returning-function-provided-to-property-where-a-void-return-was-expected.md` |
 | S4123   | [Unexpected `await` of a non-Promise (non-"Thenable") value](./lessons/unexpected-await-of-non-promise.md)                                                                        | `lessons/unexpected-await-of-non-promise.md`                                                  |
+| S7773   | [Prefer `Number.parseInt` over `parseInt`](./lessons/prefer-number-parseint-over-parseint.md)                                                                                     | `lessons/prefer-number-parseint-over-parseint.md`                                             |
 
 ---
 
@@ -86,7 +88,7 @@ The following ESLint rules are enabled to catch common Sonar issues at lint time
 
 A lightweight pre-commit check (`scripts/ci/check-sonar-patterns.cjs`) warns when staged files contain patterns we've documented as Sonar lessons/rules. This catches regressions before CI.
 
-**Checked patterns**: S2301, S3358, S4123, S4624, S6479, S6544, S6551, S6759, S6819, S6842, S6847, S6848, S7735, S7781
+**Checked patterns**: S2301, S3358, S4123, S4624, S6479, S6544, S6551, S6759, S6819, S6842, S6847, S6848, S7735, S7773, S7781
 
 **Behavior**: Warns but does not block (use `--strict` to block)
 
@@ -111,6 +113,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Avoid negated conditions with else** — Use positive conditions: `if (valid)` not `if (!invalid)`
 - [ ] **Don't return Promises where void expected** — Use block body `() => { asyncFn(); }` not `() => asyncFn()`
 - [ ] **Don't `await` non-Promises** — Ensure the value is a Promise/thenable, or remove the redundant `await`
+- [ ] **Use Number.parseInt() over parseInt()** — Prefer `Number.parseInt()` and `Number.parseFloat()` over global equivalents
 
 ---
 
@@ -180,6 +183,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Prefer `Number.parseInt` over `parseInt`](./lessons/prefer-number-parseint-over-parseint.md) (S7773)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -237,5 +244,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## ["await" should only be used with promises](./rules/4123_await-should-only-be-used-with-promises.md)
+
+---
+
+## [Number static methods should be preferred over global equivalents](./rules/7773_number-static-methods-preferred.md)
 
 ---

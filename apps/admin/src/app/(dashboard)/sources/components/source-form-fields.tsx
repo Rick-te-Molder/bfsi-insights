@@ -173,7 +173,9 @@ export function PriorityField({
         id="sourcePriority"
         type="number"
         value={formData.sort_order || 500}
-        onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) })}
+        onChange={(e) =>
+          setFormData({ ...formData, sort_order: Number.parseInt(e.target.value, 10) })
+        }
         className={inputClass}
       />
     </div>
