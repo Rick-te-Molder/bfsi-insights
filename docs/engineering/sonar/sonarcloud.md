@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.14.0  
+**Version**: 1.15.0  
 **Last updated**: 2026-01-08  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.15.0 (2026-01-08): Improved S6759 pattern to catch inline props (}: {) missing Readonly wrapper.
 - 1.14.0 (2026-01-08): Added S7763 (use export...from syntax for re-exports).
 - 1.13.0 (2026-01-08): Added S6644 (use logical OR instead of ternary for default values).
 - 1.12.0 (2026-01-08): Fix S4662 docs to use sonar.issue.ignore.multicriteria for Tailwind v4 at-rules in globals.css.
