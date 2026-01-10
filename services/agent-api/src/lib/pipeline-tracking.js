@@ -280,3 +280,10 @@ export async function handleItemFailure(item, agent, stepName, err, config) {
     retryDelay,
   });
 }
+
+// Cost tracking functions moved to pipeline-cost-tracking.js (US-7.1)
+export {
+  addRunTokenUsage,
+  calculateRunCost,
+  completePipelineRun,
+} from './pipeline-cost-tracking.js';

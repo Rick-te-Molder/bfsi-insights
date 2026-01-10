@@ -1,7 +1,7 @@
 # Database Schema Reference
 
 > **Auto-generated** by `npm run dump:schema`  
-> **Last updated:** 2026-01-02T23:15:25.811Z
+> **Last updated:** 2026-01-10T20:37:08.131Z
 
 This file is the single source of truth for AI assistants to understand the database structure.
 
@@ -61,6 +61,7 @@ This file is the single source of truth for AI assistants to understand the data
 | `obligation_pretty`                | 18   |                    |
 | `pending_entity_proposals`         | 2    |                    |
 | `pipeline_run`                     | 92   | PK: id             |
+| `pipeline_run_costs`               | 0    |                    |
 | `pipeline_step_run`                | 106  | PK: id             |
 | `process_taxonomy_apqc`            | 54   | PK: id             |
 | `process_taxonomy_basel`           | 19   | PK: id             |
@@ -97,9 +98,6 @@ This file is the single source of truth for AI assistants to understand the data
 | `taxonomy_bian`                    | 60   | PK: id             |
 | `taxonomy_bian_pretty`             | 60   |                    |
 | `taxonomy_config`                  | 12   | PK: id             |
-| `taxonomy_gics`                    | 14   | PK: id             |
-| `taxonomy_nace`                    | 35   | PK: id             |
-| `taxonomy_naics`                   | 20   | PK: id             |
 
 ---
 
@@ -792,8 +790,8 @@ This file is the single source of truth for AI assistants to understand the data
 | ---------------- | ------- | -------- | ------- | ---------------------- |
 | `publication_id` | uuid    | NO       |         | PK                     |
 | `publication_id` | uuid    | NO       |         | FK → kb_publication.id |
-| `vendor_id`      | uuid    | NO       |         | FK → ag_vendor.id      |
 | `vendor_id`      | uuid    | NO       |         | PK                     |
+| `vendor_id`      | uuid    | NO       |         | FK → ag_vendor.id      |
 | `rank`           | integer | YES      | 0       |                        |
 
 ### `kb_publication_bfsi_industry`
@@ -802,8 +800,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column           | Type    | Nullable | Default | Constraints            |
 | ---------------- | ------- | -------- | ------- | ---------------------- |
-| `publication_id` | uuid    | NO       |         | PK                     |
 | `publication_id` | uuid    | NO       |         | FK → kb_publication.id |
+| `publication_id` | uuid    | NO       |         | PK                     |
 | `industry_code`  | text    | NO       |         | PK                     |
 | `rank`           | integer | YES      | 0       |                        |
 
@@ -849,8 +847,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column            | Type | Nullable | Default | Constraints            |
 | ----------------- | ---- | -------- | ------- | ---------------------- |
-| `publication_id`  | uuid | NO       |         | PK                     |
 | `publication_id`  | uuid | NO       |         | FK → kb_publication.id |
+| `publication_id`  | uuid | NO       |         | PK                     |
 | `obligation_code` | text | NO       |         | PK                     |
 | `obligation_code` | text | NO       |         | FK → obligation.code   |
 
@@ -905,8 +903,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column           | Type | Nullable | Default | Constraints            |
 | ---------------- | ---- | -------- | ------- | ---------------------- |
-| `publication_id` | uuid | NO       |         | PK                     |
 | `publication_id` | uuid | NO       |         | FK → kb_publication.id |
+| `publication_id` | uuid | NO       |         | PK                     |
 | `regulator_code` | text | NO       |         | PK                     |
 
 ### `kb_publication_standard`
@@ -916,8 +914,8 @@ This file is the single source of truth for AI assistants to understand the data
 | Column           | Type                     | Nullable | Default | Constraints      |
 | ---------------- | ------------------------ | -------- | ------- | ---------------- |
 | `resource_id`    | integer                  | NO       |         | PK               |
-| `standard_id`    | bigint                   | NO       |         | PK               |
 | `standard_id`    | bigint                   | NO       |         | FK → standard.id |
+| `standard_id`    | bigint                   | NO       |         | PK               |
 | `rank`           | integer                  | YES      | 0       |                  |
 | `created_at`     | timestamp with time zone | YES      | now()   |                  |
 | `publication_id` | uuid                     | YES      |         |                  |
@@ -1092,15 +1090,37 @@ This file is the single source of truth for AI assistants to understand the data
 
 **Rows:** 92
 
-| Column         | Type                     | Nullable | Default           | Constraints             |
-| -------------- | ------------------------ | -------- | ----------------- | ----------------------- |
-| `id`           | uuid                     | NO       | gen_random_uuid() | PK                      |
-| `queue_id`     | uuid                     | NO       |                   | FK → ingestion_queue.id |
-| `trigger`      | text                     | NO       |                   |                         |
-| `status`       | text                     | NO       | 'running'::text   |                         |
-| `started_at`   | timestamp with time zone | NO       | now()             |                         |
-| `completed_at` | timestamp with time zone | YES      |                   |                         |
-| `created_by`   | text                     | YES      |                   |                         |
+| Column               | Type                     | Nullable | Default           | Constraints             |
+| -------------------- | ------------------------ | -------- | ----------------- | ----------------------- |
+| `id`                 | uuid                     | NO       | gen_random_uuid() | PK                      |
+| `queue_id`           | uuid                     | NO       |                   | FK → ingestion_queue.id |
+| `trigger`            | text                     | NO       |                   |                         |
+| `status`             | text                     | NO       | 'running'::text   |                         |
+| `started_at`         | timestamp with time zone | NO       | now()             |                         |
+| `completed_at`       | timestamp with time zone | YES      |                   |                         |
+| `created_by`         | text                     | YES      |                   |                         |
+| `llm_tokens_input`   | integer                  | YES      | 0                 |                         |
+| `llm_tokens_output`  | integer                  | YES      | 0                 |                         |
+| `embedding_tokens`   | integer                  | YES      | 0                 |                         |
+| `estimated_cost_usd` | numeric                  | YES      |                   |                         |
+
+### `pipeline_run_costs`
+
+**Rows:** 0
+
+| Column               | Type                     | Nullable | Default | Constraints |
+| -------------------- | ------------------------ | -------- | ------- | ----------- |
+| `id`                 | uuid                     | YES      |         |             |
+| `queue_id`           | uuid                     | YES      |         |             |
+| `trigger`            | text                     | YES      |         |             |
+| `status`             | text                     | YES      |         |             |
+| `started_at`         | timestamp with time zone | YES      |         |             |
+| `completed_at`       | timestamp with time zone | YES      |         |             |
+| `llm_tokens_input`   | integer                  | YES      |         |             |
+| `llm_tokens_output`  | integer                  | YES      |         |             |
+| `embedding_tokens`   | integer                  | YES      |         |             |
+| `estimated_cost_usd` | numeric                  | YES      |         |             |
+| `duration_seconds`   | numeric                  | YES      |         |             |
 
 ### `pipeline_step_run`
 
@@ -1109,8 +1129,8 @@ This file is the single source of truth for AI assistants to understand the data
 | Column            | Type                     | Nullable | Default           | Constraints          |
 | ----------------- | ------------------------ | -------- | ----------------- | -------------------- |
 | `id`              | uuid                     | NO       | gen_random_uuid() | PK                   |
-| `run_id`          | uuid                     | NO       |                   | FK → pipeline_run.id |
 | `run_id`          | uuid                     | NO       |                   | UNIQUE               |
+| `run_id`          | uuid                     | NO       |                   | FK → pipeline_run.id |
 | `step_name`       | text                     | NO       |                   | UNIQUE               |
 | `status`          | text                     | NO       | 'pending'::text   |                      |
 | `attempt`         | integer                  | NO       | 1                 | UNIQUE               |
@@ -1705,39 +1725,3 @@ This file is the single source of truth for AI assistants to understand the data
 | `score_threshold`        | real                     | YES      | 0.5               |             |
 | `is_active`              | boolean                  | YES      | true              |             |
 | `created_at`             | timestamp with time zone | YES      | now()             |             |
-| `updated_at`             | timestamp with time zone | YES      | now()             |             |
-
-### `taxonomy_gics`
-
-**Rows:** 14
-
-| Column        | Type                     | Nullable | Default           | Constraints |
-| ------------- | ------------------------ | -------- | ----------------- | ----------- |
-| `id`          | uuid                     | NO       | gen_random_uuid() | PK          |
-| `original_id` | integer                  | YES      |                   | UNIQUE      |
-| `code`        | text                     | YES      |                   |             |
-| `description` | text                     | YES      |                   |             |
-| `created_at`  | timestamp with time zone | YES      | now()             |             |
-
-### `taxonomy_nace`
-
-**Rows:** 35
-
-| Column        | Type                     | Nullable | Default           | Constraints |
-| ------------- | ------------------------ | -------- | ----------------- | ----------- |
-| `id`          | uuid                     | NO       | gen_random_uuid() | PK          |
-| `original_id` | integer                  | YES      |                   | UNIQUE      |
-| `code`        | text                     | YES      |                   |             |
-| `description` | text                     | YES      |                   |             |
-| `created_at`  | timestamp with time zone | YES      | now()             |             |
-
-### `taxonomy_naics`
-
-**Rows:** 20
-
-| Column        | Type    | Nullable | Default           | Constraints |
-| ------------- | ------- | -------- | ----------------- | ----------- |
-| `id`          | uuid    | NO       | gen_random_uuid() | PK          |
-| `original_id` | integer | YES      |                   | UNIQUE      |
-| `code`        | text    | YES      |                   |             |
-| `description` | text    | YES      |                   |             |

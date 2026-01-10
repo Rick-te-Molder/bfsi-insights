@@ -43,10 +43,10 @@ function buildSummarizedPayload(item, result, sourceName) {
   return updated;
 }
 
-export async function stepSummarize(queueId, payload) {
+export async function stepSummarize(queueId, payload, pipelineRunId = null) {
   await transitionByAgent(queueId, getStatusCode('SUMMARIZING'), 'orchestrator');
   console.log('   📝 Generating summary...');
-  const result = await runSummarizer({ id: queueId, payload });
+  const result = await runSummarizer({ id: queueId, payload, pipelineRunId });
 
   const sourceName = payload.source_name?.toLowerCase() || '';
   const updated = buildSummarizedPayload({ payload }, result, sourceName);
@@ -84,10 +84,10 @@ function buildTaggedPayload(item, result) {
   };
 }
 
-export async function stepTag(queueId, payload) {
+export async function stepTag(queueId, payload, pipelineRunId = null) {
   await transitionByAgent(queueId, getStatusCode('TAGGING'), 'orchestrator');
   console.log('   🏷️  Classifying taxonomy...');
-  const result = await runTagger({ id: queueId, payload });
+  const result = await runTagger({ id: queueId, payload, pipelineRunId });
 
   const updated = buildTaggedPayload({ payload }, result);
   const nextStatus = payload.thumbnail_bucket
@@ -100,11 +100,11 @@ export async function stepTag(queueId, payload) {
   return updated;
 }
 
-export async function stepThumbnail(queueId, payload) {
+export async function stepThumbnail(queueId, payload, pipelineRunId = null) {
   await transitionByAgent(queueId, getStatusCode('THUMBNAILING'), 'orchestrator');
   console.log('   📸 Generating thumbnail...');
   try {
-    const result = await runThumbnailer({ id: queueId, payload });
+    const result = await runThumbnailer({ id: queueId, payload, pipelineRunId });
     return {
       ...payload,
       thumbnail_bucket: result.bucket,

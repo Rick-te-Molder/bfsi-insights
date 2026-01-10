@@ -1,5 +1,6 @@
 import { updateRunError, updateRunSuccess } from './runner-db.js';
 import { buildTools, createTraceIfEnabled } from './runner-execution.js';
+import { addRunTokenUsage } from './pipeline-tracking.js';
 
 function logOpenAIAvailability(agentName, openaiClient) {
   console.log(`🔍 [${agentName}] OpenAI client available:`, !!openaiClient);
@@ -18,11 +19,19 @@ async function writeEnrichmentMetaIfNeeded(runner, context, promptConfig, usage)
   await runner.writeEnrichmentMeta(context.queueId, promptConfig, usage?.model);
 }
 
-async function addUsageMetricsIfPresent(runner, usage) {
+async function addUsageMetricsIfPresent(runner, usage, pipelineRunId) {
   if (!usage) return;
   await runner.addMetric('tokens_total', usage.total_tokens, usage);
   await runner.addMetric('tokens_prompt', usage.prompt_tokens);
   await runner.addMetric('tokens_completion', usage.completion_tokens);
+
+  // US-7.1: Track costs on pipeline run
+  if (pipelineRunId) {
+    await addRunTokenUsage(pipelineRunId, {
+      input_tokens: usage.input_tokens || usage.prompt_tokens || 0,
+      output_tokens: usage.output_tokens || usage.completion_tokens || 0,
+    });
+  }
 }
 
 async function finalizeSuccess(runner, context, promptConfig, { startTime, result }) {
@@ -30,7 +39,7 @@ async function finalizeSuccess(runner, context, promptConfig, { startTime, resul
 
   if (runner.runId) {
     await updateRunSuccess(runner.supabase, runner.runId, { durationMs, result });
-    await addUsageMetricsIfPresent(runner, result.usage);
+    await addUsageMetricsIfPresent(runner, result.usage, context.pipelineRunId);
     await writeEnrichmentMetaIfNeeded(runner, context, promptConfig, result.usage);
   }
 
