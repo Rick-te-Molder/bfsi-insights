@@ -29,6 +29,7 @@ import {
 } from './cli/commands/pipeline.js';
 import { runEvalCmd, runEvalHistoryCmd } from './cli/commands/eval.js';
 import { runQueueHealthCmd } from './cli/commands/health.js';
+import { runCostReportCmd } from './cli/commands/cost-report.js';
 
 /** @type {Record<string, (options: any) => Promise<any>>} */
 const COMMAND_MAP = {
@@ -48,12 +49,13 @@ const COMMAND_MAP = {
   'eval-history': runEvalHistoryCmd,
   'queue-health': () => runQueueHealthCmd(),
   health: () => runQueueHealthCmd(),
+  'cost-report': runCostReportCmd,
 };
 
 function showUsage() {
   console.log('Usage: node cli.js <command> [options]');
   console.log('Commands: discovery, classics, fetch, filter, summarize, tag, thumbnail,');
-  console.log('          enrich, process-queue, eval, eval-history, queue-health');
+  console.log('          enrich, process-queue, eval, eval-history, queue-health, cost-report');
   process.exit(1);
 }
 
