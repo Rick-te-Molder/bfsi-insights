@@ -1,7 +1,7 @@
 ---
 id: S3358
 name: Nested ternary operator
-pattern: "\\?[^?:]*\\?"
+pattern: "\\?[^\\n]*:[^\\n]*\\?"
 extensions: ['.ts', '.tsx', '.js', '.jsx']
 blocking: true
 ---
