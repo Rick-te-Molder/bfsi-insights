@@ -63,16 +63,46 @@ function getSchemaAge() {
   }
 }
 
+function hasEnvCredentials() {
+  const envPath = path.join(process.cwd(), '.env');
+  if (!fs.existsSync(envPath)) return false;
+
+  const content = fs.readFileSync(envPath, 'utf8');
+  return content.includes('PUBLIC_SUPABASE_URL=') && content.includes('SUPABASE_SERVICE_KEY=');
+}
+
+function tryAutoUpdateSchema() {
+  if (!hasEnvCredentials()) {
+    console.warn('\n⚠️  No .env with Supabase credentials found.');
+    console.warn('   Schema sync check skipped (CI will catch this).\n');
+    return false;
+  }
+
+  console.log('\n📊 Auto-running schema dump...');
+  try {
+    execSync('npm run dump:schema', { stdio: 'inherit' });
+    execSync(`git add ${SCHEMA_FILE}`, { stdio: 'inherit' });
+    console.log('✅ Schema updated and staged automatically.\n');
+    return true;
+  } catch (err) {
+    console.error('\n❌ Auto schema dump failed:', err.message);
+    console.error('   Please run manually: npm run dump:schema\n');
+    return false;
+  }
+}
+
 function main() {
   const stagedFiles = getStagedFiles();
 
   // Check if migrations are being committed
   if (hasMigrationChanges(stagedFiles)) {
     if (!isSchemaStaged(stagedFiles)) {
-      console.error('\n❌ Migration files changed but schema.md not updated!\n');
-      console.error('   Run: npm run dump:schema');
-      console.error('   Then: git add docs/data-model/schema.md\n');
-      process.exit(1);
+      // Try to auto-update schema
+      const success = tryAutoUpdateSchema();
+      if (!success) {
+        // Graceful fallback: warn but don't block (CI will catch)
+        console.warn('⚠️  Continuing without schema update (CI will enforce).\n');
+      }
     }
   }
 

@@ -38,7 +38,7 @@ async function summarizerCallback(context, promptTemplate, tools) {
   return flattenSummaryResult(result, modelId, message.usage);
 }
 
-/** @param {any} queueItem @param {{ promptOverride?: any }} options */
+/** @param {any} queueItem @param {{ promptOverride?: any; pipelineStepRunId?: string; skipEnrichmentMeta?: boolean }} options */
 export async function runSummarizer(queueItem, options = {}) {
   return runner.run(
     {
@@ -46,6 +46,8 @@ export async function runSummarizer(queueItem, options = {}) {
       payload: queueItem.payload,
       promptOverride: options.promptOverride,
       pipelineRunId: queueItem.pipelineRunId,
+      pipelineStepRunId: options.pipelineStepRunId,
+      skipEnrichmentMeta: options.skipEnrichmentMeta,
     },
     summarizerCallback,
   );

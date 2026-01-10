@@ -33,7 +33,7 @@ describe('lib/runner-db', () => {
 
     await insertRun(supabase, {
       agentName: 'tagger',
-      promptConfig: { version: 'v1' },
+      promptConfig: { id: 'pv-1', version: 'v1' },
       context: { queueId: 'q1', publicationId: 'p1' },
     });
 
@@ -43,6 +43,7 @@ describe('lib/runner-db', () => {
     expect(payload.agent_name).toBe('tagger');
     expect(payload.stage).toBe('tagger');
     expect(payload.prompt_version).toBe('v1');
+    expect(payload.prompt_version_id).toBe('pv-1');
     expect(payload.status).toBe('running');
     expect(payload.queue_id).toBe('q1');
     expect(payload.publication_id).toBe('p1');
@@ -86,6 +87,7 @@ describe('lib/runner-db', () => {
       stepOrder: 2,
       stepType: 'fetch',
       details: { a: 1 },
+      promptVersionId: 'pv-1',
     });
 
     expect(supabase.from).toHaveBeenCalledWith('agent_run_step');
@@ -94,6 +96,7 @@ describe('lib/runner-db', () => {
     expect(payload.run_id).toBe('run-1');
     expect(payload.step_order).toBe(2);
     expect(payload.step_type).toBe('fetch');
+    expect(payload.prompt_version_id).toBe('pv-1');
     expect(payload.status).toBe('running');
     expect(payload.details).toEqual({ a: 1 });
     expect(chain.select).toHaveBeenCalled();
