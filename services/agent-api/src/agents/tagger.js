@@ -62,7 +62,13 @@ export async function runTagger(queueItem, options = {}) {
   const { queueId, publicationId } = extractQueueIds(queueItem);
 
   return runner.run(
-    { queueId, publicationId, payload: queueItem.payload, promptOverride: options.promptOverride },
+    {
+      queueId,
+      publicationId,
+      payload: queueItem.payload,
+      promptOverride: options.promptOverride,
+      pipelineRunId: queueItem.pipelineRunId,
+    },
     createTaggerCallback(taxonomies, vendorData),
   );
 }

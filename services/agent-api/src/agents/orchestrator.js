@@ -9,6 +9,7 @@ import { transitionByAgent } from '../lib/queue-update.js';
 import { loadStatusCodes, getStatusCode } from '../lib/status-codes.js';
 import { stepSummarize, stepTag, stepThumbnail } from './enrichment-steps.js';
 import { getSupabaseAdminClient } from '../clients/supabase.js';
+import { ensurePipelineRun, completePipelineRun } from '../lib/pipeline-tracking.js';
 
 /** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabase = null;
@@ -104,12 +105,14 @@ function handleRetry(queueItem, currentAttempts, error) {
   return { success: false, error: error.message, permanent: false };
 }
 
-/** @param {any} queueItem @param {any} payload @param {{ includeThumbnail?: boolean }} options */
+/** @param {any} queueItem @param {any} payload @param {{ includeThumbnail?: boolean; pipelineRunId?: string | null }} options */
 async function runEnrichmentSteps(queueItem, payload, options) {
-  const { includeThumbnail = true } = options;
-  const summarized = await stepSummarize(queueItem.id, payload);
-  const tagged = await stepTag(queueItem.id, summarized);
-  const finalPayload = includeThumbnail ? await stepThumbnail(queueItem.id, tagged) : tagged;
+  const { includeThumbnail = true, pipelineRunId = null } = options;
+  const summarized = await stepSummarize(queueItem.id, payload, pipelineRunId);
+  const tagged = await stepTag(queueItem.id, summarized, pipelineRunId);
+  const finalPayload = includeThumbnail
+    ? await stepThumbnail(queueItem.id, tagged, pipelineRunId)
+    : tagged;
   await transitionByAgent(queueItem.id, getStatusCode('PENDING_REVIEW'), 'orchestrator', {
     changes: { payload: finalPayload },
   });
@@ -121,15 +124,23 @@ export async function enrichItem(queueItem, options = {}) {
   await loadStatusCodes();
   const currentAttempts = (queueItem.payload?.fetch_attempts || 0) + 1;
 
+  // US-7.1: Ensure pipeline run exists for cost tracking
+  const pipelineRunId = await ensurePipelineRun(queueItem);
+
   try {
     const payload = await stepFetch(queueItem);
     const filterResult = await stepFilter(queueItem.id, payload, { skipRejection });
-    if (filterResult.rejected) return { success: false, error: filterResult.reason };
-    await runEnrichmentSteps(queueItem, payload, { includeThumbnail });
+    if (filterResult.rejected) {
+      await completePipelineRun(pipelineRunId, 'completed');
+      return { success: false, error: filterResult.reason };
+    }
+    await runEnrichmentSteps(queueItem, payload, { includeThumbnail, pipelineRunId });
+    await completePipelineRun(pipelineRunId, 'completed');
     return { success: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`❌ Enrichment failed: ${message}`);
+    await completePipelineRun(pipelineRunId, 'failed');
     const errObj = error instanceof Error ? error : new Error(message);
     return currentAttempts >= MAX_FETCH_ATTEMPTS
       ? handleMaxAttempts(queueItem, currentAttempts, errObj)

@@ -106,7 +106,7 @@ function getTargetUrl(payload) {
 
 export async function runThumbnailer(queueItem) {
   return runner.run(
-    { queueId: queueItem.id, payload: queueItem.payload },
+    { queueId: queueItem.id, payload: queueItem.payload, pipelineRunId: queueItem.pipelineRunId },
     async (context, configText, tools) => {
       const { payload, queueId } = context;
       const stepTracker = createStepTracker(tools);
