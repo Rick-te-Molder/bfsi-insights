@@ -19,6 +19,7 @@ const PDF_RENDERER_PATH = join(__dirname, '../../scripts/render-pdf.py');
 const runner = new AgentRunner('thumbnailer');
 
 // Create step tracker from tools (bundles callbacks into single object)
+/** @param {any} tools */
 function createStepTracker(tools) {
   return {
     start: tools.startStep,
@@ -27,6 +28,7 @@ function createStepTracker(tools) {
   };
 }
 
+/** @param {any} ctx @param {any} pdfBuffer */
 async function renderPdfThumbnail(ctx, pdfBuffer) {
   const { queueId, config, stepTracker } = ctx;
   const renderStepId = await stepTracker.start('pdf_render', { viewport: config.viewport });
@@ -46,12 +48,14 @@ async function renderPdfThumbnail(ctx, pdfBuffer) {
     console.log(`   ✅ Rendered PDF first page: ${result.width}x${result.height}`);
     return screenshotBuffer;
   } catch (err) {
-    await stepTracker.error(renderStepId, err.message);
+    const message = err instanceof Error ? err.message : String(err);
+    await stepTracker.error(renderStepId, message);
     throw err;
   }
 }
 
 // Process PDF: download, store, render first page as thumbnail
+/** @param {any} ctx */
 async function processPdf(ctx) {
   const { targetUrl, queueId, supabase, stepTracker } = ctx;
   const pdfBuffer = await downloadPdf(targetUrl, stepTracker);
@@ -68,6 +72,7 @@ async function processPdf(ctx) {
 }
 
 // Process web page screenshot
+/** @param {any} ctx */
 async function processWebPage(ctx) {
   const { targetUrl, queueId, supabase, config, stepTracker } = ctx;
   const browser = await launchBrowser(targetUrl, stepTracker);
@@ -83,17 +88,20 @@ async function processWebPage(ctx) {
 }
 
 // Parse config with defaults
+/** @param {any} configText */
 function parseConfig(configText) {
   const defaults = { viewport: { width: 1200, height: 675 }, timeout: 45000, wait: 8000 };
   try {
     return { ...defaults, ...JSON.parse(configText) };
   } catch (err) {
-    console.warn('📸 Thumbnail config JSON parse failed, using defaults:', err.message);
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('📸 Thumbnail config JSON parse failed, using defaults:', message);
     return defaults;
   }
 }
 
 // Get and validate target URL from payload
+/** @param {any} payload */
 function getTargetUrl(payload) {
   const targetUrl = payload.url || payload.source_url;
   if (!targetUrl) {
@@ -104,10 +112,18 @@ function getTargetUrl(payload) {
   return targetUrl;
 }
 
-export async function runThumbnailer(queueItem) {
+/** @param {any} queueItem @param {{ promptOverride?: any; pipelineStepRunId?: string; skipEnrichmentMeta?: boolean }} options */
+export async function runThumbnailer(queueItem, options = {}) {
   return runner.run(
-    { queueId: queueItem.id, payload: queueItem.payload, pipelineRunId: queueItem.pipelineRunId },
-    async (context, configText, tools) => {
+    {
+      queueId: queueItem.id,
+      payload: queueItem.payload,
+      pipelineRunId: queueItem.pipelineRunId,
+      promptOverride: options.promptOverride,
+      pipelineStepRunId: options.pipelineStepRunId,
+      skipEnrichmentMeta: options.skipEnrichmentMeta,
+    },
+    async (/** @type {any} */ context, /** @type {any} */ configText, /** @type {any} */ tools) => {
       const { payload, queueId } = context;
       const stepTracker = createStepTracker(tools);
       const config = parseConfig(configText);

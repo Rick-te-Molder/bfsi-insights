@@ -16,6 +16,7 @@ import {
 const runner = new AgentRunner('tagger');
 
 /** Extract queue item identifiers */
+/** @param {any} queueItem */
 function extractQueueIds(queueItem) {
   const hasQueueId = Object.hasOwn(queueItem, 'queueId');
   return {
@@ -25,6 +26,7 @@ function extractQueueIds(queueItem) {
 }
 
 /** Call LLM with tagging schema */
+/** @param {any} llm @param {string} systemPrompt @param {string} content @param {any} tools */
 async function callTaggerLlm(llm, systemPrompt, content, tools) {
   const TaggingSchema = await getTaggingSchema();
   return llm.parseStructured({
@@ -40,8 +42,13 @@ async function callTaggerLlm(llm, systemPrompt, content, tools) {
 }
 
 /** Create tagger callback for runner */
+/** @param {any} taxonomies @param {any} vendorData */
 function createTaggerCallback(taxonomies, vendorData) {
-  return async (context, promptTemplate, tools) => {
+  return async (
+    /** @type {any} */ context,
+    /** @type {any} */ promptTemplate,
+    /** @type {any} */ tools,
+  ) => {
     const { payload } = context;
     const countryTldHint = await buildCountryTldHint(payload.url);
     const contextData = buildContextData(payload, taxonomies, vendorData, countryTldHint);
@@ -57,6 +64,7 @@ function createTaggerCallback(taxonomies, vendorData) {
   };
 }
 
+/** @param {any} queueItem @param {{ promptOverride?: any; pipelineStepRunId?: string; skipEnrichmentMeta?: boolean }} options */
 export async function runTagger(queueItem, options = {}) {
   const [taxonomies, vendorData] = await Promise.all([loadTaxonomies(), loadVendors()]);
   const { queueId, publicationId } = extractQueueIds(queueItem);
@@ -68,6 +76,8 @@ export async function runTagger(queueItem, options = {}) {
       payload: queueItem.payload,
       promptOverride: options.promptOverride,
       pipelineRunId: queueItem.pipelineRunId,
+      pipelineStepRunId: options.pipelineStepRunId,
+      skipEnrichmentMeta: options.skipEnrichmentMeta,
     },
     createTaggerCallback(taxonomies, vendorData),
   );

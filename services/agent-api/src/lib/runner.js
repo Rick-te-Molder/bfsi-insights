@@ -4,6 +4,7 @@ import { insertRun, insertStep, updateStep, insertMetric } from './runner-db.js'
 import { writeEnrichmentMetaToQueue } from './runner-enrichment-meta.js';
 import { runAgentLogic } from './runner-run.js';
 import { getSupabaseAdminClient } from '../clients/supabase.js';
+import { setStepRunPromptVersionId } from './pipeline-tracking.js';
 
 /** @param {any} context */
 function getPromptOverride(context) {
@@ -95,6 +96,8 @@ export class AgentRunner {
     this._supabase = null;
     this.runId = null;
     this.stepOrder = 0;
+    /** @type {string | null} */
+    this.promptVersionId = null;
     /** @type {any} */
     this.trace = null; // LangSmith trace
   }
@@ -125,6 +128,7 @@ export class AgentRunner {
       stepOrder: this.stepOrder,
       stepType,
       details,
+      promptVersionId: this.promptVersionId,
     });
 
     if (error) {
@@ -185,20 +189,27 @@ export class AgentRunner {
 
   /**
    * Main execution method
-   * @param {object} context - { publicationId, queueId, payload, promptOverride, etc. }
+   * @param {any} context - { publicationId, queueId, payload, promptOverride, etc. }
    * @param {function} logicFn - (context, prompt, tools) => Promise<result>
    */
   async run(context, logicFn) {
     console.log(`🤖 [${this.agentName}] Starting run...`);
     this.stepOrder = 0;
 
-    const promptConfig = await this.loadPromptConfig(context);
+    const ctx = /** @type {any} */ (context);
 
-    const runLog = await startRunLog(this.supabase, this.agentName, promptConfig, context);
+    const promptConfig = await this.loadPromptConfig(ctx);
+    this.promptVersionId = promptConfig?.id ?? null;
+
+    if (ctx?.pipelineStepRunId && this.promptVersionId) {
+      await setStepRunPromptVersionId(ctx.pipelineStepRunId, this.promptVersionId);
+    }
+
+    const runLog = await startRunLog(this.supabase, this.agentName, promptConfig, ctx);
     this.runId = runLog?.id;
     return runAgentLogic({
       runner: this,
-      context,
+      context: ctx,
       promptConfig,
       logicFn,
       llm,
