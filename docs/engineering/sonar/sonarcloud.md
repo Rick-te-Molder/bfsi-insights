@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.15.0  
-**Last updated**: 2026-01-08  
+**Version**: 1.16.0  
+**Last updated**: 2026-01-11  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.16.0 (2026-01-11): Added S6594 (prefer RegExp.exec() over String.match()).
 - 1.15.0 (2026-01-08): Improved S6759 pattern to catch inline props (}: {) missing Readonly wrapper.
 - 1.14.0 (2026-01-08): Added S7763 (use export...from syntax for re-exports).
 - 1.13.0 (2026-01-08): Added S6644 (use logical OR instead of ternary for default values).
@@ -69,6 +70,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S6481   | [Wrap Context Provider value in useMemo](./lessons/wrap-context-provider-value-in-usememo.md)                                                                                     | `lessons/wrap-context-provider-value-in-usememo.md`                                           |
 | S6644   | [Use logical OR instead of ternary for default values](./lessons/use-logical-or-instead-of-ternary-for-default-values.md)                                                         | `lessons/use-logical-or-instead-of-ternary-for-default-values.md`                             |
 | S7763   | [Use export...from for re-exports](./lessons/use-export-from-for-re-exports.md)                                                                                                   | `lessons/use-export-from-for-re-exports.md`                                                   |
+| S6594   | [Use the "RegExp.exec()" method instead](./lessons/use-the-regexp-exec-method-instead.md)                                                                                         | `lessons/use-the-regexp-exec-method-instead.md`                                               |
 
 ---
 
@@ -102,9 +104,9 @@ The following ESLint rules are enabled to catch common Sonar issues at lint time
 
 A lightweight pre-commit check (`scripts/ci/check-sonar-patterns.cjs`) warns when staged files contain patterns we've documented as Sonar lessons/rules. This catches regressions before CI.
 
-**Checked patterns**: S2301, S3358, S4123, S4624, S6479, S6544, S6551, S6759, S6772, S6819, S6842, S6847, S6848, S7735, S7772, S7773, S7781
+**Checked patterns**: S2301, S3358, S4123, S4624, S6479, S6544, S6551, S6594, S6759, S6772, S6819, S6842, S6847, S6848, S7735, S7772, S7773, S7781
 
-**Behavior**: Warns but does not block (use `--strict` to block)
+**Behavior**: Blocks on patterns marked `blocking: true` in lessons; warns otherwise (use `--strict` to block warnings)
 
 ---
 
@@ -134,6 +136,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Wrap Context Provider values in useMemo** — Memoize object values passed to React Context Providers
 - [ ] **Use || or ?? instead of ternary for defaults** — Replace `x ? x : y` with `x || y`
 - [ ] **Use export...from for re-exports** — Replace `import { x } from './mod'; export { x };` with `export { x } from './mod';`
+- [ ] **Prefer RegExp.exec over String.match** — Use `/re/.exec(str)` instead of `str.match(/re/)`
 
 ---
 
@@ -231,6 +234,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Use the "RegExp.exec()" method instead](./lessons/use-the-regexp-exec-method-instead.md) (S6594)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -316,5 +323,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [Re-exports should use export...from syntax](./rules/7763_re-exports-should-use-export-from-syntax.md)
+
+---
+
+## ["RegExp.exec()" should be preferred over "String.match()"](./rules/6594_regexp-exec-should-be-preferred-over-string-match.md)
 
 ---

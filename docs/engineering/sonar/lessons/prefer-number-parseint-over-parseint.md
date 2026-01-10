@@ -1,7 +1,7 @@
 ---
 id: S7773
 name: prefer-number-parseint-over-parseint
-pattern: "\\bparseInt\\s*\\("
+pattern: "(?<!\\.)\\bparseInt\\s*\\("
 extensions: [ts, tsx, js, jsx]
 ---
 

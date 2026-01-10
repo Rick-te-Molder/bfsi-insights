@@ -26,11 +26,11 @@ export function getAgentIcon(agentName: string): string {
 
 export function suggestNextVersion(currentVersion: string): string {
   // Extract agent prefix (e.g., "tagger" from "tagger-v2.3")
-  const prefixMatch = currentVersion.match(/^([a-z-]+)-v/);
+  const prefixMatch = /^([a-z-]+)-v/.exec(currentVersion);
   const prefix = prefixMatch ? prefixMatch[1] : '';
 
   // Extract version numbers
-  const match = currentVersion.match(/v?(\d+)\.?(\d*)/);
+  const match = /v?(\d+)\.?(\d*)/.exec(currentVersion);
   if (match) {
     const major = Number.parseInt(match[1], 10);
     const minor = match[2] ? Number.parseInt(match[2], 10) + 1 : 1;
