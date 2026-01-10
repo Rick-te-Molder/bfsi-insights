@@ -3,6 +3,7 @@ id: S6551
 name: Object in template literal without toString
 pattern: "`[^`]*\\$\\{[^}]*\\b(error|err|e)\\b[^}]*\\}[^`]*`"
 extensions: ['.ts', '.tsx', '.js', '.jsx']
+blocking: true
 ---
 
 # Will use Object's default stringification format (S6551)

@@ -100,6 +100,7 @@ function loadPatternsFromDocs() {
           extensions: frontmatter.extensions || ['.ts', '.tsx', '.js', '.jsx'],
           lesson: filePath,
           advisory: frontmatter.advisory || false,
+          blocking: frontmatter.blocking || false,
         });
       }
     } catch {
@@ -199,9 +200,18 @@ function main() {
     allMatches.push(...matches);
   }
 
-  // Separate warnings from advisory notices
-  const warnings = allMatches.filter((m) => !m.advisory);
+  // Separate blocking, warnings, and advisory notices
+  const blocking = allMatches.filter((m) => m.blocking && !m.advisory);
+  const warnings = allMatches.filter((m) => !m.blocking && !m.advisory);
   const advisories = allMatches.filter((m) => m.advisory);
+
+  if (blocking.length > 0) {
+    console.log(`❌ Found ${blocking.length} BLOCKING Sonar pattern(s):\n`);
+    for (const match of blocking) {
+      console.log(formatMatch(match));
+      console.log('');
+    }
+  }
 
   if (warnings.length > 0) {
     console.log(`⚠️  Found ${warnings.length} potential Sonar pattern(s):\n`);
@@ -228,6 +238,13 @@ function main() {
   console.log('These patterns have caused Sonar issues before.');
   console.log('Review the linked lessons and consider refactoring.');
   console.log('');
+
+  // Block on blocking patterns OR strict mode with any warnings
+  if (blocking.length > 0) {
+    console.log('❌ Blocking patterns detected (S3358, S6551). Fix before committing.');
+    console.log('   See lesson files for fix patterns.');
+    process.exit(1);
+  }
 
   if (strict && warnings.length > 0) {
     console.log('❌ Strict mode: blocking commit due to detected patterns.');
