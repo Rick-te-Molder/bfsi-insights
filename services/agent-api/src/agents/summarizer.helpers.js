@@ -1,4 +1,5 @@
 import { JSON_SCHEMA_DESCRIPTION } from './summarizer.schema.js';
+import { logLLMContentSent } from '../lib/prompt-content-logger.js';
 
 /** @param {string | null | undefined} title */
 export function cleanTitle(title) {
@@ -89,6 +90,14 @@ export function flattenSummaryResult(result, modelId, usage) {
  */
 export async function callClaudeAPI(opts) {
   const { anthropic, modelId, maxTokens, fullPrompt, payload, content } = opts;
+
+  logLLMContentSent('summarizer', {
+    title: payload.title,
+    url: payload.url || '',
+    content,
+    systemPrompt: fullPrompt,
+  });
+
   return anthropic.messages.create({
     model: modelId,
     max_tokens: maxTokens,

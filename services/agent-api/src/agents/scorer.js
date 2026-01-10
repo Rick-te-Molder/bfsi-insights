@@ -94,6 +94,10 @@ async function executeLLMScoring(tools, systemPrompt, userContent, agePenalty) {
   const modelId = tools.model || 'gpt-4o-mini';
   const maxTokens = tools.promptConfig?.max_tokens || 200;
 
+  console.log(
+    `📤 [scorer] Sending to LLM: systemPrompt=${systemPrompt.length} chars, userContent=${userContent.length} chars (raw, no PII redaction)`,
+  );
+
   const completion = await llm.complete({
     model: modelId,
     messages: [

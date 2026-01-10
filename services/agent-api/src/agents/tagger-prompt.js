@@ -69,6 +69,9 @@ export function logPromptDebug(promptTemplate, content, systemPrompt) {
     `🔍 [tagger] Prompt debug: Kee in system=${hasKeeInSystemPrompt}, Kee in user=${hasKeeInUserContent}`,
   );
   console.log(`🔍 [tagger] System prompt length: ${systemPrompt?.length || 0} chars`);
+  console.log(
+    `📤 [tagger] Sending to LLM: systemPrompt=${systemPrompt?.length || 0} chars, userContent=${content.length} chars (raw, no PII redaction)`,
+  );
 }
 
 /** Log debug info about topic validation */
