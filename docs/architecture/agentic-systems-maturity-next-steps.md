@@ -33,6 +33,7 @@ If a change does not move at least one exit criterion from “failing” to “p
 
 | Phase | Name                | Core Question                                     |
 | ----- | ------------------- | ------------------------------------------------- |
+| 0     | Ad-hoc              | Does the system exist at all?                     |
 | 1     | Foundation          | Does the system behave predictably?               |
 | 2     | Controlled          | Can we observe, steer, and intervene?             |
 | 3     | Reliable Quality    | Is quality measurable and protected?              |
@@ -51,7 +52,53 @@ Each section below answers:
 
 ---
 
+## Phase 0 → Phase 1 Enablement (Per Dimension)
+
+### Definition
+
+- **Phase 0** = ad-hoc, best-effort, demo-grade behavior
+- **Phase 1** = deterministic, observable, failure-safe behavior
+
+A system may be Phase 1 in some dimensions and Phase 0.x in others.
+
+> **Rule:** Phase 1 is reached per dimension, not per system.
+
+This section defines the minimum engineering required to enter Phase 1.
+
+### How Synthetic Coders Should Use This Section
+
+For each dimension:
+
+1. Ask: Can we prove the Phase 1 exit criterion today?
+2. If no, assume the dimension is Phase 0.x
+3. Implement only the items listed below
+4. Produce the evidence
+5. Re-evaluate Phase 1 exit criteria
+
+---
+
 ## 1. Knowledge Store + Indexing
+
+### Phase 0 → 1
+
+**Phase 0 symptoms**
+
+- IDs generated inconsistently
+- Records mutable or overwritten
+- No single source of truth
+
+**Implement**
+
+- Canonical entity definitions
+- Immutable internal IDs assigned at ingest
+- One authoritative store per entity type
+
+**Evidence**
+
+- DB query shows 100% items with canonical ID
+- No updates mutate identity fields
+
+---
 
 ### Phase 1 → 2 (What to Add)
 
@@ -119,6 +166,27 @@ Each section below answers:
 
 ## 2. Durable Workflow Engine
 
+### Phase 0 → 1
+
+**Phase 0 symptoms**
+
+- Implicit steps
+- Manual retries
+- Hidden failures
+
+**Implement**
+
+- Explicit workflow states
+- Entry/exit conditions per state
+- Idempotent step execution
+
+**Evidence**
+
+- DB constraints prevent invalid states
+- Retry produces no duplicates
+
+---
+
 ### Phase 1 → 2
 
 **Goal:** Make execution observable and recoverable
@@ -180,6 +248,25 @@ Each section below answers:
 ---
 
 ## 3. Source Adapters + Ingestion
+
+### Phase 0 → 1
+
+**Phase 0 symptoms**
+
+- Manual imports
+- Silent ingestion failures
+- No outcome visibility
+
+**Implement**
+
+- Explicit ingest attempt logging
+- Success / failure recording with reason
+
+**Evidence**
+
+- 100% ingest attempts have recorded outcome
+
+---
 
 ### Phase 1 → 2
 
@@ -244,6 +331,25 @@ Each section below answers:
 ---
 
 ## 4. Tool Execution Plane
+
+### Phase 0 → 1
+
+**Phase 0 symptoms**
+
+- Direct API calls
+- Side effects not tracked
+- Inputs/outputs lost
+
+**Implement**
+
+- Wrapper around every tool call
+- Log inputs + outputs per execution
+
+**Evidence**
+
+- Structured logs show 100% tool executions
+
+---
 
 ### Phase 1 → 2
 
@@ -310,6 +416,24 @@ Each section below answers:
 
 ## 5. Policy Guardrails
 
+### Phase 0 → 1
+
+**Phase 0 symptoms**
+
+- Rules embedded in code
+- Violations discovered after the fact
+
+**Implement**
+
+- Central policy checks
+- Hard block on violation
+
+**Evidence**
+
+- 100% blocked executions logged with rule ID
+
+---
+
 ### Phase 1 → 2
 
 **Implement**
@@ -340,6 +464,24 @@ Each section below answers:
 
 ## 6. Telemetry + Control
 
+### Phase 0 → 1
+
+**Phase 0 symptoms**
+
+- "It failed" without explanation
+- Missing transitions
+
+**Implement**
+
+- Event log for all state transitions
+- Error logging with codes
+
+**Evidence**
+
+- No silent failures in 30-day audit
+
+---
+
 **Progression**
 
 - Phase 1: events exist
@@ -354,6 +496,24 @@ Synthetic coders should treat telemetry gaps as blocking defects, not enhancemen
 
 ## 7. Spend + Capacity Controls
 
+### Phase 0 → 1
+
+**Phase 0 symptoms**
+
+- Unknown cost
+- Unbounded runs
+
+**Implement**
+
+- Cost estimation per run
+- Basic runtime / call caps
+
+**Evidence**
+
+- ≥90% runs have estimated cost recorded
+
+---
+
 **Progression**
 
 - Rough awareness → per-run cost → budgets → tenant showback → predictive optimization
@@ -366,17 +526,52 @@ If you cannot attribute cost to runs, you cannot scale.
 
 ## 8. Traceability (Lineage)
 
+### Phase 0 → 1
+
+**Phase 0 symptoms**
+
+- Outputs disconnected from sources
+- Manual reconstruction
+
+**Implement**
+
+- Store source references per output
+
+**Evidence**
+
+- 100% outputs link to ≥1 source
+
+---
+
 **Progression**
 
 - Source links → transform lineage → explainability → impact analysis
 
 Rule:
 
-If you cannot answer “why did this output exist?”, you are pre-Phase-4.
+If you cannot answer "why did this output exist?", you are pre-Phase-4.
 
 ---
 
 ## 9. Privacy + Prompt Ops
+
+### Phase 0 → 1
+
+**Phase 0 symptoms**
+
+- Raw data passed to prompts
+- PII in logs
+
+**Implement**
+
+- Default redaction
+- Log scanning for sensitive data
+
+**Evidence**
+
+- 0 detected sensitive data in sampled logs
+
+---
 
 **Progression**
 
@@ -387,6 +582,24 @@ Synthetic coders must never embed secrets or raw PII in prompts by default.
 ---
 
 ## 10. Retrieval Quality System
+
+### Phase 0 → 1
+
+**Phase 0 symptoms**
+
+- Empty or random results
+- No ranking logic
+
+**Implement**
+
+- Basic lexical or semantic retrieval
+- Visibility into empty results
+
+**Evidence**
+
+- ≥95% retrieval calls return ≥1 result
+
+---
 
 **Progression**
 
@@ -400,6 +613,24 @@ Retrieval quality is a first-class system, not a model parameter.
 
 ## 11. Session Records
 
+### Phase 0 → 1
+
+**Phase 0 symptoms**
+
+- Stateless execution
+- Lost context
+
+**Implement**
+
+- Session/run identifiers
+- Persisted context per run
+
+**Evidence**
+
+- 100% runs reconstructable from session data
+
+---
+
 **Progression**
 
 - Minimal history → durable sessions → searchable → governed analytics → multi-tenant export
@@ -410,6 +641,24 @@ If sessions cannot be reconstructed, audits and support will fail.
 
 ## 12. Run APIs + Evidence Export
 
+### Phase 0 → 1
+
+**Phase 0 symptoms**
+
+- No status visibility
+- Manual debugging
+
+**Implement**
+
+- Run status endpoint
+- Timeline per run
+
+**Evidence**
+
+- P95 admin query time ≤30s
+
+---
+
 **Progression**
 
 - Status endpoint → timelines → evidence packages → immutable hashes → bulk exports
@@ -417,6 +666,20 @@ If sessions cannot be reconstructed, audits and support will fail.
 Rule:
 
 If auditors need engineers to prepare evidence, you are not Phase-4 ready.
+
+---
+
+## Key Principle for Synthetic Coders
+
+**Phase 1 is not "feature completeness". Phase 1 is operational determinism.**
+
+If a dimension:
+
+- cannot be replayed,
+- cannot be explained,
+- or cannot be audited,
+
+…it is not yet Phase 1, regardless of how advanced it looks.
 
 ---
 
