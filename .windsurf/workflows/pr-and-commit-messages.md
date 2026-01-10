@@ -30,7 +30,7 @@ This workflow ensures code changes are traceable through git history.
 
 ### Scope (required if KB issue exists)
 
-- Linear issue ID: `KB-XXX`
+- If an issue ID exists: include it (project-specific format)
 - If no issue: omit scope or use component name
 
 ### Subject (required)
@@ -113,7 +113,7 @@ One paragraph explaining the change at a high level.
 
 ## Why
 
-Link to Linear issue or explain the motivation.
+Link to the relevant issue/ticket (if any) or explain the motivation.
 
 ## Testing
 
@@ -130,7 +130,7 @@ Any additional context, trade-offs, or follow-up work needed.
 
 ---
 
-Closes https://linear.app/knowledge-base/issue/KB-XXX
+Issue: <link-if-any>
 ```
 
 ### PR Description Rules
@@ -139,11 +139,70 @@ Closes https://linear.app/knowledge-base/issue/KB-XXX
 2. **Group by action** - Created vs Modified vs Deleted
 3. **Include paths** - Full relative paths from repo root
 4. **Explain each file** - What changed or why it exists
-5. **Link to Linear** - Full URL at bottom for auto-close
+5. **Link to issue/ticket (if any)** - Use a full URL if available
 
 ---
 
 ## Quick Reference
+
+---
+
+## Shell Quoting Gotchas (zsh)
+
+When running `git commit -m ...` or `gh pr create --body "..."` in `zsh`, the shell can interpret parts of your message as commands or globs.
+
+### Common pitfalls
+
+1. **Backticks**
+   - Backticks run command substitution in the shell.
+   - Example: `` `apps/admin/src/app/api/jobs/[agent]/start/route.ts` `` will be executed as a command, not treated as text.
+
+2. **Square brackets**
+   - `zsh` treats `[...]` as a glob character class.
+   - Example: `jobs/[agent]/start` is treated as a glob, not literal text.
+
+3. **Unquoted colons and slashes in some contexts**
+   - In error cases you may see confusing `no such file` or `permission denied` messages when the shell tries to interpret parts of the body.
+
+### Safe patterns (use these)
+
+1. **Prefer `--body-file` for PR bodies** (recommended)
+   - Create a file `pr-body.md` with markdown content.
+   - Then run:
+
+   ```bash
+   gh pr create --title "..." --body-file pr-body.md --base main
+   ```
+
+2. **Use a heredoc (no interpolation)**
+
+   ```bash
+   gh pr create --title "..." --body "$(cat <<'EOF'
+   ## Summary
+   ...
+
+   ### Files Modified
+   - `apps/admin/src/app/api/jobs/[agent]/start/route.ts` - ...
+
+   Closes https://linear.app/knowledge-base/issue/KB-XXX
+   EOF
+   )" --base main
+   ```
+
+   Notes:
+   - The **single quotes** in `<<'EOF'` prevent `zsh` expansion.
+   - This avoids backtick and glob interpretation.
+
+3. **If you must inline text, single-quote the whole message**
+   - Single quotes prevent globbing and command substitution.
+   - If you need a literal single quote inside, close/open the string.
+
+   ```bash
+   git commit -m 'fix: message' -m '## Files
+   - `path/with/[brackets].ts` - ...'
+   ```
+
+---
 
 ### Before Committing
 
