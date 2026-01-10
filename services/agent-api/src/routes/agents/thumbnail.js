@@ -9,6 +9,7 @@ import { transitionByAgent } from '../../lib/queue-update.js';
 import { loadStatusCodes, getStatusCode } from '../../lib/status-codes.js';
 import { getUtilityVersion } from '../../lib/utility-versions.js';
 import { getSupabaseAdminClient } from '../../clients/supabase.js';
+import { completePipelineRun, ensurePipelineRun } from '../../lib/pipeline-tracking.js';
 
 const router = express.Router();
 
@@ -60,7 +61,17 @@ function buildPayload(item, result) {
 
 /** @param {any} item */
 async function processItem(item) {
-  const result = await runThumbnailer(item);
+  const pipelineRunId = await ensurePipelineRun(item);
+  const itemWithRun = { ...item, pipelineRunId };
+
+  let result;
+  try {
+    result = await runThumbnailer(itemWithRun);
+    await completePipelineRun(pipelineRunId, 'completed');
+  } catch (error) {
+    await completePipelineRun(pipelineRunId, 'failed');
+    throw error;
+  }
 
   await transitionByAgent(item.id, getStatusCode('ENRICHED'), 'thumbnailer', {
     changes: { payload: buildPayload(item, result) },

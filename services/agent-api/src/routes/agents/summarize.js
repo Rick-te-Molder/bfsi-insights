@@ -8,6 +8,7 @@ import { runSummarizer } from '../../agents/summarizer.js';
 import { transitionByAgent } from '../../lib/queue-update.js';
 import { loadStatusCodes, getStatusCode } from '../../lib/status-codes.js';
 import { getSupabaseAdminClient } from '../../clients/supabase.js';
+import { completePipelineRun, ensurePipelineRun } from '../../lib/pipeline-tracking.js';
 
 const router = express.Router();
 
@@ -18,6 +19,53 @@ function getSupabase() {
   if (supabase) return supabase;
   supabase = getSupabaseAdminClient();
   return supabase;
+}
+
+/** @param {string} itemId */
+async function fetchLatestPayload(itemId) {
+  const { data } = await getSupabase()
+    .from('ingestion_queue')
+    .select('payload')
+    .eq('id', itemId)
+    .single();
+  return data?.payload;
+}
+
+/** @param {any} basePayload @param {any} result */
+function buildSummaryPayload(basePayload, result) {
+  return {
+    ...basePayload,
+    title: result.title,
+    summary: result.summary,
+    key_takeaways: result.key_takeaways,
+    summarized_at: new Date().toISOString(),
+  };
+}
+
+/** @param {any} item */
+async function processItem(item) {
+  const pipelineRunId = await ensurePipelineRun(item);
+  const itemWithRun = { ...item, pipelineRunId };
+
+  let result;
+  try {
+    result = await runSummarizer(itemWithRun);
+    await completePipelineRun(pipelineRunId, 'completed');
+  } catch (err) {
+    await completePipelineRun(pipelineRunId, 'failed');
+    throw err;
+  }
+
+  const latestPayload = await fetchLatestPayload(item.id);
+  const basePayload = latestPayload || item.payload;
+
+  await transitionByAgent(item.id, getStatusCode('TO_TAG'), 'summarizer', {
+    changes: {
+      payload: buildSummaryPayload(basePayload, result),
+    },
+  });
+
+  return { id: item.id, status_code: getStatusCode('TO_TAG'), result };
 }
 
 router.post('/run/summarize', async (/** @type {any} */ req, /** @type {any} */ res) => {
@@ -39,27 +87,8 @@ router.post('/run/summarize', async (/** @type {any} */ req, /** @type {any} */ 
 
     const results = [];
     for (const item of items) {
-      const result = await runSummarizer(item);
-
-      const { data: updatedItem } = await getSupabase()
-        .from('ingestion_queue')
-        .select('payload')
-        .eq('id', item.id)
-        .single();
-
-      await transitionByAgent(item.id, getStatusCode('TO_TAG'), 'summarizer', {
-        changes: {
-          payload: {
-            ...(updatedItem?.payload || item.payload),
-            title: result.title,
-            summary: result.summary,
-            key_takeaways: result.key_takeaways,
-            summarized_at: new Date().toISOString(),
-          },
-        },
-      });
-
-      results.push({ id: item.id, status_code: getStatusCode('TO_TAG'), result });
+      const result = await processItem(item);
+      results.push(result);
     }
 
     res.json({ processed: results.length, results });

@@ -33,13 +33,59 @@ function getRunningJob(supabase, agent) {
     .single();
 }
 
-// POST /api/agents/jobs/:agent/run
-router.post('/jobs/:agent/run', async (req, res) => {
+/** @param {import('@supabase/supabase-js').SupabaseClient} supabase @param {string} agent */
+function getRecentJobs(supabase, agent) {
+  return supabase
+    .from('agent_jobs')
+    .select('*')
+    .eq('agent_name', agent)
+    .order('created_at', { ascending: false })
+    .limit(20);
+}
+
+router.post('/:agent/start', async (/** @type {any} */ req, /** @type {any} */ res) => {
   try {
-    const { agent } = req.params;
+    const agent = /** @type {keyof typeof AGENTS} */ (req.params.agent);
     const { limit = 10 } = req.body;
 
-    if (!AGENTS[agent]) {
+    if (!Object.hasOwn(AGENTS, agent)) {
+      return respondUnknownAgent(res, agent);
+    }
+
+    const result = await processAgentBatch(agent, AGENTS[agent], { limit });
+    res.json(result);
+  } catch (err) {
+    console.error('Job start error:', err);
+    res.status(500).json({ error: getErrMessage(err) });
+  }
+});
+
+router.get('/:agent/jobs', async (/** @type {any} */ req, /** @type {any} */ res) => {
+  try {
+    const agent = /** @type {keyof typeof AGENTS} */ (req.params.agent);
+    const supabase = getSupabaseAdminClient();
+
+    if (!Object.hasOwn(AGENTS, agent)) {
+      return respondUnknownAgent(res, agent);
+    }
+
+    const { data: jobs, error } = await getRecentJobs(supabase, agent);
+    if (error) throw error;
+
+    res.json({ jobs: jobs || [] });
+  } catch (err) {
+    console.error('Get jobs error:', err);
+    res.status(500).json({ error: getErrMessage(err) });
+  }
+});
+
+// POST /api/agents/jobs/:agent/run
+router.post('/jobs/:agent/run', async (/** @type {any} */ req, /** @type {any} */ res) => {
+  try {
+    const agent = /** @type {keyof typeof AGENTS} */ (req.params.agent);
+    const { limit = 10 } = req.body;
+
+    if (!Object.hasOwn(AGENTS, agent)) {
       return respondUnknownAgent(res, agent);
     }
 
@@ -52,9 +98,9 @@ router.post('/jobs/:agent/run', async (req, res) => {
 });
 
 // GET /api/agents/jobs/:agent/status
-router.get('/jobs/:agent/status', async (req, res) => {
+router.get('/jobs/:agent/status', async (/** @type {any} */ req, /** @type {any} */ res) => {
   try {
-    const { agent } = req.params;
+    const agent = /** @type {keyof typeof AGENTS} */ (req.params.agent);
     const supabase = getSupabaseAdminClient();
     const { data: job } = await getRunningJob(supabase, agent);
 
