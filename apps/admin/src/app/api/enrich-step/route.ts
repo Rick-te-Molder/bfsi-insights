@@ -87,14 +87,15 @@ async function cancelRunningPipeline(
 async function createPipelineRun(
   supabase: ReturnType<typeof createServiceRoleClient>,
   id: string,
-  step: StepName,
+  _step: StepName,
 ) {
   // Create new pipeline run - ASMM Phase 1: No silent fails
+  // trigger must be one of: 'discovery', 'manual', 're-enrich', 'retry'
   const result = await supabase
     .from('pipeline_run')
     .insert({
       queue_id: id,
-      trigger: `re-${step}`,
+      trigger: 're-enrich',
       status: 'running',
       created_by: 'system',
     })
