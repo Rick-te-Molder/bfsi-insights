@@ -1,4 +1,4 @@
-import { loadStatusCodes } from './status-codes.js';
+import { initStateMachine, validateTransition } from './state-machine.js';
 import { TIMEOUT_MS, withTimeout } from './agent-config.js';
 import {
   ensurePipelineRun,
@@ -11,7 +11,6 @@ import {
 } from './pipeline-tracking.js';
 import { WIP_LIMITS, getCurrentWIP } from './wip-limits.js';
 import { transitionByAgent } from './queue-update.js';
-import { validateTransition } from './state-machine.js';
 import { getSupabase } from './supabase.js';
 
 function supabase() {
@@ -220,7 +219,7 @@ async function processItems(items, agent, jobId, config) {
  */
 export async function processAgentBatch(agent, config, options = {}) {
   const limit = typeof options.limit === 'number' ? options.limit : 10;
-  await loadStatusCodes();
+  await initStateMachine();
 
   const stale = await cleanupStaleJob(agent, config);
   if (stale) return { skipped: 'job-already-running' };
