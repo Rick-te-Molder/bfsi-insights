@@ -60,20 +60,28 @@ function getReturnStatus(
 }
 
 async function fetchQueueItem(supabase: ReturnType<typeof createServiceRoleClient>, id: string) {
-  // Fetch current item
-  return supabase.from('ingestion_queue').select('payload, status_code').eq('id', id).single();
+  // Fetch current item - ASMM Phase 1: No silent fails
+  const result = await supabase.from('ingestion_queue').select('payload, status_code').eq('id', id).single();
+  if (result.error && result.error.code !== 'PGRST116') {
+    // PGRST116 = "not found" which is handled by caller
+    throw new Error(`Failed to fetch queue item ${id}: ${result.error.message}`);
+  }
+  return result;
 }
 
 async function cancelRunningPipeline(
   supabase: ReturnType<typeof createServiceRoleClient>,
   id: string,
 ) {
-  // Cancel any running pipeline
-  await supabase
+  // Cancel any running pipeline - ASMM Phase 1: No silent fails
+  const { error } = await supabase
     .from('pipeline_run')
     .update({ status: 'cancelled', completed_at: new Date().toISOString() })
     .eq('queue_id', id)
     .eq('status', 'running');
+  if (error) {
+    throw new Error(`Failed to cancel running pipeline for ${id}: ${error.message}`);
+  }
 }
 
 async function createPipelineRun(
@@ -81,8 +89,8 @@ async function createPipelineRun(
   id: string,
   step: StepName,
 ) {
-  // Create new pipeline run
-  return supabase
+  // Create new pipeline run - ASMM Phase 1: No silent fails
+  const result = await supabase
     .from('pipeline_run')
     .insert({
       queue_id: id,
@@ -92,6 +100,10 @@ async function createPipelineRun(
     })
     .select('id')
     .single();
+  if (result.error) {
+    throw new Error(`Failed to create pipeline run for ${id}: ${result.error.message}`);
+  }
+  return result;
 }
 
 function buildSingleStepPayload(
@@ -116,20 +128,25 @@ async function updateQueueForSingleStep(
   supabase: ReturnType<typeof createServiceRoleClient>,
   id: string,
   update: {
-    statusCode: number;
+    statusCode: number | null;
     runId: string | null;
     payload: Record<string, unknown>;
   },
 ) {
-  // Update status and set return_status in payload
-  await supabase
-    .from('ingestion_queue')
-    .update({
-      status_code: update.statusCode,
-      current_run_id: update.runId,
-      payload: update.payload,
-    })
-    .eq('id', id);
+  // For independent step runs (statusCode=null), don't update status
+  // The state machine trigger blocks invalid transitions like 210→230
+  const updateData: Record<string, unknown> = {
+    current_run_id: update.runId,
+    payload: update.payload,
+  };
+  if (update.statusCode !== null) {
+    updateData.status_code = update.statusCode;
+  }
+  // ASMM Phase 1: No silent fails - always check for errors
+  const { error } = await supabase.from('ingestion_queue').update(updateData).eq('id', id);
+  if (error) {
+    throw new Error(`Failed to update queue item ${id}: ${error.message}`);
+  }
 }
 
 async function callAgentApi(endpoint: string, id: string, step: StepName) {
@@ -160,12 +177,14 @@ async function computeReturnStatus(
 async function runEnrichStep(step: StepName, id: string) {
   const supabase = createServiceRoleClient();
   const config = getStepConfig(step);
-  const statusCode = await getStatusCode(supabase, config.statusName);
 
   const { data: currentItem } = await fetchQueueItem(supabase, id);
   if (!currentItem) return NextResponse.json({ error: 'Item not found' }, { status: 404 });
 
   const returnStatus = await computeReturnStatus(supabase, currentItem.status_code);
+  // For independent step runs (returnStatus=null), don't update status_code
+  // The state machine trigger blocks invalid transitions like 210→230
+  const statusCode = returnStatus === null ? null : await getStatusCode(supabase, config.statusName);
 
   await cancelRunningPipeline(supabase, id);
   const { data: newRun } = await createPipelineRun(supabase, id, step);
