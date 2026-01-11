@@ -112,18 +112,20 @@ async function updateQueueForSingleStep(
 }
 
 async function callAgentApi(endpoint: string, id: string) {
-  // Call agent API
   const res = await fetch(`${AGENT_API_URL}${endpoint}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': AGENT_API_KEY,
-    },
+    headers: { 'Content-Type': 'application/json', 'X-API-Key': AGENT_API_KEY },
     body: JSON.stringify({ id }),
   });
 
-  const data = await res.json();
-  return { data, status: res.status };
+  const text = await res.text();
+  try {
+    return { data: JSON.parse(text), status: res.status };
+  } catch {
+    // Agent API returned non-JSON (e.g., HTML error page when service is down)
+    const preview = text.substring(0, 100).replaceAll(/\s+/g, ' ');
+    return { data: { error: `Agent API unavailable: ${preview}...` }, status: 503 };
+  }
 }
 
 async function runEnrichStep(step: StepName, id: string) {
