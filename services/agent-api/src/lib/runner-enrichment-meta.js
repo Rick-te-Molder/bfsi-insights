@@ -4,7 +4,7 @@ function getEnrichmentStepKey(agentName) {
   const agentToStep = {
     summarizer: 'summarize',
     tagger: 'tag',
-    'thumbnail-generator': 'thumbnail',
+    thumbnailer: 'thumbnail',
   };
 
   return agentToStep[agentName];
