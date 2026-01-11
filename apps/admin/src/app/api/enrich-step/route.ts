@@ -27,10 +27,11 @@ async function parseStepRequest(request: NextRequest): Promise<StepRequest> {
 
 function getStepConfig(step: StepName): StepConfig {
   // Map step to status name and agent API endpoint
+  // All steps use the single orchestrated endpoint
   const stepConfig: Record<StepName, StepConfig> = {
-    summarize: { statusName: 'to_summarize', endpoint: '/api/agents/summarize/run/summarize' },
-    tag: { statusName: 'to_tag', endpoint: '/api/agents/tag/run/tag' },
-    thumbnail: { statusName: 'to_thumbnail', endpoint: '/api/agents/thumbnail/run/thumbnail' },
+    summarize: { statusName: 'to_summarize', endpoint: '/api/agents/enrich-single-step' },
+    tag: { statusName: 'to_tag', endpoint: '/api/agents/enrich-single-step' },
+    thumbnail: { statusName: 'to_thumbnail', endpoint: '/api/agents/enrich-single-step' },
   };
 
   return stepConfig[step];
@@ -111,11 +112,11 @@ async function updateQueueForSingleStep(
     .eq('id', id);
 }
 
-async function callAgentApi(endpoint: string, id: string) {
+async function callAgentApi(endpoint: string, id: string, step: StepName) {
   const res = await fetch(`${AGENT_API_URL}${endpoint}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-API-Key': AGENT_API_KEY },
-    body: JSON.stringify({ id }),
+    body: JSON.stringify({ id, step }),
   });
 
   const text = await res.text();
@@ -151,7 +152,7 @@ async function runEnrichStep(step: StepName, id: string) {
     payload: buildSingleStepPayload(currentItem.payload, returnStatus, step),
   });
 
-  const result = await callAgentApi(config.endpoint, id);
+  const result = await callAgentApi(config.endpoint, id, step);
   return NextResponse.json(result.data, { status: result.status });
 }
 
