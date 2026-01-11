@@ -87,7 +87,7 @@ describe('lib/runner-enrichment-meta', () => {
 
     const res = await writeEnrichmentMetaToQueue({
       supabase: { sb: true },
-      agentName: 'thumbnail-generator',
+      agentName: 'thumbnailer',
       queueId: 'q1',
       promptConfig: { id: 'p1', version: 'v1', model_id: 'm1' },
       llmModel: undefined,
