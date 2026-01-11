@@ -107,6 +107,27 @@ export function StatusIndicator({ statusCode }: Readonly<{ statusCode: number }>
   );
 }
 
+export function ErrorDisplay({
+  lastErrorMessage,
+  lastFailedStep,
+  failureCount,
+}: Readonly<{
+  lastErrorMessage?: string;
+  lastFailedStep?: string;
+  failureCount?: number;
+}>) {
+  if (!lastErrorMessage) return null;
+  return (
+    <div className="mb-3 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20">
+      <div className="text-xs font-medium text-red-400 mb-1">
+        {lastFailedStep ? `Failed at: ${lastFailedStep}` : 'Error'}
+        {failureCount && failureCount > 1 ? ` (${failureCount} attempts)` : ''}
+      </div>
+      <div className="text-xs text-red-300/80 break-words">{lastErrorMessage}</div>
+    </div>
+  );
+}
+
 function StepLabel({
   label,
   hasRun,

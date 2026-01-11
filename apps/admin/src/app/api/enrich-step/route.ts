@@ -170,12 +170,17 @@ export async function POST(request: NextRequest) {
     const { step, id } = await parseStepRequest(request);
     return await runEnrichStep(step, id);
   } catch (error) {
-    console.error('Enrich step error:', error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('Enrich step error:', message, error);
 
     if (error instanceof Error && error.message === 'step and id are required') {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
-    return NextResponse.json({ error: 'Failed to run enrichment step' }, { status: 500 });
+    // Surface actual error message instead of generic message
+    return NextResponse.json(
+      { error: `Failed to run enrichment step: ${message}` },
+      { status: 500 },
+    );
   }
 }

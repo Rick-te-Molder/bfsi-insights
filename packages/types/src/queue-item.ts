@@ -10,6 +10,13 @@ export interface QueueItem {
   payload: QueueItemPayload;
   discovered_at: string;
   entry_type?: 'manual' | 'discovered';
+  // Error tracking fields
+  failure_count?: number;
+  last_failed_step?: string;
+  last_error_message?: string;
+  last_error_at?: string;
+  error_type?: string;
+  error_retryable?: boolean;
 }
 
 export interface QueueItemPayload {
