@@ -7,6 +7,7 @@ import {
   StepVersionInfo,
   StatusMessage,
   StatusIndicator,
+  ErrorDisplay,
   StepRow,
   ReEnrichButton,
 } from './components';
@@ -125,19 +126,49 @@ function checkHasAnyOutdated(
   });
 }
 
+function usePanelState(
+  item: QueueItem,
+  currentPrompts: CurrentPrompt[],
+  utilityVersions: UtilityVersion[],
+) {
+  const enrichmentMeta = (item.payload?.enrichment_meta || {}) as Record<string, EnrichmentMeta>;
+  const checks = useVersionChecks(currentPrompts, utilityVersions, enrichmentMeta);
+  const hasAnyOutdated = checkHasAnyOutdated(item, enrichmentMeta, checks.isUpToDate);
+  return { enrichmentMeta, checks, hasAnyOutdated };
+}
+
+function PanelStatusSection({ item }: Readonly<{ item: QueueItem }>) {
+  return (
+    <>
+      <StatusIndicator statusCode={item.status_code} />
+      <ErrorDisplay
+        lastErrorMessage={item.last_error_message}
+        lastFailedStep={item.last_failed_step}
+        failureCount={item.failure_count}
+      />
+    </>
+  );
+}
+
+interface PanelContentProps extends EnrichmentPanelProps {
+  actions: ReturnType<typeof useEnrichmentActions>;
+}
+
 function PanelContent({
   item,
   currentPrompts,
   utilityVersions,
   actions,
-}: Readonly<EnrichmentPanelProps & { actions: ReturnType<typeof useEnrichmentActions> }>) {
-  const enrichmentMeta = (item.payload?.enrichment_meta || {}) as Record<string, EnrichmentMeta>;
-  const checks = useVersionChecks(currentPrompts, utilityVersions || [], enrichmentMeta);
-  const hasAnyOutdated = checkHasAnyOutdated(item, enrichmentMeta, checks.isUpToDate);
+}: Readonly<PanelContentProps>) {
+  const { enrichmentMeta, checks, hasAnyOutdated } = usePanelState(
+    item,
+    currentPrompts,
+    utilityVersions || [],
+  );
   return (
     <>
       <StatusMessage message={actions.message} />
-      <StatusIndicator statusCode={item.status_code} />
+      <PanelStatusSection item={item} />
       <StepsList
         item={item}
         loading={actions.loading}
