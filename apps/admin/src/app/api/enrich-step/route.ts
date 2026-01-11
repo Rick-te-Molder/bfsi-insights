@@ -45,6 +45,20 @@ async function loadStatusCodes(supabase: ReturnType<typeof createServiceRoleClie
   return { publishedCode, pendingReviewCode, enrichedCode };
 }
 
+function getReturnStatus(
+  currentStatus: number,
+  publishedCode: number,
+  pendingReviewCode: number,
+  enrichedCode: number,
+): number | null {
+  // Items in enrichment phase (200-239) should continue normal flow
+  const isInEnrichmentPhase = currentStatus >= 200 && currentStatus < 240;
+  if (isInEnrichmentPhase) return null;
+
+  // Published items return to pending_review; review items return to enriched
+  return currentStatus === publishedCode ? pendingReviewCode : enrichedCode;
+}
+
 async function fetchQueueItem(supabase: ReturnType<typeof createServiceRoleClient>, id: string) {
   // Fetch current item
   return supabase.from('ingestion_queue').select('payload, status_code').eq('id', id).single();
@@ -82,14 +96,18 @@ async function createPipelineRun(
 
 function buildSingleStepPayload(
   payload: Record<string, unknown>,
-  returnStatus: number,
+  returnStatus: number | null,
   step: StepName,
 ) {
-  return {
+  const result: Record<string, unknown> = {
     ...payload,
-    _return_status: returnStatus,
     _single_step: step,
   };
+  // Only set _return_status if provided (for items past enrichment phase)
+  if (returnStatus !== null) {
+    result._return_status = returnStatus;
+  }
+  return result;
 }
 
 async function updateQueueForSingleStep(
@@ -129,20 +147,23 @@ async function callAgentApi(endpoint: string, id: string, step: StepName) {
   }
 }
 
+async function computeReturnStatus(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  currentStatus: number,
+) {
+  const { publishedCode, pendingReviewCode, enrichedCode } = await loadStatusCodes(supabase);
+  return getReturnStatus(currentStatus, publishedCode, pendingReviewCode, enrichedCode);
+}
+
 async function runEnrichStep(step: StepName, id: string) {
   const supabase = createServiceRoleClient();
   const config = getStepConfig(step);
-
-  // KB-202: Load status codes from status_lookup
   const statusCode = await getStatusCode(supabase, config.statusName);
-  const { publishedCode, pendingReviewCode, enrichedCode } = await loadStatusCodes(supabase);
 
   const { data: currentItem } = await fetchQueueItem(supabase, id);
   if (!currentItem) return NextResponse.json({ error: 'Item not found' }, { status: 404 });
 
-  // Determine return status
-  const isPublished = currentItem.status_code === publishedCode;
-  const returnStatus = isPublished ? pendingReviewCode : enrichedCode;
+  const returnStatus = await computeReturnStatus(supabase, currentItem.status_code);
 
   await cancelRunningPipeline(supabase, id);
   const { data: newRun } = await createPipelineRun(supabase, id, step);
