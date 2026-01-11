@@ -9,7 +9,7 @@ import { runSummarizer } from '../../agents/summarizer.js';
 import { runTagger } from '../../agents/tagger.js';
 import { runThumbnailer } from '../../agents/thumbnailer.js';
 import { transitionByAgent } from '../../lib/queue-update.js';
-import { loadStatusCodes, getStatusCode } from '../../lib/status-codes.js';
+import { loadStatusCodes } from '../../lib/status-codes.js';
 import { getSupabaseAdminClient } from '../../clients/supabase.js';
 import { completePipelineRun, ensurePipelineRun } from '../../lib/pipeline-tracking.js';
 
@@ -131,22 +131,24 @@ router.post('/enrich-single-step', async (/** @type {any} */ req, /** @type {any
     delete mergedPayload._return_status;
     delete mergedPayload._single_step;
 
-    // Determine target status: _return_status (re-enrichment) or normal next
+    // Determine target status from _return_status (for re-enrichment from review/published)
     const returnStatus = item.payload?._return_status;
-    const isManual = !!returnStatus;
 
-    // Default next status for each step
-    const defaultNext = {
-      summarize: getStatusCode('TO_TAG'),
-      tag: getStatusCode('TO_THUMBNAIL'),
-      thumbnail: getStatusCode('PENDING_REVIEW'),
-    };
-    const targetStatus = returnStatus || defaultNext[step];
+    if (returnStatus) {
+      // Re-enrichment: transition to return status (manual)
+      await transitionByAgent(id, returnStatus, `orchestrator:${step}`, {
+        changes: { payload: mergedPayload },
+        isManual: true,
+      });
+    } else {
+      // Independent step run: just update payload, keep current status
+      await getSupabase()
+        .from('ingestion_queue')
+        .update({ payload: mergedPayload })
+        .eq('id', id);
+    }
 
-    await transitionByAgent(id, targetStatus, `orchestrator:${step}`, {
-      changes: { payload: mergedPayload },
-      isManual,
-    });
+    const targetStatus = returnStatus || item.status_code;
 
     res.json({
       success: true,
