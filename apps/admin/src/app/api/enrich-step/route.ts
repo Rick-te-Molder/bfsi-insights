@@ -103,8 +103,10 @@ function buildSingleStepPayload(
     ...payload,
     _single_step: step,
   };
-  // Only set _return_status if provided (for items past enrichment phase)
-  if (returnStatus !== null) {
+  // Set or clear _return_status based on whether item is past enrichment phase
+  if (returnStatus === null) {
+    delete result._return_status;
+  } else {
     result._return_status = returnStatus;
   }
   return result;
