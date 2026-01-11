@@ -91,6 +91,18 @@ Users requested ability to approve multiple items at once (KB-301)
 PRs are documentation. They explain WHAT changed, WHERE, and WHY.
 
 ```markdown
+## Problem
+
+1-2 sentences describing the user-visible issue or risk.
+
+## Root Cause
+
+Short technical explanation of _why_ it happened.
+
+## Solution
+
+What you changed to fix it (high level). Include any notable behavior changes.
+
 ## Summary
 
 One paragraph explaining the change at a high level.
@@ -124,6 +136,16 @@ How to verify this works:
 
 Or: `npm run test -- --run path/to/test`
 
+## Evidence (recommended)
+
+Include 1-3 bullets of concrete proof:
+
+- Before/after screenshots
+- Log excerpt
+- Links to dashboard traces
+- `curl` output
+- Test output snippet
+
 ## Notes (optional)
 
 Any additional context, trade-offs, or follow-up work needed.
@@ -139,7 +161,9 @@ Issue: <link-if-any>
 2. **Group by action** - Created vs Modified vs Deleted
 3. **Include paths** - Full relative paths from repo root
 4. **Explain each file** - What changed or why it exists
-5. **Link to issue/ticket (if any)** - Use a full URL if available
+5. **Write down the root cause** - So future readers don't have to rediscover it
+6. **Include evidence** - Prefer concrete proof over “works for me”
+7. **Link to issue/ticket (if any)** - Use a full URL if available
 
 ---
 

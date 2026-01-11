@@ -28,9 +28,9 @@ async function parseStepRequest(request: NextRequest): Promise<StepRequest> {
 function getStepConfig(step: StepName): StepConfig {
   // Map step to status name and agent API endpoint
   const stepConfig: Record<StepName, StepConfig> = {
-    summarize: { statusName: 'to_summarize', endpoint: '/api/agents/run/summarize' },
-    tag: { statusName: 'to_tag', endpoint: '/api/agents/run/tag' },
-    thumbnail: { statusName: 'to_thumbnail', endpoint: '/api/agents/run/thumbnail' },
+    summarize: { statusName: 'to_summarize', endpoint: '/api/agents/summarize/run/summarize' },
+    tag: { statusName: 'to_tag', endpoint: '/api/agents/tag/run/tag' },
+    thumbnail: { statusName: 'to_thumbnail', endpoint: '/api/agents/thumbnail/run/thumbnail' },
   };
 
   return stepConfig[step];
