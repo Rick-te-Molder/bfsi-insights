@@ -132,7 +132,9 @@ router.post('/enrich-single-step', async (/** @type {any} */ req, /** @type {any
     delete mergedPayload._single_step;
 
     // Determine target status from _return_status (for re-enrichment from review/published)
-    const returnStatus = item.payload?._return_status;
+    // Belt-and-suspenders: ignore _return_status if item is still in enrichment phase (200-239)
+    const isInEnrichmentPhase = item.status_code >= 200 && item.status_code < 240;
+    const returnStatus = isInEnrichmentPhase ? null : item.payload?._return_status;
 
     if (returnStatus) {
       // Re-enrichment: transition to return status (manual)
