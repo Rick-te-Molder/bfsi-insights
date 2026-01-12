@@ -77,13 +77,16 @@ try {
   if (filesExceedingLimit.length > 0) {
     hasErrors = true;
     console.error('\n🔴 FILES EXCEEDING SIZE LIMIT:\n');
+    console.error('   ⚠️  IMPORTANT: The GOAL is max 200-250 lines, not just <300.');
+    console.error('   ⚠️  Refactor to max 200-250 lines, not to 299 lines.\n');
     const sortedFilesExceedingLimit = [...filesExceedingLimit].sort(
       (a, b) => b.lineCount - a.lineCount,
     );
     for (const result of sortedFilesExceedingLimit) {
+      const isTest = isTestFile(result.filePath);
+      const goal = isTest ? 'goal: max 400-450 lines' : 'goal: max 200-250 lines';
       console.error(`  ❌ ${result.filePath}`);
-      console.error(`     ${result.lineCount} lines (limit: ${result.limits.file})`);
-      console.error(`     Exceeds by: ${result.lineCount - result.limits.file} lines\n`);
+      console.error(`     ${result.lineCount} lines → refactor to ${goal}\n`);
     }
   }
 
@@ -91,6 +94,8 @@ try {
   if (filesWithLargeParamUnits.length > 0) {
     hasErrors = true;
     console.error('\n🔴 FILES WITH TOO MANY PARAMETERS (>= 6):\n');
+    console.error('   ⚠️  IMPORTANT: The GOAL is ≤3 params (max 4), not just <6.');
+    console.error('   ⚠️  Use an options object or extract logic.\n');
     for (const result of filesWithLargeParamUnits) {
       console.error(`  ❌ ${result.filePath}`);
       const sortedLargeParamUnits = [...result.units.largeParams].sort(
@@ -101,7 +106,7 @@ try {
           unit.destructuredKeysCount > PARAM_LIMITS.maxDestructuredKeys
             ? `${unit.effectiveParamCount} keys`
             : `${unit.effectiveParamCount} params`;
-        console.error(`     - ${unit.name}(): ${label} (lines ${unit.startLine}-${unit.endLine})`);
+        console.error(`     - ${unit.name}(): ${label} → refactor to ≤3 params`);
       }
       console.error('');
     }
@@ -110,16 +115,16 @@ try {
   // Report files with large units
   if (filesWithLargeUnits.length > 0) {
     hasErrors = true;
-    console.error('\n🔴 FILES WITH LARGE UNITS:\n');
+    console.error('\n🔴 FILES WITH LARGE UNITS (exceeds 30-line limit):\n');
+    console.error('   ⚠️  IMPORTANT: The GOAL is max 15-20 lines per function, not just <30.');
+    console.error('   ⚠️  Refactor to max 15-20 lines, not to 29 lines.\n');
     for (const result of filesWithLargeUnits) {
       const isTest = isTestFile(result.filePath);
-      const limit = isTest ? 'test files: >50 lines' : 'source files: >30 lines';
-      console.error(`  ❌ ${result.filePath} (${limit})`);
+      const goal = isTest ? 'goal: max 25-30 lines' : 'goal: max 15-20 lines';
+      console.error(`  ❌ ${result.filePath}`);
       const sortedLargeUnits = [...result.units.large].sort((a, b) => b.length - a.length);
       for (const unit of sortedLargeUnits) {
-        console.error(
-          `     - ${unit.name}(): ${unit.length} lines (lines ${unit.startLine}-${unit.endLine})`,
-        );
+        console.error(`     - ${unit.name}(): ${unit.length} lines → refactor to ${goal}`);
       }
       console.error('');
     }
@@ -190,17 +195,22 @@ try {
     console.error(`      Files exceeding size limit: ${filesExceedingLimit.length}`);
     console.error(`      Files with large units: ${filesWithLargeUnits.length}`);
     console.error(`      Files with too many parameters: ${filesWithLargeParamUnits.length}`);
-    console.error('\n💡 Quality Gate Requirements (enforced for ALL touched files):');
-    console.error('   Source files: <300 lines, functions <30 lines');
-    console.error('   Test files: <500 lines, functions <50 lines (relaxed for fixtures/tables)');
-    console.error('   Functions SHOULD be <15 lines (excellent) for all files');
+    console.error('\n💡 Quality Gate - GOALS vs LIMITS:');
+    console.error('   ──────────────────────────────────────────────────');
+    console.error('   🎯 GOAL (what to aim for):');
+    console.error('      - Functions: 15-20 lines (source), 25-30 lines (tests)');
+    console.error('      - Files: 200-250 lines');
+    console.error('   🚨 LIMIT (blocks commit if exceeded):');
+    console.error('      - Functions: 30 lines (source), 50 lines (tests)');
+    console.error('      - Files: 300 lines (source), 500 lines (tests)');
+    console.error('   ──────────────────────────────────────────────────');
     console.error('   Parameters: <=3 optimal, 4-5 warn, >=6 block');
-    console.error('   Options/context objects: >7 keys treated like too many parameters');
     console.error('\n🧹 Boy Scout Rule:');
-    console.error('   - If you touch a file, you MUST clean it');
-    console.error('   - No exceptions - even for files with known violations');
-    console.error('   - Leave the code cleaner than you found it');
-    console.error('\n🔧 To fix: Extract large functions into smaller, focused units\n');
+    console.error(
+      '   - If you touch a file, you MUST clean it to the GOAL, not just under the LIMIT',
+    );
+    console.error('   - Refactoring to 29 lines when limit is 30 is NOT acceptable');
+    console.error('\n🔧 To fix: Extract into smaller functions until you reach 15-20 lines\n');
   }
 
   // Exit with error if there are violations

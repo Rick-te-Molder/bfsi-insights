@@ -7,7 +7,7 @@ import { runRelevanceFilter } from './screener.js';
 import { fetchContent } from '../lib/content-fetcher.js';
 import { transitionByAgent } from '../lib/queue-update.js';
 import { loadStatusCodes, getStatusCode } from '../lib/status-codes.js';
-import { stepSummarize, stepTag, stepThumbnail } from './enrichment-steps.js';
+import { runSummarizeStep, runTagStep, runThumbnailStep } from './enrichment-steps.js';
 import { getSupabaseAdminClient } from '../clients/supabase.js';
 import { ensurePipelineRun, completePipelineRun } from '../lib/pipeline-tracking.js';
 
@@ -105,46 +105,99 @@ function handleRetry(queueItem, currentAttempts, error) {
   return { success: false, error: error.message, permanent: false };
 }
 
-/** @param {any} queueItem @param {any} payload @param {{ includeThumbnail?: boolean; pipelineRunId?: string | null }} options */
+async function handleThumbnailResult(queueId, thumbResult) {
+  if (thumbResult.fatal) {
+    await transitionByAgent(queueId, getStatusCode('REJECTED'), 'orchestrator', {
+      changes: { payload: thumbResult.payload, rejection_reason: thumbResult.error },
+    });
+    throw new Error(thumbResult.error);
+  }
+  return thumbResult.payload;
+}
+
+async function runEnrichmentAgents(queueId, payload, pipelineRunId, includeThumbnail) {
+  const summarized = await runSummarizeStep(queueId, payload, pipelineRunId);
+  const tagged = await runTagStep(queueId, summarized, pipelineRunId);
+  if (!includeThumbnail) return tagged;
+  const thumbResult = await runThumbnailStep(queueId, tagged, pipelineRunId);
+  return handleThumbnailResult(queueId, thumbResult);
+}
+
+/** @param {any} queueItem @param {any} payload @param {{ includeThumbnail?: boolean; pipelineRunId?: string | null; returnStatus?: number | null; isManual?: boolean }} options */
 async function runEnrichmentSteps(queueItem, payload, options) {
-  const { includeThumbnail = true, pipelineRunId = null } = options;
-  const summarized = await stepSummarize(queueItem.id, payload, pipelineRunId);
-  const tagged = await stepTag(queueItem.id, summarized, pipelineRunId);
-  const finalPayload = includeThumbnail
-    ? await stepThumbnail(queueItem.id, tagged, pipelineRunId)
-    : tagged;
-  await transitionByAgent(queueItem.id, getStatusCode('PENDING_REVIEW'), 'orchestrator', {
+  const {
+    includeThumbnail = true,
+    pipelineRunId = null,
+    returnStatus = null,
+    isManual = false,
+  } = options;
+  const finalPayload = await runEnrichmentAgents(
+    queueItem.id,
+    payload,
+    pipelineRunId,
+    includeThumbnail,
+  );
+  const targetStatus = returnStatus || getStatusCode('PENDING_REVIEW');
+  await transitionByAgent(queueItem.id, targetStatus, 'orchestrator', {
     changes: { payload: finalPayload },
+    isManual,
   });
 }
 
-/** @param {any} queueItem @param {{ includeThumbnail?: boolean; skipRejection?: boolean }} options */
-export async function enrichItem(queueItem, options = {}) {
-  const { includeThumbnail = true, skipRejection = false } = options;
-  await loadStatusCodes();
-  const currentAttempts = (queueItem.payload?.fetch_attempts || 0) + 1;
+async function fetchAndFilter(queueItem, skipFetchFilter, skipRejection) {
+  if (skipFetchFilter) return { payload: queueItem.payload, rejected: false };
+  const payload = await stepFetch(queueItem);
+  const filterResult = await stepFilter(queueItem.id, payload, { skipRejection });
+  return { payload, rejected: filterResult.rejected, reason: filterResult.reason };
+}
 
-  // US-7.1: Ensure pipeline run exists for cost tracking
+function toError(error) {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+function handleEnrichError(queueItem, currentAttempts, error) {
+  console.error(`❌ Enrichment failed: ${toError(error).message}`);
+  return currentAttempts >= MAX_FETCH_ATTEMPTS
+    ? handleMaxAttempts(queueItem, currentAttempts, toError(error))
+    : handleRetry(queueItem, currentAttempts, toError(error));
+}
+
+function getEnrichContext(queueItem) {
+  return {
+    currentAttempts: (queueItem.payload?.fetch_attempts || 0) + 1,
+    returnStatus: queueItem.payload?._return_status || null,
+    isManual: !!queueItem.payload?._manual_override,
+  };
+}
+
+/** @param {any} queueItem @param {{ includeThumbnail?: boolean; skipRejection?: boolean; skipFetchFilter?: boolean }} options */
+export async function enrichItem(queueItem, options = {}) {
+  const { includeThumbnail = true, skipRejection = false, skipFetchFilter = false } = options;
+  await loadStatusCodes();
+  const { currentAttempts, returnStatus, isManual } = getEnrichContext(queueItem);
   const pipelineRunId = await ensurePipelineRun(queueItem);
 
   try {
-    const payload = await stepFetch(queueItem);
-    const filterResult = await stepFilter(queueItem.id, payload, { skipRejection });
-    if (filterResult.rejected) {
-      await completePipelineRun(pipelineRunId, 'completed');
-      return { success: false, error: filterResult.reason };
-    }
-    await runEnrichmentSteps(queueItem, payload, { includeThumbnail, pipelineRunId });
-    await completePipelineRun(pipelineRunId, 'completed');
-    return { success: true };
+    const { payload, rejected, reason } = await fetchAndFilter(
+      queueItem,
+      skipFetchFilter,
+      skipRejection,
+    );
+    if (rejected)
+      return (
+        await completePipelineRun(pipelineRunId, 'completed'),
+        { success: false, error: reason }
+      );
+    await runEnrichmentSteps(queueItem, payload, {
+      includeThumbnail,
+      pipelineRunId,
+      returnStatus,
+      isManual,
+    });
+    return (await completePipelineRun(pipelineRunId, 'completed'), { success: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(`❌ Enrichment failed: ${message}`);
     await completePipelineRun(pipelineRunId, 'failed');
-    const errObj = error instanceof Error ? error : new Error(message);
-    return currentAttempts >= MAX_FETCH_ATTEMPTS
-      ? handleMaxAttempts(queueItem, currentAttempts, errObj)
-      : handleRetry(queueItem, currentAttempts, errObj);
+    return handleEnrichError(queueItem, currentAttempts, error);
   }
 }
 
