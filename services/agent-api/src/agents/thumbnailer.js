@@ -100,12 +100,13 @@ function parseConfig(configText) {
   }
 }
 
-// Get and validate target URL from payload
-/** @param {any} payload */
-function getTargetUrl(payload) {
-  const targetUrl = payload.url || payload.source_url;
+// Get and validate target URL from queue item or payload
+/** @param {any} queueItem */
+function getTargetUrl(queueItem) {
+  // Check queue item's url column first, then payload fields
+  const targetUrl = queueItem.url || queueItem.payload?.url || queueItem.payload?.source_url;
   if (!targetUrl) {
-    throw new Error('No URL provided in payload (expected payload.url or payload.source_url)');
+    throw new Error('No URL provided (expected queueItem.url, payload.url, or payload.source_url)');
   }
   console.log(`   🔍 Checking URL: ${targetUrl}`);
   validateUrlScheme(targetUrl);
@@ -114,6 +115,9 @@ function getTargetUrl(payload) {
 
 /** @param {any} queueItem @param {{ promptOverride?: any; pipelineStepRunId?: string; skipEnrichmentMeta?: boolean }} options */
 export async function runThumbnailer(queueItem, options = {}) {
+  // Extract URL from queue item (column) or payload for backward compatibility
+  const targetUrl = getTargetUrl(queueItem);
+
   return runner.run(
     {
       queueId: queueItem.id,
@@ -127,7 +131,6 @@ export async function runThumbnailer(queueItem, options = {}) {
       const { payload, queueId } = context;
       const stepTracker = createStepTracker(tools);
       const config = parseConfig(configText);
-      const targetUrl = getTargetUrl(payload);
       const ctx = { targetUrl, queueId, supabase: tools.supabase, config, stepTracker };
 
       console.log(`📸 Generating thumbnail for: ${payload.title}`);
