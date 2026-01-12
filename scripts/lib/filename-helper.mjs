@@ -1,10 +1,10 @@
-export const toAscii = (s) => (s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+export const toAscii = (s) => (s || '').normalize('NFKD').replaceAll(/[\u0300-\u036f]/g, '');
 export const slug = (s) =>
   toAscii((s || '').toLowerCase())
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .replace(/-{2,}/g, '-');
+    .replaceAll('&', ' and ')
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/(^-+)|(-+$)/g, '')
+    .replaceAll(/-{2,}/g, '-');
 
 export const lastName = (full) => {
   if (!full) return 'unknown';
@@ -25,13 +25,14 @@ const publisherSlug = ({ source_name, source_domain }) => {
 export function kbFileName(options) {
   const {
     title,
+    published_at,
     date_published,
     authors,
     source_name = '',
     source_domain = '',
     version = '',
   } = options || {};
-  const year = String(date_published || '0000').slice(0, 4) || '0000';
+  const year = String(published_at || date_published || '0000').slice(0, 4) || '0000';
   const s = slug(title || 'untitled');
   const authorList = Array.isArray(authors) ? authors : [];
   const a = authorList.length ? lastName(authorList[0]) : 'unknown';

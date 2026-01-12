@@ -102,10 +102,10 @@ const ogImage = thumbCandidates[0];
       <h1 class="text-3xl font-bold tracking-tight">{item.title}</h1>
       <div class="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
         {
-          item.date_published && (
+          item.published_at && (
             <span title="Date published">
               <span class="text-neutral-500 dark:text-neutral-400">Published</span>{' '}
-              {fmt(item.date_published)}
+              {fmt(item.published_at)}
             </span>
           )
         }

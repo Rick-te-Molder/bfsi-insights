@@ -6,6 +6,7 @@ export function lastName(full: string | null | undefined): string;
 
 export type KbFileNameOptions = {
   title?: string | null;
+  published_at?: string | null;
   date_published?: string | null;
   authors?: string[];
   source_name?: string | null;

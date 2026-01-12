@@ -17,8 +17,8 @@ type PublicationRow = {
   summary_medium: string | null;
   summary_long: string | null;
   source_name: string | null;
-  date_published: string | null;
-  date_added: string | null;
+  published_at: string | null;
+  added_at: string | null;
   thumbnail: string | null;
 };
 
@@ -55,11 +55,11 @@ function mapPublicationToQueueItem(pub: PublicationRow, publishedStatusCode: num
     id: pub.id,
     url: pub.source_url,
     status_code: publishedStatusCode,
-    discovered_at: pub.date_added || '',
+    discovered_at: pub.added_at || '',
     payload: {
       title: pub.title,
       source_name: pub.source_name,
-      published_at: pub.date_published,
+      published_at: pub.published_at,
       thumbnail_url: pub.thumbnail,
       summary: {
         short: pub.summary_short,
@@ -100,10 +100,10 @@ async function searchPublicationsByTitle(
   const { data, error } = await supabase
     .from('kb_publication')
     .select(
-      'id, source_url, title, summary_short, summary_medium, summary_long, source_name, date_published, date_added, thumbnail',
+      'id, source_url, title, summary_short, summary_medium, summary_long, source_name, published_at, added_at, thumbnail',
     )
     .ilike('title', `%${q}%`)
-    .order('date_added', { ascending: false })
+    .order('added_at', { ascending: false })
     .limit(100);
   if (error || !data) return [] as PublicationRow[];
   return data as PublicationRow[];
@@ -144,9 +144,9 @@ async function getPublishedItems(statusCodes: StatusCodes) {
   const { data, error } = await supabase
     .from('kb_publication')
     .select(
-      'id, source_url, title, summary_short, summary_medium, summary_long, source_name, date_published, date_added, thumbnail',
+      'id, source_url, title, summary_short, summary_medium, summary_long, source_name, published_at, added_at, thumbnail',
     )
-    .order('date_added', { ascending: false })
+    .order('added_at', { ascending: false })
     .limit(500);
 
   if (error) return { items: [], sources: [] as string[] };

@@ -52,8 +52,8 @@ const extraTagCount = calculateExtraTagCount({
   deepestProcesses,
 });
 
-const isNew = isHome && isWithinDays(item.date_added, 7);
-const isUpdated = isHome && !isNew && isWithinDays(item.last_edited, 7);
+const isNew = isHome && isWithinDays(item.added_at, 7);
+const isUpdated = isHome && !isNew && isWithinDays(item.last_edited_at, 7);
 const hasImage = !!item.thumbnail || !!item.thumbnail_path;
 
 const supabaseUrl = buildThumbnailUrl(
@@ -87,8 +87,8 @@ const candidates = supabaseUrl ? [supabaseUrl] : expandItemThumb(item.thumbnail)
   data-title={item.title}
   data-thumbnail={item.thumbnail || ''}
   data-summary-medium={item.summary_medium || ''}
-  data-date_published={item.date_published || ''}
-  data-date_added={item.date_added || ''}
+  data-date_published={item.published_at || ''}
+  data-date_added={item.added_at || ''}
 >
   <a
     href={`/${item.slug}`}
@@ -127,11 +127,11 @@ const candidates = supabaseUrl ? [supabaseUrl] : expandItemThumb(item.thumbnail)
     <div class="relative mt-1 text-sm text-neutral-700 dark:text-neutral-200">
       <span
         class="date-display"
-        data-published={formatDate(item.date_published ?? undefined)}
-        data-added={formatDate(item.date_added ?? undefined)}
+        data-published={formatDate(item.published_at ?? undefined)}
+        data-added={formatDate(item.added_at ?? undefined)}
       >
         <span class="date-label text-neutral-600 dark:text-neutral-400">Published</span>
-        <span class="date-value">{formatDate(item.date_published ?? undefined)}</span>
+        <span class="date-value">{formatDate(item.published_at ?? undefined)}</span>
       </span>
       {
         item.source_name && (

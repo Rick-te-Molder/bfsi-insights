@@ -41,8 +41,8 @@ function normaliseSlug(str) {
   if (!str) return null;
   return str
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/(^-+)|(-+$)/g, '');
 }
 
 function safeArray(x) {
@@ -55,10 +55,10 @@ function safeString(x) {
   return String(x).trim();
 }
 
-function resolveRole(role, tags) {
-  const validRoles = new Set(['executive', 'professional', 'researcher']);
-  const candidate = safeString(role || tags?.role);
-  if (candidate && validRoles.has(candidate.toLowerCase())) {
+function resolveAudience(audience, tags) {
+  const validAudiences = new Set(['executive', 'professional', 'researcher']);
+  const candidate = safeString(audience || tags?.audience);
+  if (candidate && validAudiences.has(candidate.toLowerCase())) {
     return candidate.toLowerCase();
   }
   return 'researcher';
@@ -129,6 +129,94 @@ async function getOrCreateOrg(name) {
 // -------------------------------------------------------------
 // Publish one item
 // -------------------------------------------------------------
+async function insertPublication(item, payload, tags, publicationSlug) {
+  return supabase
+    .from('kb_publication')
+    .insert({
+      title: safeString(payload.title),
+      author: safeArray(payload.authors).join(', '),
+      published_at: payload.published_at || payload.date_published || null,
+      source_url: safeString(item.url),
+      source_name: payload.source || payload.source_name || null,
+      source_domain: new URL(item.url).hostname,
+      slug: publicationSlug,
+      summary_short: payload.summary?.short || null,
+      summary_medium: payload.summary?.medium || null,
+      summary_long: payload.summary?.long || null,
+      audience: resolveAudience(payload.audience, tags),
+      content_type: tags.content_type || 'article',
+      geography: tags.geography || 'global',
+      thumbnail: item.thumb_ref || null,
+      status: 'published',
+      use_cases: tags.use_cases || null,
+      agentic_capabilities: tags.agentic_capabilities || null,
+      origin_queue_id: item.id,
+    })
+    .select('id')
+    .single();
+}
+
+async function markQueuePublished(queueId) {
+  await supabase
+    .from('ingestion_queue')
+    .update({ status: 'published', reviewed_at: new Date().toISOString() })
+    .eq('id', queueId);
+}
+
+async function insertIndustryJunctions(publicationId, tags, junctionErrors) {
+  const industries = safeArray(tags.industry).filter(Boolean);
+  if (industries.length === 0) return;
+
+  const { error } = await supabase.from('kb_publication_bfsi_industry').insert(
+    industries.map((code, idx) => ({
+      publication_id: publicationId,
+      industry_code: code,
+      rank: idx,
+    })),
+  );
+
+  if (error) junctionErrors.push(error.message);
+}
+
+async function insertTopicJunctions(publicationId, tags, junctionErrors) {
+  const topics = safeArray(tags.topic).filter(Boolean);
+  if (topics.length === 0) return;
+
+  const { error } = await supabase.from('kb_publication_bfsi_topic').insert(
+    topics.map((code, idx) => ({
+      publication_id: publicationId,
+      topic_code: code,
+      rank: idx,
+    })),
+  );
+
+  if (error) junctionErrors.push(error.message);
+}
+
+async function insertVendorJunctions(publicationId, payload) {
+  const vendors = safeArray(payload.vendors);
+  for (const [idx, name] of vendors.entries()) {
+    const vid = await getOrCreateVendor(name);
+    if (!vid) continue;
+    await supabase
+      .from('kb_publication_ag_vendor')
+      .insert({ publication_id: publicationId, vendor_id: vid, rank: idx });
+  }
+}
+
+async function insertOrganizationJunctions(publicationId, payload) {
+  const orgs = safeArray(payload.organizations);
+  for (const [idx, name] of orgs.entries()) {
+    const oid = await getOrCreateOrg(name);
+    if (!oid) continue;
+    await supabase.from('kb_publication_bfsi_organization').insert({
+      publication_id: publicationId,
+      organization_id: oid,
+      rank: idx,
+    });
+  }
+}
+
 async function publishItem(item, dryRun = false) {
   const payload = item.payload || {};
   const tags = payload.tags || {};
@@ -153,30 +241,12 @@ async function publishItem(item, dryRun = false) {
 
   const publicationSlug = payload.slug || slugFromTitle || slugFromUrl || `item-${Date.now()}`;
 
-  const { data: inserted, error: insertError } = await supabase
-    .from('kb_publication')
-    .insert({
-      title: safeString(payload.title),
-      author: safeArray(payload.authors).join(', '),
-      date_published: payload.published_at || payload.date_published || null,
-      source_url: safeString(item.url),
-      source_name: payload.source || payload.source_name || null,
-      source_domain: new URL(item.url).hostname,
-      slug: publicationSlug,
-      summary_short: payload.summary?.short || null,
-      summary_medium: payload.summary?.medium || null,
-      summary_long: payload.summary?.long || null,
-      role: resolveRole(payload.role, tags),
-      content_type: tags.content_type || 'article',
-      geography: tags.geography || 'global',
-      thumbnail: item.thumb_ref || null,
-      status: 'published',
-      use_cases: tags.use_cases || null,
-      agentic_capabilities: tags.agentic_capabilities || null,
-      origin_queue_id: item.id,
-    })
-    .select('id')
-    .single();
+  const { data: inserted, error: insertError } = await insertPublication(
+    item,
+    payload,
+    tags,
+    publicationSlug,
+  );
 
   if (insertError) {
     console.error(`   ❌ Insert failed: ${insertError.message}`);
@@ -189,65 +259,17 @@ async function publishItem(item, dryRun = false) {
   // ---- 3. Junction tables ----
   const junctionErrors = [];
 
-  // INDUSTRY
-  const industries = safeArray(tags.industry).filter(Boolean);
-  if (industries.length > 0) {
-    const { error } = await supabase.from('kb_publication_bfsi_industry').insert(
-      industries.map((code, idx) => ({
-        publication_id: publicationId,
-        industry_code: code,
-        rank: idx,
-      })),
-    );
-    if (error) junctionErrors.push(error.message);
-  }
-
-  // TOPIC
-  const topics = safeArray(tags.topic).filter(Boolean);
-  if (topics.length > 0) {
-    const { error } = await supabase.from('kb_publication_bfsi_topic').insert(
-      topics.map((code, idx) => ({
-        publication_id: publicationId,
-        topic_code: code,
-        rank: idx,
-      })),
-    );
-    if (error) junctionErrors.push(error.message);
-  }
-
-  // VENDORS
-  const vendors = safeArray(payload.vendors);
-  for (const [idx, name] of vendors.entries()) {
-    const vid = await getOrCreateVendor(name);
-    if (vid) {
-      await supabase
-        .from('kb_publication_ag_vendor')
-        .insert({ publication_id: publicationId, vendor_id: vid, rank: idx });
-    }
-  }
-
-  // ORGANIZATIONS
-  const orgs = safeArray(payload.organizations);
-  for (const [idx, name] of orgs.entries()) {
-    const oid = await getOrCreateOrg(name);
-    if (oid) {
-      await supabase.from('kb_publication_bfsi_organization').insert({
-        publication_id: publicationId,
-        organization_id: oid,
-        rank: idx,
-      });
-    }
-  }
+  await insertIndustryJunctions(publicationId, tags, junctionErrors);
+  await insertTopicJunctions(publicationId, tags, junctionErrors);
+  await insertVendorJunctions(publicationId, payload);
+  await insertOrganizationJunctions(publicationId, payload);
 
   if (junctionErrors.length > 0) {
     console.warn(`   ⚠ Junction warnings: ${junctionErrors.join(', ')}`);
   }
 
   // ---- 4. Mark queue item as published ----
-  await supabase
-    .from('ingestion_queue')
-    .update({ status: 'published', reviewed_at: new Date().toISOString() })
-    .eq('id', item.id);
+  await markQueuePublished(item.id);
 
   return { success: true, publicationId };
 }
@@ -258,7 +280,8 @@ async function publishItem(item, dryRun = false) {
 async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
-  const limit = parseInt(args.find((a) => a.startsWith('--limit='))?.split('=')[1]) || 100;
+  const limitArg = args.find((a) => a.startsWith('--limit='));
+  const limit = Number.parseInt(limitArg?.split('=')[1] ?? '', 10) || 100;
 
   console.log(`🚀 Publishing approved items (${dryRun ? 'DRY RUN' : 'LIVE'})\n`);
 
@@ -302,4 +325,9 @@ async function main() {
   }
 }
 
-main().catch((e) => console.error(e));
+try {
+  await main();
+} catch (e) {
+  console.error(e);
+  process.exit(1);
+}

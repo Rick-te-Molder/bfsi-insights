@@ -6,36 +6,49 @@ interface QueueItemWithRun extends QueueItem {
   current_run_id?: string | null;
 }
 
-export async function getQueueItem(id: string): Promise<QueueItemWithRun | null> {
-  const supabase = createServiceRoleClient();
+type PublicationRow = {
+  id: string;
+  source_url: string;
+  title: string;
+  summary_short: string | null;
+  summary_medium: string | null;
+  summary_long: string | null;
+  source_name: string | null;
+  published_at: string | null;
+  added_at: string | null;
+  thumbnail: string | null;
+};
 
-  const { data, error } = await supabase.from('ingestion_queue').select('*').eq('id', id).single();
+async function getQueueItemFromIngestionQueue(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  id: string,
+) {
+  return supabase.from('ingestion_queue').select('*').eq('id', id).single();
+}
 
-  if (!error && data) {
-    return data as QueueItemWithRun;
-  }
-
-  const { data: pubData, error: pubError } = await supabase
+async function getPublicationById(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  id: string,
+) {
+  return supabase
     .from('kb_publication')
     .select(
-      'id, source_url, title, summary_short, summary_medium, summary_long, source_name, date_published, date_added, thumbnail',
+      'id, source_url, title, summary_short, summary_medium, summary_long, source_name, published_at, added_at, thumbnail',
     )
     .eq('id', id)
     .single();
+}
 
-  if (pubError || !pubData) {
-    return null;
-  }
-
+function mapPublicationRowToQueueItem(pubData: PublicationRow): QueueItemWithRun {
   return {
     id: pubData.id,
     url: pubData.source_url,
     status_code: 400,
-    discovered_at: pubData.date_added || '',
+    discovered_at: pubData.added_at || '',
     payload: {
       title: pubData.title,
       source_name: pubData.source_name,
-      date_published: pubData.date_published,
+      published_at: pubData.published_at,
       thumbnail_url: pubData.thumbnail,
       summary: {
         short: pubData.summary_short,
@@ -44,6 +57,24 @@ export async function getQueueItem(id: string): Promise<QueueItemWithRun | null>
       },
     },
   } as QueueItemWithRun;
+}
+
+export async function getQueueItem(id: string): Promise<QueueItemWithRun | null> {
+  const supabase = createServiceRoleClient();
+
+  const { data, error } = await getQueueItemFromIngestionQueue(supabase, id);
+
+  if (!error && data) {
+    return data as QueueItemWithRun;
+  }
+
+  const { data: pubData, error: pubError } = await getPublicationById(supabase, id);
+
+  if (pubError || !pubData) {
+    return null;
+  }
+
+  return mapPublicationRowToQueueItem(pubData as PublicationRow);
 }
 
 export async function getTaxonomyData() {

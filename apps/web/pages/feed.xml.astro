@@ -11,10 +11,10 @@ const feedDescription =
   'Agentic AI insights for executives, professionals, and researchers in banking, financial services and insurance.';
 
 const items = [...publications]
-  .filter((item) => typeof item.date_added === 'string' && item.date_added.length > 0)
+  .filter((item) => typeof item.added_at === 'string' && item.added_at.length > 0)
   .sort((a, b) => {
-    const da = new Date(a.date_added as string).getTime();
-    const db = new Date(b.date_added as string).getTime();
+    const da = new Date(a.added_at as string).getTime();
+    const db = new Date(b.added_at as string).getTime();
     return db - da;
   })
   .slice(0, 50)
@@ -32,7 +32,7 @@ const items = [...publications]
       title: item.title,
       description,
       link: item.url,
-      pubDate: new Date(item.date_added as string),
+      pubDate: new Date(item.added_at as string),
       categories,
       author,
     };

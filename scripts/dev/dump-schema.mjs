@@ -13,44 +13,64 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Load env
-const envPath = path.join(__dirname, '../../.env');
-if (fs.existsSync(envPath)) {
+function loadEnvFromFile(envPath) {
+  if (!fs.existsSync(envPath)) return;
   const envContent = fs.readFileSync(envPath, 'utf8');
   envContent.split('\n').forEach((line) => {
-    const [key, ...valueParts] = line.split('=');
-    if (key && valueParts.length) {
-      process.env[key.trim()] = valueParts.join('=').trim();
-    }
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) return;
+    const idx = trimmed.indexOf('=');
+    if (idx <= 0) return;
+    const key = trimmed.slice(0, idx).trim();
+    const value = trimmed.slice(idx + 1).trim();
+    if (!key) return;
+    if (process.env[key] == null) process.env[key] = value;
   });
 }
 
-const supabaseUrl = process.env.PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
+function loadEnv() {
+  const envCandidates = [
+    path.join(__dirname, '../../.env'),
+    path.join(__dirname, '../../apps/admin/.env.local'),
+    path.join(__dirname, '../../services/agent-api/.env.local'),
+  ];
 
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_KEY');
-  process.exit(1);
+  for (const envPath of envCandidates) {
+    loadEnvFromFile(envPath);
+  }
 }
 
+loadEnv();
+
+function getRequiredEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    console.error('Missing PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_KEY');
+    process.exit(1);
+  }
+  return value;
+}
+
+const supabaseUrl = getRequiredEnv('PUBLIC_SUPABASE_URL');
+const supabaseKey = getRequiredEnv('SUPABASE_SERVICE_KEY');
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function main() {
-  console.log('📊 Dumping database schema...\n');
+function byKeyAsc(a, b) {
+  return String(a).localeCompare(String(b));
+}
 
-  // Use raw SQL via RPC to get schema info
-  const { data: schemaInfo, error } = await supabase.rpc('dump_schema_info');
+async function fetchSchemaInfo() {
+  return supabase.rpc('dump_schema_info');
+}
 
-  if (error) {
-    console.log('Creating schema dump function...');
-    // Create the function if it doesn't exist
-    const createFn = `
+function printCreateFunctionSql() {
+  const createFn = `
       CREATE OR REPLACE FUNCTION dump_schema_info()
       RETURNS TABLE (
         table_name text,
@@ -89,13 +109,12 @@ async function main() {
         ORDER BY c.table_name, c.ordinal_position;
       $$;
     `;
-    console.log('\n⚠️  Please run this SQL in Supabase SQL Editor first:\n');
-    console.log(createFn);
-    console.log('\nThen re-run this script.');
-    process.exit(1);
-  }
+  console.log('\n⚠️  Please run this SQL in Supabase SQL Editor first:\n');
+  console.log(createFn);
+  console.log('\nThen re-run this script.');
+}
 
-  // Get row counts
+async function getRowCounts(schemaInfo) {
   const counts = {};
   const tableNames = [...new Set(schemaInfo.map((r) => r.table_name))];
 
@@ -108,16 +127,25 @@ async function main() {
     }
   }
 
-  // Group by table
+  return counts;
+}
+
+function groupSchemaByTable(schemaInfo) {
   const tables = {};
   for (const row of schemaInfo) {
-    if (!tables[row.table_name]) {
-      tables[row.table_name] = [];
-    }
+    if (!tables[row.table_name]) tables[row.table_name] = [];
     tables[row.table_name].push(row);
   }
+  return tables;
+}
 
-  // Generate markdown
+function getDefaultVal(col) {
+  if (!col.column_default) return '';
+  const clipped = col.column_default.substring(0, 30);
+  return clipped + (col.column_default.length > 30 ? '...' : '');
+}
+
+function generateMarkdown(tables, counts) {
   let md = `# Database Schema Reference
 
 > **Auto-generated** by \`npm run dump:schema\`  
@@ -131,16 +159,15 @@ This file is the single source of truth for AI assistants to understand the data
 |-------|------|---------|
 `;
 
-  // Add table summary
-  for (const [tableName, cols] of Object.entries(tables).sort()) {
+  for (const [tableName, cols] of Object.entries(tables).sort(([a], [b]) => byKeyAsc(a, b))) {
     const pkCol = cols.find((c) => c.constraint_type === 'PRIMARY KEY');
-    md += `| \`${tableName}\` | ${counts[tableName]} | ${pkCol ? `PK: ${pkCol.column_name}` : ''} |\n`;
+    const purpose = pkCol ? `PK: ${pkCol.column_name}` : '';
+    md += `| \`${tableName}\` | ${counts[tableName]} | ${purpose} |\n`;
   }
 
   md += `\n---\n\n## Table Details\n\n`;
 
-  // Add detailed table info
-  for (const [tableName, cols] of Object.entries(tables).sort()) {
+  for (const [tableName, cols] of Object.entries(tables).sort(([a], [b]) => byKeyAsc(a, b))) {
     md += `### \`${tableName}\`\n\n`;
     md += `**Rows:** ${counts[tableName]}\n\n`;
     md += `| Column | Type | Nullable | Default | Constraints |\n`;
@@ -154,16 +181,18 @@ This file is the single source of truth for AI assistants to understand the data
         constraints.push(`FK → ${col.foreign_table}.${col.foreign_column}`);
       }
 
-      const defaultVal = col.column_default
-        ? col.column_default.substring(0, 30) + (col.column_default.length > 30 ? '...' : '')
-        : '';
-
-      md += `| \`${col.column_name}\` | ${col.data_type} | ${col.is_nullable} | ${defaultVal} | ${constraints.join(', ')} |\n`;
+      md += `| \`${col.column_name}\` | ${col.data_type} | ${col.is_nullable} | ${getDefaultVal(
+        col,
+      )} | ${constraints.join(', ')} |\n`;
     }
+
     md += '\n';
   }
 
-  // Write to file
+  return md;
+}
+
+function writeSchemaMarkdown(md, tables, schemaInfo) {
   const outDir = path.join(__dirname, '../../docs/data-model');
   if (!fs.existsSync(outDir)) {
     fs.mkdirSync(outDir, { recursive: true });
@@ -176,4 +205,28 @@ This file is the single source of truth for AI assistants to understand the data
   console.log(`   ${Object.keys(tables).length} tables, ${schemaInfo.length} columns`);
 }
 
-main().catch(console.error);
+async function main() {
+  console.log('📊 Dumping database schema...\n');
+
+  // Use raw SQL via RPC to get schema info
+  const { data: schemaInfo, error } = await fetchSchemaInfo();
+
+  if (error) {
+    console.log('Creating schema dump function...');
+    printCreateFunctionSql();
+    process.exit(1);
+  }
+
+  // Get row counts
+  const counts = await getRowCounts(schemaInfo);
+  const tables = groupSchemaByTable(schemaInfo);
+  const md = generateMarkdown(tables, counts);
+  writeSchemaMarkdown(md, tables, schemaInfo);
+}
+
+try {
+  await main();
+} catch (err) {
+  console.error(err);
+  process.exit(1);
+}

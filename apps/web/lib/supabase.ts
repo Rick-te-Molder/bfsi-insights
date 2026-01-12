@@ -40,9 +40,9 @@ export interface Publication {
   authors: string[]; // always array
   url: string;
   source_name: string | null;
-  date_published: string | null;
-  date_added: string | null;
-  last_edited: string | null;
+  published_at: string | null;
+  added_at: string | null;
+  last_edited_at: string | null;
   thumbnail: string | null;
   thumbnail_bucket?: string | null;
   thumbnail_path?: string | null;
@@ -94,7 +94,7 @@ export async function getAllPublications(): Promise<Publication[]> {
     .from('kb_publication_pretty')
     .select('*')
     .eq('status', 'published')
-    .order('date_published', { ascending: false });
+    .order('published_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching publications:', error);
@@ -141,7 +141,7 @@ export async function getFilteredPublications(
     }
   }
 
-  const { data, error } = await query.order('date_added', { ascending: false });
+  const { data, error } = await query.order('added_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching filtered publications:', error);
