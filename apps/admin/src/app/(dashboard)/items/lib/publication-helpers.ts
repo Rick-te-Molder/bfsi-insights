@@ -15,6 +15,34 @@ export interface PublicationData {
   thumbnailPath: string | null;
 }
 
+function isoNow(): string {
+  return new Date().toISOString();
+}
+
+function toIsoOrNow(date: Date): string {
+  return Number.isNaN(date.getTime()) ? isoNow() : date.toISOString();
+}
+
+function normalizeDatePublished(input: unknown): string {
+  if (!input) return isoNow();
+  const raw = String(input).trim();
+  if (!raw) return isoNow();
+
+  if (/^\d{4}-\d{2}$/.test(raw)) return toIsoOrNow(new Date(`${raw}-01`));
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return toIsoOrNow(new Date(raw));
+
+  const dmY = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  if (dmY) {
+    const year = dmY[3].length === 2 ? 2000 + Number(dmY[3]) : Number(dmY[3]);
+    const yyyy = String(year).padStart(4, '0');
+    const mm = String(Number(dmY[2])).padStart(2, '0');
+    const dd = String(Number(dmY[1])).padStart(2, '0');
+    return toIsoOrNow(new Date(`${yyyy}-${mm}-${dd}`));
+  }
+
+  return toIsoOrNow(new Date(raw));
+}
+
 export async function upsertPublication(
   supabase: SupabaseClient,
   data: PublicationData,
@@ -204,7 +232,10 @@ export function extractDomain(url: string): string {
   }
 }
 
-export function buildPublicStorageUrl(bucket?: string | null, path?: string | null): string | null {
+export function buildPublicStorageUrl(
+  bucket: string | null | undefined,
+  path: string | null | undefined,
+): string | null {
   if (!bucket || !path) return null;
   const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   if (!baseUrl) return null;
@@ -244,7 +275,7 @@ export function preparePublicationData(
     sourceName:
       sourceFromPayload && sourceFromPayload !== 'manual' ? sourceFromPayload : sourceDomain,
     sourceDomain,
-    datePublished: (payload.published_at as string) || new Date().toISOString(),
+    datePublished: normalizeDatePublished(payload.published_at),
     summaryShort: (summary.short as string) || '',
     summaryMedium: (summary.medium as string) || '',
     summaryLong: (summary.long as string) || '',

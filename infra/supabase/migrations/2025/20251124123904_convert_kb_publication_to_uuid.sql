@@ -1,4 +1,3 @@
-[paste the SQL above]
 -- Migration: Convert kb_publication to UUID primary key
 -- Run date: 2024-11-24
 -- Purpose: Fix schema inconsistency - all tables should use UUID

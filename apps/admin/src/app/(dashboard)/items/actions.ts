@@ -8,6 +8,33 @@ import { bulkApproveItems, bulkReenrichItems, bulkRejectItems } from './lib/acti
 import { hasAnyTaxonomyTags } from './lib/actions-validate';
 import { approveQueueItem } from './lib/actions-approve';
 
+function normalizePublishedDate(input: string): string | null {
+  const raw = input.trim();
+  if (!raw) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  if (/^\d{4}-\d{2}$/.test(raw)) return `${raw}-01`;
+
+  const dmY = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  if (dmY) {
+    const day = Number(dmY[1]);
+    const month = Number(dmY[2]);
+    const yearPart = dmY[3];
+    const year = yearPart.length === 2 ? 2000 + Number(yearPart) : Number(yearPart);
+
+    if (day < 1 || day > 31 || month < 1 || month > 12) return null;
+
+    const yyyy = String(year).padStart(4, '0');
+    const mm = String(month).padStart(2, '0');
+    const dd = String(day).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().split('T')[0];
+}
+
 export async function updatePublishedDateAction(itemId: string, publishedDate: string) {
   const supabase = createServiceRoleClient();
 
@@ -20,7 +47,10 @@ export async function updatePublishedDateAction(itemId: string, publishedDate: s
     return { success: false as const, error: fetchError?.message || 'Failed to fetch item' };
 
   const currentPayload = coercePayload(currentItem.payload);
-  const updatedPayload = mergePayload(currentPayload, { published_at: publishedDate });
+  const normalized = normalizePublishedDate(publishedDate);
+  if (!normalized) return { success: false as const, error: 'Invalid publication date format' };
+
+  const updatedPayload = mergePayload(currentPayload, { published_at: normalized });
   const { error: updateError } = await updateQueueItem(supabase, itemId, {
     payload: updatedPayload,
   });
