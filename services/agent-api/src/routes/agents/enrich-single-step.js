@@ -127,19 +127,26 @@ router.post('/enrich-single-step', async (/** @type {any} */ req, /** @type {any
     const buildPayload = STEP_PAYLOAD_BUILDERS[step];
     const mergedPayload = buildPayload(basePayload, result);
 
-    // Clean up single-step flags
-    delete mergedPayload._return_status;
-    delete mergedPayload._single_step;
-
     // Determine target status from _return_status (for re-enrichment from review/published)
     // Belt-and-suspenders: ignore _return_status if item is still in enrichment phase (200-239)
     const isInEnrichmentPhase = item.status_code >= 200 && item.status_code < 240;
-    const returnStatus = isInEnrichmentPhase ? null : item.payload?._return_status;
+    // Read from both original item and latest payload (runner may have updated it)
+    const returnStatus = isInEnrichmentPhase
+      ? null
+      : (item.payload?._return_status ?? basePayload?._return_status ?? null);
+
+    // Preserve _manual_override for the DB trigger, but clean up other single-step flags
+    const manualOverride = item.payload?._manual_override ?? basePayload?._manual_override;
+    delete mergedPayload._return_status;
+    delete mergedPayload._single_step;
+    if (manualOverride) {
+      mergedPayload._manual_override = true;
+    }
 
     // Always save the merged payload first (fixes bug where payload wasn't persisted)
     await getSupabase().from('ingestion_queue').update({ payload: mergedPayload }).eq('id', id);
 
-    if (returnStatus) {
+    if (returnStatus && typeof returnStatus === 'number') {
       // Re-enrichment: transition to return status (manual)
       // Payload already saved above; transition_status only updates status_code
       await transitionByAgent(id, returnStatus, `orchestrator:${step}`, {
@@ -149,7 +156,8 @@ router.post('/enrich-single-step', async (/** @type {any} */ req, /** @type {any
     }
     // else: Independent step run - payload already saved, keep current status
 
-    const targetStatus = returnStatus || item.status_code;
+    const targetStatus =
+      returnStatus && typeof returnStatus === 'number' ? returnStatus : item.status_code;
 
     res.json({
       success: true,
