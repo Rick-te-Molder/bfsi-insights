@@ -59,7 +59,7 @@ function mapPublicationToQueueItem(pub: PublicationRow, publishedStatusCode: num
     payload: {
       title: pub.title,
       source_name: pub.source_name,
-      date_published: pub.date_published,
+      published_at: pub.date_published,
       thumbnail_url: pub.thumbnail,
       summary: {
         short: pub.summary_short,
@@ -68,6 +68,45 @@ function mapPublicationToQueueItem(pub: PublicationRow, publishedStatusCode: num
       },
     },
   } as QueueItem;
+}
+
+function mapPublicationsToQueueItems(
+  rows: PublicationRow[] | null | undefined,
+  publishedStatusCode: number,
+): QueueItem[] {
+  return ((rows ?? []) as PublicationRow[]).map((pub) =>
+    mapPublicationToQueueItem(pub, publishedStatusCode),
+  ) as QueueItem[];
+}
+
+async function searchIngestionQueueByTitle(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  q: string,
+) {
+  const { data, error } = await supabase
+    .from('ingestion_queue')
+    .select('id, url, status_code, payload, discovered_at')
+    .ilike('payload->>title', `%${q}%`)
+    .order('discovered_at', { ascending: false })
+    .limit(100);
+  if (error || !data) return [] as QueueItem[];
+  return data as QueueItem[];
+}
+
+async function searchPublicationsByTitle(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  q: string,
+) {
+  const { data, error } = await supabase
+    .from('kb_publication')
+    .select(
+      'id, source_url, title, summary_short, summary_medium, summary_long, source_name, date_published, date_added, thumbnail',
+    )
+    .ilike('title', `%${q}%`)
+    .order('date_added', { ascending: false })
+    .limit(100);
+  if (error || !data) return [] as PublicationRow[];
+  return data as PublicationRow[];
 }
 
 async function getQueueItemById(itemId: string) {
@@ -92,29 +131,11 @@ async function getQueueItemByUrl(url: string) {
 
 async function searchQueueByTitle(searchQuery: string, statusCodes: StatusCodes) {
   const supabase = createServiceRoleClient();
-  const queueResult = await supabase
-    .from('ingestion_queue')
-    .select('id, url, status_code, payload, discovered_at')
-    .ilike('payload->>title', `%${searchQuery}%`)
-    .order('discovered_at', { ascending: false })
-    .limit(100);
-
-  const pubResult = await supabase
-    .from('kb_publication')
-    .select(
-      'id, source_url, title, summary_short, summary_medium, summary_long, source_name, date_published, date_added, thumbnail',
-    )
-    .ilike('title', `%${searchQuery}%`)
-    .order('date_added', { ascending: false })
-    .limit(100);
-
-  const queueItems = queueResult.error ? [] : ((queueResult.data ?? []) as QueueItem[]);
-  const pubItems = pubResult.error
-    ? []
-    : ((pubResult.data ?? []).map((pub) =>
-        mapPublicationToQueueItem(pub, getPublishedStatusCode(statusCodes)),
-      ) as QueueItem[]);
-
+  const [queueItems, pubRows] = await Promise.all([
+    searchIngestionQueueByTitle(supabase, searchQuery),
+    searchPublicationsByTitle(supabase, searchQuery),
+  ]);
+  const pubItems = mapPublicationsToQueueItems(pubRows, getPublishedStatusCode(statusCodes));
   return { items: [...queueItems, ...pubItems], sources: [] as string[] };
 }
 
