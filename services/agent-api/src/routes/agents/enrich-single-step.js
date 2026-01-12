@@ -136,19 +136,18 @@ router.post('/enrich-single-step', async (/** @type {any} */ req, /** @type {any
     const isInEnrichmentPhase = item.status_code >= 200 && item.status_code < 240;
     const returnStatus = isInEnrichmentPhase ? null : item.payload?._return_status;
 
+    // Always save the merged payload first (fixes bug where payload wasn't persisted)
+    await getSupabase().from('ingestion_queue').update({ payload: mergedPayload }).eq('id', id);
+
     if (returnStatus) {
       // Re-enrichment: transition to return status (manual)
+      // Payload already saved above; transition_status only updates status_code
       await transitionByAgent(id, returnStatus, `orchestrator:${step}`, {
-        changes: { payload: mergedPayload },
+        changes: { step_completed: step },
         isManual: true,
       });
-    } else {
-      // Independent step run: just update payload, keep current status
-      await getSupabase()
-        .from('ingestion_queue')
-        .update({ payload: mergedPayload })
-        .eq('id', id);
     }
+    // else: Independent step run - payload already saved, keep current status
 
     const targetStatus = returnStatus || item.status_code;
 
