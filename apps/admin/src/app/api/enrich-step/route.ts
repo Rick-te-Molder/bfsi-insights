@@ -48,16 +48,17 @@ async function loadStatusCodes(supabase: ReturnType<typeof createServiceRoleClie
 
 function getReturnStatus(
   currentStatus: number,
-  publishedCode: number,
+  _publishedCode: number,
   pendingReviewCode: number,
-  enrichedCode: number,
+  _enrichedCode: number,
 ): number | null {
   // Items in enrichment phase (200-239) should continue normal flow
   const isInEnrichmentPhase = currentStatus >= 200 && currentStatus < 240;
   if (isInEnrichmentPhase) return null;
 
-  // Published items return to pending_review; review items return to enriched
-  return currentStatus === publishedCode ? pendingReviewCode : enrichedCode;
+  // All non-enrichment items (review 300s, published 400s) return to pending_review
+  // This ensures re-enriched items get human review before republishing
+  return pendingReviewCode;
 }
 
 async function cancelRunningPipeline(
