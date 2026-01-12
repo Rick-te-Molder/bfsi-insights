@@ -144,7 +144,7 @@ describe('apps/web/features/publications/filter-utils', () => {
           source_name: 'S',
           authors: 'X',
           summary: 'Y',
-          date_published: '2024-01-02',
+          published_at: '2024-01-02',
         },
         {
           el: document.createElement('div'),
@@ -152,7 +152,7 @@ describe('apps/web/features/publications/filter-utils', () => {
           source_name: 'S',
           authors: 'X',
           summary: 'Y',
-          date_published: '2024-01-01',
+          published_at: '2024-01-01',
         },
       ];
 
@@ -171,7 +171,7 @@ describe('apps/web/features/publications/filter-utils', () => {
           source_name: 'S',
           authors: 'X',
           summary: 'Y',
-          date_added: '2024-01-02',
+          added_at: '2024-01-02',
         },
         {
           el: document.createElement('div'),
@@ -179,7 +179,7 @@ describe('apps/web/features/publications/filter-utils', () => {
           source_name: 'S',
           authors: 'X',
           summary: 'Y',
-          date_added: '2024-01-01',
+          added_at: '2024-01-01',
         },
       ];
 
@@ -202,7 +202,7 @@ describe('apps/web/features/publications/filter-utils', () => {
           source_name: 'S',
           authors: 'X',
           summary: 'Y',
-          date_added: '2024-01-01',
+          added_at: '2024-01-01',
         },
       ];
 

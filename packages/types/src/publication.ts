@@ -12,7 +12,7 @@ export interface Publication {
   title: string;
   source_url: string;
   source_slug: string;
-  date_published?: string;
+  published_at?: string;
   summary_short?: string;
   summary_medium?: string;
   summary_long?: string;
@@ -35,9 +35,9 @@ export interface PublicationPretty {
   authors: string[];
   url: string;
   source_name: string | null;
-  date_published: string | null;
-  date_added: string | null;
-  last_edited: string | null;
+  published_at: string | null;
+  added_at: string | null;
+  last_edited_at: string | null;
   thumbnail: string | null;
   thumbnail_bucket?: string | null;
   thumbnail_path?: string | null;

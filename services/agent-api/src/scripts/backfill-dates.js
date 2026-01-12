@@ -50,7 +50,7 @@ async function fetchMissingDatePublications(limitCount) {
   return supabase
     .from('kb_publication')
     .select('id, slug, title, source_url, status')
-    .is('date_published', null)
+    .is('published_at', null)
     .eq('status', 'published')
     .limit(limitCount);
 }
@@ -97,7 +97,7 @@ async function updatePublicationDate(pubId, date, author) {
   return supabase
     .from('kb_publication')
     .update({
-      date_published: date,
+      published_at: date,
       author,
     })
     .eq('id', pubId);

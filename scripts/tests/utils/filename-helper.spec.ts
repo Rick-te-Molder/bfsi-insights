@@ -69,7 +69,7 @@ describe('kbFileName', () => {
   it('generates standard filename', () => {
     const result = kbFileName({
       title: 'AI in Banking',
-      date_published: '2024-03-15',
+      published_at: '2024-03-15',
       authors: ['John Doe'],
       source_name: 'TechNews',
     });
@@ -79,7 +79,7 @@ describe('kbFileName', () => {
   it('handles missing author', () => {
     const result = kbFileName({
       title: 'Test Article',
-      date_published: '2024-01-01',
+      published_at: '2024-01-01',
       source_name: 'Source',
     });
     expect(result).toContain('_unknown-');
@@ -88,7 +88,7 @@ describe('kbFileName', () => {
   it('handles version suffix', () => {
     const result = kbFileName({
       title: 'Test',
-      date_published: '2024-01-01',
+      published_at: '2024-01-01',
       authors: ['Author'],
       source_name: 'Source',
       version: '2',

@@ -60,11 +60,15 @@ export function sortIndices(indices: number[], data: IndexedItem[], sortOrder: s
     let dateA: number, dateB: number;
 
     if (sortOrder.startsWith('date_published')) {
-      dateA = itemA.date_published ? new Date(itemA.date_published as string).getTime() : 0;
-      dateB = itemB.date_published ? new Date(itemB.date_published as string).getTime() : 0;
+      const publishedA = (itemA.published_at as string) || (itemA.date_published as string);
+      const publishedB = (itemB.published_at as string) || (itemB.date_published as string);
+      dateA = publishedA ? new Date(publishedA).getTime() : 0;
+      dateB = publishedB ? new Date(publishedB).getTime() : 0;
     } else {
-      dateA = itemA.date_added ? new Date(itemA.date_added as string).getTime() : 0;
-      dateB = itemB.date_added ? new Date(itemB.date_added as string).getTime() : 0;
+      const addedA = (itemA.added_at as string) || (itemA.date_added as string);
+      const addedB = (itemB.added_at as string) || (itemB.date_added as string);
+      dateA = addedA ? new Date(addedA).getTime() : 0;
+      dateB = addedB ? new Date(addedB).getTime() : 0;
     }
 
     if (sortOrder.endsWith('_asc')) {

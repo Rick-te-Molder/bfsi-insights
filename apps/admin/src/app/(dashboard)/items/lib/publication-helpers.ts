@@ -80,14 +80,14 @@ async function updateExistingPublication(
     .from('kb_publication')
     .update({
       title: data.title,
-      date_published: data.datePublished,
+      published_at: data.datePublished,
       summary_short: data.summaryShort,
       summary_medium: data.summaryMedium,
       summary_long: data.summaryLong,
       thumbnail: data.thumbnailUrl,
       thumbnail_bucket: data.thumbnailBucket,
       thumbnail_path: data.thumbnailPath,
-      last_edited: new Date().toISOString(),
+      last_edited_at: new Date().toISOString(),
     })
     .eq('id', id);
 
@@ -107,7 +107,7 @@ async function insertNewPublication(
       source_url: data.sourceUrl,
       source_name: data.sourceName,
       source_domain: data.sourceDomain,
-      date_published: data.datePublished,
+      published_at: data.datePublished,
       summary_short: data.summaryShort,
       summary_medium: data.summaryMedium,
       summary_long: data.summaryLong,
