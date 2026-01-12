@@ -7,7 +7,9 @@ export const SummarySchema = z.object({
   published_at: z
     .string()
     .nullable()
-    .describe('ISO 8601 date (YYYY-MM-DD). Extract from content. Null only if not found.'),
+    .describe(
+      'Date in YYYY-MM-DD format if day is known, or YYYY-MM if only month/year available. Null only if not found.',
+    ),
 
   // Authors with context
   authors: z
@@ -96,7 +98,7 @@ export const JSON_SCHEMA_DESCRIPTION = `
 Output a JSON object with this exact structure:
 {
   "title": "string - cleaned-up professional title",
-  "published_at": "string|null - ISO 8601 date (YYYY-MM-DD) or null",
+  "published_at": "string|null - YYYY-MM-DD if day known, YYYY-MM if only month/year, or null",
   "authors": [{"name": "string", "role": "string|null", "authority": "string|null"}],
   "summary": {
     "short": "string - 1-2 sentences, 120-150 characters total (for cards)",
