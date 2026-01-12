@@ -1,19 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { formatDateTime, getStatusColor, truncate } from '@/lib/utils';
+import { formatDateTime, truncate } from '@/lib/utils';
+import { useStatus } from '@/contexts/StatusContext';
 import type { QueueItem } from '@bfsi/types';
-
-const STATUS_LABEL: Record<number, string> = {
-  300: 'pending_review',
-  330: 'approved',
-  500: 'failed',
-  540: 'rejected',
-};
-
-export function getStatusLabel(code: number): string {
-  return STATUS_LABEL[code] || String(code);
-}
 
 export function SuccessBanner({ message }: Readonly<{ message: string | null }>) {
   if (!message) return null;
@@ -178,12 +168,13 @@ export function ItemCheckbox({
 }
 
 function ItemMeta({ item }: Readonly<{ item: QueueItem }>) {
+  const { getStatusName, getStatusColor } = useStatus();
   return (
     <div className="flex flex-col items-end gap-2">
       <span
-        className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(getStatusLabel(item.status_code))}`}
+        className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(item.status_code)}`}
       >
-        {getStatusLabel(item.status_code)}
+        {getStatusName(item.status_code)}
       </span>
       <span className="text-xs text-neutral-500">{formatDateTime(item.discovered_at)}</span>
       {item.payload?.source_slug && (
@@ -191,6 +182,20 @@ function ItemMeta({ item }: Readonly<{ item: QueueItem }>) {
       )}
     </div>
   );
+}
+
+function formatPublishedDate(date: string): string {
+  if (/^\d{4}-\d{2}$/.test(date)) {
+    return new Date(
+      Number.parseInt(date.split('-')[0]),
+      Number.parseInt(date.split('-')[1]) - 1,
+    ).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' });
+  }
+  return new Date(date).toLocaleDateString('en-GB', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 function ItemContent({ item }: Readonly<{ item: QueueItem }>) {
@@ -201,11 +206,7 @@ function ItemContent({ item }: Readonly<{ item: QueueItem }>) {
       </p>
       {item.payload?.published_at && (
         <p className="text-xs text-neutral-400 mt-0.5">
-          {new Date(item.payload.published_at).toLocaleDateString('en-GB', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-          })}
+          {formatPublishedDate(item.payload.published_at)}
         </p>
       )}
       <p className="mt-1 text-sm text-neutral-500 truncate">{item.url}</p>

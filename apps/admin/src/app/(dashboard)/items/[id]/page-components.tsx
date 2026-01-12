@@ -1,6 +1,9 @@
+'use client';
+
 import Link from 'next/link';
 import type { QueueItem } from '@bfsi/types';
-import { formatDateTime, getStatusColorByCode, getStatusName } from '@/lib/utils';
+import { formatDateTime } from '@/lib/utils';
+import { useStatus } from '@/contexts/StatusContext';
 
 interface PageHeaderProps {
   payload: Record<string, unknown>;
@@ -18,9 +21,10 @@ function BackLink({ backUrl }: Readonly<{ backUrl: string }>) {
 }
 
 function StatusBadge({ statusCode }: Readonly<{ statusCode: number }>) {
+  const { getStatusName, getStatusColor } = useStatus();
   return (
     <span
-      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColorByCode(statusCode)}`}
+      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${getStatusColor(statusCode)}`}
     >
       {getStatusName(statusCode)}
     </span>

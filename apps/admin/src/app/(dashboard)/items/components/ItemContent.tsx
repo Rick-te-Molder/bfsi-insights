@@ -1,4 +1,7 @@
-import { formatDateTime, getStatusColorByCode, getStatusName, truncate } from '@/lib/utils';
+'use client';
+
+import { formatDateTime, truncate } from '@/lib/utils';
+import { useStatus } from '@/contexts/StatusContext';
 import type { QueueItem } from '@bfsi/types';
 
 export function ItemContent({
@@ -16,6 +19,21 @@ export function ItemContent({
   );
 }
 
+function formatPublishedDate(date: string): string {
+  // Handle both YYYY-MM-DD and YYYY-MM formats
+  if (/^\d{4}-\d{2}$/.test(date)) {
+    return new Date(
+      Number.parseInt(date.split('-')[0]),
+      Number.parseInt(date.split('-')[1]) - 1,
+    ).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' });
+  }
+  return new Date(date).toLocaleDateString('en-GB', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 function ItemMainContent({ item }: Readonly<{ item: QueueItem }>) {
   return (
     <div className="min-w-0 flex-1">
@@ -24,11 +42,7 @@ function ItemMainContent({ item }: Readonly<{ item: QueueItem }>) {
       </p>
       {item.payload?.published_at && (
         <p className="text-[10px] text-neutral-400 mt-0.5">
-          {new Date(item.payload.published_at).toLocaleDateString('en-GB', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-          })}
+          {formatPublishedDate(item.payload.published_at)}
         </p>
       )}
       <ItemStatusInfo item={item} />
@@ -38,10 +52,11 @@ function ItemMainContent({ item }: Readonly<{ item: QueueItem }>) {
 }
 
 function ItemStatusInfo({ item }: Readonly<{ item: QueueItem }>) {
+  const { getStatusName, getStatusColor } = useStatus();
   return (
     <div className="flex items-center gap-2 mt-1">
       <span
-        className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${getStatusColorByCode(item.status_code)}`}
+        className={`rounded px-1.5 py-0.5 text-[10px] font-medium ${getStatusColor(item.status_code)}`}
       >
         {getStatusName(item.status_code)}
       </span>

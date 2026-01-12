@@ -1,15 +1,16 @@
 'use client';
 
-import { getStatusColorByCode, getStatusName } from '@/lib/utils';
+import { useStatus } from '@/contexts/StatusContext';
 import type { DetailPanelHeaderProps, DetailPanelTitleBlockProps } from './detail-panel.types';
 
 const NAV_BTN =
   'px-2 py-1 text-xs rounded bg-neutral-800 text-neutral-300 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed';
 
 function StatusPill({ statusCode }: Readonly<{ statusCode: number }>) {
+  const { getStatusName, getStatusColor } = useStatus();
   return (
     <span
-      className={`rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColorByCode(statusCode)}`}
+      className={`rounded-full px-2 py-0.5 text-xs font-medium ${getStatusColor(statusCode)}`}
     >
       {getStatusName(statusCode)}
     </span>
@@ -17,11 +18,18 @@ function StatusPill({ statusCode }: Readonly<{ statusCode: number }>) {
 }
 
 function PublishedAt({ date }: Readonly<{ date: string }>) {
-  const formatted = new Date(date).toLocaleDateString('en-GB', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  // Handle both YYYY-MM-DD and YYYY-MM formats
+  const isMonthYearOnly = /^\d{4}-\d{2}$/.test(date);
+  const formatted = isMonthYearOnly
+    ? new Date(
+        Number.parseInt(date.split('-')[0]),
+        Number.parseInt(date.split('-')[1]) - 1,
+      ).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
+    : new Date(date).toLocaleDateString('en-GB', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
   return <p className="text-xs text-neutral-400 mt-1">Published {formatted}</p>;
 }
 
