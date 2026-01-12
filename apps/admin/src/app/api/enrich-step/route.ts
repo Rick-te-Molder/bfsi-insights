@@ -110,8 +110,11 @@ function buildSingleStepPayload(
   // Set or clear _return_status based on whether item is past enrichment phase
   if (returnStatus === null) {
     delete result._return_status;
+    delete result._manual_override;
   } else {
     result._return_status = returnStatus;
+    // Mark as manual override so state machine allows 400→300 (published→pending_review)
+    result._manual_override = true;
   }
   return result;
 }
