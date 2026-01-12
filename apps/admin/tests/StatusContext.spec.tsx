@@ -17,6 +17,7 @@ vi.mock('@/lib/supabase/client', () => ({
                 description: null,
                 category: 'enrichment',
                 is_terminal: false,
+                color: 'bg-neutral-500/20 text-neutral-300',
               },
               {
                 code: 300,
@@ -24,6 +25,7 @@ vi.mock('@/lib/supabase/client', () => ({
                 description: null,
                 category: 'review',
                 is_terminal: false,
+                color: 'bg-purple-500/20 text-purple-300',
               },
               {
                 code: 400,
@@ -31,6 +33,7 @@ vi.mock('@/lib/supabase/client', () => ({
                 description: null,
                 category: 'published',
                 is_terminal: true,
+                color: 'bg-green-500/20 text-green-300',
               },
             ],
             error: null,
@@ -81,17 +84,6 @@ describe('StatusContext', () => {
 
       expect(html).toContain('statusCount');
     });
-
-    it('initializes with fallback statuses', () => {
-      const html = renderToStaticMarkup(
-        <StatusProvider>
-          <TestConsumer />
-        </StatusProvider>,
-      );
-
-      // Should have statuses from fallback initially
-      expect(html).toContain('statusCount');
-    });
   });
 
   describe('useStatus', () => {
@@ -128,7 +120,10 @@ describe('StatusContext', () => {
         </StatusProvider>,
       );
 
-      expect(html).toContain('pending_enrichment');
+      // No fallback statuses: in SSR render, effects don't run and statuses remain empty
+      // So helpers fall back to status_<code> and DEFAULT_COLOR.
+      expect(html).toContain('status_200');
+      expect(html).toContain('bg-neutral-500/20 text-neutral-300');
     });
 
     it('returns fallback for unknown status code', () => {
