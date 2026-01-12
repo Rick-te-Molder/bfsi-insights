@@ -184,3 +184,68 @@ export async function resolveQueueIdForEnrichment(
   const resolved = await resolveQueueItemForEnrichment(supabase, id);
   return resolved.queueId;
 }
+
+function buildReenrichOverridePayload(
+  basePayload: Record<string, unknown>,
+  pendingReviewCode: number,
+): Record<string, unknown> {
+  return {
+    ...basePayload,
+    _manual_override: true,
+    _return_status: pendingReviewCode,
+  };
+}
+
+async function fetchCurrentPayload(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  queueId: string,
+): Promise<Record<string, unknown>> {
+  const { data } = await supabase
+    .from('ingestion_queue')
+    .select('payload')
+    .eq('id', queueId)
+    .single<{ payload: Record<string, unknown> }>();
+  return data?.payload ?? {};
+}
+
+async function setManualOverridePayload(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  queueId: string,
+  pendingReviewCode: number,
+): Promise<void> {
+  const basePayload = await fetchCurrentPayload(supabase, queueId);
+  const updatedPayload = buildReenrichOverridePayload(basePayload, pendingReviewCode);
+
+  await supabase.from('ingestion_queue').update({ payload: updatedPayload }).eq('id', queueId);
+}
+
+async function transitionToPendingEnrichment(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  queueId: string,
+  pendingEnrichmentCode: number,
+): Promise<void> {
+  const { error } = await supabase.rpc('transition_status', {
+    p_queue_id: queueId,
+    p_new_status: pendingEnrichmentCode,
+    p_changed_by: 'admin:full-reenrich',
+    p_changes: { reason: 'full re-enrichment requested' },
+    p_is_manual: true,
+  });
+
+  if (error) {
+    throw new Error(`Failed to prepare queue for re-enrichment: ${error.message}`);
+  }
+}
+
+/**
+ * Prepare a queue item for full re-enrichment by resetting its status.
+ * Sets _manual_override:true so state machine allows transitions from review/published.
+ */
+export async function prepareQueueForFullReenrich(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  queueId: string,
+): Promise<void> {
+  const { pendingReviewCode, pendingEnrichmentCode } = await loadReenrichStatusCodes(supabase);
+  await setManualOverridePayload(supabase, queueId, pendingReviewCode);
+  await transitionToPendingEnrichment(supabase, queueId, pendingEnrichmentCode);
+}

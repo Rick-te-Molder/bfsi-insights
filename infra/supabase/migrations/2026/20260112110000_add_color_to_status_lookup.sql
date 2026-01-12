@@ -27,11 +27,11 @@ UPDATE status_lookup SET color = 'bg-amber-500/20 text-amber-300' WHERE code = 2
 UPDATE status_lookup SET color = 'bg-sky-500/20 text-sky-300' WHERE code = 232;
 UPDATE status_lookup SET color = 'bg-emerald-500/20 text-emerald-300' WHERE code = 240;
 
--- Review (300s) - purple for pending, amber for active, green for done
+-- Review (300s) - purple for pending, amber for active
+-- Note: 330 (approved) was removed; approve now goes directly to 400 (published)
 UPDATE status_lookup SET color = 'bg-purple-500/20 text-purple-300' WHERE code = 300;
 UPDATE status_lookup SET color = 'bg-amber-500/20 text-amber-300' WHERE code = 310;
 UPDATE status_lookup SET color = 'bg-amber-500/20 text-amber-300' WHERE code = 320;
-UPDATE status_lookup SET color = 'bg-green-500/20 text-green-300' WHERE code = 330;
 
 -- Published (400s) - green
 UPDATE status_lookup SET color = 'bg-green-500/20 text-green-300' WHERE code = 400;

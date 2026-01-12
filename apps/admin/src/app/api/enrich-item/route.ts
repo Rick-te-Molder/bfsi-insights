@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { resolveQueueIdForEnrichment } from '@/app/api/_lib/reenrich-queue';
+import {
+  resolveQueueIdForEnrichment,
+  prepareQueueForFullReenrich,
+} from '@/app/api/_lib/reenrich-queue';
 
 const AGENT_API_URL = process.env.AGENT_API_URL || 'http://localhost:3001';
 const AGENT_API_KEY = process.env.AGENT_API_KEY || '';
@@ -47,6 +50,9 @@ export async function POST(request: NextRequest) {
     if (!queueId) {
       return NextResponse.json({ error: 'Item not found' }, { status: 404 });
     }
+
+    // Prepare queue item for full re-enrichment (reset status, set manual override)
+    await prepareQueueForFullReenrich(supabase, queueId);
 
     const result = await callAgentApi(queueId);
     return NextResponse.json(result.data, { status: result.status });
