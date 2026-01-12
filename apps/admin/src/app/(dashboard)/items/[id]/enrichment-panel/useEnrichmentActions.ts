@@ -51,12 +51,34 @@ async function queueReEnrichment(supabase: Supabase, item: QueueItem) {
     ...currentItem?.payload,
     _single_step: null,
     _return_status: isPublished ? 300 : null,
+    _manual_override: true, // Required for state machine to allow re-enrich transitions
   };
   const { error } = await supabase
     .from('ingestion_queue')
     .update({ status_code: 200, current_run_id: newRunId, payload: updatedPayload })
     .eq('id', item.id);
   if (error) throw error;
+}
+
+async function triggerImmediateEnrichment(itemId: string) {
+  // Trigger immediate processing via the enrich-item API
+  const res = await fetch('/api/enrich-item', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: itemId }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    let errorMsg: string;
+    try {
+      const errData = JSON.parse(text);
+      errorMsg = errData.error || `API error: ${res.status}`;
+    } catch {
+      errorMsg = text.substring(0, 100) || `API error: ${res.status}`;
+    }
+    throw new Error(errorMsg);
+  }
+  return res.json();
 }
 
 function useMessageState() {
@@ -104,7 +126,10 @@ function createTriggerEnrichAll(
     setLoading('enrich');
     try {
       await queueReEnrichment(supabase, item);
-      show('success', '✓ Queued full re-enrichment (status → 200)');
+      show('success', '✓ Starting re-enrichment...');
+      // Trigger immediate processing instead of waiting for queue
+      await triggerImmediateEnrichment(item.id);
+      show('success', '✓ Re-enrichment started');
       refresh();
     } catch (err) {
       show('error', `Failed: ${err instanceof Error ? err.message : 'Unknown'}`);

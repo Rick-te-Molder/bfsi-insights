@@ -18,14 +18,25 @@ export async function POST() {
       body: JSON.stringify({ limit: 20, includeThumbnail: true }),
     });
 
-    const data = await res.json();
+    // Handle non-JSON responses (e.g., HTML error pages from proxy/CDN)
+    const text = await res.text();
+    let data: Record<string, unknown>;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      const preview = text.substring(0, 100).replaceAll(/\s+/g, ' ');
+      return NextResponse.json(
+        { error: `Agent API unavailable: ${preview}...` },
+        { status: 503 },
+      );
+    }
 
     if (!res.ok) {
       return NextResponse.json({ error: data.error || 'Agent API error' }, { status: res.status });
     }
 
     return NextResponse.json({
-      processed: data.processed || data.results?.length || 0,
+      processed: data.processed || (data.results as unknown[])?.length || 0,
       results: data.results,
     });
   } catch (error) {

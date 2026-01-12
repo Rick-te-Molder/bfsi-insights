@@ -11,6 +11,7 @@ import thumbnailRouter from './agents/thumbnail.js';
 import discoveryRouter from './agents/discovery.js';
 import improvementRouter from './agents/improvement.js';
 import enrichSingleStepRouter from './agents/enrich-single-step.js';
+import enrichItemRouter from './agents/enrich-item.js';
 import { runPromptEval } from '../lib/prompt-eval.js';
 
 const router = express.Router();
@@ -22,6 +23,7 @@ router.use('/thumbnail', thumbnailRouter);
 router.use('/discovery', discoveryRouter);
 router.use('/improvement', improvementRouter);
 router.use('/', enrichSingleStepRouter); // Single-step re-enrichment
+router.use('/', enrichItemRouter); // Full item re-enrichment
 
 router.post('/run/prompt-eval', async (req, res) => {
   try {
