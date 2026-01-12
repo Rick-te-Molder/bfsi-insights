@@ -30,6 +30,16 @@ vi.mock('../../src/lib/status-codes.js', () => ({
   }),
 }));
 
+vi.mock('../../src/clients/supabase.js', () => ({
+  getSupabaseAdminClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      update: vi.fn(() => ({
+        eq: vi.fn(() => Promise.resolve({ error: null })),
+      })),
+    })),
+  })),
+}));
+
 import { stepSummarize, stepTag, stepThumbnail } from '../../src/agents/enrichment-steps.js';
 import { runSummarizer } from '../../src/agents/summarizer.js';
 import { runTagger } from '../../src/agents/tagger.js';
