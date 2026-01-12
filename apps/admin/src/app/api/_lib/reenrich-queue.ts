@@ -24,6 +24,27 @@ async function fetchQueueItem(supabase: ReturnType<typeof createServiceRoleClien
   return result;
 }
 
+function normalizeQueueUrl(url: string) {
+  return url.toLowerCase().replace(/[?#].*$/, '');
+}
+
+async function fetchQueueIdByUrlNorm(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  urlNorm: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('ingestion_queue')
+    .select('id')
+    .eq('url_norm', urlNorm)
+    .maybeSingle<{ id: string }>();
+
+  if (error) {
+    throw new Error(`Failed to fetch queue item by url_norm: ${error.message}`);
+  }
+
+  return data?.id ?? null;
+}
+
 async function fetchPublicationForReenrich(
   supabase: ReturnType<typeof createServiceRoleClient>,
   id: string,
@@ -88,8 +109,19 @@ async function insertQueueItemForPublication(
     .select('id')
     .single();
 
-  if (insert.error || !insert.data) {
-    throw new Error(insert.error?.message || 'Failed to create queue item for publication');
+  if (insert.error) {
+    const isUniqueViolation = insert.error.code === '23505';
+    const isUrlNormConstraint = insert.error.message.includes('idx_queue_url_norm');
+    if (isUniqueViolation && isUrlNormConstraint) {
+      const existingId = await fetchQueueIdByUrlNorm(supabase, normalizeQueueUrl(input.sourceUrl));
+      if (existingId) return existingId;
+    }
+
+    throw new Error(insert.error.message || 'Failed to create queue item for publication');
+  }
+
+  if (!insert.data) {
+    throw new Error('Failed to create queue item for publication');
   }
 
   return insert.data.id;
