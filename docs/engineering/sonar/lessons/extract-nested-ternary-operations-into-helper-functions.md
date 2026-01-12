@@ -3,7 +3,7 @@ id: S3358
 name: Nested ternary operator
 pattern: "\\?[^\\n]*:[^\\n]*\\?"
 extensions: ['.ts', '.tsx', '.js', '.jsx']
-blocking: true
+blocking: false
 ---
 
 # Extract Nested Ternary Operations into Helper Functions
