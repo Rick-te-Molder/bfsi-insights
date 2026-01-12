@@ -14,6 +14,8 @@ export async function rejectQueueItem(args: {
       status_code: args.rejectedCode,
       reviewer: HUMAN_REJECTED_REVIEWER_ID,
       reviewed_at: new Date().toISOString(),
+      review_action: 'reject', // US-5: Track action type
+      review_notes: args.reason, // US-5: Store reason as notes
       payload: {
         ...args.item.payload,
         rejection_reason: args.reason,

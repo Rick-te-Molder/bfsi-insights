@@ -1,5 +1,6 @@
 /**
  * Enrichment step helpers for orchestrator
+ * US-4: Includes checkpointing for partial failure recovery
  */
 
 import { runSummarizer } from '../agents/summarizer.js';
@@ -7,6 +8,56 @@ import { runTagger } from '../agents/tagger.js';
 import { runThumbnailer } from '../agents/thumbnailer.js';
 import { transitionByAgent } from '../lib/queue-update.js';
 import { getStatusCode } from '../lib/status-codes.js';
+import { getSupabaseAdminClient } from '../clients/supabase.js';
+
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
+let supabase = null;
+
+function getSupabase() {
+  if (supabase) return supabase;
+  supabase = getSupabaseAdminClient();
+  return supabase;
+}
+
+/**
+ * US-4: Record last successful step for partial failure recovery
+ * @param {string} queueId
+ * @param {string} stepName
+ */
+async function checkpointStep(queueId, stepName) {
+  const { error } = await getSupabase()
+    .from('ingestion_queue')
+    .update({
+      last_successful_step: stepName,
+      step_attempt: 1, // Reset attempt counter on success
+      retry_after: null, // Clear any pending retry
+    })
+    .eq('id', queueId);
+
+  if (error) {
+    const msg = typeof error.message === 'string' ? error.message : 'Unknown error';
+    console.warn(`   ⚠️ Failed to checkpoint step: ${msg}`);
+  }
+}
+
+/**
+ * US-4: Get last successful step for resuming
+ * @param {string} queueId
+ * @returns {Promise<string | null>}
+ */
+export async function getLastSuccessfulStep(queueId) {
+  const { data, error } = await getSupabase()
+    .from('ingestion_queue')
+    .select('last_successful_step')
+    .eq('id', queueId)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data.last_successful_step;
+}
 
 function filterOrganizations(result, sourceName) {
   const sourceVariants = [
@@ -54,6 +105,9 @@ export async function stepSummarize(queueId, payload, pipelineRunId = null) {
   await transitionByAgent(queueId, getStatusCode('TO_TAG'), 'orchestrator', {
     changes: { payload: updated },
   });
+
+  // US-4: Checkpoint after successful summarization
+  await checkpointStep(queueId, 'summarize');
   return updated;
 }
 
@@ -97,6 +151,9 @@ export async function stepTag(queueId, payload, pipelineRunId = null) {
   await transitionByAgent(queueId, nextStatus, 'orchestrator', {
     changes: { payload: updated },
   });
+
+  // US-4: Checkpoint after successful tagging
+  await checkpointStep(queueId, 'tag');
   return updated;
 }
 
@@ -105,6 +162,8 @@ export async function stepThumbnail(queueId, payload, pipelineRunId = null) {
   console.log('   📸 Generating thumbnail...');
   try {
     const result = await runThumbnailer({ id: queueId, payload, pipelineRunId });
+    // US-4: Checkpoint after successful thumbnail
+    await checkpointStep(queueId, 'thumbnail');
     return {
       ...payload,
       thumbnail_bucket: result.bucket,
@@ -112,15 +171,16 @@ export async function stepThumbnail(queueId, payload, pipelineRunId = null) {
       thumbnail_url: result.publicUrl,
     };
   } catch (error) {
-    if (error.message.includes('Invalid URL scheme')) {
-      console.log(`   ❌ Fatal error: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes('Invalid URL scheme')) {
+      console.log(`   ❌ Fatal error: ${errorMessage}`);
       await transitionByAgent(queueId, getStatusCode('REJECTED'), 'orchestrator', {
-        changes: { rejection_reason: error.message },
+        changes: { rejection_reason: errorMessage },
       });
       throw error;
     }
 
-    console.log(`   ⚠️ Thumbnail failed: ${error.message} (continuing without)`);
+    console.log(`   ⚠️ Thumbnail failed: ${errorMessage} (continuing without)`);
     return payload;
   }
 }
