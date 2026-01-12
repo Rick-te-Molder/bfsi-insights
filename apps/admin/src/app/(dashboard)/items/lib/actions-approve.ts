@@ -22,6 +22,7 @@ type ApproveArgs = {
   editedTitle?: string;
   publishedCode: number;
   reviewedBy: string | null;
+  reviewNotes?: string; // US-5: Optional approval notes
 };
 
 async function fetchQueueRow(supabase: Supabase, queueId: string) {
@@ -54,12 +55,15 @@ async function markQueueItemPublished(opts: {
   publishedCode: number;
   reviewedBy: string | null;
   payload: Record<string, unknown>;
+  reviewNotes?: string; // US-5
 }) {
   return updateQueueItem(opts.supabase, opts.row.id, {
     status_code: opts.publishedCode,
     payload: opts.payload,
     reviewed_by: opts.reviewedBy,
     reviewed_at: new Date().toISOString(),
+    review_action: 'approve', // US-5: Track action type
+    review_notes: opts.reviewNotes || null, // US-5: Track notes
   });
 }
 
@@ -82,6 +86,7 @@ async function approveQueueItemImpl(args: ApproveArgs): Promise<ApproveResult> {
     publishedCode: args.publishedCode,
     reviewedBy: args.reviewedBy,
     payload: updatedPayload,
+    reviewNotes: args.reviewNotes, // US-5
   });
   if (updateError) return { success: false, error: updateError.message };
   return { success: true, publicationId: pubResult.publicationId };
