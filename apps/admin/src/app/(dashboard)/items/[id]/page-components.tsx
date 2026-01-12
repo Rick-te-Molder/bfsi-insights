@@ -28,14 +28,22 @@ function StatusBadge({ statusCode }: Readonly<{ statusCode: number }>) {
 }
 
 function PublishedDate({ publishedAt }: Readonly<{ publishedAt: string }>) {
-  return (
-    <p className="text-sm text-neutral-400 mt-1">
-      Published{' '}
-      {new Date(publishedAt).toLocaleDateString('en-GB', {
+  // Handle both YYYY-MM-DD and YYYY-MM formats
+  const isMonthYearOnly = /^\d{4}-\d{2}$/.test(publishedAt);
+  const displayDate = isMonthYearOnly
+    ? new Date(
+        Number.parseInt(publishedAt.split('-')[0]),
+        Number.parseInt(publishedAt.split('-')[1]) - 1,
+      ).toLocaleDateString('en-GB', { year: 'numeric', month: 'short' })
+    : new Date(publishedAt).toLocaleDateString('en-GB', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
-      })}
+      });
+
+  return (
+    <p className="text-sm text-neutral-400 mt-1">
+      Published {displayDate}
     </p>
   );
 }

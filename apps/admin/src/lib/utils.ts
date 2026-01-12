@@ -5,7 +5,18 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Format a date string for display.
+ * Supports YYYY-MM-DD (full date) and YYYY-MM (month+year only).
+ */
 export function formatDate(dateString: string): string {
+  // Check if it's month-year only format (YYYY-MM)
+  if (/^\d{4}-\d{2}$/.test(dateString)) {
+    const [year, month] = dateString.split('-');
+    const date = new Date(Number.parseInt(year), Number.parseInt(month) - 1);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+  }
+  // Full date format
   return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -13,7 +24,18 @@ export function formatDate(dateString: string): string {
   });
 }
 
+/**
+ * Format a date string with time for display.
+ * Supports YYYY-MM-DD (full date) and YYYY-MM (month+year only).
+ */
 export function formatDateTime(dateString: string): string {
+  // Check if it's month-year only format (YYYY-MM)
+  if (/^\d{4}-\d{2}$/.test(dateString)) {
+    const [year, month] = dateString.split('-');
+    const date = new Date(Number.parseInt(year), Number.parseInt(month) - 1);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+  }
+  // Full date format with time
   return new Date(dateString).toLocaleString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -28,7 +50,9 @@ export function truncate(str: string, length: number): string {
   return str.slice(0, length) + '...';
 }
 
-// KB-285: Map status_code directly to colors (no name lookup needed)
+// KB-285: Fallback status colors for server-side code where StatusContext unavailable
+// PREFER: Use useStatus().getStatusColor() from StatusContext where possible
+// Colors are now stored in status_lookup.color column (single source of truth)
 const STATUS_CODE_TO_COLOR: Record<number, string> = {
   // Discovery (100s) - neutral/amber for processing
   100: 'bg-neutral-500/20 text-neutral-300',
