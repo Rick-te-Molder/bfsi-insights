@@ -175,10 +175,11 @@ async function runEnrichStep(step: StepName, id: string) {
     return NextResponse.json({ error: 'Item not found' }, { status: 404 });
 
   const returnStatus = await computeReturnStatus(supabase, currentItem.status_code);
-  // For independent step runs (returnStatus=null), don't update status_code
-  // The state machine trigger blocks invalid transitions like 210→230
+  // For review/published items (returnStatus!=null), do NOT update status_code.
+  // The state machine trigger blocks transitions like 400→230.
+  // We still set _single_step and _return_status so the agent can run the step.
   const statusCode =
-    returnStatus === null ? null : await getStatusCode(supabase, config.statusName);
+    returnStatus === null ? await getStatusCode(supabase, config.statusName) : null;
 
   await cancelRunningPipeline(supabase, queueId);
   const { data: newRun } = await createPipelineRun(supabase, queueId, step);
