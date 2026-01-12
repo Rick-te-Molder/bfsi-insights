@@ -1,13 +1,14 @@
 /**
  * Enrichment step helpers for orchestrator
  * US-4: Includes checkpointing for partial failure recovery
+ *
+ * ARCHITECTURE: These functions are stateless - they run agents and build payloads.
+ * The orchestrator handles ALL state transitions.
  */
 
 import { runSummarizer } from '../agents/summarizer.js';
 import { runTagger } from '../agents/tagger.js';
 import { runThumbnailer } from '../agents/thumbnailer.js';
-import { transitionByAgent } from '../lib/queue-update.js';
-import { getStatusCode } from '../lib/status-codes.js';
 import { getSupabaseAdminClient } from '../clients/supabase.js';
 
 /** @type {import('@supabase/supabase-js').SupabaseClient | null} */
@@ -94,19 +95,18 @@ function buildSummarizedPayload(item, result, sourceName) {
   return updated;
 }
 
-export async function stepSummarize(queueId, payload, pipelineRunId = null) {
-  await transitionByAgent(queueId, getStatusCode('SUMMARIZING'), 'orchestrator');
+/**
+ * Run summarizer agent and build payload. No state transitions.
+ * @param {string} queueId
+ * @param {any} payload
+ * @param {string | null} pipelineRunId
+ * @returns {Promise<any>} Updated payload with summary
+ */
+export async function runSummarizeStep(queueId, payload, pipelineRunId = null) {
   console.log('   📝 Generating summary...');
   const result = await runSummarizer({ id: queueId, payload, pipelineRunId });
-
   const sourceName = payload.source_name?.toLowerCase() || '';
   const updated = buildSummarizedPayload({ payload }, result, sourceName);
-
-  await transitionByAgent(queueId, getStatusCode('TO_TAG'), 'orchestrator', {
-    changes: { payload: updated },
-  });
-
-  // US-4: Checkpoint after successful summarization
   await checkpointStep(queueId, 'summarize');
   return updated;
 }
@@ -138,49 +138,48 @@ function buildTaggedPayload(item, result) {
   };
 }
 
-export async function stepTag(queueId, payload, pipelineRunId = null) {
-  await transitionByAgent(queueId, getStatusCode('TAGGING'), 'orchestrator');
+/**
+ * Run tagger agent and build payload. No state transitions.
+ * @param {string} queueId
+ * @param {any} payload
+ * @param {string | null} pipelineRunId
+ * @returns {Promise<any>} Updated payload with tags
+ */
+export async function runTagStep(queueId, payload, pipelineRunId = null) {
   console.log('   🏷️  Classifying taxonomy...');
   const result = await runTagger({ id: queueId, payload, pipelineRunId });
-
   const updated = buildTaggedPayload({ payload }, result);
-  const nextStatus = payload.thumbnail_bucket
-    ? getStatusCode('THUMBNAILING')
-    : getStatusCode('PENDING_REVIEW');
-
-  await transitionByAgent(queueId, nextStatus, 'orchestrator', {
-    changes: { payload: updated },
-  });
-
-  // US-4: Checkpoint after successful tagging
   await checkpointStep(queueId, 'tag');
   return updated;
 }
 
-export async function stepThumbnail(queueId, payload, pipelineRunId = null) {
-  await transitionByAgent(queueId, getStatusCode('THUMBNAILING'), 'orchestrator');
+/**
+ * Run thumbnailer agent and build payload. No state transitions.
+ * @param {string} queueId
+ * @param {any} payload
+ * @param {string | null} pipelineRunId
+ * @returns {Promise<{payload: any, error?: string}>} Updated payload with thumbnail, or error
+ */
+export async function runThumbnailStep(queueId, payload, pipelineRunId = null) {
   console.log('   📸 Generating thumbnail...');
   try {
     const result = await runThumbnailer({ id: queueId, payload, pipelineRunId });
-    // US-4: Checkpoint after successful thumbnail
     await checkpointStep(queueId, 'thumbnail');
     return {
-      ...payload,
-      thumbnail_bucket: result.bucket,
-      thumbnail_path: result.path,
-      thumbnail_url: result.publicUrl,
+      payload: {
+        ...payload,
+        thumbnail_bucket: result.bucket,
+        thumbnail_path: result.path,
+        thumbnail_url: result.publicUrl,
+      },
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     if (errorMessage.includes('Invalid URL scheme')) {
       console.log(`   ❌ Fatal error: ${errorMessage}`);
-      await transitionByAgent(queueId, getStatusCode('REJECTED'), 'orchestrator', {
-        changes: { rejection_reason: errorMessage },
-      });
-      throw error;
+      return { payload, error: errorMessage, fatal: true };
     }
-
     console.log(`   ⚠️ Thumbnail failed: ${errorMessage} (continuing without)`);
-    return payload;
+    return { payload };
   }
 }

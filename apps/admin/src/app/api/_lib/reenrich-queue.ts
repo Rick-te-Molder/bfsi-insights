@@ -219,33 +219,16 @@ async function setManualOverridePayload(
   await supabase.from('ingestion_queue').update({ payload: updatedPayload }).eq('id', queueId);
 }
 
-async function transitionToPendingEnrichment(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  queueId: string,
-  pendingEnrichmentCode: number,
-): Promise<void> {
-  const { error } = await supabase.rpc('transition_status', {
-    p_queue_id: queueId,
-    p_new_status: pendingEnrichmentCode,
-    p_changed_by: 'admin:full-reenrich',
-    p_changes: { reason: 'full re-enrichment requested' },
-    p_is_manual: true,
-  });
-
-  if (error) {
-    throw new Error(`Failed to prepare queue for re-enrichment: ${error.message}`);
-  }
-}
-
 /**
- * Prepare a queue item for full re-enrichment by resetting its status.
- * Sets _manual_override:true so state machine allows transitions from review/published.
+ * Prepare a queue item for full re-enrichment.
+ * Sets _manual_override:true and _return_status so orchestrator can transition directly.
+ * Does NOT change status - orchestrator handles the final transition (e.g., 400→300).
  */
 export async function prepareQueueForFullReenrich(
   supabase: ReturnType<typeof createServiceRoleClient>,
   queueId: string,
 ): Promise<void> {
-  const { pendingReviewCode, pendingEnrichmentCode } = await loadReenrichStatusCodes(supabase);
+  const { pendingReviewCode } = await loadReenrichStatusCodes(supabase);
   await setManualOverridePayload(supabase, queueId, pendingReviewCode);
-  await transitionToPendingEnrichment(supabase, queueId, pendingEnrichmentCode);
+  // No status transition here - orchestrator will transition directly to pendingReviewCode
 }

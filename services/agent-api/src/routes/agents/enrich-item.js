@@ -42,7 +42,13 @@ router.post('/enrich-item', async (/** @type {any} */ req, /** @type {any} */ re
 
     // Use orchestrator's enrichItem for consistency
     // skipRejection: true for re-enrichment (user explicitly requested)
-    const result = await enrichItem(item, { includeThumbnail: true, skipRejection: true });
+    // skipFetchFilter: true if _return_status is set (re-enrichment from published/review)
+    const skipFetchFilter = !!item.payload?._return_status;
+    const result = await enrichItem(item, {
+      includeThumbnail: true,
+      skipRejection: true,
+      skipFetchFilter,
+    });
 
     if (!result.success) {
       return res.status(400).json({ error: result.error || 'Enrichment failed' });
