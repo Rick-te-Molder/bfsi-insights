@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { getStatusCode, resolveQueueItemForEnrichment } from '@/app/api/_lib/reenrich-queue';
 
 const AGENT_API_URL = process.env.AGENT_API_URL || 'http://localhost:3001';
 const AGENT_API_KEY = process.env.AGENT_API_KEY || '';
@@ -57,16 +58,6 @@ function getReturnStatus(
 
   // Published items return to pending_review; review items return to enriched
   return currentStatus === publishedCode ? pendingReviewCode : enrichedCode;
-}
-
-async function fetchQueueItem(supabase: ReturnType<typeof createServiceRoleClient>, id: string) {
-  // Fetch current item - ASMM Phase 1: No silent fails
-  const result = await supabase.from('ingestion_queue').select('payload, status_code').eq('id', id).single();
-  if (result.error && result.error.code !== 'PGRST116') {
-    // PGRST116 = "not found" which is handled by caller
-    throw new Error(`Failed to fetch queue item ${id}: ${result.error.message}`);
-  }
-  return result;
 }
 
 async function cancelRunningPipeline(
@@ -179,34 +170,26 @@ async function runEnrichStep(step: StepName, id: string) {
   const supabase = createServiceRoleClient();
   const config = getStepConfig(step);
 
-  const { data: currentItem } = await fetchQueueItem(supabase, id);
-  if (!currentItem) return NextResponse.json({ error: 'Item not found' }, { status: 404 });
+  const { queueId, item: currentItem } = await resolveQueueItemForEnrichment(supabase, id);
+  if (!currentItem || !queueId)
+    return NextResponse.json({ error: 'Item not found' }, { status: 404 });
 
   const returnStatus = await computeReturnStatus(supabase, currentItem.status_code);
   // For independent step runs (returnStatus=null), don't update status_code
   // The state machine trigger blocks invalid transitions like 210→230
-  const statusCode = returnStatus === null ? null : await getStatusCode(supabase, config.statusName);
+  const statusCode =
+    returnStatus === null ? null : await getStatusCode(supabase, config.statusName);
 
-  await cancelRunningPipeline(supabase, id);
-  const { data: newRun } = await createPipelineRun(supabase, id, step);
-  await updateQueueForSingleStep(supabase, id, {
+  await cancelRunningPipeline(supabase, queueId);
+  const { data: newRun } = await createPipelineRun(supabase, queueId, step);
+  await updateQueueForSingleStep(supabase, queueId, {
     statusCode,
     runId: newRun?.id || null,
     payload: buildSingleStepPayload(currentItem.payload, returnStatus, step),
   });
 
-  const result = await callAgentApi(config.endpoint, id, step);
+  const result = await callAgentApi(config.endpoint, queueId, step);
   return NextResponse.json(result.data, { status: result.status });
-}
-
-// KB-202: Load status codes from status_lookup table (single source of truth)
-async function getStatusCode(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  name: string,
-): Promise<number> {
-  const { data } = await supabase.from('status_lookup').select('code').eq('name', name).single();
-  if (!data) throw new Error(`Status code not found: ${name}`);
-  return data.code;
 }
 
 // KB-285: Trigger a single enrichment step for immediate processing

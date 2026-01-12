@@ -275,7 +275,7 @@ export function preparePublicationData(
     sourceName:
       sourceFromPayload && sourceFromPayload !== 'manual' ? sourceFromPayload : sourceDomain,
     sourceDomain,
-    datePublished: normalizeDatePublished(payload.published_at),
+    datePublished: normalizeDatePublished(payload.published_at ?? payload.date_published),
     summaryShort: (summary.short as string) || '',
     summaryMedium: (summary.medium as string) || '',
     summaryLong: (summary.long as string) || '',
