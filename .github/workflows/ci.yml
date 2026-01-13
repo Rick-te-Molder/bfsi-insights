@@ -114,14 +114,14 @@ jobs:
         run: npm run test:coverage -w services/agent-api
 
       - name: Download baseline coverage (if exists)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: coverage-baseline-agent-api
           path: artifacts
         continue-on-error: true
 
       - name: Download baseline coverage for apps (if exists)
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: coverage-baseline-apps
           path: artifacts
