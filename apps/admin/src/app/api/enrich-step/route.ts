@@ -52,11 +52,9 @@ function getReturnStatus(
   pendingReviewCode: number,
   _enrichedCode: number,
 ): number | null {
-  // Items in enrichment phase (200-239) should continue normal flow
-  const isInEnrichmentPhase = currentStatus >= 200 && currentStatus < 240;
-  if (isInEnrichmentPhase) return null;
-
-  // All non-enrichment items (review 300s, published 400s) return to pending_review
+  // Items in enrichment phase (200-239): return to pending_review after step completes
+  // This handles items stuck at intermediate statuses from failed runs
+  // All other items (review 300s, published 400s): also return to pending_review
   // This ensures re-enriched items get human review before republishing
   return pendingReviewCode;
 }
@@ -179,11 +177,10 @@ async function runEnrichStep(step: StepName, id: string) {
     return NextResponse.json({ error: 'Item not found' }, { status: 404 });
 
   const returnStatus = await computeReturnStatus(supabase, currentItem.status_code);
-  // For review/published items (returnStatus!=null), do NOT update status_code.
-  // The state machine trigger blocks transitions like 400→230.
-  // We still set _single_step and _return_status so the agent can run the step.
-  const statusCode =
-    returnStatus === null ? await getStatusCode(supabase, config.statusName) : null;
+  // NEVER update status_code for single-step enrichment.
+  // The agent API runs the step and saves the payload without status changes.
+  // Then transitions to returnStatus at the end (or keeps current status if null).
+  const statusCode = null;
 
   await cancelRunningPipeline(supabase, queueId);
   const { data: newRun } = await createPipelineRun(supabase, queueId, step);
