@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { AbTestsHeader } from './ab-tests-header';
 import { AbTestsStats } from './ab-tests-stats';
 import { AbTestsTable } from './ab-tests-table';
