@@ -1,5 +1,7 @@
 import { Sidebar } from '@/components/ui/sidebar';
 
+export const dynamic = 'force-dynamic';
+
 export default function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <div className="min-h-screen bg-neutral-950">

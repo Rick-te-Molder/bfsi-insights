@@ -102,6 +102,19 @@ function useLLMJudgeState(prompts: { agent_name: string }[]) {
   };
 }
 
+async function postEvalRun(payload: { promptVersionId: string; criteria: string }) {
+  return fetch('/api/evals/llm-judge', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+async function showEvalRunError(res: Response) {
+  const data = await res.json();
+  alert('Failed to run eval: ' + data.error);
+}
+
 async function runEvaluation(
   selectedPrompt: string,
   criteria: string,
@@ -112,21 +125,11 @@ async function runEvaluation(
     alert('Please select a prompt version');
     return;
   }
-
   setRunning(true);
-
   try {
-    const res = await fetch('/api/evals/llm-judge', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ promptVersionId: selectedPrompt, criteria }),
-    });
-
+    const res = await postEvalRun({ promptVersionId: selectedPrompt, criteria });
     if (res.ok) loadData();
-    else {
-      const data = await res.json();
-      alert('Failed to run eval: ' + data.error);
-    }
+    else await showEvalRunError(res);
   } catch {
     alert('Network error');
   } finally {
