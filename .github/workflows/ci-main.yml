@@ -99,6 +99,7 @@ jobs:
         run: supabase db lint --linked
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
 
   build:
     runs-on: ubuntu-latest
