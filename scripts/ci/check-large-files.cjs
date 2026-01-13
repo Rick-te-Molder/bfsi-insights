@@ -198,11 +198,11 @@ try {
     console.error('\n💡 Quality Gate - GOALS vs LIMITS:');
     console.error('   ──────────────────────────────────────────────────');
     console.error('   🎯 GOAL (what to aim for):');
-    console.error('      - Functions: 15-20 lines (source), 25-30 lines (tests)');
-    console.error('      - Files: 200-250 lines');
+    console.error('      - Functions: max 15-20 lines (source), max 25-30 lines (tests)');
+    console.error('      - Files: max 200-250 lines');
     console.error('   🚨 LIMIT (blocks commit if exceeded):');
-    console.error('      - Functions: 30 lines (source), 50 lines (tests)');
-    console.error('      - Files: 300 lines (source), 500 lines (tests)');
+    console.error('      - Functions: max 30 lines (source), max 50 lines (tests)');
+    console.error('      - Files: max 300 lines (source), max 500 lines (tests)');
     console.error('   ──────────────────────────────────────────────────');
     console.error('   Parameters: <=3 optimal, 4-5 warn, >=6 block');
     console.error('\n🧹 Boy Scout Rule:');
@@ -210,7 +210,7 @@ try {
       '   - If you touch a file, you MUST clean it to the GOAL, not just under the LIMIT',
     );
     console.error('   - Refactoring to 29 lines when limit is 30 is NOT acceptable');
-    console.error('\n🔧 To fix: Extract into smaller functions until you reach 15-20 lines\n');
+    console.error('\n🔧 To fix: Extract into smaller functions until you reach max 15-20 lines\n');
   }
 
   // Exit with error if there are violations
