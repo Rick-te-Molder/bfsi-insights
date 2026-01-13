@@ -1,5 +1,6 @@
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { TaxonomyConfig, TaxonomyData, TaxonomyItem } from '@/components/tags';
+import { resolveQueueItemForEnrichment } from '@/app/api/_lib/reenrich-queue';
 import type { QueueItem } from '@bfsi/types';
 
 interface QueueItemWithRun extends QueueItem {
@@ -66,6 +67,14 @@ export async function getQueueItem(id: string): Promise<QueueItemWithRun | null>
 
   if (!error && data) {
     return data as QueueItemWithRun;
+  }
+
+  const resolved = await resolveQueueItemForEnrichment(supabase, id);
+  if (resolved.queueId) {
+    const queue = await getQueueItemFromIngestionQueue(supabase, resolved.queueId);
+    if (!queue.error && queue.data) {
+      return queue.data as QueueItemWithRun;
+    }
   }
 
   const { data: pubData, error: pubError } = await getPublicationById(supabase, id);

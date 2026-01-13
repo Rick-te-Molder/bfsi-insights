@@ -1,6 +1,8 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import './env-shim.js';
 import process from 'node:process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import agentRoutes from './routes/agents.js';
 import agentJobRoutes from './routes/agent-jobs.js';
@@ -9,6 +11,12 @@ import discoveryControlRoutes from './routes/discovery-control.js';
 import evalsRoutes from './routes/evals.js';
 import { requireApiKey } from './middleware/auth.js';
 import { getSupabaseAdminClient } from './clients/supabase.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const serviceRoot = path.resolve(__dirname, '..');
+dotenv.config({ path: path.join(serviceRoot, '.env') });
+dotenv.config({ path: path.join(serviceRoot, '.env.local'), override: true });
 
 const app = express();
 const port = process.env.PORT || 3000;
