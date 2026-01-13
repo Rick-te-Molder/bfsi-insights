@@ -182,7 +182,7 @@ The admin UI (`apps/admin/`) is a Next.js 15 app:
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 20+ (pinned via `.node-version` / `.nvmrc`)
 - Supabase project
 - OpenAI API key
 
@@ -197,8 +197,18 @@ npm run dev -w admin
 
 # Agent API
 npm install
-npm start -w services/agent-api
+PORT=3001 npm run dev -w services/agent-api
 ```
+
+### Local PR Gate (Fast CI parity)
+
+Before creating a PR (and before pushing additional commits), run:
+
+```bash
+npm run pr:check
+```
+
+This runs the same “fast” checks that PR CI runs. CI may also run additional root test coverage after this.
 
 ---
 

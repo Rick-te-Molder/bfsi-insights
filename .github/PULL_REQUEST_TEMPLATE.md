@@ -22,6 +22,7 @@
 
 <!-- Required: paste command output or CI log excerpts -->
 
+- **PR Gate (`npm run pr:check`)**:
 - **Lint**:
 - **Tests**:
 - **Build**:
