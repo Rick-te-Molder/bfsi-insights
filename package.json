@@ -12,6 +12,8 @@
   "scripts": {
     "dev": "astro dev",
     "dev:admin": "npm run dev -w apps/admin",
+    "pr:check": "npm run pr:check:fast",
+    "pr:check:fast": "npm run lint -w admin && npm run typecheck -w services/agent-api && npm run validate:prompts -w services/agent-api && npm run test:coverage -w services/agent-api && npm run build:admin",
     "build": "astro build",
     "build:admin": "npm run build -w apps/admin",
     "build:web": "astro build",

@@ -94,24 +94,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run lint
-        run: npm run lint --if-present
-
-      - name: Run tests
-        run: npm test --if-present
-
-      - name: Validate prompt registry (agent-api)
-        run: npm run validate:prompts -w services/agent-api
-        env:
-          SUPABASE_URL: ''
-          SUPABASE_SERVICE_KEY: ''
+      - name: Run PR gate (mirrors local)
+        run: npm run pr:check
 
       - name: Run root tests with coverage (apps/web + apps/admin)
         run: npm run test:coverage
         continue-on-error: true
-
-      - name: Run agent-api tests with coverage
-        run: npm run test:coverage -w services/agent-api
 
       - name: Download baseline coverage (if exists)
         uses: actions/download-artifact@v4
@@ -152,10 +140,3 @@ jobs:
           PORT: 3000
           SUPABASE_URL: ''
           SUPABASE_SERVICE_KEY: ''
-
-      - name: Build
-        if: github.actor != 'dependabot[bot]'
-        run: npm run build --if-present
-        env:
-          SUPABASE_REQUIRED: '0'
-          PUBLIC_SUPABASE_REQUIRED: '0'

@@ -55,7 +55,7 @@ This workflow ensures code changes are traceable through git history.
 
 ### Footer (optional)
 
-- `Closes KB-XXX` or `Fixes KB-XXX`
+- `Closes KB-XXX` or `Fixes KB-XXX` (or a full issue URL, depending on your tracker)
 - `BREAKING CHANGE:` if applicable
 
 ### Examples
@@ -208,7 +208,7 @@ When running `git commit -m ...` or `gh pr create --body "..."` in `zsh`, the sh
    ### Files Modified
    - `apps/admin/src/app/api/jobs/[agent]/start/route.ts` - ...
 
-   Closes https://linear.app/knowledge-base/issue/KB-XXX
+   Closes <issue-url>
    EOF
    )" --base main
    ```

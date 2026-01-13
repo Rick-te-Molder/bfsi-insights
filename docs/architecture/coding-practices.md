@@ -195,4 +195,4 @@ When you encounter a bug or incident:
 
 1. Identify the **root cause pattern** (not just the symptom)
 2. Add a rule here that would have prevented it
-3. Include the Linear issue ID for context
+3. Include the issue/ticket ID for context

@@ -8,12 +8,12 @@
 
 ## Workflow
 
-We use **Linear** for issue tracking and **GitHub** for code management.
+We use an **issue tracker** for planning and **GitHub** for code management.
 
 ### 1. Pick an Issue
 
-- All work starts with a Linear issue
-- Issues are organized in projects and cycles
+- All work starts with an issue/ticket
+- Issues can be organized in projects and cycles
 - Grab an issue from the current cycle or create one if needed
 
 ### 2. Create a Branch
@@ -37,9 +37,9 @@ Examples:
 - Run tests locally: `npm run test`
 - Keep commits focused and atomic
 
-### 4. Commit with Linear Reference
+### 4. Commit with Issue Reference
 
-Include the Linear issue ID in your commit message:
+Include the issue/ticket reference in your commit message:
 
 ```bash
 # Links to issue (doesn't close it)
@@ -47,13 +47,13 @@ git commit -m "feat: add industry filter dropdown
 
 KB-123"
 
-# Closes the issue when PR is merged
+# Closes the issue when PR is merged (if your tracker supports it)
 git commit -m "fix: resolve date parsing edge case
 
 Fixes KB-123"
 ```
 
-**Magic words** that auto-close Linear issues:
+**Magic words** that may auto-close issues (depends on your tracker integration):
 
 - `fixes KB-123`
 - `closes KB-123`
@@ -68,7 +68,7 @@ git push -u origin kb-123-short-description
 Then create a Pull Request on GitHub:
 
 - Target branch: `main`
-- Title: Brief description (Linear auto-links via branch name)
+- Title: Brief description
 - Description: What changed and why
 
 ### 6. CI Checks & Merge
@@ -78,9 +78,9 @@ Then create a Pull Request on GitHub:
 - Merge using **Squash and merge** (keeps history clean)
 - Delete the branch after merging
 
-### 7. Update Linear Issue
+### 7. Update the Issue/Ticket
 
-Add a summary comment to the Linear issue before closing:
+Add a summary comment to the issue/ticket before closing:
 
 ```markdown
 ## Problem
@@ -139,7 +139,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 [optional body]
 
-[Linear reference]
+[issue/ticket reference]
 ```
 
 **Types:**
@@ -240,4 +240,4 @@ npm run lint
 
 ## Questions?
 
-Open a Linear issue or reach out to the maintainer.
+Open an issue/ticket or reach out to the maintainer.
