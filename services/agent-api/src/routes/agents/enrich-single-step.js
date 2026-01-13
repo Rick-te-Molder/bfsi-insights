@@ -15,6 +15,13 @@ import { completePipelineRun, ensurePipelineRun } from '../../lib/pipeline-track
 
 const router = express.Router();
 
+/** @typedef {'summarize' | 'tag' | 'thumbnail'} StepKey */
+
+/** @param {unknown} value @returns {value is StepKey} */
+function isStepKey(value) {
+  return value === 'summarize' || value === 'tag' || value === 'thumbnail';
+}
+
 /** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabase = null;
 
@@ -52,6 +59,7 @@ const STEP_RUNNERS = {
 };
 
 const STEP_PAYLOAD_BUILDERS = {
+  /** @param {any} payload @param {any} result */
   summarize: (payload, result) => ({
     ...payload,
     title: result.title,
@@ -59,6 +67,7 @@ const STEP_PAYLOAD_BUILDERS = {
     key_takeaways: result.key_takeaways,
     summarized_at: new Date().toISOString(),
   }),
+  /** @param {any} payload @param {any} result */
   tag: (payload, result) => ({
     ...payload,
     industry_codes: result.industry_codes || [],
@@ -78,6 +87,7 @@ const STEP_PAYLOAD_BUILDERS = {
       tagged_at: new Date().toISOString(),
     },
   }),
+  /** @param {any} payload @param {any} result */
   thumbnail: (payload, result) => ({
     ...payload,
     thumbnail_bucket: result.bucket,
@@ -85,6 +95,35 @@ const STEP_PAYLOAD_BUILDERS = {
     thumbnail_url: result.publicUrl,
   }),
 };
+
+/** @param {any} payload */
+function hasTagOutput(payload) {
+  return !!(
+    payload?.industry_codes?.length ||
+    payload?.topic_codes?.length ||
+    payload?.geography_codes?.length ||
+    payload?.use_case_codes?.length ||
+    payload?.capability_codes?.length ||
+    payload?.process_codes?.length ||
+    payload?.regulator_codes?.length ||
+    payload?.regulation_codes?.length ||
+    payload?.obligation_codes?.length ||
+    payload?.vendor_names?.length
+  );
+}
+
+/** @param {StepKey} step @param {any} payload */
+function validateStepPersisted(step, payload) {
+  if (step === 'tag') {
+    const hasTaggedAt = typeof payload?.tagging_metadata?.tagged_at === 'string';
+    const hasMeta = !!payload?.enrichment_meta?.tag;
+    if (!hasTaggedAt && !hasTagOutput(payload) && !hasMeta) {
+      throw new Error(
+        'Tag step reported success but no tags/tagging_metadata/enrichment_meta were persisted',
+      );
+    }
+  }
+}
 
 /**
  * Orchestrator for single-step enrichment.
@@ -98,6 +137,10 @@ router.post('/enrich-single-step', async (/** @type {any} */ req, /** @type {any
     const { id, step } = req.body;
     if (!id || !step) {
       return res.status(400).json({ error: 'id and step are required' });
+    }
+
+    if (!isStepKey(step)) {
+      return res.status(400).json({ error: `Unknown step: ${String(step)}` });
     }
 
     if (!STEP_RUNNERS[step]) {
@@ -144,7 +187,16 @@ router.post('/enrich-single-step', async (/** @type {any} */ req, /** @type {any
     }
 
     // Always save the merged payload first (fixes bug where payload wasn't persisted)
-    await getSupabase().from('ingestion_queue').update({ payload: mergedPayload }).eq('id', id);
+    const { error: updateError } = await getSupabase()
+      .from('ingestion_queue')
+      .update({ payload: mergedPayload })
+      .eq('id', id);
+    if (updateError) {
+      throw new Error(`Failed to persist payload: ${updateError.message}`);
+    }
+
+    const persistedPayload = await fetchLatestPayload(id);
+    validateStepPersisted(step, persistedPayload || mergedPayload);
 
     if (returnStatus && typeof returnStatus === 'number') {
       // Re-enrichment: transition to return status (manual)
