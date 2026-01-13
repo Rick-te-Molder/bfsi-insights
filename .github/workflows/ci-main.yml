@@ -85,27 +85,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Supabase CLI (retry)
-        run: |
-          set -euo pipefail
-
-          SUPABASE_CLI_VERSION="1.215.0"
-          url="https://github.com/supabase/cli/releases/download/v${SUPABASE_CLI_VERSION}/supabase_linux_amd64.tar.gz"
-
-          for attempt in 1 2 3; do
-            echo "Installing Supabase CLI (attempt ${attempt}/3)"
-
-            rm -f supabase_linux_amd64.tar.gz supabase
-            curl -fL --retry 5 --retry-all-errors --connect-timeout 20 --max-time 300 "${url}" -o supabase_linux_amd64.tar.gz && \
-              tar -xzf supabase_linux_amd64.tar.gz supabase && \
-              sudo mv supabase /usr/local/bin/supabase && \
-              supabase --version && \
-              break
-
-            sleep $((attempt * 5))
-          done
-
-          command -v supabase >/dev/null 2>&1
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
 
       - name: Link Supabase project
         working-directory: infra/supabase
