@@ -21,6 +21,7 @@ describe('lib/supabase', () => {
 
   it('throws if SUPABASE_URL is missing', () => {
     delete process.env.SUPABASE_URL;
+    delete process.env.PUBLIC_SUPABASE_URL;
     process.env.SUPABASE_SERVICE_KEY = 'service-key';
 
     expect(() => getSupabase()).toThrow('CRITICAL: Supabase env vars missing');
@@ -31,6 +32,8 @@ describe('lib/supabase', () => {
     process.env.SUPABASE_URL = 'https://example.supabase.co';
     delete process.env.SUPABASE_SERVICE_KEY;
     delete process.env.SUPABASE_ANON_KEY;
+    delete process.env.PUBLIC_SUPABASE_SERVICE_KEY;
+    delete process.env.PUBLIC_SUPABASE_ANON_KEY;
 
     expect(() => getSupabase()).toThrow('CRITICAL: Supabase env vars missing');
     expect(mockCreateClient).not.toHaveBeenCalled();
