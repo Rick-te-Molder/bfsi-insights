@@ -25,3 +25,18 @@ export const UTILITY_VERSIONS = {
 export function getUtilityVersion(agentName) {
   return UTILITY_VERSIONS[agentName] || '0.0.0';
 }
+
+export async function syncUtilityVersionsToDb() {
+  const { getSupabaseAdminClient } = await import('../clients/supabase.js');
+  const supabase = getSupabaseAdminClient();
+  const rows = Object.entries(UTILITY_VERSIONS).map(([agent_name, version]) => ({
+    agent_name,
+    version,
+  }));
+  const { error } = await supabase
+    .from('utility_version')
+    .upsert(rows, { onConflict: 'agent_name' });
+  if (error) {
+    console.warn('⚠️ Failed to sync utility versions:', error.message);
+  }
+}

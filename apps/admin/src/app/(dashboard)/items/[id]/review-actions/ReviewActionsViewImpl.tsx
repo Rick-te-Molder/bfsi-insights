@@ -6,7 +6,7 @@ import type { ReviewActionsViewProps } from './ReviewActionsView.types';
 export function ReviewActionsView(props: Readonly<ReviewActionsViewProps>) {
   return (
     <ActionsCard>
-      <ActionsCardHeader />
+      <ActionsCardHeader itemId={props.itemId} />
       <EditorsBlock
         isEditable={props.isEditable}
         canEditPublishedDate={props.canEditPublishedDate}

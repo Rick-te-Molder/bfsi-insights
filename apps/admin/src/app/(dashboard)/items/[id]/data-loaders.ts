@@ -130,13 +130,11 @@ export async function getCurrentPrompts() {
 }
 
 export async function getUtilityVersions() {
-  // Directly return utility versions (keep in sync with agent-api/src/lib/utility-versions.js)
-  const UTILITY_VERSIONS = {
-    'thumbnail-generator': '1.0.0',
-  };
-
-  return Object.entries(UTILITY_VERSIONS).map(([agent_name, version]) => ({
-    agent_name,
-    version,
-  }));
+  const supabase = createServiceRoleClient();
+  const { data, error } = await supabase.from('utility_version').select('agent_name, version');
+  if (error) {
+    console.warn('Failed to load utility_version:', error.message);
+    return [];
+  }
+  return (data || []) as { agent_name: string; version: string }[];
 }

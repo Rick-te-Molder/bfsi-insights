@@ -11,6 +11,7 @@ import discoveryControlRoutes from './routes/discovery-control.js';
 import evalsRoutes from './routes/evals.js';
 import { requireApiKey } from './middleware/auth.js';
 import { getSupabaseAdminClient } from './clients/supabase.js';
+import { syncUtilityVersionsToDb } from './lib/utility-versions.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -107,4 +108,11 @@ app.listen(port, () => {
   console.log(`🤖 Agent API running on port ${port}`);
   console.log(`   Health: http://localhost:${port}/health`);
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+
+  // Best-effort sync of utility versions so Admin can read from DB.
+  // Do not fail startup if env vars or table are not available.
+  syncUtilityVersionsToDb().catch((err) => {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn('⚠️ Utility version sync failed:', message);
+  });
 });
