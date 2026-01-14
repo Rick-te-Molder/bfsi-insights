@@ -126,6 +126,13 @@ export default async function ReviewDetailPage({
 
         {/* Sidebar - Right column */}
         <div className="space-y-6">
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+            <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">
+              Item ID
+            </h3>
+            <div className="text-xs text-neutral-200 font-mono break-all">{item.id}</div>
+          </div>
+
           {/* Actions */}
           <ReviewActions item={item} />
 
