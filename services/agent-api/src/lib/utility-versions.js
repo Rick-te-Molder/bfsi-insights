@@ -12,7 +12,7 @@
 
 /** @type {Record<string, string>} */
 export const UTILITY_VERSIONS = {
-  'thumbnail-generator': '1.0.1',
+  'thumbnail-generator': '1.1',
   // Add other utility agents here as needed
   // 'fetcher': '1.0.0',
   // 'extractor': '1.0.0',
