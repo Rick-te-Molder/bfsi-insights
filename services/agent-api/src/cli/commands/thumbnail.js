@@ -12,16 +12,61 @@ function getSupabase() {
   return getSupabaseAdminClient();
 }
 
-/** @param {{ limit?: number }} options */
+/**
+ * @param {any} pub
+ * @returns {any}
+ */
+function mapPublicationToQueueItem(pub) {
+  return {
+    id: pub.id,
+    url: pub.source_url,
+    status_code: 400,
+    discovered_at: pub.added_at || pub.published_at || new Date().toISOString(),
+    payload: {
+      title: pub.title,
+      source_name: pub.source_name,
+      published_at: pub.published_at,
+      thumbnail_url: pub.thumbnail,
+      summary: {
+        short: pub.summary_short,
+        medium: pub.summary_medium,
+        long: pub.summary_long,
+      },
+    },
+  };
+}
+
+/** @param {{ limit?: number; id?: string; write?: boolean }} options */
 async function fetchItems(options) {
-  const { limit = 5 } = options;
-  const { data: items, error } = await getSupabase()
-    .from('ingestion_queue')
-    .select('*')
-    .eq('status_code', getStatusCode('TO_THUMBNAIL'))
-    .is('payload->thumbnail_url', null)
-    .order('discovered_at', { ascending: true })
-    .limit(limit);
+  const { limit = 5, id } = options;
+  let query = getSupabase().from('ingestion_queue').select('*');
+
+  if (id) {
+    const { data: queueRow, error: queueError } = await query.eq('id', id).maybeSingle();
+    if (queueError) throw queueError;
+    if (queueRow) return [queueRow];
+
+    const { data: pubRow, error: pubError } = await getSupabase()
+      .from('kb_publication')
+      .select(
+        'id, source_url, title, summary_short, summary_medium, summary_long, source_name, published_at, added_at, thumbnail',
+      )
+      .eq('id', id)
+      .maybeSingle();
+
+    if (pubError) throw pubError;
+    if (pubRow) return [mapPublicationToQueueItem(pubRow)];
+
+    return [];
+  } else {
+    query = query
+      .eq('status_code', getStatusCode('TO_THUMBNAIL'))
+      .is('payload->thumbnail_url', null)
+      .order('discovered_at', { ascending: true })
+      .limit(limit);
+  }
+
+  const { data: items, error } = await query;
 
   if (error) throw error;
   return items;
@@ -40,7 +85,8 @@ function buildPayload(item, result) {
 }
 
 /** @param {any} item */
-async function processItem(item) {
+/** @param {{ write?: boolean }} options */
+async function processItem(/** @type {any} */ item, options) {
   try {
     if (!item.payload.url && !item.payload.source_url && item.url) {
       item.payload.url = item.url;
@@ -49,9 +95,11 @@ async function processItem(item) {
     console.log(`   📸 Generating: ${item.payload?.title?.substring(0, 50)}...`);
     const result = await runThumbnailer(item);
 
-    await transitionByAgent(item.id, getStatusCode('ENRICHED'), 'thumbnailer', {
-      changes: { payload: buildPayload(item, result) },
-    });
+    if (options.write) {
+      await transitionByAgent(item.id, getStatusCode('ENRICHED'), 'thumbnailer', {
+        changes: { payload: buildPayload(item, result) },
+      });
+    }
 
     console.log(`   ✅ Uploaded: ${result.publicUrl}`);
     return { success: true };
@@ -62,10 +110,13 @@ async function processItem(item) {
   }
 }
 
-/** @param {{ limit?: number }} options */
+/** @param {{ limit?: number; id?: string; write?: boolean }} options */
 export async function runThumbnailCmd(options) {
   console.log('📸 Running Thumbnail Agent...\n');
   await loadStatusCodes();
+
+  const write = !options?.id;
+  const runOptions = { write: options?.write === true ? true : write };
 
   const items = await fetchItems(options);
   if (!items?.length) {
@@ -77,7 +128,7 @@ export async function runThumbnailCmd(options) {
 
   let success = 0;
   for (const item of items) {
-    const result = await processItem(item);
+    const result = await processItem(item, runOptions);
     if (result.success) success++;
   }
 

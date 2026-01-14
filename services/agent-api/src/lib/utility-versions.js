@@ -10,8 +10,9 @@
  * - PATCH: Bug fixes, optimizations
  */
 
+/** @type {Record<string, string>} */
 export const UTILITY_VERSIONS = {
-  'thumbnail-generator': '1.0.0',
+  'thumbnail-generator': '1.0.1',
   // Add other utility agents here as needed
   // 'fetcher': '1.0.0',
   // 'extractor': '1.0.0',
@@ -20,6 +21,7 @@ export const UTILITY_VERSIONS = {
 /**
  * Get current implementation version for a utility agent
  */
+/** @param {string} agentName */
 export function getUtilityVersion(agentName) {
   return UTILITY_VERSIONS[agentName] || '0.0.0';
 }
