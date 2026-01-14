@@ -138,3 +138,6 @@ export async function getUtilityVersions() {
   }
   return (data || []) as { agent_name: string; version: string }[];
 }
+
+// Prevent caching so Admin always reads latest versions from DB
+export const revalidate = 0;
