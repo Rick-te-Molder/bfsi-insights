@@ -4,11 +4,10 @@ export function ActionsCard({ children }: Readonly<{ children: React.ReactNode }
   );
 }
 
-export function ActionsCardHeader({ itemId }: Readonly<{ itemId?: string }>) {
+export function ActionsCardHeader() {
   return (
     <div className="mb-4">
       <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide">Actions</h3>
-      {itemId && <div className="mt-2 text-xs text-neutral-300 font-mono break-all">{itemId}</div>}
     </div>
   );
 }
