@@ -21,3 +21,8 @@ CREATE TRIGGER set_utility_version_updated_at
 BEFORE UPDATE ON public.utility_version
 FOR EACH ROW
 EXECUTE FUNCTION public.set_utility_version_updated_at();
+
+INSERT INTO public.utility_version (agent_name, version)
+VALUES ('thumbnail-generator', '1.0.1')
+ON CONFLICT (agent_name)
+DO UPDATE SET version = EXCLUDED.version;
