@@ -10,6 +10,7 @@ import { runTagger } from '../../agents/tagger.js';
 import { runThumbnailer } from '../../agents/thumbnailer.js';
 import { transitionByAgent } from '../../lib/queue-update.js';
 import { loadStatusCodes } from '../../lib/status-codes.js';
+import { getUtilityVersion } from '../../lib/utility-versions.js';
 import { getSupabaseAdminClient } from '../../clients/supabase.js';
 import { completePipelineRun, ensurePipelineRun } from '../../lib/pipeline-tracking.js';
 
@@ -88,13 +89,27 @@ const STEP_PAYLOAD_BUILDERS = {
     },
   }),
   /** @param {any} payload @param {any} result */
-  thumbnail: (payload, result) => ({
+  thumbnail: (payload, result) => buildThumbnailPayload(payload, result),
+};
+
+/** @param {any} payload @param {any} result */
+export function buildThumbnailPayload(payload, result) {
+  return {
     ...payload,
     thumbnail_bucket: result.bucket,
     thumbnail_path: result.path,
     thumbnail_url: result.publicUrl,
-  }),
-};
+    enrichment_meta: {
+      ...payload?.enrichment_meta,
+      thumbnail: {
+        agent_type: 'utility',
+        implementation_version: getUtilityVersion('thumbnail-generator'),
+        method: result.pdfPath ? 'pdf2image' : 'playwright',
+        processed_at: new Date().toISOString(),
+      },
+    },
+  };
+}
 
 /** @param {any} payload */
 function hasTagOutput(payload) {
@@ -120,6 +135,17 @@ function validateStepPersisted(step, payload) {
     if (!hasTaggedAt && !hasTagOutput(payload) && !hasMeta) {
       throw new Error(
         'Tag step reported success but no tags/tagging_metadata/enrichment_meta were persisted',
+      );
+    }
+  }
+
+  if (step === 'thumbnail') {
+    const hasThumb =
+      typeof payload?.thumbnail_url === 'string' || typeof payload?.thumbnail === 'string';
+    const hasMeta = typeof payload?.enrichment_meta?.thumbnail?.implementation_version === 'string';
+    if (!hasThumb || !hasMeta) {
+      throw new Error(
+        'Thumbnail step reported success but thumbnail_url/enrichment_meta.thumbnail.implementation_version were not persisted',
       );
     }
   }
