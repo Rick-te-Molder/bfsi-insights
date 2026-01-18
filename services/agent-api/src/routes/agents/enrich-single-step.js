@@ -12,7 +12,13 @@ import { transitionByAgent } from '../../lib/queue-update.js';
 import { loadStatusCodes } from '../../lib/status-codes.js';
 import { getUtilityVersion } from '../../lib/utility-versions.js';
 import { getSupabaseAdminClient } from '../../clients/supabase.js';
-import { completePipelineRun, ensurePipelineRun } from '../../lib/pipeline-tracking.js';
+import {
+  completePipelineRun,
+  getPipelineSupabase,
+  startStepRun,
+  completeStepRun,
+  failStepRun,
+} from '../../lib/pipeline-tracking.js';
 
 const router = express.Router();
 
@@ -30,6 +36,25 @@ function getSupabase() {
   if (supabase) return supabase;
   supabase = getSupabaseAdminClient();
   return supabase;
+}
+
+/**
+ * @param {string} queueId
+ */
+async function createStandalonePipelineRun(queueId) {
+  const { data, error } = await getPipelineSupabase()
+    .from('pipeline_run')
+    .insert({ queue_id: queueId, trigger: 're-enrich', status: 'running', created_by: 'system' })
+    .select('id')
+    .single();
+
+  if (error || !data?.id) {
+    throw new Error(
+      `Failed to create pipeline_run for ${queueId}: ${error?.message ?? 'unknown error'}`,
+    );
+  }
+
+  return data.id;
 }
 
 /** @param {string} id */
@@ -175,13 +200,26 @@ router.post('/enrich-single-step', async (/** @type {any} */ req, /** @type {any
 
     await loadStatusCodes();
     const item = await fetchQueueItem(id);
-    const pipelineRunId = await ensurePipelineRun(item);
+    const pipelineRunId = await createStandalonePipelineRun(id);
     const itemWithRun = { ...item, pipelineRunId };
 
     // Run the agent (writes enrichment_meta to DB)
     let result;
     try {
-      result = await STEP_RUNNERS[step](itemWithRun);
+      const stepRunId = await startStepRun(pipelineRunId, step, {
+        url: item.url,
+        title: item.payload?.title,
+        payload_keys: Object.keys(item.payload || {}),
+      });
+
+      try {
+        result = await STEP_RUNNERS[step](itemWithRun, { pipelineStepRunId: stepRunId });
+        await completeStepRun(stepRunId, result);
+      } catch (stepErr) {
+        await failStepRun(stepRunId, stepErr);
+        throw stepErr;
+      }
+
       await completePipelineRun(pipelineRunId, 'completed');
     } catch (err) {
       await completePipelineRun(pipelineRunId, 'failed');
