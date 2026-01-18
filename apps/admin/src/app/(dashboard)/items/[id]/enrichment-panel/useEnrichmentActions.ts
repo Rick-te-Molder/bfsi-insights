@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { QueueItem } from '@bfsi/types';
@@ -141,12 +141,15 @@ function createTriggerEnrichAll(
 
 export function useEnrichmentActions(item: QueueItem) {
   const [loading, setLoading] = useState<string | null>(null);
+  const [_isRefreshing, startTransition] = useTransition();
   const { message, show } = useMessageState();
   const router = useRouter();
   const supabase = createClient();
-  const triggerStep = createTriggerStep(item, show, setLoading, () => router.refresh());
+  const triggerStep = createTriggerStep(item, show, setLoading, () =>
+    startTransition(() => router.refresh()),
+  );
   const triggerEnrichAll = createTriggerEnrichAll(item, supabase, show, setLoading, () =>
-    router.refresh(),
+    startTransition(() => router.refresh()),
   );
   return { loading, message, triggerStep, triggerEnrichAll };
 }
