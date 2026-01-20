@@ -54,11 +54,14 @@ describe('agents/enrichment-steps', () => {
       const payload = { title: 'Old Title', source_name: 'Test Source' };
       const result = await runSummarizeStep('queue-1', payload, 'run-1');
 
-      expect(runSummarizer).toHaveBeenCalledWith({
-        id: 'queue-1',
-        payload,
-        pipelineRunId: 'run-1',
-      });
+      expect(runSummarizer).toHaveBeenCalledWith(
+        {
+          id: 'queue-1',
+          payload,
+          pipelineRunId: 'run-1',
+        },
+        undefined,
+      );
       expect(result.title).toBe('New Title');
     });
 
@@ -121,7 +124,14 @@ describe('agents/enrichment-steps', () => {
       const payload = { title: 'Title', thumbnail_bucket: null };
       const result = await runTagStep('queue-1', payload, 'run-1');
 
-      expect(runTagger).toHaveBeenCalled();
+      expect(runTagger).toHaveBeenCalledWith(
+        {
+          id: 'queue-1',
+          payload,
+          pipelineRunId: 'run-1',
+        },
+        undefined,
+      );
       expect(result.industry_codes).toEqual(['IND-1']);
       expect(result.topic_codes).toEqual(['TOP-1']);
     });
@@ -138,6 +148,14 @@ describe('agents/enrichment-steps', () => {
       const payload = { title: 'Title' };
       const result = await runThumbnailStep('queue-1', payload, 'run-1');
 
+      expect(runThumbnailer).toHaveBeenCalledWith(
+        {
+          id: 'queue-1',
+          payload,
+          pipelineRunId: 'run-1',
+        },
+        undefined,
+      );
       expect(result.payload.thumbnail_bucket).toBe('thumbnails');
       expect(result.payload.thumbnail_path).toBe('path/to/thumb.png');
       expect(result.payload.thumbnail_url).toBe('https://example.com/thumb.png');
