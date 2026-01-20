@@ -60,6 +60,7 @@ export async function getLastSuccessfulStep(queueId) {
   return data.last_successful_step;
 }
 
+/** @param {any} result @param {string} sourceName */
 function filterOrganizations(result, sourceName) {
   const sourceVariants = [
     sourceName,
@@ -69,11 +70,13 @@ function filterOrganizations(result, sourceName) {
 
   return (
     result.entities?.organizations?.filter(
-      (org) => !sourceVariants.some((variant) => org.toLowerCase().includes(variant)),
+      /** @param {any} org */ (org) =>
+        !sourceVariants.some((variant) => String(org).toLowerCase().includes(variant)),
     ) || []
   );
 }
 
+/** @param {any} item @param {any} result @param {string} sourceName */
 function buildSummarizedPayload(item, result, sourceName) {
   const filteredOrganizations = filterOrganizations(result, sourceName);
   const updated = {
@@ -100,21 +103,30 @@ function buildSummarizedPayload(item, result, sourceName) {
  * @param {string} queueId
  * @param {any} payload
  * @param {string | null} pipelineRunId
+ * @param {string | null} pipelineStepRunId
  * @returns {Promise<any>} Updated payload with summary
  */
-export async function runSummarizeStep(queueId, payload, pipelineRunId = null) {
+export async function runSummarizeStep(
+  queueId,
+  payload,
+  pipelineRunId = null,
+  pipelineStepRunId = null,
+) {
   console.log('   📝 Generating summary...');
-  const result = await runSummarizer({ id: queueId, payload, pipelineRunId });
+  const runnerOptions = pipelineStepRunId ? { pipelineStepRunId } : undefined;
+  const result = await runSummarizer({ id: queueId, payload, pipelineRunId }, runnerOptions);
   const sourceName = payload.source_name?.toLowerCase() || '';
   const updated = buildSummarizedPayload({ payload }, result, sourceName);
   await checkpointStep(queueId, 'summarize');
   return updated;
 }
 
+/** @param {any} arr */
 function extractCodes(arr) {
-  return (arr || []).map((item) => item.code || item).filter(Boolean);
+  return (arr || []).map(/** @param {any} item */ (item) => item.code || item).filter(Boolean);
 }
 
+/** @param {any} item @param {any} result */
 function buildTaggedPayload(item, result) {
   return {
     ...item.payload,
@@ -143,11 +155,13 @@ function buildTaggedPayload(item, result) {
  * @param {string} queueId
  * @param {any} payload
  * @param {string | null} pipelineRunId
+ * @param {string | null} pipelineStepRunId
  * @returns {Promise<any>} Updated payload with tags
  */
-export async function runTagStep(queueId, payload, pipelineRunId = null) {
+export async function runTagStep(queueId, payload, pipelineRunId = null, pipelineStepRunId = null) {
   console.log('   🏷️  Classifying taxonomy...');
-  const result = await runTagger({ id: queueId, payload, pipelineRunId });
+  const runnerOptions = pipelineStepRunId ? { pipelineStepRunId } : undefined;
+  const result = await runTagger({ id: queueId, payload, pipelineRunId }, runnerOptions);
   const updated = buildTaggedPayload({ payload }, result);
   await checkpointStep(queueId, 'tag');
   return updated;
@@ -158,12 +172,19 @@ export async function runTagStep(queueId, payload, pipelineRunId = null) {
  * @param {string} queueId
  * @param {any} payload
  * @param {string | null} pipelineRunId
- * @returns {Promise<{payload: any, error?: string}>} Updated payload with thumbnail, or error
+ * @param {string | null} pipelineStepRunId
+ * @returns {Promise<{payload: any, error?: string, fatal?: boolean}>} Updated payload with thumbnail, or error
  */
-export async function runThumbnailStep(queueId, payload, pipelineRunId = null) {
+export async function runThumbnailStep(
+  queueId,
+  payload,
+  pipelineRunId = null,
+  pipelineStepRunId = null,
+) {
   console.log('   📸 Generating thumbnail...');
   try {
-    const result = await runThumbnailer({ id: queueId, payload, pipelineRunId });
+    const runnerOptions = pipelineStepRunId ? { pipelineStepRunId } : undefined;
+    const result = await runThumbnailer({ id: queueId, payload, pipelineRunId }, runnerOptions);
     await checkpointStep(queueId, 'thumbnail');
     return {
       payload: {
