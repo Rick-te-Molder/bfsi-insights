@@ -103,96 +103,95 @@ async function hideCookieBanners(page) {
   await new Promise((r) => setTimeout(r, 500));
 }
 
-/** @param {Page} page */
-async function scrollToLikelyArticleContent(page) {
-  const result = await page.evaluate(() => {
-    const viewportH = globalThis.innerHeight || 0;
-    const viewportW = globalThis.innerWidth || 0;
-    if (!viewportH) return { shouldScroll: false };
+const SCROLL_TO_LIKELY_ARTICLE_CONTENT_EVAL = `() => {
+  const viewportH = globalThis.innerHeight || 0;
+  const viewportW = globalThis.innerWidth || 0;
+  if (!viewportH) return { shouldScroll: false };
 
-    const contentSelectors = [
-      'article h1',
-      'main h1',
-      '[itemprop="headline"]',
-      '.entry-title',
-      '.post-title',
-      'h1',
-      'article p',
-      'main p',
-    ];
+  const contentSelectors = [
+    'article h1',
+    'main h1',
+    '[itemprop="headline"]',
+    '.entry-title',
+    '.post-title',
+    'h1',
+    'article p',
+    'main p',
+  ];
 
-    function isVisible(/** @type {HTMLElement} */ el) {
-      const rect = el.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) return false;
-      if (rect.bottom <= 0 || rect.top >= viewportH) return false;
-      const style = globalThis.getComputedStyle(el);
-      if (style.visibility === 'hidden' || style.display === 'none') return false;
-      return true;
+  function isVisible(el) {
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    if (rect.bottom <= 0 || rect.top >= viewportH) return false;
+    const style = globalThis.getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none') return false;
+    return true;
+  }
+
+  function isWideEnough(rect) {
+    const minWidth = Math.min(600, Math.floor(viewportW * 0.55));
+    if (!viewportW) return true;
+    return rect.width >= minWidth;
+  }
+
+  function isValidCandidate(el, requireVisible) {
+    if (!(el instanceof HTMLElement)) return false;
+    let current = el;
+    while (current) {
+      const tag = current.tagName ? current.tagName.toLowerCase() : '';
+      if (tag === 'header' || tag === 'nav' || tag === 'aside') return false;
+      current = current.parentElement;
     }
+    if (requireVisible && !isVisible(el)) return false;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    return isWideEnough(rect);
+  }
 
-    function isWideEnough(/** @type {DOMRect} */ rect) {
-      const minWidth = Math.min(600, Math.floor(viewportW * 0.55));
-      if (!viewportW) return true;
-      return rect.width >= minWidth;
-    }
-
-    function isValidCandidate(/** @type {unknown} */ el, /** @type {boolean} */ requireVisible) {
-      if (!(el instanceof HTMLElement)) return false;
-      /** @type {HTMLElement | null} */
-      let current = el;
-      while (current) {
-        const tag = current.tagName ? current.tagName.toLowerCase() : '';
-        if (tag === 'header' || tag === 'nav' || tag === 'aside') return false;
-        current = current.parentElement;
+  function findFirstInViewport() {
+    for (const sel of contentSelectors) {
+      const els = Array.from(document.querySelectorAll(sel));
+      for (const el of els) {
+        if (!isValidCandidate(el, true)) continue;
+        return el;
       }
-      if (requireVisible && !isVisible(el)) return false;
-      const rect = el.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) return false;
-      return isWideEnough(rect);
     }
+    return null;
+  }
 
-    function findFirstInViewport() {
-      for (const sel of contentSelectors) {
-        const els = Array.from(document.querySelectorAll(sel));
-        for (const el of els) {
-          if (!isValidCandidate(el, true)) continue;
-          return /** @type {HTMLElement} */ (el);
-        }
+  function findFirstInDocument() {
+    for (const sel of contentSelectors) {
+      const els = Array.from(document.querySelectorAll(sel));
+      for (const el of els) {
+        if (!isValidCandidate(el, false)) continue;
+        return el;
       }
-      return null;
     }
+    return null;
+  }
 
-    function findFirstInDocument() {
-      for (const sel of contentSelectors) {
-        const els = Array.from(document.querySelectorAll(sel));
-        for (const el of els) {
-          if (!isValidCandidate(el, false)) continue;
-          return /** @type {HTMLElement} */ (el);
-        }
-      }
-      return null;
-    }
-
-    const inViewport = findFirstInViewport();
-    if (inViewport) {
-      // Even if content is technically visible, if it starts too far down the viewport,
-      // the screenshot will still be dominated by header/nav/ads.
-      const rect = inViewport.getBoundingClientRect();
-      const tooLow = rect.top > Math.min(500, Math.floor(viewportH * 0.45));
-      if (!tooLow) return { shouldScroll: false };
-      const y = Math.max(0, globalThis.scrollY + rect.top - 120);
-      if (y < 200) return { shouldScroll: false };
-      return { shouldScroll: true, y };
-    }
-
-    const target = findFirstInDocument();
-    if (!target) return { shouldScroll: false };
-
-    const rect = target.getBoundingClientRect();
+  const inViewport = findFirstInViewport();
+  if (inViewport) {
+    const rect = inViewport.getBoundingClientRect();
+    const tooLow = rect.top > Math.min(500, Math.floor(viewportH * 0.45));
+    if (!tooLow) return { shouldScroll: false };
     const y = Math.max(0, globalThis.scrollY + rect.top - 120);
     if (y < 200) return { shouldScroll: false };
     return { shouldScroll: true, y };
-  });
+  }
+
+  const target = findFirstInDocument();
+  if (!target) return { shouldScroll: false };
+
+  const rect = target.getBoundingClientRect();
+  const y = Math.max(0, globalThis.scrollY + rect.top - 120);
+  if (y < 200) return { shouldScroll: false };
+  return { shouldScroll: true, y };
+}`;
+
+/** @param {Page} page */
+async function scrollToLikelyArticleContent(page) {
+  const result = await page.evaluate(SCROLL_TO_LIKELY_ARTICLE_CONTENT_EVAL);
 
   if (result?.shouldScroll && typeof result.y === 'number') {
     await page.evaluate((y) => globalThis.scrollTo(0, y), /** @type {number} */ (result.y));
