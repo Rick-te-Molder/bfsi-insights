@@ -5,6 +5,14 @@ import type { QueueItem } from '@bfsi/types';
 import { formatDateTime } from '@/lib/utils';
 import { useStatus } from '@/contexts/StatusContext';
 
+function toStringOrNull(value: unknown): string | null {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value);
+  }
+  return null;
+}
+
 interface PageHeaderProps {
   payload: Record<string, unknown>;
   statusCode: number;
@@ -45,11 +53,7 @@ function PublishedDate({ publishedAt }: Readonly<{ publishedAt: string }>) {
         day: 'numeric',
       });
 
-  return (
-    <p className="text-sm text-neutral-400 mt-1">
-      Published {displayDate}
-    </p>
-  );
+  return <p className="text-sm text-neutral-400 mt-1">Published {displayDate}</p>;
 }
 
 function UrlLink({ url }: Readonly<{ url: string }>) {
@@ -235,11 +239,12 @@ function MetadataContent({
     ? formatDateTime(payload.published_at as string)
     : 'Not extracted';
   const pubClass = payload.published_at ? 'text-neutral-300' : 'text-amber-400';
+  const sourceSlug = toStringOrNull(payload.source_slug);
   return (
     <dl className="space-y-2 text-sm">
       <MetadataRow label="Discovered" value={formatDateTime(item.discovered_at)} />
       <MetadataRow label="Published" value={pubVal} valueClass={pubClass} />
-      {!!payload.source_slug && <MetadataRow label="Source" value={String(payload.source_slug)} />}
+      {!!sourceSlug && <MetadataRow label="Source" value={sourceSlug} />}
       {typeof payload.relevance_confidence === 'number' && (
         <MetadataRow
           label="AI Confidence"

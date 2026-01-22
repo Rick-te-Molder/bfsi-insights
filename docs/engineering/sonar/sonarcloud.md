@@ -2,11 +2,13 @@
 
 ---
 
-**Version**: 1.18.0  
+**Version**: 1.20.0  
 **Last updated**: 2026-01-22  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.20.0 (2026-01-22): Fixed S6551 (avoid default object stringification) in items dashboard utilities.
+- 1.19.0 (2026-01-22): Fixed S6759 (React props should be read-only) in workflows dashboard components.
 - 1.18.0 (2026-01-22): Added S3776 (reduce cognitive complexity).
 - 1.17.0 (2026-01-22): Added S5852 (avoid slow regex / ReDoS hotspots).
 - 1.16.0 (2026-01-11): Added S6594 (prefer RegExp.exec() over String.match()).
