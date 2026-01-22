@@ -147,6 +147,30 @@ async function setPublicationOriginQueueId(
     .eq('id', publicationId);
 }
 
+async function createQueueItemForPublication(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  publication: PublicationRow,
+): Promise<string> {
+  const { pendingReviewCode, pendingEnrichmentCode } = await loadReenrichStatusCodes(supabase);
+  const payload = buildReenrichQueuePayload(publication, pendingReviewCode);
+  return insertQueueItemForPublication(supabase, {
+    queueId: publication.origin_queue_id,
+    sourceUrl: publication.source_url,
+    payload,
+    statusCode: pendingEnrichmentCode,
+  });
+}
+
+async function ensurePublicationHasOriginQueueId(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  publication: PublicationRow,
+  queueId: string,
+): Promise<void> {
+  if (!publication.origin_queue_id) {
+    await setPublicationOriginQueueId(supabase, publication.id, queueId);
+  }
+}
+
 async function ensureQueueItemForPublication(
   supabase: ReturnType<typeof createServiceRoleClient>,
   publication: PublicationRow,
@@ -154,19 +178,8 @@ async function ensureQueueItemForPublication(
   const existingId = await getExistingQueueIdIfPresent(supabase, publication.origin_queue_id);
   if (existingId) return existingId;
 
-  const { pendingReviewCode, pendingEnrichmentCode } = await loadReenrichStatusCodes(supabase);
-  const payload = buildReenrichQueuePayload(publication, pendingReviewCode);
-  const createdId = await insertQueueItemForPublication(supabase, {
-    queueId: publication.origin_queue_id,
-    sourceUrl: publication.source_url,
-    payload,
-    statusCode: pendingEnrichmentCode,
-  });
-
-  if (!publication.origin_queue_id) {
-    await setPublicationOriginQueueId(supabase, publication.id, createdId);
-  }
-
+  const createdId = await createQueueItemForPublication(supabase, publication);
+  await ensurePublicationHasOriginQueueId(supabase, publication, createdId);
   return createdId;
 }
 
