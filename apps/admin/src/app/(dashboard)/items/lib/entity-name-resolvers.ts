@@ -168,11 +168,11 @@ export async function resolveEntityIdsForTaxonomy(args: {
   payloadField: string;
 }): Promise<string[] | null> {
   if (args.payloadField === 'vendor_names') {
-    return await resolveVendorIds(args.supabase, args.payload[args.payloadField]);
+    return resolveVendorIds(args.supabase, args.payload[args.payloadField]);
   }
 
   if (args.payloadField === 'organization_names') {
-    return await resolveOrganizationIds(args.supabase, args.payload[args.payloadField]);
+    return resolveOrganizationIds(args.supabase, args.payload[args.payloadField]);
   }
 
   return null;
