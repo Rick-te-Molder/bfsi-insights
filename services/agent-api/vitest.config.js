@@ -10,7 +10,11 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['services/agent-api/tests/**/*.spec.js', 'services/agent-api/src/**/*.test.js'],
+    include: [
+      'services/agent-api/tests/**/*.spec.js',
+      'services/agent-api/src/**/*.test.js',
+      'services/agent-api/src/**/*.test.ts',
+    ],
     env: {
       NODE_ENV: 'test',
       SITEMAP_RATE_LIMIT_MS: '5', // Fast rate limiting for tests
@@ -19,11 +23,12 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov', 'json-summary'],
       reportsDirectory: 'services/agent-api/coverage',
-      include: ['services/agent-api/src/**/*.js'],
+      include: ['services/agent-api/src/**/*.{js,ts}'],
       exclude: [
         '**/node_modules/**',
         'services/agent-api/tests/**',
         'services/agent-api/src/**/*.test.js',
+        'services/agent-api/src/**/*.test.ts',
         // Orchestration files - tested via integration, not unit tests
         'services/agent-api/src/cli.js',
         'services/agent-api/src/index.js',
