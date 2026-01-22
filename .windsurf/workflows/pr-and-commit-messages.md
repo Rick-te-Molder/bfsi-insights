@@ -6,7 +6,26 @@ description: How to write PR descriptions and commit messages for traceability
 
 This workflow ensures code changes are traceable through git history.
 
+## Canonical PR Structure
+
+PR bodies must be written by filling out `.github/PULL_REQUEST_TEMPLATE.md`.
+
+- Do **not** invent additional top-level headings beyond the template.
+- Use the template's `## Summary` guidance to write a short, human-readable narrative.
+
 ---
+
+## Shell Quoting Gotchas (zsh)
+
+When running `git commit -m ...` or `gh pr create --body "..."` in `zsh`, the shell can interpret parts of your message as commands or globs.
+
+### Recommended default
+
+Prefer `--body-file` for PR bodies:
+
+```bash
+gh pr create --title "..." --body-file pr-body.md --base main
+```
 
 ## Commit Message Format
 
@@ -90,6 +109,73 @@ Users requested ability to approve multiple items at once (KB-301)
 
 PRs are documentation. They explain WHAT changed, WHERE, and WHY.
 
+### Golden example (matches `.github/PULL_REQUEST_TEMPLATE.md`)
+
+```markdown
+## Summary
+
+### Problem
+
+Nightly link checks were failing due to a valid external site returning HTTP 403 to automated requests.
+
+### Fix
+
+Configure the nightly workflow to treat that domain as a soft-fail so failures are reported but do not fail CI.
+
+### Result
+
+The link still shows up in the report, but nightly CI no longer fails on this anti-bot false positive.
+
+## Root cause
+
+The target site blocks automated link-check requests (HTTP 403) while allowing real browser traffic.
+
+## Type of change
+
+- [x] Bug fix
+- [ ] New feature
+- [ ] Refactoring
+- [ ] Documentation
+- [x] CI/build
+
+## Files changed
+
+- `.github/workflows/ci-nightly.yml` - set `SOFT_FAIL_DOMAINS` for the nightly link-check job
+
+## AI Assistance (if applicable)
+
+- **AI tool used**: Windsurf (Cascade)
+- **Prompt summary**: Configure a soft-fail domain for nightly link checks and update PR text for clarity.
+- **Human verification**: Confirmed the link is clickable in a browser; reviewed workflow diff.
+
+## Evidence
+
+- **PR Gate (`npm run pr:check`)**: N/A (not run)
+- **Lint**: `npm run lint -w admin` (pass)
+- **Tests**: N/A
+- **Build**: N/A
+
+## Quality Checklist
+
+### General
+
+- [x] Code follows repo standards (files < 300 lines, functions < 30 lines)
+- [x] No hardcoded values that should come from config/DB
+- [x] Touched files improved to current standards (Boy Scout Rule - C1)
+
+## Rollback Plan
+
+Standard revert
+
+## Remaining risks / unverified
+
+Soft-failing this domain also soft-fails genuine 404s; rely on the report output to catch regressions.
+```
+
+### Legacy narrative template (reference only)
+
+Use the GitHub PR template as the canonical structure. The template below is kept for reference, but avoid mixing its headings into PR bodies.
+
 ```markdown
 ## Problem
 
@@ -171,9 +257,7 @@ Issue: <link-if-any>
 
 ---
 
-## Shell Quoting Gotchas (zsh)
-
-When running `git commit -m ...` or `gh pr create --body "..."` in `zsh`, the shell can interpret parts of your message as commands or globs.
+## Shell Quoting Gotchas (zsh) (details)
 
 ### Common pitfalls
 
