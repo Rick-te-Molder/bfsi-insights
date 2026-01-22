@@ -1,6 +1,21 @@
 ## Summary
 
-<!-- Brief description of changes -->
+<!--
+Write this like a short human summary.
+
+### Problem
+1–2 sentences: what was broken / risky / confusing?
+
+### Fix
+1–2 sentences: what did you change?
+
+### Result
+1 sentence: what is better now (behavior change, risk reduced, etc.)?
+-->
+
+## Root cause
+
+<!-- Required for bug fixes. Otherwise: N/A -->
 
 ## Type of change
 
@@ -9,6 +24,12 @@
 - [ ] Refactoring
 - [ ] Documentation
 - [ ] CI/build
+
+## Files changed
+
+<!-- Always list the main files and why they changed (review speed + archaeology). -->
+
+- `path/to/file` - what changed / why
 
 ## AI Assistance (if applicable)
 
@@ -21,6 +42,7 @@
 ## Evidence
 
 <!-- Required: paste command output or CI log excerpts -->
+<!-- Prefer 1–3 lines per command. If you did not run something, say why. -->
 
 - **PR Gate (`npm run pr:check`)**:
 - **Lint**:
@@ -29,43 +51,60 @@
 
 ## Quality Checklist
 
+<!-- If a section below is not applicable, explicitly write "N/A" in that section. -->
+
 ### General
 
 - [ ] Code follows repo standards (files < 300 lines, functions < 30 lines)
 - [ ] No hardcoded values that should come from config/DB
 - [ ] Touched files improved to current standards (Boy Scout Rule - C1)
 
-### Security (C12) - Required for auth/data/crypto changes
+<details>
+<summary>Security (C12) - required for auth/data/crypto changes</summary>
 
+- [ ] N/A
 - [ ] No hardcoded secrets
 - [ ] Input validated (Zod/schemas)
 - [ ] Output encoded appropriately
 - [ ] Authentication checked on protected routes
 - [ ] Authorization verified server-side
 - [ ] Errors don't expose internals
+</details>
 
-### SonarCloud fixes (if applicable)
+<details>
+<summary>SonarCloud fixes (if applicable)</summary>
 
+- [ ] N/A
 - [ ] Updated `docs/engineering/sonar/sonarcloud.md`:
   - [ ] Prevention Checklist item added (if new pattern)
   - [ ] Lessons Learned entry added
   - [ ] Rule Index entry added with link
+  </details>
 
-### Data changes (if applicable)
+<details>
+<summary>Data changes (if applicable)</summary>
 
+- [ ] N/A
 - [ ] Uses `status_code` not `status` for pipeline queries
 - [ ] Query logic matches other views of same data
+</details>
 
-### Prompt changes (if applicable)
+<details>
+<summary>Prompt changes (if applicable)</summary>
 
+- [ ] N/A
 - [ ] Migration added in `supabase/migrations/`
 - [ ] Agent declared in `docs/agents/manifest.yaml`
+</details>
 
-### New Dependencies (if applicable)
+<details>
+<summary>New Dependencies (if applicable)</summary>
 
+- [ ] N/A
 - [ ] Justified: why needed, alternatives considered
 - [ ] Evaluated: actively maintained, no known vulnerabilities
 - [ ] License compatible (MIT, Apache, etc.)
+</details>
 
 ## Rollback Plan
 
