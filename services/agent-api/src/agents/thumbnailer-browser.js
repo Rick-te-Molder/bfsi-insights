@@ -130,28 +130,33 @@ async function scrollToLikelyArticleContent(page) {
       return true;
     }
 
-    function isInTopChrome(/** @type {HTMLElement} */ el) {
+    function isWideEnough(/** @type {DOMRect} */ rect) {
+      const minWidth = Math.min(600, Math.floor(viewportW * 0.55));
+      if (!viewportW) return true;
+      return rect.width >= minWidth;
+    }
+
+    function isValidCandidate(/** @type {unknown} */ el, /** @type {boolean} */ requireVisible) {
+      if (!(el instanceof HTMLElement)) return false;
       /** @type {HTMLElement | null} */
       let current = el;
       while (current) {
         const tag = current.tagName ? current.tagName.toLowerCase() : '';
-        if (tag === 'header' || tag === 'nav' || tag === 'aside') return true;
+        if (tag === 'header' || tag === 'nav' || tag === 'aside') return false;
         current = current.parentElement;
       }
-      return false;
+      if (requireVisible && !isVisible(el)) return false;
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      return isWideEnough(rect);
     }
 
     function findFirstInViewport() {
       for (const sel of contentSelectors) {
         const els = Array.from(document.querySelectorAll(sel));
         for (const el of els) {
-          if (!(el instanceof HTMLElement)) continue;
-          if (isInTopChrome(el)) continue;
-          if (!isVisible(el)) continue;
-          const rect = el.getBoundingClientRect();
-          const minWidth = Math.min(600, Math.floor(viewportW * 0.55));
-          if (viewportW && rect.width < minWidth) continue;
-          return el;
+          if (!isValidCandidate(el, true)) continue;
+          return /** @type {HTMLElement} */ (el);
         }
       }
       return null;
@@ -161,13 +166,8 @@ async function scrollToLikelyArticleContent(page) {
       for (const sel of contentSelectors) {
         const els = Array.from(document.querySelectorAll(sel));
         for (const el of els) {
-          if (!(el instanceof HTMLElement)) continue;
-          if (isInTopChrome(el)) continue;
-          const rect = el.getBoundingClientRect();
-          if (rect.width <= 0 || rect.height <= 0) continue;
-          const minWidth = Math.min(600, Math.floor(viewportW * 0.55));
-          if (viewportW && rect.width < minWidth) continue;
-          return el;
+          if (!isValidCandidate(el, false)) continue;
+          return /** @type {HTMLElement} */ (el);
         }
       }
       return null;
