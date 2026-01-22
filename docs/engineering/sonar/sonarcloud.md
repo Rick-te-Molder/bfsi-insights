@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.17.0  
+**Version**: 1.18.0  
 **Last updated**: 2026-01-22  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.18.0 (2026-01-22): Added S3776 (reduce cognitive complexity).
 - 1.17.0 (2026-01-22): Added S5852 (avoid slow regex / ReDoS hotspots).
 - 1.16.0 (2026-01-11): Added S6594 (prefer RegExp.exec() over String.match()).
 - 1.15.0 (2026-01-08): Improved S6759 pattern to catch inline props (}: {) missing Readonly wrapper.
@@ -72,6 +73,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S6644   | [Use logical OR instead of ternary for default values](./lessons/use-logical-or-instead-of-ternary-for-default-values.md)                                                         | `lessons/use-logical-or-instead-of-ternary-for-default-values.md`                             |
 | S7763   | [Use export...from for re-exports](./lessons/use-export-from-for-re-exports.md)                                                                                                   | `lessons/use-export-from-for-re-exports.md`                                                   |
 | S6594   | [Use the "RegExp.exec()" method instead](./lessons/use-the-regexp-exec-method-instead.md)                                                                                         | `lessons/use-the-regexp-exec-method-instead.md`                                               |
+| S3776   | [Reduce cognitive complexity by extracting helpers](./lessons/reduce-cognitive-complexity-by-extracting-helpers.md)                                                               | `lessons/reduce-cognitive-complexity-by-extracting-helpers.md`                                |
 | S5852   | [Avoid slow regular expressions in user-controlled input](./lessons/avoid-slow-regular-expressions-in-user-controlled-input.md)                                                   | `lessons/avoid-slow-regular-expressions-in-user-controlled-input.md`                          |
 
 ---
@@ -140,6 +142,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Use export...from for re-exports** — Replace `import { x } from './mod'; export { x };` with `export { x } from './mod';`
 - [ ] **Prefer RegExp.exec over String.match** — Use `/re/.exec(str)` instead of `str.match(/re/)`
 - [ ] **Avoid slow regex for simple parsing** — Prefer `indexOf` + `slice` for URL/query/fragment trimming (avoid ReDoS hotspots)
+- [ ] **Reduce cognitive complexity** — Extract validation/side-effect blocks into helpers and prefer guard clauses
 
 ---
 
@@ -245,6 +248,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Reduce cognitive complexity by extracting helpers](./lessons/reduce-cognitive-complexity-by-extracting-helpers.md) (S3776)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -338,5 +345,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [Using slow regular expressions is security-sensitive](./rules/5852_using-slow-regular-expressions-is-security-sensitive.md)
+
+---
+
+## [Cognitive Complexity of functions should not be too high](./rules/3776_cognitive-complexity-of-functions-should-not-be-too-high.md)
 
 ---

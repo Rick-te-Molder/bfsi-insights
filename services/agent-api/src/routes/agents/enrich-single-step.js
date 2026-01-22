@@ -177,6 +177,96 @@ function validateStepPersisted(step, payload) {
 }
 
 /**
+ * @param {unknown} body
+ * @returns {{ ok: true; id: string; step: StepKey } | { ok: false; status: number; error: string }}
+ */
+function parseEnrichRequestBody(body) {
+  const { id, step } = /** @type {any} */ (body || {});
+  if (!id || !step) {
+    return { ok: false, status: 400, error: 'id and step are required' };
+  }
+
+  if (!isStepKey(step)) {
+    return { ok: false, status: 400, error: `Unknown step: ${String(step)}` };
+  }
+
+  if (!STEP_RUNNERS[step]) {
+    return { ok: false, status: 400, error: `Unknown step: ${step}` };
+  }
+
+  return { ok: true, id, step };
+}
+
+/** @param {string} pipelineRunId @param {StepKey} step @param {any} itemWithRun */
+async function runStepWithTracking(pipelineRunId, step, itemWithRun) {
+  const stepRunId = await startStepRun(pipelineRunId, step, {
+    url: itemWithRun.url,
+    title: itemWithRun.payload?.title,
+    payload_keys: Object.keys(itemWithRun.payload || {}),
+  });
+
+  try {
+    const result = await STEP_RUNNERS[step](itemWithRun, { pipelineStepRunId: stepRunId });
+    await completeStepRun(stepRunId, result);
+    return result;
+  } catch (error_) {
+    await failStepRun(stepRunId, error_);
+    throw error_;
+  }
+}
+
+/** @param {any} item @param {any} basePayload */
+function getReturnStatus(item, basePayload) {
+  const isInEnrichmentPhase = item.status_code >= 200 && item.status_code < 240;
+  if (isInEnrichmentPhase) return null;
+  return item.payload?._return_status ?? basePayload?._return_status ?? null;
+}
+
+/** @param {any} item @param {any} basePayload */
+function getManualOverrideFlag(item, basePayload) {
+  return item.payload?._manual_override ?? basePayload?._manual_override;
+}
+
+/** @param {any} payload @param {boolean} manualOverride */
+function cleanupSingleStepFlags(payload, manualOverride) {
+  delete payload._return_status;
+  delete payload._single_step;
+  if (manualOverride) {
+    payload._manual_override = true;
+  }
+}
+
+/** @param {string} id @param {any} mergedPayload */
+async function persistMergedPayload(id, mergedPayload) {
+  const { error: updateError } = await getSupabase()
+    .from('ingestion_queue')
+    .update({ payload: mergedPayload })
+    .eq('id', id);
+  if (updateError) {
+    throw new Error(`Failed to persist payload: ${updateError.message}`);
+  }
+}
+
+/** @param {string} id @param {any} item @param {StepKey} step @param {any} result */
+async function mergePersistAndValidate(id, item, step, result) {
+  const latestPayload = await fetchLatestPayload(id);
+  const basePayload = latestPayload || item.payload;
+  const buildPayload = STEP_PAYLOAD_BUILDERS[step];
+  const mergedPayload = buildPayload(basePayload, result);
+
+  const returnStatus = getReturnStatus(item, basePayload);
+  const manualOverride = getManualOverrideFlag(item, basePayload);
+  cleanupSingleStepFlags(mergedPayload, !!manualOverride);
+
+  await persistMergedPayload(id, mergedPayload);
+
+  const persistedPayload = await fetchLatestPayload(id);
+  validateStepPersisted(step, persistedPayload || mergedPayload);
+
+  return { mergedPayload, returnStatus };
+}
+
+/**
  * Orchestrator for single-step enrichment.
  * 1. Run the agent (writes enrichment_meta)
  * 2. Fetch latest payload (includes enrichment_meta)
@@ -185,18 +275,11 @@ function validateStepPersisted(step, payload) {
  */
 router.post('/enrich-single-step', async (/** @type {any} */ req, /** @type {any} */ res) => {
   try {
-    const { id, step } = req.body;
-    if (!id || !step) {
-      return res.status(400).json({ error: 'id and step are required' });
+    const parsed = parseEnrichRequestBody(req.body);
+    if (!parsed.ok) {
+      return res.status(parsed.status).json({ error: parsed.error });
     }
-
-    if (!isStepKey(step)) {
-      return res.status(400).json({ error: `Unknown step: ${String(step)}` });
-    }
-
-    if (!STEP_RUNNERS[step]) {
-      return res.status(400).json({ error: `Unknown step: ${step}` });
-    }
+    const { id, step } = parsed;
 
     await loadStatusCodes();
     const item = await fetchQueueItem(id);
@@ -204,21 +287,10 @@ router.post('/enrich-single-step', async (/** @type {any} */ req, /** @type {any
     const itemWithRun = { ...item, pipelineRunId };
 
     // Run the agent (writes enrichment_meta to DB)
+    /** @type {any} */
     let result;
     try {
-      const stepRunId = await startStepRun(pipelineRunId, step, {
-        url: item.url,
-        title: item.payload?.title,
-        payload_keys: Object.keys(item.payload || {}),
-      });
-
-      try {
-        result = await STEP_RUNNERS[step](itemWithRun, { pipelineStepRunId: stepRunId });
-        await completeStepRun(stepRunId, result);
-      } catch (stepErr) {
-        await failStepRun(stepRunId, stepErr);
-        throw stepErr;
-      }
+      result = await runStepWithTracking(pipelineRunId, step, itemWithRun);
 
       await completePipelineRun(pipelineRunId, 'completed');
     } catch (err) {
@@ -226,41 +298,7 @@ router.post('/enrich-single-step', async (/** @type {any} */ req, /** @type {any
       throw err;
     }
 
-    // Fetch latest payload (now includes enrichment_meta from runner)
-    const latestPayload = await fetchLatestPayload(id);
-    const basePayload = latestPayload || item.payload;
-
-    // Build final payload with result merged in
-    const buildPayload = STEP_PAYLOAD_BUILDERS[step];
-    const mergedPayload = buildPayload(basePayload, result);
-
-    // Determine target status from _return_status (for re-enrichment from review/published)
-    // Belt-and-suspenders: ignore _return_status if item is still in enrichment phase (200-239)
-    const isInEnrichmentPhase = item.status_code >= 200 && item.status_code < 240;
-    // Read from both original item and latest payload (runner may have updated it)
-    const returnStatus = isInEnrichmentPhase
-      ? null
-      : (item.payload?._return_status ?? basePayload?._return_status ?? null);
-
-    // Preserve _manual_override for the DB trigger, but clean up other single-step flags
-    const manualOverride = item.payload?._manual_override ?? basePayload?._manual_override;
-    delete mergedPayload._return_status;
-    delete mergedPayload._single_step;
-    if (manualOverride) {
-      mergedPayload._manual_override = true;
-    }
-
-    // Always save the merged payload first (fixes bug where payload wasn't persisted)
-    const { error: updateError } = await getSupabase()
-      .from('ingestion_queue')
-      .update({ payload: mergedPayload })
-      .eq('id', id);
-    if (updateError) {
-      throw new Error(`Failed to persist payload: ${updateError.message}`);
-    }
-
-    const persistedPayload = await fetchLatestPayload(id);
-    validateStepPersisted(step, persistedPayload || mergedPayload);
+    const { returnStatus } = await mergePersistAndValidate(id, item, step, result);
 
     if (returnStatus && typeof returnStatus === 'number') {
       // Re-enrichment: transition to return status (manual)
