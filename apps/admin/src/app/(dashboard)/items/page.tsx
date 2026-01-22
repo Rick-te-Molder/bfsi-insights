@@ -7,12 +7,8 @@ import { MasterDetailView } from './master-detail';
 import { ItemsStatusGrid } from './items-status-grid';
 import CardView from './card-view';
 import { SearchBar } from './search-bar';
-import {
-  getAllSources,
-  getQueueItems,
-  getTaxonomyData,
-  loadStatusCodes,
-} from './lib/items-page-data';
+import { getAllSources, getQueueItems, loadStatusCodes } from './lib/items-page-data';
+import { getTaxonomyData } from './lib/taxonomy-data';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

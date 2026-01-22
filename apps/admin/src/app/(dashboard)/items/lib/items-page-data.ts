@@ -1,13 +1,7 @@
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import type { TaxonomyConfig, TaxonomyData, TaxonomyItem } from '@/components/tags';
 import type { QueueItem } from '@bfsi/types';
 
 type StatusCodes = Record<string, number>;
-
-type Query = {
-  gte: (column: string, value: string) => Query;
-  eq: (column: string, value: number) => Query;
-};
 
 type PublicationRow = {
   id: string;
@@ -21,6 +15,13 @@ type PublicationRow = {
   added_at: string | null;
   thumbnail: string | null;
 };
+
+type QueueItemsResult = {
+  items: QueueItem[];
+  sources: string[];
+};
+
+const EMPTY_QUEUE_ITEMS_RESULT: QueueItemsResult = { items: [], sources: [] };
 
 function assertOk<T>(
   result: { data: T | null; error: { message: string } | null },
@@ -58,45 +59,44 @@ function mapPublicationToQueueItem(pub: PublicationRow, publishedStatusCode: num
     discovered_at: pub.added_at || '',
     payload: {
       title: pub.title,
-      source_name: pub.source_name,
-      published_at: pub.published_at,
-      thumbnail_url: pub.thumbnail,
+      source_name: pub.source_name ?? undefined,
+      published_at: pub.published_at ?? undefined,
+      thumbnail_url: pub.thumbnail ?? undefined,
       summary: {
-        short: pub.summary_short,
-        medium: pub.summary_medium,
-        long: pub.summary_long,
+        short: pub.summary_short ?? undefined,
+        medium: pub.summary_medium ?? undefined,
+        long: pub.summary_long ?? undefined,
       },
     },
-  } as QueueItem;
+  };
 }
 
 function mapPublicationsToQueueItems(
   rows: PublicationRow[] | null | undefined,
   publishedStatusCode: number,
 ): QueueItem[] {
-  return ((rows ?? []) as PublicationRow[]).map((pub) =>
-    mapPublicationToQueueItem(pub, publishedStatusCode),
-  ) as QueueItem[];
+  return (rows ?? []).map((pub) => mapPublicationToQueueItem(pub, publishedStatusCode));
 }
 
 async function searchIngestionQueueByTitle(
   supabase: ReturnType<typeof createServiceRoleClient>,
   q: string,
-) {
+): Promise<QueueItem[]> {
   const { data, error } = await supabase
     .from('ingestion_queue')
     .select('id, url, status_code, payload, discovered_at')
     .ilike('payload->>title', `%${q}%`)
     .order('discovered_at', { ascending: false })
-    .limit(100);
-  if (error || !data) return [] as QueueItem[];
-  return data as QueueItem[];
+    .limit(100)
+    .returns<QueueItem[]>();
+  if (error || !data) return [];
+  return data;
 }
 
 async function searchPublicationsByTitle(
   supabase: ReturnType<typeof createServiceRoleClient>,
   q: string,
-) {
+): Promise<PublicationRow[]> {
   const { data, error } = await supabase
     .from('kb_publication')
     .select(
@@ -104,9 +104,10 @@ async function searchPublicationsByTitle(
     )
     .ilike('title', `%${q}%`)
     .order('added_at', { ascending: false })
-    .limit(100);
-  if (error || !data) return [] as PublicationRow[];
-  return data as PublicationRow[];
+    .limit(100)
+    .returns<PublicationRow[]>();
+  if (error || !data) return [];
+  return data;
 }
 
 async function getQueueItemById(itemId: string) {
@@ -114,9 +115,10 @@ async function getQueueItemById(itemId: string) {
   const { data, error } = await supabase
     .from('ingestion_queue')
     .select('id, url, status_code, payload, discovered_at')
-    .eq('id', itemId);
-  if (error || !data?.length) return { items: [], sources: [] as string[] };
-  return { items: data as QueueItem[], sources: [] as string[] };
+    .eq('id', itemId)
+    .returns<QueueItem[]>();
+  if (error || !data?.length) return EMPTY_QUEUE_ITEMS_RESULT;
+  return { items: data, sources: [] };
 }
 
 async function getQueueItemByUrl(url: string) {
@@ -124,9 +126,10 @@ async function getQueueItemByUrl(url: string) {
   const { data, error } = await supabase
     .from('ingestion_queue')
     .select('id, url, status_code, payload, discovered_at')
-    .eq('url', url);
-  if (error || !data?.length) return { items: [], sources: [] as string[] };
-  return { items: data as QueueItem[], sources: [] as string[] };
+    .eq('url', url)
+    .returns<QueueItem[]>();
+  if (error || !data?.length) return EMPTY_QUEUE_ITEMS_RESULT;
+  return { items: data, sources: [] };
 }
 
 async function searchQueueByTitle(searchQuery: string, statusCodes: StatusCodes) {
@@ -136,7 +139,7 @@ async function searchQueueByTitle(searchQuery: string, statusCodes: StatusCodes)
     searchPublicationsByTitle(supabase, searchQuery),
   ]);
   const pubItems = mapPublicationsToQueueItems(pubRows, getPublishedStatusCode(statusCodes));
-  return { items: [...queueItems, ...pubItems], sources: [] as string[] };
+  return { items: [...queueItems, ...pubItems], sources: [] };
 }
 
 async function getPublishedItems(statusCodes: StatusCodes) {
@@ -147,49 +150,77 @@ async function getPublishedItems(statusCodes: StatusCodes) {
       'id, source_url, title, summary_short, summary_medium, summary_long, source_name, published_at, added_at, thumbnail',
     )
     .order('added_at', { ascending: false })
-    .limit(500);
+    .limit(500)
+    .returns<PublicationRow[]>();
 
-  if (error) return { items: [], sources: [] as string[] };
+  if (error) return EMPTY_QUEUE_ITEMS_RESULT;
   const publishedStatusCode = getPublishedStatusCode(statusCodes);
-  const items = ((data ?? []) as PublicationRow[]).map((pub) =>
-    mapPublicationToQueueItem(pub, publishedStatusCode),
-  );
-  return { items, sources: [] as string[] };
+  const items = (data ?? []).map((pub) => mapPublicationToQueueItem(pub, publishedStatusCode));
+  return { items, sources: [] };
 }
 
-function applyTimeWindowFilter(query: Query, timeWindow: string) {
-  if (!timeWindow) return query;
+function extractSources(items: QueueItem[]) {
+  const slugs = items
+    .map((item) => item.payload?.source_slug)
+    .filter((slug): slug is string => typeof slug === 'string' && slug.length > 0);
+
+  return Array.from(new Set(slugs)).sort((a, b) => a.localeCompare(b));
+}
+
+function filterBySource(items: QueueItem[], source: string) {
+  if (!source) return items;
+  return items.filter((item) => item.payload?.source_slug === source);
+}
+
+function buildBaseQueueQuery(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  tableName: string,
+) {
+  return supabase
+    .from(tableName)
+    .select('id, url, status_code, payload, discovered_at')
+    .order('discovered_at', { ascending: false })
+    .limit(500);
+}
+
+function applyStatusCodeFilter(args: {
+  query: ReturnType<typeof buildBaseQueueQuery>;
+  tableName: string;
+  status: string;
+  statusCodes: StatusCodes;
+}) {
+  if (!args.status || args.status === 'all' || args.tableName === 'review_queue_ready') {
+    return args.query;
+  }
+
+  const code = args.statusCodes[args.status];
+  if (!code) return args.query;
+  return args.query.eq('status_code', code);
+}
+
+function applyTimeWindowFilter(args: {
+  query: ReturnType<typeof buildBaseQueueQuery>;
+  timeWindow: string;
+}) {
+  if (!args.timeWindow) return args.query;
+
   const now = new Date();
   const cutoffs: Record<string, number> = {
     '24h': 24 * 60 * 60 * 1000,
     '7d': 7 * 24 * 60 * 60 * 1000,
     '30d': 30 * 24 * 60 * 60 * 1000,
   };
-  const delta = cutoffs[timeWindow];
+  const delta = cutoffs[args.timeWindow];
   const cutoff = delta ? new Date(now.getTime() - delta) : new Date(0);
-  return query.gte('discovered_at', cutoff.toISOString());
+  return args.query.gte('discovered_at', cutoff.toISOString());
 }
 
-function applyStatusFilter(
-  query: Query,
-  status: string,
-  statusCodes: StatusCodes,
-  tableName: string,
-) {
-  if (!status || status === 'all' || tableName === 'review_queue_ready') return query;
-  const code = statusCodes[status];
-  return code ? query.eq('status_code', code) : query;
-}
-
-function extractSources(items: QueueItem[]) {
-  return Array.from(
-    new Set(items.map((item) => item.payload?.source_slug).filter(Boolean) as string[]),
-  ).sort((a, b) => a.localeCompare(b));
-}
-
-function filterBySource(items: QueueItem[], source: string) {
-  if (!source) return items;
-  return items.filter((item) => item.payload?.source_slug === source);
+async function fetchQueueItemsFromQuery(
+  query: ReturnType<typeof buildBaseQueueQuery>,
+): Promise<QueueItem[]> {
+  const { data, error } = await query.returns<QueueItem[]>();
+  if (error || !data) return [];
+  return data;
 }
 
 async function getQueueFromDb(args: {
@@ -201,21 +232,17 @@ async function getQueueFromDb(args: {
   const supabase = createServiceRoleClient();
   const tableName = args.status === 'pending_review' ? 'review_queue_ready' : 'ingestion_queue';
 
-  const baseQuery = supabase
-    .from(tableName)
-    .select('id, url, status_code, payload, discovered_at')
-    .order('discovered_at', { ascending: false })
-    .limit(500);
+  const baseQuery = buildBaseQueueQuery(supabase, tableName);
+  const withStatus = applyStatusCodeFilter({
+    query: baseQuery,
+    tableName,
+    status: args.status,
+    statusCodes: args.statusCodes,
+  });
+  const withTime = applyTimeWindowFilter({ query: withStatus, timeWindow: args.timeWindow });
 
-  let query = baseQuery as unknown as Query;
-
-  query = applyStatusFilter(query, args.status, args.statusCodes, tableName);
-  query = applyTimeWindowFilter(query, args.timeWindow);
-
-  const { data, error } = await (query as unknown as typeof baseQuery);
-  if (error || !data) return { items: [], sources: [] as string[] };
-
-  const rawItems = data as QueueItem[];
+  const rawItems = await fetchQueueItemsFromQuery(withTime);
+  if (rawItems.length === 0) return EMPTY_QUEUE_ITEMS_RESULT;
   const items = filterBySource(rawItems, args.source);
   const sources = extractSources(rawItems);
   return { items, sources };
@@ -245,53 +272,4 @@ export async function getAllSources() {
     .eq('is_active', true)
     .order('name');
   return data || [];
-}
-
-async function fetchTaxonomyConfig() {
-  const supabase = createServiceRoleClient();
-  const { data } = await supabase
-    .from('taxonomy_config')
-    .select(
-      'slug, display_name, display_order, behavior_type, source_table, payload_field, color, score_parent_slug, score_threshold',
-    )
-    .eq('is_active', true)
-    .order('display_order');
-
-  return (data || []) as TaxonomyConfig[];
-}
-
-function getSourceTables(taxonomyConfig: TaxonomyConfig[]) {
-  return taxonomyConfig
-    .filter((c) => c.source_table && c.behavior_type !== 'scoring')
-    .map((c) => ({ slug: c.slug, table: c.source_table! }));
-}
-
-async function fetchTaxonomyItems(sourceTables: Array<{ slug: string; table: string }>) {
-  const supabase = createServiceRoleClient();
-  const results = await Promise.all(
-    sourceTables.map(({ slug, table }) =>
-      supabase
-        .from(table)
-        .select('code, name')
-        .order('name')
-        .then((res) => ({ slug, data: res.data || [] })),
-    ),
-  );
-  return results;
-}
-
-function buildTaxonomyData(results: Array<{ slug: string; data: unknown[] }>) {
-  const taxonomyData: TaxonomyData = {};
-  for (const { slug, data } of results) {
-    taxonomyData[slug] = data as TaxonomyItem[];
-  }
-  return taxonomyData;
-}
-
-export async function getTaxonomyData() {
-  const taxonomyConfig = await fetchTaxonomyConfig();
-  const sourceTables = getSourceTables(taxonomyConfig);
-  const results = await fetchTaxonomyItems(sourceTables);
-  const taxonomyData = buildTaxonomyData(results);
-  return { taxonomyConfig, taxonomyData };
 }

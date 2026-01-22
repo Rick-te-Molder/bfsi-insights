@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.20.0  
+**Version**: 1.21.0  
 **Last updated**: 2026-01-22  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.21.0 (2026-01-22): Added S4325 (remove redundant assertions / casts).
 - 1.20.0 (2026-01-22): Fixed S6551 (avoid default object stringification) in items dashboard utilities.
 - 1.19.0 (2026-01-22): Fixed S6759 (React props should be read-only) in workflows dashboard components.
 - 1.18.0 (2026-01-22): Added S3776 (reduce cognitive complexity).
@@ -67,6 +68,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S7735   | [Unexpected negated condition](./lessons/unexpected-negated-condition.md)                                                                                                         | `lessons/unexpected-negated-condition.md`                                                     |
 | S6544   | [Promise-returning function provided to property where a void return was expected](./lessons/promise-returning-function-provided-to-property-where-a-void-return-was-expected.md) | `lessons/promise-returning-function-provided-to-property-where-a-void-return-was-expected.md` |
 | S4123   | [Unexpected `await` of a non-Promise (non-"Thenable") value](./lessons/unexpected-await-of-non-promise.md)                                                                        | `lessons/unexpected-await-of-non-promise.md`                                                  |
+| S4325   | [Remove redundant type assertions](./lessons/remove-redundant-type-assertions.md)                                                                                                 | `lessons/remove-redundant-type-assertions.md`                                                 |
 | S7773   | [Prefer `Number.parseInt` over `parseInt`](./lessons/prefer-number-parseint-over-parseint.md)                                                                                     | `lessons/prefer-number-parseint-over-parseint.md`                                             |
 | S6772   | [Ambiguous spacing after previous element](./lessons/ambiguous-spacing-after-previous-element.md)                                                                                 | `lessons/ambiguous-spacing-after-previous-element.md`                                         |
 | S7772   | [Prefer node: protocol for Node.js built-in imports](./lessons/prefer-node-protocol-for-builtins.md)                                                                              | `lessons/prefer-node-protocol-for-builtins.md`                                                |
@@ -129,6 +131,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Prefer native HTML over ARIA roles** — Use `<button>` not `<div role="button">`
 - [ ] **Use target check for modal backdrops** — `e.target === e.currentTarget` instead of stopPropagation
 - [ ] **No code duplication** — Extract shared logic to functions/components
+- [ ] **No redundant type assertions** — Remove `as Foo` / `!` assertions that do not change types; prefer explicit return types or typed Supabase `.returns<T>()`
 - [ ] **No overly complex functions** — Keep cyclomatic complexity low
 - [ ] **Use type guards before string coercion** — Check `typeof val === 'string'` before using `unknown` in template literals
 - [ ] **Use replaceAll() for global replacement** — Prefer `.replaceAll()` over `.replace(/pattern/g, ...)`
@@ -211,6 +214,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 ---
 
 ## [Unexpected `await` of a non-Promise (non-"Thenable") value](./lessons/unexpected-await-of-non-promise.md) (S4123)
+
+---
+
+## [Remove redundant type assertions](./lessons/remove-redundant-type-assertions.md) (S4325)
 
 ---
 
@@ -311,6 +318,10 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## ["await" should only be used with promises](./rules/4123_await-should-only-be-used-with-promises.md)
+
+---
+
+## [Redundant assertions should not be used](./rules/4325_redundant-assertions-should-not-be-used.md)
 
 ---
 
