@@ -40,12 +40,12 @@ function SummaryCard({
   label,
   value,
   valueColor,
-}: {
+}: Readonly<{
   icon: React.ReactNode;
   label: string;
   value: number;
   valueColor?: string;
-}) {
+}>) {
   return (
     <div className="bg-white rounded-lg shadow p-4">
       <div className="flex items-center gap-2 text-gray-500 text-sm">
@@ -64,11 +64,11 @@ type SummaryCardsProps = {
   stuckCount: number;
 };
 
-function TotalItemsCard({ value }: { value: number }) {
+function TotalItemsCard({ value }: Readonly<{ value: number }>) {
   return <SummaryCard icon={<BarChart3 className="h-4 w-4" />} label="Total Items" value={value} />;
 }
 
-function FailedItemsCard({ value }: { value: number }) {
+function FailedItemsCard({ value }: Readonly<{ value: number }>) {
   return (
     <SummaryCard
       icon={<XCircle className="h-4 w-4" />}
@@ -79,7 +79,7 @@ function FailedItemsCard({ value }: { value: number }) {
   );
 }
 
-function PendingRetryCard({ value }: { value: number }) {
+function PendingRetryCard({ value }: Readonly<{ value: number }>) {
   return (
     <SummaryCard
       icon={<Clock className="h-4 w-4" />}
@@ -90,7 +90,7 @@ function PendingRetryCard({ value }: { value: number }) {
   );
 }
 
-function StuckItemsCard({ value }: { value: number }) {
+function StuckItemsCard({ value }: Readonly<{ value: number }>) {
   return (
     <SummaryCard
       icon={<AlertTriangle className="h-4 w-4" />}
@@ -106,7 +106,7 @@ export function SummaryCards({
   totalFailed,
   totalPendingRetry,
   stuckCount,
-}: SummaryCardsProps) {
+}: Readonly<SummaryCardsProps>) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <TotalItemsCard value={totalItems} />
@@ -121,7 +121,10 @@ export function SummaryCards({
 // Status distribution components
 // ============================================================================
 
-function StatusRow({ status, totalItems }: { status: StatusSummary; totalItems: number }) {
+function StatusRow({
+  status,
+  totalItems,
+}: Readonly<{ status: StatusSummary; totalItems: number }>) {
   const pct = Math.min(100, (status.item_count / totalItems) * 100);
   return (
     <div className="flex items-center gap-3">
@@ -140,10 +143,10 @@ function StatusRow({ status, totalItems }: { status: StatusSummary; totalItems: 
 export function StatusDistribution({
   statusSummary,
   totalItems,
-}: {
+}: Readonly<{
   statusSummary: StatusSummary[];
   totalItems: number;
-}) {
+}>) {
   const filtered = statusSummary
     .filter((s) => s.item_count > 0)
     .sort((a, b) => b.item_count - a.item_count);
