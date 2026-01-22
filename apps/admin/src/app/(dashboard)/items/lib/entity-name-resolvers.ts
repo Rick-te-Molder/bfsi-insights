@@ -1,5 +1,26 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 
+function toTrimmedStringOrNull(value: unknown): string | null {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed || null;
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value);
+  }
+
+  return null;
+}
+
+function toStringOrNull(value: unknown): string | null {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value);
+  }
+  return null;
+}
+
 function normalizeName(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
@@ -64,15 +85,20 @@ function extractVendorRow(
   if (!row || typeof row !== 'object') return null;
 
   const id = (row as { id?: unknown }).id;
-  if (!id) return null;
+  const idStr = toStringOrNull(id);
+  if (!idStr) return null;
 
   const name = (row as { name?: unknown }).name;
   const aliases = (row as { aliases?: unknown }).aliases;
+  const nameStr = toTrimmedStringOrNull(name);
+  const aliasStrings = Array.isArray(aliases)
+    ? aliases.map(toTrimmedStringOrNull).filter((a): a is string => !!a)
+    : null;
 
   return {
-    id: String(id),
-    name: name ? String(name) : null,
-    aliases: Array.isArray(aliases) ? aliases.map(String) : null,
+    id: idStr,
+    name: nameStr,
+    aliases: aliasStrings,
   };
 }
 
@@ -128,7 +154,9 @@ function buildOrganizationNameToIdMap(orgRows: unknown): Map<string, string> {
 
     const id = (row as { id?: unknown }).id;
     const name = (row as { name?: unknown }).name;
-    if (id && name) map.set(String(name).toLowerCase(), String(id));
+    const idStr = toStringOrNull(id);
+    const nameStr = toTrimmedStringOrNull(name);
+    if (idStr && nameStr) map.set(nameStr.toLowerCase(), idStr);
   }
 
   return map;
@@ -140,11 +168,11 @@ export async function resolveEntityIdsForTaxonomy(args: {
   payloadField: string;
 }): Promise<string[] | null> {
   if (args.payloadField === 'vendor_names') {
-    return await resolveVendorIds(args.supabase, args.payload[args.payloadField]);
+    return resolveVendorIds(args.supabase, args.payload[args.payloadField]);
   }
 
   if (args.payloadField === 'organization_names') {
-    return await resolveOrganizationIds(args.supabase, args.payload[args.payloadField]);
+    return resolveOrganizationIds(args.supabase, args.payload[args.payloadField]);
   }
 
   return null;

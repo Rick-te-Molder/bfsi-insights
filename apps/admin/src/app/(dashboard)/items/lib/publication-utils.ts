@@ -13,6 +13,15 @@ export interface PublicationData {
   thumbnailPath: string | null;
 }
 
+function toTrimmedStringOrEmpty(value: unknown): string {
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') {
+    return String(value);
+  }
+  if (value instanceof Date) return value.toISOString();
+  return '';
+}
+
 function isoNow(): string {
   return new Date().toISOString();
 }
@@ -23,13 +32,13 @@ function toIsoOrNow(date: Date): string {
 
 function normalizeDatePublished(input: unknown): string {
   if (!input) return isoNow();
-  const raw = String(input).trim();
+  const raw = toTrimmedStringOrEmpty(input);
   if (!raw) return isoNow();
 
   if (/^\d{4}-\d{2}$/.test(raw)) return toIsoOrNow(new Date(`${raw}-01`));
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return toIsoOrNow(new Date(raw));
 
-  const dmY = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  const dmY = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(raw);
   if (dmY) {
     const year = dmY[3].length === 2 ? 2000 + Number(dmY[3]) : Number(dmY[3]);
     const yyyy = String(year).padStart(4, '0');
