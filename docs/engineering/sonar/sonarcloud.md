@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.16.0  
-**Last updated**: 2026-01-11  
+**Version**: 1.17.0  
+**Last updated**: 2026-01-22  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.17.0 (2026-01-22): Added S5852 (avoid slow regex / ReDoS hotspots).
 - 1.16.0 (2026-01-11): Added S6594 (prefer RegExp.exec() over String.match()).
 - 1.15.0 (2026-01-08): Improved S6759 pattern to catch inline props (}: {) missing Readonly wrapper.
 - 1.14.0 (2026-01-08): Added S7763 (use export...from syntax for re-exports).
@@ -71,6 +72,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S6644   | [Use logical OR instead of ternary for default values](./lessons/use-logical-or-instead-of-ternary-for-default-values.md)                                                         | `lessons/use-logical-or-instead-of-ternary-for-default-values.md`                             |
 | S7763   | [Use export...from for re-exports](./lessons/use-export-from-for-re-exports.md)                                                                                                   | `lessons/use-export-from-for-re-exports.md`                                                   |
 | S6594   | [Use the "RegExp.exec()" method instead](./lessons/use-the-regexp-exec-method-instead.md)                                                                                         | `lessons/use-the-regexp-exec-method-instead.md`                                               |
+| S5852   | [Avoid slow regular expressions in user-controlled input](./lessons/avoid-slow-regular-expressions-in-user-controlled-input.md)                                                   | `lessons/avoid-slow-regular-expressions-in-user-controlled-input.md`                          |
 
 ---
 
@@ -137,6 +139,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Use || or ?? instead of ternary for defaults** — Replace `x ? x : y` with `x || y`
 - [ ] **Use export...from for re-exports** — Replace `import { x } from './mod'; export { x };` with `export { x } from './mod';`
 - [ ] **Prefer RegExp.exec over String.match** — Use `/re/.exec(str)` instead of `str.match(/re/)`
+- [ ] **Avoid slow regex for simple parsing** — Prefer `indexOf` + `slice` for URL/query/fragment trimming (avoid ReDoS hotspots)
 
 ---
 
@@ -238,6 +241,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Avoid slow regular expressions in user-controlled input](./lessons/avoid-slow-regular-expressions-in-user-controlled-input.md) (S5852)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -327,5 +334,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## ["RegExp.exec()" should be preferred over "String.match()"](./rules/6594_regexp-exec-should-be-preferred-over-string-match.md)
+
+---
+
+## [Using slow regular expressions is security-sensitive](./rules/5852_using-slow-regular-expressions-is-security-sensitive.md)
 
 ---

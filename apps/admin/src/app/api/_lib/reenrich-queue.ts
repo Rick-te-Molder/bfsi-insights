@@ -25,7 +25,16 @@ async function fetchQueueItem(supabase: ReturnType<typeof createServiceRoleClien
 }
 
 function normalizeQueueUrl(url: string) {
-  return url.toLowerCase().replace(/[?#].*$/, '');
+  const lower = url.toLowerCase();
+  const hashIndex = lower.indexOf('#');
+  const queryIndex = lower.indexOf('?');
+  let firstSuffixIndex = hashIndex;
+  if (firstSuffixIndex === -1) {
+    firstSuffixIndex = queryIndex;
+  } else if (queryIndex !== -1) {
+    firstSuffixIndex = Math.min(firstSuffixIndex, queryIndex);
+  }
+  return firstSuffixIndex === -1 ? lower : lower.slice(0, firstSuffixIndex);
 }
 
 async function fetchQueueIdByUrlNorm(
