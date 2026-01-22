@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { BarChart3, RefreshCw } from 'lucide-react';
 import {
@@ -25,7 +25,7 @@ function LoadingSkeleton() {
   );
 }
 
-function ErrorBanner({ message }: { message: string }) {
+function ErrorBanner({ message }: Readonly<{ message: string }>) {
   return (
     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
       {message}
@@ -60,7 +60,7 @@ async function fetchStuckItems(supabase: ReturnType<typeof createClient>) {
   return (data as StuckItem[]) || [];
 }
 
-function DashboardHeader({ onRefresh }: { onRefresh: () => void }) {
+function DashboardHeader({ onRefresh }: Readonly<{ onRefresh: () => void }>) {
   return (
     <div className="flex items-center justify-between">
       <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -103,7 +103,7 @@ function useWorkflowData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -116,11 +116,11 @@ function useWorkflowData() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   return { statusSummary, stepFailures, stuckItems, loading, error, fetchData };
 }

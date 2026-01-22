@@ -26,7 +26,7 @@ function StepFailureTableHeader() {
   );
 }
 
-function StepFailureRow({ step }: { step: StepFailureRate }) {
+function StepFailureRow({ step }: Readonly<{ step: StepFailureRate }>) {
   return (
     <tr>
       <td className="px-4 py-2 font-medium">{step.step_name}</td>
@@ -61,7 +61,7 @@ function StepFailureEmptyRow() {
   );
 }
 
-export function StepFailureTable({ stepFailures }: { stepFailures: StepFailureRate[] }) {
+export function StepFailureTable({ stepFailures }: Readonly<{ stepFailures: StepFailureRate[] }>) {
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="p-4 border-b">
