@@ -37,6 +37,7 @@ jobs:
         env:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SOFT_FAIL_DOMAINS: "autoriteitpersoonsgegevens\\.nl" # Returns HTTP 403 for automated requests (anti-bot); soft-fail to avoid nightly false positives
 
       - name: Upload link-check report
         if: always()
