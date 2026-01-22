@@ -25,7 +25,7 @@ function StuckItemsTableHeader() {
   );
 }
 
-function StuckItemRow({ item }: { item: StuckItem }) {
+function StuckItemRow({ item }: Readonly<{ item: StuckItem }>) {
   return (
     <tr>
       <td className="px-4 py-2">
@@ -63,7 +63,7 @@ function StuckItemsEmptyRow() {
   );
 }
 
-export function StuckItemsTable({ stuckItems }: { stuckItems: StuckItem[] }) {
+export function StuckItemsTable({ stuckItems }: Readonly<{ stuckItems: StuckItem[] }>) {
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="p-4 border-b">
