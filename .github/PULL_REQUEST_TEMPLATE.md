@@ -38,6 +38,7 @@ Write this like a short human summary.
 - **AI tool used**: <!-- Windsurf / Cursor / Copilot / None -->
 - **Prompt summary**: <!-- Brief description of what you asked AI to do -->
 - **Human verification**: <!-- What you manually verified beyond AI output -->
+- [ ] **Shell-safe PR creation**: PR body created with `gh ... --body-file` or a `<<'EOF'` heredoc (avoid inline backticks in zsh)
 
 ## Evidence
 
