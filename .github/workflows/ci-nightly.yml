@@ -37,6 +37,7 @@ jobs:
         env:
           PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SOFT_FAIL_DOMAINS: "autoriteitpersoonsgegevens\\.nl"
 
       - name: Upload link-check report
         if: always()
