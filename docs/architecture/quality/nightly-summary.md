@@ -1,15 +1,15 @@
 # Quality Metrics Summary
 
-> Auto-generated on 2026-01-22 by nightly quality workflow
+> Auto-generated on 2026-01-23 by nightly quality workflow
 
 ## Overview
 
 | Metric                     | Count | Status |
 | -------------------------- | ----: | ------ |
 | Large files (>limit)       |     0 | ✅     |
-| Large functions (>limit)   |    33 | ⚠️     |
+| Large functions (>limit)   |    32 | ⚠️     |
 | High param functions (>=6) |     0 | ✅     |
-| Total files scanned        |   682 |        |
+| Total files scanned        |   697 |        |
 
 ## Detailed Reports
 
