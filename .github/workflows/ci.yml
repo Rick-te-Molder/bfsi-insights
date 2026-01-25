@@ -102,18 +102,34 @@ jobs:
         continue-on-error: true
 
       - name: Download baseline coverage (if exists)
-        uses: actions/download-artifact@v7
+        uses: dawidd6/action-download-artifact@v3
         with:
+          workflow: ci.yml
+          branch: main
           name: coverage-baseline-agent-api
-          path: artifacts
+          path: artifacts/baseline-agent-api
+          if_no_artifact_found: ignore
         continue-on-error: true
 
       - name: Download baseline coverage for apps (if exists)
-        uses: actions/download-artifact@v7
+        uses: dawidd6/action-download-artifact@v3
         with:
+          workflow: ci.yml
+          branch: main
           name: coverage-baseline-apps
-          path: artifacts
+          path: artifacts/baseline-apps
+          if_no_artifact_found: ignore
         continue-on-error: true
+
+      - name: Normalize baseline coverage filenames (if downloaded)
+        run: |
+          set -e
+          if [ -f artifacts/baseline-agent-api/coverage-summary.json ]; then
+            cp artifacts/baseline-agent-api/coverage-summary.json artifacts/coverage-baseline-agent-api.json
+          fi
+          if [ -f artifacts/baseline-apps/coverage-summary.json ]; then
+            cp artifacts/baseline-apps/coverage-summary.json artifacts/coverage-baseline-apps.json
+          fi
 
       - name: Check coverage delta (all workspaces)
         run: node scripts/ci/check-coverage-delta.cjs

@@ -42,7 +42,7 @@ export function extractTitleFromUrl(url) {
     return slug
       .replace(/\.(html?|php|aspx?)$/i, '')
       .replaceAll(/[-_]/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .replaceAll(/\b\w/g, (c) => c.toUpperCase())
       .trim();
   } catch {
     return 'Untitled';
