@@ -111,6 +111,15 @@ app.listen(port, () => {
 
   // Best-effort sync of utility versions so Admin can read from DB.
   // Do not fail startup if env vars or table are not available.
+  const hasSupabaseEnv =
+    Boolean(process.env.SUPABASE_URL) &&
+    (Boolean(process.env.SUPABASE_SERVICE_KEY) || Boolean(process.env.SUPABASE_ANON_KEY));
+
+  if (!hasSupabaseEnv) {
+    console.log('ℹ️ Utility version sync skipped: Missing Supabase environment variables');
+    return;
+  }
+
   syncUtilityVersionsToDb().catch((err) => {
     const message = err instanceof Error ? err.message : String(err);
     console.warn('⚠️ Utility version sync failed:', message);
