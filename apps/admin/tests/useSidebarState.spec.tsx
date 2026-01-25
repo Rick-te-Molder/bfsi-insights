@@ -40,4 +40,27 @@ describe('useSidebarState', () => {
     expect(html).toContain('&quot;expanded&quot;');
     expect(html).toContain('/dashboard');
   });
+
+  it('initializes isOpen as false', () => {
+    const navItems: NavItem[] = [{ href: '/test' }];
+    const html = renderToStaticMarkup(<SidebarStateHarness navItems={navItems} />);
+    expect(html).toContain('&quot;isOpen&quot;:false');
+  });
+
+  it('does not expand menus without children', () => {
+    const navItems: NavItem[] = [
+      { href: '/dashboard' }, // no children
+      { href: '/plain' },
+    ];
+    const html = renderToStaticMarkup(<SidebarStateHarness navItems={navItems} />);
+    expect(html).toContain('&quot;expanded&quot;:[]');
+  });
+
+  it('does not expand menus that do not match pathname', () => {
+    const navItems: NavItem[] = [
+      { href: '/other', children: [{}] }, // doesn't match /dashboard/pipeline
+    ];
+    const html = renderToStaticMarkup(<SidebarStateHarness navItems={navItems} />);
+    expect(html).not.toContain('/other');
+  });
 });

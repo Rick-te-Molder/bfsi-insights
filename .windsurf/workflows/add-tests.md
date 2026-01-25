@@ -4,7 +4,7 @@ description: Add tests and bring coverage to target threshold
 
 # Add Tests Workflow
 
-Add tests and bring the coverage to 85%
+Add tests and bring the coverage of the files in the screenshot to 85%
 
 ## Acceptance Criteria
 

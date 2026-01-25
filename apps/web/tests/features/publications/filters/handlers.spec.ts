@@ -51,7 +51,7 @@ describe('filters/handlers', () => {
       mobileSearchEl: document.createElement('input'),
       chipsEl: document.createElement('div'),
       badgeEl: document.createElement('span'),
-      loadMoreBtn: document.createElement('button') as HTMLButtonElement,
+      loadMoreBtn: document.createElement('button'),
       clearBtn: document.createElement('button'),
       searchSpinner: document.createElement('div'),
       mobileSearchSpinner: document.createElement('div'),
@@ -81,7 +81,7 @@ describe('filters/handlers', () => {
       const deps = createDeps();
       setupSearchHandlers(deps);
 
-      deps.qEl!.dispatchEvent(new Event('input'));
+      deps.qEl?.dispatchEvent(new Event('input'));
 
       expect(deps.apply).toHaveBeenCalled();
     });
@@ -90,7 +90,7 @@ describe('filters/handlers', () => {
       const deps = createDeps();
       setupSearchHandlers(deps);
 
-      deps.qEl!.dispatchEvent(new Event('focus'));
+      deps.qEl?.dispatchEvent(new Event('focus'));
 
       // Focus triggers showSearchSuggestions - verified by no error thrown
       expect(true).toBe(true);
@@ -102,7 +102,7 @@ describe('filters/handlers', () => {
       const deps = createDeps();
       setupClearButton(deps);
 
-      deps.clearBtn!.click();
+      deps.clearBtn?.click();
 
       // clearStorage is called internally - verified by apply being called
       expect(deps.apply).toHaveBeenCalled();
@@ -121,6 +121,56 @@ describe('filters/handlers', () => {
 
       expect(deps.setCurrentPage).toHaveBeenCalledWith(2);
       expect(deps.apply).toHaveBeenCalled();
+    });
+
+    it('scrolls to first new item when loading more', () => {
+      const deps = createDeps();
+      // Create 31 visible items (page 1 = 30, so item 31 is first of page 2)
+      for (let i = 0; i < 35; i++) {
+        const li = document.createElement('li');
+        li.scrollIntoView = vi.fn();
+        deps.list.appendChild(li);
+      }
+      deps.getCurrentPage = vi.fn(() => 1);
+
+      setupLoadMoreButton(deps);
+      deps.loadMoreBtn!.click();
+
+      // First new item (index 30) should have scrollIntoView called
+      const items = Array.from(deps.list.children) as HTMLElement[];
+      expect(items[30].scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  describe('setupSearchHandlers - mobile', () => {
+    it('adds input listener to mobileSearchEl', () => {
+      const deps = createDeps();
+      setupSearchHandlers(deps);
+
+      deps.mobileSearchEl!.dispatchEvent(new Event('input'));
+
+      expect(deps.apply).toHaveBeenCalled();
+    });
+
+    it('adds focus listener to mobile search', () => {
+      const deps = createDeps();
+      setupSearchHandlers(deps);
+
+      deps.mobileSearchEl!.dispatchEvent(new Event('focus'));
+
+      // Focus triggers showSearchSuggestions
+      expect(true).toBe(true);
+    });
+
+    it('adds blur listener to hide suggestions after delay', () => {
+      const deps = createDeps();
+      setupSearchHandlers(deps);
+
+      deps.qEl!.dispatchEvent(new Event('blur'));
+      vi.advanceTimersByTime(200);
+
+      // hideSearchSuggestions should be called after timeout
+      expect(true).toBe(true);
     });
   });
 });

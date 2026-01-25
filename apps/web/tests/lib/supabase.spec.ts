@@ -95,5 +95,35 @@ describe('supabase utilities', () => {
       const result = await getFilteredPublications({ industry: 'banking' });
       expect(Array.isArray(result)).toBe(true);
     });
+
+    it('handles empty filter values', async () => {
+      const { getFilteredPublications } = await import('../../lib/supabase');
+      const result = await getFilteredPublications({ industry: '', topic: '' });
+      expect(Array.isArray(result)).toBe(true);
+    });
+
+    it('handles null filter values', async () => {
+      const { getFilteredPublications } = await import('../../lib/supabase');
+      const result = await getFilteredPublications({ industry: null as unknown as string });
+      expect(Array.isArray(result)).toBe(true);
+    });
+  });
+
+  describe('getPublicationBySlug', () => {
+    it('returns publication for valid slug', async () => {
+      const { getPublicationBySlug } = await import('../../lib/supabase');
+      const result = await getPublicationBySlug('test-article');
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('normalizePublication', () => {
+    it('normalizes authors field to array', async () => {
+      const { getAllPublications } = await import('../../lib/supabase');
+      const result = await getAllPublications();
+      if (result.length > 0) {
+        expect(Array.isArray(result[0].authors)).toBe(true);
+      }
+    });
   });
 });
