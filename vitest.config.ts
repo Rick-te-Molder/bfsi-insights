@@ -28,6 +28,8 @@ export default defineConfig({
       reportsDirectory: resolve(__dirname, 'artifacts/test/coverage'),
       include: [
         'apps/web/**/*.ts',
+        'apps/admin/src/contexts/**/*.ts',
+        'apps/admin/src/contexts/**/*.tsx',
         'apps/admin/src/components/ui/**/*.ts',
         'apps/admin/src/components/ui/**/*.tsx',
         'apps/admin/src/components/tags/**/*.ts',

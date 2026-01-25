@@ -1,9 +1,56 @@
 // @ts-check
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const hoisted = vi.hoisted(() => {
+  /** @type {import('vitest').Mock} */
+  const delayMock = vi.fn(async () => undefined);
+  const browserCloseMock = vi.fn(async () => undefined);
+  const pageGotoMock = vi.fn(async () => undefined);
+  const pageContentMock = vi.fn(async () => '<html>ok</html>');
+  const addInitScriptMock = vi.fn(async () => undefined);
+
+  const newPageMock = vi.fn(async () => ({
+    addInitScript: addInitScriptMock,
+    goto: pageGotoMock,
+    content: pageContentMock,
+  }));
+
+  const newContextMock = vi.fn(async () => ({
+    newPage: newPageMock,
+  }));
+
+  const launchMock = vi.fn(async () => ({
+    newContext: newContextMock,
+    close: browserCloseMock,
+  }));
+
+  return {
+    delayMock,
+    browserCloseMock,
+    pageGotoMock,
+    pageContentMock,
+    addInitScriptMock,
+    newPageMock,
+    newContextMock,
+    launchMock,
+  };
+});
+
+vi.mock('playwright', () => ({
+  chromium: {
+    launch: hoisted.launchMock,
+  },
+}));
+
+vi.mock('./content-fetcher-http.js', () => ({
+  delay: hoisted.delayMock,
+}));
+
 import {
   requiresPlaywright,
   PLAYWRIGHT_DOMAINS,
   fetchFromGoogleCache,
+  fetchWithPlaywright,
 } from './content-fetcher-browser.js';
 
 // Mock fetch for Google Cache tests
@@ -141,6 +188,22 @@ describe('content-fetcher-browser', () => {
           headers: { 'User-Agent': 'Test' },
         }),
       );
+    });
+  });
+
+  describe('fetchWithPlaywright', () => {
+    it('returns success with html and closes browser', async () => {
+      const res = await fetchWithPlaywright('https://example.com');
+      expect(res).toEqual({ success: true, html: '<html>ok</html>' });
+      expect(hoisted.launchMock).toHaveBeenCalled();
+      expect(hoisted.delayMock).toHaveBeenCalled();
+      expect(hoisted.browserCloseMock).toHaveBeenCalled();
+    });
+
+    it('closes browser when page.goto throws', async () => {
+      hoisted.pageGotoMock.mockRejectedValueOnce(new Error('boom'));
+      await expect(fetchWithPlaywright('https://example.com')).rejects.toThrow('boom');
+      expect(hoisted.browserCloseMock).toHaveBeenCalled();
     });
   });
 });
