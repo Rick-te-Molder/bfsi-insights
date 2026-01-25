@@ -5,6 +5,8 @@ import type { QueueItem } from '@bfsi/types';
 
 interface QueueItemWithRun extends QueueItem {
   current_run_id?: string | null;
+  raw_ref?: string | null;
+  storage_deleted_at?: string | null;
 }
 
 type PublicationRow = {

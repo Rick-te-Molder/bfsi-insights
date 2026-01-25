@@ -22,6 +22,7 @@ import {
   MetadataPanel,
   RawContentPreview,
 } from './page-components';
+import { ViewOriginalButton } from './view-original-button';
 
 export default async function ReviewDetailPage({
   params,
@@ -147,6 +148,18 @@ export default async function ReviewDetailPage({
           <PipelineTimeline queueId={item.id} currentRunId={item.current_run_id} />
 
           <MetadataPanel item={item} payload={payload} />
+
+          {/* View Original Content */}
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900/60 p-4">
+            <h3 className="text-sm font-semibold text-neutral-400 uppercase tracking-wide mb-3">
+              Raw Content
+            </h3>
+            <ViewOriginalButton
+              queueId={item.id}
+              rawRef={item.raw_ref ?? null}
+              storageDeletedAt={item.storage_deleted_at ?? null}
+            />
+          </div>
 
           {typeof payload.raw_content === 'string' && (
             <RawContentPreview rawContent={payload.raw_content} />
