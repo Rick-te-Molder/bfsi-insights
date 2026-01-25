@@ -89,16 +89,11 @@ export function processHeadlineOnly(candidate, source) {
  * @param {string} description - RSS description/summary
  * @returns {Object} Extracted preview data
  */
-export function extractRssPreview(description) {
-  if (!description) return { preview: null, wordCount: 0 };
-
-  // Limit input length to prevent DoS attacks
-  const safeInput = description.slice(0, 10000);
-
-  // Strip HTML tags using iterative approach (ReDoS-safe)
+// Strip HTML tags using iterative approach (ReDoS-safe)
+function stripHtmlTags(html) {
   let textOnly = '';
   let inTag = false;
-  for (const char of safeInput) {
+  for (const char of html) {
     if (char === '<') {
       inTag = true;
       textOnly += ' ';
@@ -108,11 +103,15 @@ export function extractRssPreview(description) {
       textOnly += char;
     }
   }
+  return textOnly;
+}
 
-  // Clean up whitespace and entities
+export function extractRssPreview(description) {
+  if (!description) return { preview: null, wordCount: 0 };
+
+  const safeInput = description.slice(0, 10000);
+  const textOnly = stripHtmlTags(safeInput);
   const cleaned = textOnly.replaceAll('&nbsp;', ' ').split(/\s+/).join(' ').trim();
-
-  // Truncate to reasonable preview length
   const preview = cleaned.length > 500 ? cleaned.slice(0, 500) + '...' : cleaned;
 
   return {
@@ -129,6 +128,27 @@ export function extractRssPreview(description) {
  * @param {Object} options - Processing options
  * @returns {Object} Queue payload
  */
+function buildSourceFields(source) {
+  return {
+    source: source.name,
+    source_slug: source.slug,
+    source_tier: source.tier,
+    source_domain: source.domain,
+  };
+}
+
+function buildPremiumFields(config, previewData) {
+  return {
+    premium: true,
+    premium_mode: config.mode,
+    requires_manual_fetch: config.mode !== PREMIUM_MODES.LANDING_PAGE,
+    preview: previewData.preview,
+    has_substantive_preview: previewData.hasSubstantivePreview,
+    skip_auto_enrich: true,
+    manual_review_required: true,
+  };
+}
+
 export function buildPremiumPayload(candidate, source, options = {}) {
   const previewData = extractRssPreview(candidate.description);
   const config = getPremiumConfig(source);
@@ -136,32 +156,11 @@ export function buildPremiumPayload(candidate, source, options = {}) {
   return {
     title: candidate.title,
     url: candidate.url,
-    source: source.name,
-    source_slug: source.slug,
-    source_tier: source.tier,
-    source_domain: source.domain,
-
-    // Premium-specific fields
-    premium: true,
-    premium_mode: config.mode,
-    requires_manual_fetch: config.mode !== PREMIUM_MODES.LANDING_PAGE,
-
-    // Preview data (if available from RSS)
-    preview: previewData.preview,
-    has_substantive_preview: previewData.hasSubstantivePreview,
-
-    // Dates
+    ...buildSourceFields(source),
+    ...buildPremiumFields(config, previewData),
     published_at: candidate.published_at || null,
     discovered_at: new Date().toISOString(),
-
-    // Metadata
     raw_description: candidate.description || null,
-
-    // Processing flags
-    skip_auto_enrich: true,
-    manual_review_required: true,
-
-    // Optional overrides
     ...options,
   };
 }

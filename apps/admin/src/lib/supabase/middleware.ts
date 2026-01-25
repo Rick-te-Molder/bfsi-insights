@@ -1,46 +1,53 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
+function isPublicRoute(pathname: string): boolean {
+  return pathname.startsWith('/login') || pathname.startsWith('/auth');
+}
 
-  const supabase = createServerClient(
+function createRedirectToLogin(request: NextRequest): NextResponse {
+  const url = request.nextUrl.clone();
+  url.pathname = '/login';
+  return NextResponse.redirect(url);
+}
+
+function createSupabaseClientWithCookies(
+  request: NextRequest,
+  getResponse: () => NextResponse,
+  setResponse: (res: NextResponse) => void,
+) {
+  return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
+        getAll: () => request.cookies.getAll(),
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({
-            request,
-          });
+          setResponse(NextResponse.next({ request }));
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
+            getResponse().cookies.set(name, value, options),
           );
         },
       },
     },
   );
+}
 
-  // Refresh session if expired
+export async function updateSession(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request });
+  const supabase = createSupabaseClientWithCookies(
+    request,
+    () => supabaseResponse,
+    (r) => (supabaseResponse = r),
+  );
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Redirect to login if not authenticated and trying to access protected routes
-  if (
-    !user &&
-    !request.nextUrl.pathname.startsWith('/login') &&
-    !request.nextUrl.pathname.startsWith('/auth')
-  ) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
+  if (!user && !isPublicRoute(request.nextUrl.pathname)) {
+    return createRedirectToLogin(request);
   }
 
   return supabaseResponse;

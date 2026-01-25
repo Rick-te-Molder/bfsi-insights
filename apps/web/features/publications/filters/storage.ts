@@ -44,47 +44,48 @@ export function updateQuery(vals: FilterValues, currentPage: number) {
   history.replaceState(null, '', url);
 }
 
+function parsePageParam(params: URLSearchParams): number {
+  const pageParam = params.get('page');
+  if (!pageParam) return 1;
+
+  const parsed = Number.parseInt(pageParam, 10);
+  return !Number.isNaN(parsed) && parsed > 0 ? parsed : 1;
+}
+
+function loadFromLocalStorage(vals: FilterValues): void {
+  try {
+    const personaPref = localStorage.getItem('bfsi-persona-preference');
+    const saved = localStorage.getItem(STORAGE_KEY);
+
+    if (saved) {
+      const parsed = JSON.parse(saved) as FilterValues;
+      vals.role = getDefaultRole(personaPref);
+      vals.industry = parsed.industry || '';
+      vals.topic = parsed.topic || '';
+      vals.content_type = parsed.content_type || '';
+      vals.geography = parsed.geography || '';
+      vals.q = parsed.q || '';
+    } else {
+      vals.role = getDefaultRole(personaPref);
+    }
+  } catch {
+    // ignore
+  }
+}
+
 export function readFromQuery(filters: FilterElement[]): { vals: FilterValues; page: number } {
   const params = new URLSearchParams(location.search);
-
-  const vals: FilterValues = {
-    q: params.get('q') || '',
-  };
+  const vals: FilterValues = { q: params.get('q') || '' };
 
   filters.forEach(({ key }) => {
     vals[key] = params.get(key) || '';
   });
 
-  let currentPage = 1;
-  const pageParam = params.get('page');
-  if (pageParam) {
-    const parsed = Number.parseInt(pageParam, 10);
-    if (!Number.isNaN(parsed) && parsed > 0) {
-      currentPage = parsed;
-    }
-  }
-
+  const currentPage = parsePageParam(params);
   const hasAnyParam = Object.values(vals).some(Boolean);
 
   if (!hasAnyParam) {
-    try {
-      const personaPref = localStorage.getItem('bfsi-persona-preference');
-      const saved = localStorage.getItem(STORAGE_KEY);
-
-      if (saved) {
-        const parsed = JSON.parse(saved) as FilterValues;
-        vals.role = getDefaultRole(personaPref);
-        vals.industry = parsed.industry || '';
-        vals.topic = parsed.topic || '';
-        vals.content_type = parsed.content_type || '';
-        vals.geography = parsed.geography || '';
-        vals.q = parsed.q || '';
-      } else {
-        vals.role = getDefaultRole(personaPref);
-      }
-    } catch {
-      // ignore
-    }
+    loadFromLocalStorage(vals);
   } else if (!vals.role) {
     vals.role = 'all';
   }

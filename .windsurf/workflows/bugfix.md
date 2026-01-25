@@ -1,14 +1,8 @@
----
-description: Bugfix prompt template for surgical fixes with repro steps and DoD
----
-
-# Bugfix Template
-
-Use this template for surgical bug fixes with clear repro steps and definition of done.
+# Bugfix
 
 ## Goal
 
-Fix: <one-line description of the bug>
+<one-line description of the bug>
 
 ## Context
 

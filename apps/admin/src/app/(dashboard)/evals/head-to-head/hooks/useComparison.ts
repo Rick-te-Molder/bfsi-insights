@@ -20,45 +20,57 @@ interface RunComparisonParams {
   setResults: (updater: (prev: ComparisonResult[]) => ComparisonResult[]) => void;
 }
 
+function validateParams(params: RunComparisonParams): string | null {
+  const { versionA, versionB, selectedItem } = params;
+
+  if (!versionA || !versionB || !selectedItem) {
+    return 'Please select two versions and an item to compare';
+  }
+  if (versionA === versionB) {
+    return 'Please select two different versions';
+  }
+  return null;
+}
+
+async function executeComparison(params: RunComparisonParams): Promise<void> {
+  const { selectedAgent, versionA, versionB, selectedItem, useLLMJudge, setResults } = params;
+
+  const res = await fetch('/api/evals/head-to-head', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      agentName: selectedAgent,
+      versionAId: versionA,
+      versionBId: versionB,
+      itemId: selectedItem,
+      useLLMJudge,
+    }),
+  });
+
+  if (res.ok) {
+    const data = await res.json();
+    setResults((prev) => [data.result, ...prev]);
+  } else {
+    const data = await res.json();
+    throw new Error(data.error || 'Unknown error');
+  }
+}
+
 export function useComparison() {
   const [running, setRunning] = useState(false);
 
   async function runComparison(params: RunComparisonParams) {
-    const { selectedAgent, versionA, versionB, selectedItem, useLLMJudge, setResults } = params;
-
-    if (!versionA || !versionB || !selectedItem) {
-      alert('Please select two versions and an item to compare');
-      return;
-    }
-
-    if (versionA === versionB) {
-      alert('Please select two different versions');
+    const validationError = validateParams(params);
+    if (validationError) {
+      alert(validationError);
       return;
     }
 
     setRunning(true);
     try {
-      const res = await fetch('/api/evals/head-to-head', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agentName: selectedAgent,
-          versionAId: versionA,
-          versionBId: versionB,
-          itemId: selectedItem,
-          useLLMJudge,
-        }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setResults((prev) => [data.result, ...prev]);
-      } else {
-        const data = await res.json();
-        alert('Failed to run comparison: ' + data.error);
-      }
-    } catch {
-      alert('Network error');
+      await executeComparison(params);
+    } catch (err) {
+      alert(err instanceof Error ? `Failed: ${err.message}` : 'Network error');
     } finally {
       setRunning(false);
     }

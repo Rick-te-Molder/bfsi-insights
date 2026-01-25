@@ -76,21 +76,16 @@ function normalizeScore(score, min = 0, max = 10) {
  * @param {string|null} params.publishedAt - Publication date
  * @returns {Object} Combined quality assessment
  */
-export function calculateQualityScore({
-  relevanceScore = 5,
-  similarityScore = null,
-  impactScore = null,
-  publishedAt = null,
-} = {}) {
-  // Normalize scores to 0-10 (null values stay null)
-  const scores = {
+function normalizeScores(relevanceScore, similarityScore, impactScore, publishedAt) {
+  return {
     relevance: normalizeScore(relevanceScore, 1, 10),
     similarity: similarityScore == null ? null : normalizeScore(similarityScore, 0, 1),
     impact: impactScore == null ? null : normalizeScore(impactScore, 0, 10),
     recency: calculateRecencyScore(publishedAt),
   };
+}
 
-  // Calculate weighted average (skip null scores, redistribute weight)
+function calculateWeightedAverage(scores) {
   let totalWeight = 0;
   let weightedSum = 0;
   const breakdown = {};
@@ -108,16 +103,22 @@ export function calculateQualityScore({
   }
 
   const finalScore = totalWeight > 0 ? weightedSum / totalWeight : 5;
+  return { finalScore, breakdown };
+}
+
+export function calculateQualityScore({
+  relevanceScore = 5,
+  similarityScore = null,
+  impactScore = null,
+  publishedAt = null,
+} = {}) {
+  const scores = normalizeScores(relevanceScore, similarityScore, impactScore, publishedAt);
+  const { finalScore, breakdown } = calculateWeightedAverage(scores);
 
   return {
     score: Math.round(finalScore * 10) / 10,
     breakdown,
-    factors: {
-      relevance: scores.relevance,
-      similarity: scores.similarity,
-      impact: scores.impact,
-      recency: scores.recency,
-    },
+    factors: scores,
   };
 }
 
@@ -126,37 +127,35 @@ export function calculateQualityScore({
  * @param {Object} candidate - { title, url, description }
  * @returns {Promise<Object>} Citation data or empty object
  */
+function extractArxivId(url) {
+  const match = url ? /arxiv\.org\/(?:abs|pdf)\/(\d{4}\.\d{4,5})/.exec(url) : null;
+  return match ? match[1] : null;
+}
+
+function buildCitationResult(citationData) {
+  return {
+    citationCount: citationData.metrics.citationCount,
+    influentialCitations: citationData.metrics.influentialCitations,
+    maxAuthorHIndex: citationData.metrics.maxAuthorHIndex,
+    citationsPerYear: citationData.metrics.citationsPerYear,
+    impactScore: citationData.impactScore,
+    semanticScholarId: citationData.paperId,
+  };
+}
+
 export async function enrichWithCitations(candidate) {
   if (!candidate) return {};
 
   const { title, url } = candidate;
-
-  // Extract arXiv ID if present
-  const arxivMatch = url ? /arxiv\.org\/(?:abs|pdf)\/(\d{4}\.\d{4,5})/.exec(url) : null;
-  const arxivId = arxivMatch ? arxivMatch[1] : null;
+  const arxivId = extractArxivId(url);
 
   try {
-    const citationData = await getCitationData({
-      title,
-      arxivId,
-      url,
-    });
-
-    if (citationData) {
-      return {
-        citationCount: citationData.metrics.citationCount,
-        influentialCitations: citationData.metrics.influentialCitations,
-        maxAuthorHIndex: citationData.metrics.maxAuthorHIndex,
-        citationsPerYear: citationData.metrics.citationsPerYear,
-        impactScore: citationData.impactScore,
-        semanticScholarId: citationData.paperId,
-      };
-    }
+    const citationData = await getCitationData({ title, arxivId, url });
+    return citationData ? buildCitationResult(citationData) : {};
   } catch (error) {
     console.warn(`   ⚠️ Citation lookup failed: ${error.message}`);
+    return {};
   }
-
-  return {};
 }
 
 /**
