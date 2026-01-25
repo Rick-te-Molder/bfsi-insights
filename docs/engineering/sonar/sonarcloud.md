@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.21.0  
-**Last updated**: 2026-01-22  
+**Version**: 1.22.0  
+**Last updated**: 2026-01-25  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.22.0 (2026-01-25): Added S6767 (remove unused React typed props).
 - 1.21.0 (2026-01-22): Added S4325 (remove redundant assertions / casts).
 - 1.20.0 (2026-01-22): Fixed S6551 (avoid default object stringification) in items dashboard utilities.
 - 1.19.0 (2026-01-22): Fixed S6759 (React props should be read-only) in workflows dashboard components.
@@ -79,6 +80,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S6594   | [Use the "RegExp.exec()" method instead](./lessons/use-the-regexp-exec-method-instead.md)                                                                                         | `lessons/use-the-regexp-exec-method-instead.md`                                               |
 | S3776   | [Reduce cognitive complexity by extracting helpers](./lessons/reduce-cognitive-complexity-by-extracting-helpers.md)                                                               | `lessons/reduce-cognitive-complexity-by-extracting-helpers.md`                                |
 | S5852   | [Avoid slow regular expressions in user-controlled input](./lessons/avoid-slow-regular-expressions-in-user-controlled-input.md)                                                   | `lessons/avoid-slow-regular-expressions-in-user-controlled-input.md`                          |
+| S6767   | [Remove unused React typed props](./lessons/remove-unused-react-typed-props.md)                                                                                                   | `lessons/remove-unused-react-typed-props.md`                                                  |
 
 ---
 
@@ -148,6 +150,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Prefer RegExp.exec over String.match** — Use `/re/.exec(str)` instead of `str.match(/re/)`
 - [ ] **Avoid slow regex for simple parsing** — Prefer `indexOf` + `slice` for URL/query/fragment trimming (avoid ReDoS hotspots)
 - [ ] **Reduce cognitive complexity** — Extract validation/side-effect blocks into helpers and prefer guard clauses
+- [ ] **Remove unused React props** — Delete props from type definitions that are never used; destructure props explicitly to avoid false positives
 
 ---
 
@@ -261,6 +264,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Remove unused React typed props](./lessons/remove-unused-react-typed-props.md) (S6767)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -362,5 +369,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [Cognitive Complexity of functions should not be too high](./rules/3776_cognitive-complexity-of-functions-should-not-be-too-high.md)
+
+---
+
+## [Unused React typed props should be removed](./rules/6767_unused-react-typed-props-should-be-removed.md)
 
 ---
