@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.22.0  
+**Version**: 1.23.0  
 **Last updated**: 2026-01-25  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.23.0 (2026-01-25): Added S7764 (prefer globalThis over window).
 - 1.22.0 (2026-01-25): Added S6767 (remove unused React typed props).
 - 1.21.0 (2026-01-22): Added S4325 (remove redundant assertions / casts).
 - 1.20.0 (2026-01-22): Fixed S6551 (avoid default object stringification) in items dashboard utilities.
@@ -81,6 +82,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S3776   | [Reduce cognitive complexity by extracting helpers](./lessons/reduce-cognitive-complexity-by-extracting-helpers.md)                                                               | `lessons/reduce-cognitive-complexity-by-extracting-helpers.md`                                |
 | S5852   | [Avoid slow regular expressions in user-controlled input](./lessons/avoid-slow-regular-expressions-in-user-controlled-input.md)                                                   | `lessons/avoid-slow-regular-expressions-in-user-controlled-input.md`                          |
 | S6767   | [Remove unused React typed props](./lessons/remove-unused-react-typed-props.md)                                                                                                   | `lessons/remove-unused-react-typed-props.md`                                                  |
+| S7764   | [Prefer globalThis over window](./lessons/prefer-globalthis-over-window.md)                                                                                                       | `lessons/prefer-globalthis-over-window.md`                                                    |
 
 ---
 
@@ -151,6 +153,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Avoid slow regex for simple parsing** — Prefer `indexOf` + `slice` for URL/query/fragment trimming (avoid ReDoS hotspots)
 - [ ] **Reduce cognitive complexity** — Extract validation/side-effect blocks into helpers and prefer guard clauses
 - [ ] **Remove unused React props** — Delete props from type definitions that are never used; destructure props explicitly to avoid false positives
+- [ ] **Use globalThis over window** — Replace `window.`, `self.`, or `global.` with `globalThis.` for cross-environment compatibility
 
 ---
 
@@ -268,6 +271,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Prefer globalThis over window](./lessons/prefer-globalthis-over-window.md) (S7764)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -373,5 +380,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [Unused React typed props should be removed](./rules/6767_unused-react-typed-props-should-be-removed.md)
+
+---
+
+## [Prefer 'globalThis' over 'window'](./rules/7764_prefer-globalthis-over-window.md)
 
 ---

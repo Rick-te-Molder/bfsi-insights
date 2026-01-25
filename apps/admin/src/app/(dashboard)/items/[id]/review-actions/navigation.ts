@@ -6,5 +6,5 @@ export function goBackToItems(router: AppRouterInstance) {
 }
 
 export function reloadItem(id: string) {
-  window.location.href = `/items/${id}`;
+  globalThis.location.href = `/items/${id}`;
 }
