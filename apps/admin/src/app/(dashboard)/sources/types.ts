@@ -1,4 +1,4 @@
-export type FilterCategory = 'all' | string;
+export type FilterCategory = string;
 export type FilterTier = 'all' | 'standard' | 'premium';
 export type FilterEnabled = 'all' | 'true' | 'false';
 export type FilterHealth = 'all' | 'healthy' | 'warning' | 'error' | 'inactive';

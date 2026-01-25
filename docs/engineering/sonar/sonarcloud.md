@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.24.0  
+**Version**: 1.25.0  
 **Last updated**: 2026-01-25  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.25.0 (2026-01-25): Added S8571 (remove redundant union type constituents) and S7780 (use String.raw for escaped backslashes).
 - 1.24.0 (2026-01-25): Added S7718 (catch parameter naming convention) and S6606 (prefer nullish coalescing assignment).
 - 1.23.0 (2026-01-25): Added S7764 (prefer globalThis over window).
 - 1.22.0 (2026-01-25): Added S6767 (remove unused React typed props).
@@ -86,6 +87,8 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S7764   | [Prefer globalThis over window](./lessons/prefer-globalthis-over-window.md)                                                                                                       | `lessons/prefer-globalthis-over-window.md`                                                    |
 | S7718   | [Catch parameter naming convention](./lessons/catch-parameter-naming-convention.md)                                                                                               | `lessons/catch-parameter-naming-convention.md`                                                |
 | S6606   | [Prefer nullish coalescing assignment](./lessons/prefer-nullish-coalescing-assignment.md)                                                                                         | `lessons/prefer-nullish-coalescing-assignment.md`                                             |
+| S8571   | [Remove redundant union type constituents](./lessons/remove-redundant-union-type-constituents.md)                                                                                 | `lessons/remove-redundant-union-type-constituents.md`                                         |
+| S7780   | [Use String.raw for escaped backslashes](./lessons/use-string-raw-for-escaped-backslashes.md)                                                                                     | `lessons/use-string-raw-for-escaped-backslashes.md`                                           |
 
 ---
 
@@ -159,6 +162,8 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Use globalThis over window** — Replace `window.`, `self.`, or `global.` with `globalThis.` for cross-environment compatibility
 - [ ] **Name catch parameters consistently** — Use `error` (or `error_` when shadowing) for catch clause parameters
 - [ ] **Use nullish coalescing assignment** — Replace `if (x === null) x = y` with `x ??= y`
+- [ ] **Remove redundant union constituents** — Don't mix string literals with `string` type (e.g., `'all' | string` → `string`)
+- [ ] **Use String.raw for backslashes** — Replace escaped backslashes `\\` with `String.raw` template literals
 
 ---
 
@@ -288,6 +293,14 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Remove redundant union type constituents](./lessons/remove-redundant-union-type-constituents.md) (S8571)
+
+---
+
+## [Use String.raw for escaped backslashes](./lessons/use-string-raw-for-escaped-backslashes.md) (S7780)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -405,5 +418,13 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [Nullish coalescing should be preferred](./rules/6606_nullish-coalescing-should-be-preferred.md)
+
+---
+
+## [Type constituents of unions and intersections should not be redundant](./rules/8571_type-constituents-of-unions-and-intersections-should-not-be-redundant.md)
+
+---
+
+## ['String.raw' should be used to avoid escaping '\\'](./rules/7780_string-raw-should-be-used-to-avoid-escaping-backslashes.md)
 
 ---

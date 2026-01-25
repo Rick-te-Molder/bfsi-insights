@@ -46,7 +46,7 @@ export type {
 export { STATUS_CODES } from '@bfsi/types';
 
 // Legacy alias for backward compatibility
-// TODO: Migrate usages to IngestionQueueItem
+// Note: QueueItem is kept as an alias for IngestionQueueItem for existing usages
 import type { IngestionQueueItem } from '@bfsi/types';
 export type QueueItem = IngestionQueueItem;
 
