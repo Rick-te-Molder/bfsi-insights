@@ -10,7 +10,7 @@ import { loadStatusCodes, getStatusCode } from '../lib/status-codes.js';
 import { runEnrichmentAgentsTracked } from './orchestrator-tracking.js';
 import { getSupabaseAdminClient } from '../clients/supabase.js';
 import { ensurePipelineRun, completePipelineRun } from '../lib/pipeline-tracking.js';
-import { fetchAndStoreRaw } from '../lib/raw-storage.js';
+import { fetchAndStoreRaw, getRawContent } from '../lib/raw-storage.js';
 
 /** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabase = null;
@@ -65,11 +65,40 @@ function logRawStorageResult(rawResult) {
   }
 }
 
+/** Check if item has valid raw_ref for reading from storage */
+function hasStoredContent(queueItem) {
+  return queueItem.raw_ref && !queueItem.storage_deleted_at && queueItem.raw_store_mode !== 'none';
+}
+
+/** Fetch content using storage or URL based on item state */
+async function fetchContentWithSource(queueItem) {
+  if (hasStoredContent(queueItem)) {
+    const result = await getRawContent(queueItem);
+    if (result.buffer) {
+      return { source: result.source, content: await fetchContent(queueItem.url) };
+    }
+  }
+  return { source: 'url', content: await fetchContent(queueItem.url) };
+}
+
 /** @param {any} queueItem */
 async function stepFetch(queueItem) {
   console.log('   Fetching content...');
-  console.log('   Storing raw content...');
 
+  // If raw_ref exists, try to use storage (re-enrichment case)
+  if (hasStoredContent(queueItem)) {
+    console.log('   📦 Reading from storage (re-enrichment)...');
+    const { source, content } = await fetchContentWithSource(queueItem);
+    console.log(`   Source: ${source}`);
+    const payload = buildFetchPayload(queueItem, content);
+    await transitionByAgent(queueItem.id, getStatusCode('TO_SUMMARIZE'), 'orchestrator', {
+      changes: { payload, fetched_at: new Date().toISOString() },
+    });
+    return payload;
+  }
+
+  // New fetch: store raw content first
+  console.log('   Storing raw content...');
   const rawResult = await fetchAndStoreRaw(queueItem.url);
   const rawMetadata = buildRawMetadata(rawResult);
   logRawStorageResult(rawResult);
