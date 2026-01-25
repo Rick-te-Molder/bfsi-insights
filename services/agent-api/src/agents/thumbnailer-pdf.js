@@ -60,8 +60,8 @@ function handlePythonClose(code, stdout, stderr, resolve, reject) {
   }
   try {
     const result = JSON.parse(stdout);
-    if (!result.success) reject(new Error(result.message || 'PDF rendering failed'));
-    else resolve(result);
+    if (result.success) resolve(result);
+    else reject(new Error(result.message || 'PDF rendering failed'));
   } catch (e) {
     reject(new Error(`Failed to parse PDF rendering result: ${e.message}`));
   }
@@ -91,7 +91,9 @@ export async function renderPdfFirstPage(pdfBuffer, queueId, config, scriptPath)
   const tempPdfPath = join(tmpdir(), `${queueId}.pdf`);
   const tempImagePath = join(tmpdir(), `${queueId}.jpg`);
   const cleanup = async () => {
+    // eslint-disable-next-line no-empty-function -- intentionally ignore cleanup errors
     await unlink(tempPdfPath).catch(() => {});
+    // eslint-disable-next-line no-empty-function -- intentionally ignore cleanup errors
     await unlink(tempImagePath).catch(() => {});
   };
 

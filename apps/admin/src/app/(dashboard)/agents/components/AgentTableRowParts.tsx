@@ -196,12 +196,17 @@ function RowMetaCells(props: {
   readonly isUtilityAgent: boolean;
   readonly isOrchestratorAgent: boolean;
 }) {
+  const { currentPrompt, isUtilityAgent, isOrchestratorAgent } = props;
   return (
     <>
-      <td className="px-4 py-3 text-neutral-300">{getDisplayVersion(props)}</td>
-      <td className="px-4 py-3 text-neutral-400 text-sm font-mono">{getDisplayModel(props)}</td>
+      <td className="px-4 py-3 text-neutral-300">
+        {getDisplayVersion({ currentPrompt, isUtilityAgent, isOrchestratorAgent })}
+      </td>
+      <td className="px-4 py-3 text-neutral-400 text-sm font-mono">
+        {getDisplayModel({ currentPrompt, isUtilityAgent, isOrchestratorAgent })}
+      </td>
       <td className="px-4 py-3 text-neutral-400 text-sm">
-        {props.currentPrompt ? new Date(props.currentPrompt.created_at).toLocaleDateString() : '-'}
+        {currentPrompt ? new Date(currentPrompt.created_at).toLocaleDateString() : '-'}
       </td>
     </>
   );

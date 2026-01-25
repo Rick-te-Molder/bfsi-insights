@@ -11,7 +11,7 @@ interface SourceFilterProps {
 function useSourceChange(baseUrl: string) {
   const router = useRouter();
   return (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const url = new URL(baseUrl, window.location.origin);
+    const url = new URL(baseUrl, globalThis.location.origin);
     if (e.target.value) url.searchParams.set('source', e.target.value);
     else url.searchParams.delete('source');
     router.push(url.pathname + url.search);
