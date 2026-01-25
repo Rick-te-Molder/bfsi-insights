@@ -15,7 +15,7 @@ function normalizePublishedDate(input: string): string | null {
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
   if (/^\d{4}-\d{2}$/.test(raw)) return `${raw}-01`;
 
-  const dmY = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/);
+  const dmY = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(raw);
   if (dmY) {
     const day = Number(dmY[1]);
     const month = Number(dmY[2]);

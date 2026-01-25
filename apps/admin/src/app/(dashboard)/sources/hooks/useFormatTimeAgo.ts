@@ -2,8 +2,7 @@ import { useRef, useCallback } from 'react';
 
 export function useFormatTimeAgo() {
   const nowRef = useRef<number | null>(null);
-  // eslint-disable-next-line react-hooks/purity -- Date.now() computed once on mount for relative time display
-  if (nowRef.current === null) nowRef.current = Date.now();
+  nowRef.current ??= Date.now();
 
   return useCallback((date: string | null) => {
     if (!date) return 'Never';
