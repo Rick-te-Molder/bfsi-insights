@@ -1,13 +1,16 @@
 /**
  * Raw Content Routes
  * US-7: Admin Preview — Signed URLs
+ * US-8: Takedown Capability
  * ADR-004: Raw Data Storage Strategy
  *
  * Provides signed URLs for viewing original content in admin UI.
+ * Provides DELETE endpoints for takedown operations.
  */
 
 import express from 'express';
 import { getSupabaseAdminClient } from '../clients/supabase.js';
+import { takedownByHash, takedownByQueueId } from '../lib/raw-storage.js';
 
 const router = express.Router();
 const SIGNED_URL_EXPIRY = 3600; // 1 hour
@@ -112,6 +115,50 @@ router.get('/by-hash/:hash', async (req, res) => {
   }
 
   return res.json({ signedUrl });
+});
+
+/**
+ * DELETE /by-queue/:queueId
+ * Takedown raw content by queue ID
+ */
+router.delete('/by-queue/:queueId', async (req, res) => {
+  const { queueId } = req.params;
+  const { reason, requestedBy } = req.body;
+
+  if (!reason || !requestedBy) {
+    return res.status(400).json({ error: 'Missing required fields: reason, requestedBy' });
+  }
+
+  const result = await takedownByQueueId(queueId, reason, requestedBy);
+
+  if (!result.success) {
+    const status = result.error === 'Content not found' ? 404 : 500;
+    return res.status(status).json({ error: result.error });
+  }
+
+  return res.json({ success: true, rowsAffected: result.rowsAffected });
+});
+
+/**
+ * DELETE /by-hash/:hash
+ * Takedown raw content by content hash
+ */
+router.delete('/by-hash/:hash', async (req, res) => {
+  const { hash } = req.params;
+  const { reason, requestedBy } = req.body;
+
+  if (!reason || !requestedBy) {
+    return res.status(400).json({ error: 'Missing required fields: reason, requestedBy' });
+  }
+
+  const result = await takedownByHash(hash, reason, requestedBy);
+
+  if (!result.success) {
+    const status = result.error === 'Content not found' ? 404 : 500;
+    return res.status(status).json({ error: result.error });
+  }
+
+  return res.json({ success: true, rowsAffected: result.rowsAffected });
 });
 
 export default router;
