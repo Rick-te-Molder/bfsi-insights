@@ -1,6 +1,7 @@
 // @ts-check
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Buffer } from 'node:buffer';
+import { EventEmitter } from 'node:events';
 
 vi.mock('node:child_process', () => ({
   spawn: vi.fn(),
@@ -12,7 +13,39 @@ vi.mock('node:fs/promises', () => ({
   readFile: vi.fn(() => Promise.resolve(Buffer.from('fake-image'))),
 }));
 
-import { downloadPdf, storePdf, uploadThumbnail } from './thumbnailer-pdf.js';
+import { downloadPdf, storePdf, uploadThumbnail, renderPdfFirstPage } from './thumbnailer-pdf.js';
+
+import { spawn } from 'node:child_process';
+
+/** @param {{ code: number; stdout: string; stderr: string }} params */
+function mockSpawnWithClose(params) {
+  const { code, stdout, stderr } = params;
+
+  /** @type {any} */
+  const proc = new EventEmitter();
+  proc.stdout = new EventEmitter();
+  proc.stderr = new EventEmitter();
+
+  setTimeout(() => {
+    if (stdout) proc.stdout.emit('data', Buffer.from(stdout));
+    if (stderr) proc.stderr.emit('data', Buffer.from(stderr));
+    proc.emit('close', code);
+  }, 0);
+
+  vi.mocked(spawn).mockReturnValue(proc);
+}
+
+/** @param {{ ok: boolean; status?: number; statusText?: string; arrayBuffer?: () => Promise<ArrayBuffer> }} init */
+function makeFetchResponse(init) {
+  /** @type {any} */
+  const res = {
+    ok: init.ok,
+    status: init.status,
+    statusText: init.statusText,
+    arrayBuffer: init.arrayBuffer,
+  };
+  return res;
+}
 
 describe('thumbnailer-pdf', () => {
   const mockStepTracker = {
@@ -23,18 +56,24 @@ describe('thumbnailer-pdf', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    global.fetch = vi.fn();
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    globalThis.fetch = vi.fn();
   });
 
   describe('downloadPdf', () => {
     it('downloads PDF and returns buffer', async () => {
       const pdfContent = Buffer.from('PDF content');
-      vi.mocked(global.fetch).mockResolvedValue({
-        ok: true,
-        arrayBuffer: () => Promise.resolve(pdfContent),
-      });
+      const ab = pdfContent.buffer.slice(
+        pdfContent.byteOffset,
+        pdfContent.byteOffset + pdfContent.byteLength,
+      );
+      vi.mocked(globalThis.fetch).mockResolvedValue(
+        makeFetchResponse({
+          ok: true,
+          arrayBuffer: () => Promise.resolve(ab),
+        }),
+      );
 
       const result = await downloadPdf('https://example.com/doc.pdf', mockStepTracker);
 
@@ -46,11 +85,9 @@ describe('thumbnailer-pdf', () => {
     });
 
     it('throws on HTTP error', async () => {
-      vi.mocked(global.fetch).mockResolvedValue({
-        ok: false,
-        status: 404,
-        statusText: 'Not Found',
-      });
+      vi.mocked(globalThis.fetch).mockResolvedValue(
+        makeFetchResponse({ ok: false, status: 404, statusText: 'Not Found' }),
+      );
 
       await expect(downloadPdf('https://example.com/missing.pdf', mockStepTracker)).rejects.toThrow(
         'HTTP 404',
@@ -59,7 +96,7 @@ describe('thumbnailer-pdf', () => {
     });
 
     it('tracks step on error', async () => {
-      vi.mocked(global.fetch).mockRejectedValue(new Error('Network error'));
+      vi.mocked(globalThis.fetch).mockRejectedValue(new Error('Network error'));
 
       await expect(downloadPdf('https://example.com/doc.pdf', mockStepTracker)).rejects.toThrow(
         'Network error',
@@ -142,6 +179,31 @@ describe('thumbnailer-pdf', () => {
         uploadThumbnail(Buffer.from('image'), 'queue-123', mockSupabase, mockStepTracker),
       ).rejects.toThrow('Thumbnail upload failed');
       expect(mockStepTracker.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('renderPdfFirstPage', () => {
+    it('renders first page and returns screenshot buffer', async () => {
+      mockSpawnWithClose({
+        code: 0,
+        stdout: JSON.stringify({ success: true }),
+        stderr: '',
+      });
+
+      const config = { viewport: { width: 100, height: 100 } };
+      const res = await renderPdfFirstPage(Buffer.from('pdf'), 'q1', config, '/script.py');
+
+      expect(res.screenshotBuffer).toBeInstanceOf(Buffer);
+      expect(res.result).toEqual({ success: true });
+    });
+
+    it('throws when python exits non-zero', async () => {
+      mockSpawnWithClose({ code: 1, stdout: '', stderr: 'bad' });
+
+      const config = { viewport: { width: 100, height: 100 } };
+      await expect(
+        renderPdfFirstPage(Buffer.from('pdf'), 'q1', config, '/script.py'),
+      ).rejects.toThrow('PDF rendering failed');
     });
   });
 });

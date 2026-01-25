@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import React from 'react';
+import React, { act } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { createRoot } from 'react-dom/client';
 import { StatusProvider, useStatus } from '@/contexts/StatusContext';
 
 // Mock supabase client
@@ -134,6 +135,34 @@ describe('StatusContext', () => {
       );
 
       expect(html).toContain('status_999');
+    });
+  });
+
+  describe('fetchStatuses async paths', () => {
+    it('loads statuses after mount via useEffect', async () => {
+      let result: any = null;
+
+      function AsyncConsumer() {
+        const ctx = useStatus();
+        result = ctx;
+        return null;
+      }
+
+      const el = document.createElement('div');
+      const root = createRoot(el);
+
+      await act(async () => {
+        root.render(
+          <StatusProvider>
+            <AsyncConsumer />
+          </StatusProvider>,
+        );
+      });
+
+      // After act, the useEffect should have run and fetched statuses
+      expect(result.loading).toBe(false);
+      expect(result.statuses.length).toBe(3);
+      expect(result.getStatusName(200)).toBe('pending_enrichment');
     });
   });
 });

@@ -115,4 +115,54 @@ describe('CLI rerun-step', () => {
     expect(callArgs[1]).toMatchObject({ promptOverride: { id: 'pv-1' } });
     expect(res).toMatchObject({ stepRunId: 'step-1', stepName: 'tag', promptVersionId: 'pv-1' });
   });
+
+  it('throws when pipeline_step_run cannot be loaded', async () => {
+    const chain = mockSupabase.__chain;
+
+    chain.single.mockResolvedValueOnce({ data: null, error: { message: 'nope' } });
+
+    await expect(runRerunStepCmd({ 'step-run-id': 'step-1', simulate: true })).rejects.toThrow(
+      'Failed to load pipeline_step_run step-1',
+    );
+  });
+
+  it('throws on unsupported step_name', async () => {
+    const chain = mockSupabase.__chain;
+
+    // pipeline_step_run
+    chain.single.mockResolvedValueOnce({
+      data: {
+        id: 'step-1',
+        run_id: 'run-1',
+        step_name: 'nope',
+        prompt_version_id: 'pv-1',
+        input_snapshot: {},
+      },
+      error: null,
+    });
+
+    await expect(runRerunStepCmd({ 'step-run-id': 'step-1', simulate: true })).rejects.toThrow(
+      'Unsupported step_name: nope',
+    );
+  });
+
+  it('throws when prompt_version_id is missing', async () => {
+    const chain = mockSupabase.__chain;
+
+    // pipeline_step_run
+    chain.single.mockResolvedValueOnce({
+      data: {
+        id: 'step-1',
+        run_id: 'run-1',
+        step_name: 'tag',
+        prompt_version_id: null,
+        input_snapshot: {},
+      },
+      error: null,
+    });
+
+    await expect(runRerunStepCmd({ 'step-run-id': 'step-1', simulate: true })).rejects.toThrow(
+      'pipeline_step_run step-1 has no prompt_version_id',
+    );
+  });
 });
