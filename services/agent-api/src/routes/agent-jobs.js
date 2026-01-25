@@ -21,6 +21,27 @@ function respondUnknownAgent(res, agent) {
 }
 
 /**
+ * Shared handler for starting/running agent batches
+ * @param {any} req @param {any} res @param {string} errorContext
+ */
+async function handleAgentBatch(req, res, errorContext) {
+  try {
+    const agent = /** @type {keyof typeof AGENTS} */ (req.params.agent);
+    const { limit = 10 } = req.body;
+
+    if (!Object.hasOwn(AGENTS, agent)) {
+      return respondUnknownAgent(res, agent);
+    }
+
+    const result = await processAgentBatch(agent, AGENTS[agent], { limit });
+    res.json(result);
+  } catch (err) {
+    console.error(`${errorContext} error:`, err);
+    res.status(500).json({ error: getErrMessage(err) });
+  }
+}
+
+/**
  * @param {import('@supabase/supabase-js').SupabaseClient} supabase
  * @param {string} agent
  */
@@ -43,22 +64,9 @@ function getRecentJobs(supabase, agent) {
     .limit(20);
 }
 
-router.post('/:agent/start', async (/** @type {any} */ req, /** @type {any} */ res) => {
-  try {
-    const agent = /** @type {keyof typeof AGENTS} */ (req.params.agent);
-    const { limit = 10 } = req.body;
-
-    if (!Object.hasOwn(AGENTS, agent)) {
-      return respondUnknownAgent(res, agent);
-    }
-
-    const result = await processAgentBatch(agent, AGENTS[agent], { limit });
-    res.json(result);
-  } catch (err) {
-    console.error('Job start error:', err);
-    res.status(500).json({ error: getErrMessage(err) });
-  }
-});
+router.post('/:agent/start', (/** @type {any} */ req, /** @type {any} */ res) =>
+  handleAgentBatch(req, res, 'Job start'),
+);
 
 router.get('/:agent/jobs', async (/** @type {any} */ req, /** @type {any} */ res) => {
   try {
@@ -80,22 +88,9 @@ router.get('/:agent/jobs', async (/** @type {any} */ req, /** @type {any} */ res
 });
 
 // POST /api/agents/jobs/:agent/run
-router.post('/jobs/:agent/run', async (/** @type {any} */ req, /** @type {any} */ res) => {
-  try {
-    const agent = /** @type {keyof typeof AGENTS} */ (req.params.agent);
-    const { limit = 10 } = req.body;
-
-    if (!Object.hasOwn(AGENTS, agent)) {
-      return respondUnknownAgent(res, agent);
-    }
-
-    const result = await processAgentBatch(agent, AGENTS[agent], { limit });
-    res.json(result);
-  } catch (err) {
-    console.error('Job run error:', err);
-    res.status(500).json({ error: getErrMessage(err) });
-  }
-});
+router.post('/jobs/:agent/run', (/** @type {any} */ req, /** @type {any} */ res) =>
+  handleAgentBatch(req, res, 'Job run'),
+);
 
 // GET /api/agents/jobs/:agent/status
 router.get('/jobs/:agent/status', async (/** @type {any} */ req, /** @type {any} */ res) => {
