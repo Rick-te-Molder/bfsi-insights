@@ -259,8 +259,8 @@ describe('setupMobileSheet', () => {
     document.body.innerHTML = '';
     const list = document.createElement('div');
 
-    // Should not throw
-    setupMobileSheet({
+    // Should not throw and return undefined (early exit)
+    const result = setupMobileSheet({
       list,
       qEl: null,
       mobileSearchEl: null,
@@ -270,6 +270,8 @@ describe('setupMobileSheet', () => {
       apply: () => 1,
       setCurrentPage: vi.fn(),
     });
+
+    expect(result).toBeUndefined();
   });
 
   it('syncs values to mobile elements on open', () => {
