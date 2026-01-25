@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.26.0  
+**Version**: 1.27.0  
 **Last updated**: 2026-01-25  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.27.0 (2026-01-25): Added S2699 (tests should include assertions).
 - 1.26.0 (2026-01-25): Added S6564 (remove redundant type aliases).
 - 1.25.0 (2026-01-25): Added S8571 (remove redundant union type constituents) and S7780 (use String.raw for escaped backslashes).
 - 1.24.0 (2026-01-25): Added S7718 (catch parameter naming convention) and S6606 (prefer nullish coalescing assignment).
@@ -91,6 +92,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S6564   | [Remove redundant type aliases](./lessons/remove-redundant-type-aliases.md)                                                                                                       | `lessons/remove-redundant-type-aliases.md`                                                    |
 | S8571   | [Remove redundant union type constituents](./lessons/remove-redundant-union-type-constituents.md)                                                                                 | `lessons/remove-redundant-union-type-constituents.md`                                         |
 | S7780   | [Use String.raw for escaped backslashes](./lessons/use-string-raw-for-escaped-backslashes.md)                                                                                     | `lessons/use-string-raw-for-escaped-backslashes.md`                                           |
+| S2699   | [Tests should include assertions](./lessons/tests-should-include-assertions.md)                                                                                                   | `lessons/tests-should-include-assertions.md`                                                  |
 
 ---
 
@@ -167,6 +169,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Use nullish coalescing assignment** — Replace `if (x === null) x = y` with `x ??= y`
 - [ ] **Remove redundant union constituents** — Don't mix string literals with `string` type (e.g., `'all' | string` → `string`)
 - [ ] **Use String.raw for backslashes** — Replace escaped backslashes `\\` with `String.raw` template literals
+- [ ] **Tests must have assertions** — Every test case must include at least one assertion (expect, assert, etc.)
 
 ---
 
@@ -308,6 +311,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Tests should include assertions](./lessons/tests-should-include-assertions.md) (S2699)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -437,5 +444,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## ['String.raw' should be used to avoid escaping '\\'](./rules/7780_string-raw-should-be-used-to-avoid-escaping-backslashes.md)
+
+---
+
+## [Tests should include assertions](./rules/2699_tests-should-include-assertions.md)
 
 ---
