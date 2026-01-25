@@ -13,4 +13,5 @@ export { uploadToStorage, upsertRawObject } from './raw-storage-upload.js';
 export { isBlockedByHash, isBlockedByUrl } from './raw-storage-blocklist.js';
 export { storeRawContent, fetchAndStoreRaw } from './raw-storage-store.js';
 export { hashStreamWithLimit, fetchWithStreamingHash } from './raw-storage-stream.js';
+export { getRawContent, getRawContentAsText } from './raw-storage-download.js';
 export { RAW_STORAGE_MAX_BYTES } from './constants.js';
