@@ -3,41 +3,62 @@
  * Allows users to expand cards in-place to see more details without changing card position
  */
 
-function toggleCard(card: HTMLElement, expand: boolean) {
+interface CardElements {
+  collapsed: Element;
+  expanded: Element;
+  expandLabel: Element | null;
+  collapseLabel: Element | null;
+  expandButtons: NodeListOf<Element>;
+  collapsedOnlyElements: NodeListOf<Element>;
+  expandedOnlyElements: NodeListOf<Element>;
+}
+
+function getCardElements(card: HTMLElement): CardElements | null {
   const collapsed = card.querySelector('.card-collapsed');
   const expanded = card.querySelector('.card-expanded');
-  const expandLabel = card.querySelector('.expand-label');
-  const collapseLabel = card.querySelector('.collapse-label');
-  const expandButtons = card.querySelectorAll('[data-expand-card]');
-  const collapsedOnlyElements = card.querySelectorAll('.card-collapsed-only');
-  const expandedOnlyElements = card.querySelectorAll('.card-expanded-only');
+  if (!collapsed || !expanded) return null;
 
-  if (!collapsed || !expanded) return;
+  return {
+    collapsed,
+    expanded,
+    expandLabel: card.querySelector('.expand-label'),
+    collapseLabel: card.querySelector('.collapse-label'),
+    expandButtons: card.querySelectorAll('[data-expand-card]'),
+    collapsedOnlyElements: card.querySelectorAll('.card-collapsed-only'),
+    expandedOnlyElements: card.querySelectorAll('.card-expanded-only'),
+  };
+}
+
+function applyExpandedState(card: HTMLElement, els: CardElements): void {
+  els.collapsed.classList.add('hidden');
+  els.expanded.classList.remove('hidden');
+  els.expandLabel?.classList.add('hidden');
+  els.collapseLabel?.classList.remove('hidden');
+  card.dataset.expanded = 'true';
+  els.collapsedOnlyElements.forEach((el) => (el as HTMLElement).classList.add('hidden'));
+  els.expandedOnlyElements.forEach((el) => (el as HTMLElement).classList.remove('hidden'));
+  els.expandButtons.forEach((btn) => btn.setAttribute('aria-expanded', 'true'));
+}
+
+function applyCollapsedState(card: HTMLElement, els: CardElements): void {
+  els.collapsed.classList.remove('hidden');
+  els.expanded.classList.add('hidden');
+  els.expandLabel?.classList.remove('hidden');
+  els.collapseLabel?.classList.add('hidden');
+  delete card.dataset.expanded;
+  els.collapsedOnlyElements.forEach((el) => (el as HTMLElement).classList.remove('hidden'));
+  els.expandedOnlyElements.forEach((el) => (el as HTMLElement).classList.add('hidden'));
+  els.expandButtons.forEach((btn) => btn.setAttribute('aria-expanded', 'false'));
+}
+
+function toggleCard(card: HTMLElement, expand: boolean) {
+  const els = getCardElements(card);
+  if (!els) return;
 
   if (expand) {
-    collapsed.classList.add('hidden');
-    expanded.classList.remove('hidden');
-    expandLabel?.classList.add('hidden');
-    collapseLabel?.classList.remove('hidden');
-    card.dataset.expanded = 'true';
-    // Hide collapsed-only elements (like +X more button)
-    collapsedOnlyElements.forEach((el) => (el as HTMLElement).classList.add('hidden'));
-    // Show expanded-only elements (extra tags)
-    expandedOnlyElements.forEach((el) => (el as HTMLElement).classList.remove('hidden'));
-    // Update aria-expanded on all expand buttons
-    expandButtons.forEach((btn) => btn.setAttribute('aria-expanded', 'true'));
+    applyExpandedState(card, els);
   } else {
-    collapsed.classList.remove('hidden');
-    expanded.classList.add('hidden');
-    expandLabel?.classList.remove('hidden');
-    collapseLabel?.classList.add('hidden');
-    delete card.dataset.expanded;
-    // Show collapsed-only elements
-    collapsedOnlyElements.forEach((el) => (el as HTMLElement).classList.remove('hidden'));
-    // Hide expanded-only elements
-    expandedOnlyElements.forEach((el) => (el as HTMLElement).classList.add('hidden'));
-    // Update aria-expanded on all expand buttons
-    expandButtons.forEach((btn) => btn.setAttribute('aria-expanded', 'false'));
+    applyCollapsedState(card, els);
   }
 }
 

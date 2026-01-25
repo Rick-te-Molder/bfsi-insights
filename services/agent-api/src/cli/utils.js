@@ -7,13 +7,31 @@ export function parseValue(value) {
   return /^\d+$/.test(value) ? Number.parseInt(value, 10) : value;
 }
 
+// Parse a single CLI argument, returns { key, value, consumedNext }
+function parseArgument(arg, nextArg) {
+  if (!arg.startsWith('--')) return null;
+
+  const [key, ...valueParts] = arg.slice(2).split('=');
+  const hasEqualSign = valueParts.length > 0;
+
+  if (hasEqualSign) {
+    return { key, value: parseValue(valueParts.join('=')), consumedNext: false };
+  }
+
+  const nextIsValue = nextArg && !nextArg.startsWith('--');
+  if (nextIsValue) {
+    return { key, value: parseValue(nextArg), consumedNext: true };
+  }
+
+  return { key, value: true, consumedNext: false };
+}
+
 // Parse CLI arguments
 // Supports both --limit=5 and --limit 5 formats
 export function parseArgs() {
   const args = process.argv.slice(2);
   const command = args[0];
   const options = {};
-
   const remainingArgs = args.slice(1);
   let skipNext = false;
 
@@ -23,23 +41,10 @@ export function parseArgs() {
       continue;
     }
 
-    const arg = remainingArgs[i];
-    if (!arg.startsWith('--')) continue;
-
-    const [key, ...valueParts] = arg.slice(2).split('=');
-    const hasEqualSign = valueParts.length > 0;
-
-    if (hasEqualSign) {
-      options[key] = parseValue(valueParts.join('='));
-    } else {
-      const nextArg = remainingArgs[i + 1];
-      const nextIsValue = nextArg && !nextArg.startsWith('--');
-      if (nextIsValue) {
-        options[key] = parseValue(nextArg);
-        skipNext = true;
-      } else {
-        options[key] = true;
-      }
+    const parsed = parseArgument(remainingArgs[i], remainingArgs[i + 1]);
+    if (parsed) {
+      options[parsed.key] = parsed.value;
+      skipNext = parsed.consumedNext;
     }
   }
 

@@ -1,16 +1,12 @@
 import { useEffect } from 'react';
 
-export function useSidebarEffects(
-  isOpen: boolean,
-  setIsOpen: (open: boolean) => void,
-  pathname: string,
-) {
-  // Close sidebar when route changes (mobile)
+function useCloseOnRouteChange(setIsOpen: (open: boolean) => void, pathname: string) {
   useEffect(() => {
     setIsOpen(false);
   }, [pathname, setIsOpen]);
+}
 
-  // Close sidebar on escape key
+function useCloseOnEscape(setIsOpen: (open: boolean) => void) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsOpen(false);
@@ -18,16 +14,23 @@ export function useSidebarEffects(
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [setIsOpen]);
+}
 
-  // Prevent body scroll when sidebar is open on mobile
+function usePreventBodyScroll(isOpen: boolean) {
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    document.body.style.overflow = isOpen ? 'hidden' : '';
     return () => {
       document.body.style.overflow = '';
     };
   }, [isOpen]);
+}
+
+export function useSidebarEffects(
+  isOpen: boolean,
+  setIsOpen: (open: boolean) => void,
+  pathname: string,
+) {
+  useCloseOnRouteChange(setIsOpen, pathname);
+  useCloseOnEscape(setIsOpen);
+  usePreventBodyScroll(isOpen);
 }

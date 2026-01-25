@@ -36,40 +36,42 @@ function mapPublicationToQueueItem(pub) {
   };
 }
 
+async function fetchById(id) {
+  const { data: queueRow, error: queueError } = await getSupabase()
+    .from('ingestion_queue')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (queueError) throw queueError;
+  if (queueRow) return [queueRow];
+
+  const { data: pubRow, error: pubError } = await getSupabase()
+    .from('kb_publication')
+    .select(
+      'id, source_url, title, summary_short, summary_medium, summary_long, source_name, published_at, added_at, thumbnail',
+    )
+    .eq('id', id)
+    .maybeSingle();
+  if (pubError) throw pubError;
+  return pubRow ? [mapPublicationToQueueItem(pubRow)] : [];
+}
+
+async function fetchPending(limit) {
+  const { data: items, error } = await getSupabase()
+    .from('ingestion_queue')
+    .select('*')
+    .eq('status_code', getStatusCode('TO_THUMBNAIL'))
+    .is('payload->thumbnail_url', null)
+    .order('discovered_at', { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return items;
+}
+
 /** @param {{ limit?: number; id?: string; write?: boolean }} options */
 async function fetchItems(options) {
   const { limit = 5, id } = options;
-  let query = getSupabase().from('ingestion_queue').select('*');
-
-  if (id) {
-    const { data: queueRow, error: queueError } = await query.eq('id', id).maybeSingle();
-    if (queueError) throw queueError;
-    if (queueRow) return [queueRow];
-
-    const { data: pubRow, error: pubError } = await getSupabase()
-      .from('kb_publication')
-      .select(
-        'id, source_url, title, summary_short, summary_medium, summary_long, source_name, published_at, added_at, thumbnail',
-      )
-      .eq('id', id)
-      .maybeSingle();
-
-    if (pubError) throw pubError;
-    if (pubRow) return [mapPublicationToQueueItem(pubRow)];
-
-    return [];
-  } else {
-    query = query
-      .eq('status_code', getStatusCode('TO_THUMBNAIL'))
-      .is('payload->thumbnail_url', null)
-      .order('discovered_at', { ascending: true })
-      .limit(limit);
-  }
-
-  const { data: items, error } = await query;
-
-  if (error) throw error;
-  return items;
+  return id ? fetchById(id) : fetchPending(limit);
 }
 
 /** @param {any} item @param {any} result */
