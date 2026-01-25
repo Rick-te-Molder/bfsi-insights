@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.23.0  
+**Version**: 1.24.0  
 **Last updated**: 2026-01-25  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.24.0 (2026-01-25): Added S7718 (catch parameter naming convention) and S6606 (prefer nullish coalescing assignment).
 - 1.23.0 (2026-01-25): Added S7764 (prefer globalThis over window).
 - 1.22.0 (2026-01-25): Added S6767 (remove unused React typed props).
 - 1.21.0 (2026-01-22): Added S4325 (remove redundant assertions / casts).
@@ -83,6 +84,8 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S5852   | [Avoid slow regular expressions in user-controlled input](./lessons/avoid-slow-regular-expressions-in-user-controlled-input.md)                                                   | `lessons/avoid-slow-regular-expressions-in-user-controlled-input.md`                          |
 | S6767   | [Remove unused React typed props](./lessons/remove-unused-react-typed-props.md)                                                                                                   | `lessons/remove-unused-react-typed-props.md`                                                  |
 | S7764   | [Prefer globalThis over window](./lessons/prefer-globalthis-over-window.md)                                                                                                       | `lessons/prefer-globalthis-over-window.md`                                                    |
+| S7718   | [Catch parameter naming convention](./lessons/catch-parameter-naming-convention.md)                                                                                               | `lessons/catch-parameter-naming-convention.md`                                                |
+| S6606   | [Prefer nullish coalescing assignment](./lessons/prefer-nullish-coalescing-assignment.md)                                                                                         | `lessons/prefer-nullish-coalescing-assignment.md`                                             |
 
 ---
 
@@ -154,6 +157,8 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Reduce cognitive complexity** — Extract validation/side-effect blocks into helpers and prefer guard clauses
 - [ ] **Remove unused React props** — Delete props from type definitions that are never used; destructure props explicitly to avoid false positives
 - [ ] **Use globalThis over window** — Replace `window.`, `self.`, or `global.` with `globalThis.` for cross-environment compatibility
+- [ ] **Name catch parameters consistently** — Use `error` (or `error_` when shadowing) for catch clause parameters
+- [ ] **Use nullish coalescing assignment** — Replace `if (x === null) x = y` with `x ??= y`
 
 ---
 
@@ -275,6 +280,14 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Catch parameter naming convention](./lessons/catch-parameter-naming-convention.md) (S7718)
+
+---
+
+## [Prefer nullish coalescing assignment](./lessons/prefer-nullish-coalescing-assignment.md) (S6606)
+
+---
+
 # Rule Index
 
 Rules we've encountered. Links to authoritative SonarSource documentation.
@@ -384,5 +397,13 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [Prefer 'globalThis' over 'window'](./rules/7764_prefer-globalthis-over-window.md)
+
+---
+
+## [Error parameters in catch clauses should follow a consistent naming convention](./rules/7718_catch-parameter-naming-convention.md)
+
+---
+
+## [Nullish coalescing should be preferred](./rules/6606_nullish-coalescing-should-be-preferred.md)
 
 ---

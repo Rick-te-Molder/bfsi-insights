@@ -86,8 +86,8 @@ export async function executeMissedFormSubmit(args: {
       reset: args.reset,
       onSuccess: args.onSuccess,
     });
-  } catch (e2) {
+  } catch (error) {
     args.setStatus('error');
-    args.setMessage(e2 instanceof Error ? e2.message : 'Failed to submit');
+    args.setMessage(error instanceof Error ? error.message : 'Failed to submit');
   }
 }
