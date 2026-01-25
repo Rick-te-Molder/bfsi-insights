@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.25.0  
+**Version**: 1.26.0  
 **Last updated**: 2026-01-25  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.26.0 (2026-01-25): Added S6564 (remove redundant type aliases).
 - 1.25.0 (2026-01-25): Added S8571 (remove redundant union type constituents) and S7780 (use String.raw for escaped backslashes).
 - 1.24.0 (2026-01-25): Added S7718 (catch parameter naming convention) and S6606 (prefer nullish coalescing assignment).
 - 1.23.0 (2026-01-25): Added S7764 (prefer globalThis over window).
@@ -87,6 +88,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S7764   | [Prefer globalThis over window](./lessons/prefer-globalthis-over-window.md)                                                                                                       | `lessons/prefer-globalthis-over-window.md`                                                    |
 | S7718   | [Catch parameter naming convention](./lessons/catch-parameter-naming-convention.md)                                                                                               | `lessons/catch-parameter-naming-convention.md`                                                |
 | S6606   | [Prefer nullish coalescing assignment](./lessons/prefer-nullish-coalescing-assignment.md)                                                                                         | `lessons/prefer-nullish-coalescing-assignment.md`                                             |
+| S6564   | [Remove redundant type aliases](./lessons/remove-redundant-type-aliases.md)                                                                                                       | `lessons/remove-redundant-type-aliases.md`                                                    |
 | S8571   | [Remove redundant union type constituents](./lessons/remove-redundant-union-type-constituents.md)                                                                                 | `lessons/remove-redundant-union-type-constituents.md`                                         |
 | S7780   | [Use String.raw for escaped backslashes](./lessons/use-string-raw-for-escaped-backslashes.md)                                                                                     | `lessons/use-string-raw-for-escaped-backslashes.md`                                           |
 
@@ -142,6 +144,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Use target check for modal backdrops** — `e.target === e.currentTarget` instead of stopPropagation
 - [ ] **No code duplication** — Extract shared logic to functions/components
 - [ ] **No redundant type assertions** — Remove `as Foo` / `!` assertions that do not change types; prefer explicit return types or typed Supabase `.returns<T>()`
+- [ ] **No redundant type aliases** — Inline primitive aliases like `type Foo = string` into `string`
 - [ ] **No overly complex functions** — Keep cyclomatic complexity low
 - [ ] **Use type guards before string coercion** — Check `typeof val === 'string'` before using `unknown` in template literals
 - [ ] **Use replaceAll() for global replacement** — Prefer `.replaceAll()` over `.replace(/pattern/g, ...)`
@@ -293,6 +296,10 @@ Project-specific patterns derived from fixing real issues. Each entry shows what
 
 ---
 
+## [Remove redundant type aliases](./lessons/remove-redundant-type-aliases.md) (S6564)
+
+---
+
 ## [Remove redundant union type constituents](./lessons/remove-redundant-union-type-constituents.md) (S8571)
 
 ---
@@ -342,6 +349,10 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [Objects converted to strings should define a toString method](./rules/6551_objects-converted-to-strings-should-define-tostring-method.md)
+
+---
+
+## [Redundant type aliases should not be used](./rules/6564_redundant-type-aliases-should-not-be-used.md)
 
 ---
 

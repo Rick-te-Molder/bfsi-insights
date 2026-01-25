@@ -1,15 +1,9 @@
 import { useState } from 'react';
 import type { Source } from '@/types/database';
-import type {
-  FilterCategory,
-  FilterTier,
-  FilterEnabled,
-  FilterHealth,
-  SourceHealth,
-} from '../types';
+import type { FilterTier, FilterEnabled, FilterHealth, SourceHealth } from '../types';
 
 export function useSourceFilters() {
-  const [filterCategory, setFilterCategory] = useState<FilterCategory>('all');
+  const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterTier, setFilterTier] = useState<FilterTier>('all');
   const [filterEnabled, setFilterEnabled] = useState<FilterEnabled>('all');
   const [filterHealth, setFilterHealth] = useState<FilterHealth>('all');
@@ -29,7 +23,7 @@ export function useSourceFilters() {
 interface FilterOptions {
   sources: Source[];
   healthData: Map<string, SourceHealth>;
-  filterCategory: FilterCategory;
+  filterCategory: string;
   filterTier: FilterTier;
   filterEnabled: FilterEnabled;
   filterHealth: FilterHealth;
