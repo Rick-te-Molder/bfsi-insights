@@ -1,11 +1,11 @@
 'use client';
 
 import { CategoryFilter, TierFilter, StatusFilter, HealthFilter } from './FilterComponents';
-import type { FilterCategory, FilterTier, FilterEnabled, FilterHealth } from '../types';
+import type { FilterTier, FilterEnabled, FilterHealth } from '../types';
 
 interface FilterBarProps {
-  filterCategory: FilterCategory;
-  setFilterCategory: (v: FilterCategory) => void;
+  filterCategory: string;
+  setFilterCategory: (v: string) => void;
   filterTier: FilterTier;
   setFilterTier: (v: FilterTier) => void;
   filterEnabled: FilterEnabled;
