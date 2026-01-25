@@ -10,6 +10,7 @@ import { loadStatusCodes, getStatusCode } from '../lib/status-codes.js';
 import { runEnrichmentAgentsTracked } from './orchestrator-tracking.js';
 import { getSupabaseAdminClient } from '../clients/supabase.js';
 import { ensurePipelineRun, completePipelineRun } from '../lib/pipeline-tracking.js';
+import { fetchAndStoreRaw } from '../lib/raw-storage.js';
 
 /** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabase = null;
@@ -36,21 +37,44 @@ function buildFetchPayload(queueItem, content) {
   };
 }
 
+/** Build raw storage metadata from result */
+function buildRawMetadata(rawResult) {
+  return {
+    raw_ref: rawResult.rawRef,
+    content_hash: rawResult.contentHash,
+    mime: rawResult.mime,
+    final_url: rawResult.finalUrl,
+    original_url: rawResult.originalUrl === rawResult.finalUrl ? null : rawResult.originalUrl,
+    fetch_status: rawResult.fetchStatus,
+    fetch_error: rawResult.fetchError,
+    fetched_at: new Date().toISOString(),
+  };
+}
+
+/** Log raw storage result */
+function logRawStorageResult(rawResult) {
+  if (rawResult.success) {
+    console.log(`   ✅ Raw content stored: ${rawResult.rawRef}`);
+  } else {
+    console.log(`   ⚠️ Raw storage failed: ${rawResult.fetchError}`);
+  }
+}
+
 /** @param {any} queueItem */
 async function stepFetch(queueItem) {
   console.log('   Fetching content...');
+  console.log('   Storing raw content...');
+
+  const rawResult = await fetchAndStoreRaw(queueItem.url);
+  const rawMetadata = buildRawMetadata(rawResult);
+  logRawStorageResult(rawResult);
+
   const content = await fetchContent(queueItem.url);
   const payload = buildFetchPayload(queueItem, content);
 
   await transitionByAgent(queueItem.id, getStatusCode('TO_SUMMARIZE'), 'orchestrator', {
-    changes: { payload, fetched_at: new Date().toISOString() },
+    changes: { payload, ...rawMetadata },
   });
-
-  if ('raw_ref' in content && content.raw_ref) {
-    await transitionByAgent(queueItem.id, getStatusCode('TO_SUMMARIZE'), 'orchestrator', {
-      changes: { raw_ref: content.raw_ref },
-    });
-  }
 
   return payload;
 }

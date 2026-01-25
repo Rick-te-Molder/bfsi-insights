@@ -87,3 +87,57 @@ export async function attemptFetch(url, attempt, retries) {
     return result;
   }
 }
+
+/** Build success result for raw bytes fetch */
+function buildRawSuccessResult(buffer, response) {
+  return {
+    success: true,
+    buffer,
+    status: response.status,
+    contentType: response.headers.get('content-type') || null,
+    finalUrl: response.url,
+  };
+}
+
+/** Build error result for raw bytes fetch */
+function buildRawErrorResult(response) {
+  return {
+    success: false,
+    status: response.status,
+    contentType: response.headers.get('content-type') || null,
+    finalUrl: response.url,
+    error: `HTTP ${response.status}`,
+  };
+}
+
+/** Build catch error result */
+function buildCatchResult(error) {
+  const message = error.name === 'AbortError' ? 'Request timeout' : error.message;
+  return { success: false, status: 0, error: message };
+}
+
+/**
+ * Fetch raw bytes from URL (for raw storage)
+ * @param {string} url - URL to fetch
+ */
+export async function fetchRawBytes(url) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 45000);
+
+  try {
+    const response = await fetch(url, {
+      headers: FETCH_HEADERS,
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!response.ok) return buildRawErrorResult(response);
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return buildRawSuccessResult(buffer, response);
+  } catch (error) {
+    clearTimeout(timeout);
+    return buildCatchResult(error);
+  }
+}
