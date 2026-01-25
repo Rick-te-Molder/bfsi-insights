@@ -3,10 +3,11 @@
  * ADR-004: Raw Data Storage Strategy
  */
 
-import { fetchRawBytes } from './content-fetcher-http.js';
 import { computeHash, detectExtension, detectMime } from './raw-storage-hash.js';
 import { uploadToStorage, upsertRawObject } from './raw-storage-upload.js';
 import { isBlockedByHash, isBlockedByUrl } from './raw-storage-blocklist.js';
+import { fetchWithStreamingHash } from './raw-storage-stream.js';
+import { RAW_STORAGE_MAX_BYTES } from './constants.js';
 
 /** Build empty buffer error result */
 function emptyBufferResult() {
@@ -110,37 +111,84 @@ function hashBlockedResult(url, hash, finalUrl, status, reason) {
     fetchStatus: status,
     fetchError: `Blocked by takedown: ${reason}`,
     buffer: null,
+    oversizeBytes: null,
+    rawStoreMode: null,
   };
 }
 
-/**
- * Fetch content from URL and store raw bytes
- * @param {string} url - URL to fetch
- */
-export async function fetchAndStoreRaw(url) {
-  const urlBlock = await isBlockedByUrl(url);
-  if (urlBlock.blocked) return blockedResult(url, urlBlock.reason);
+/** Build oversize result (file > 50 MB) */
+function oversizeResult(url, fetchResult) {
+  const { contentHash, bytes, contentType, finalUrl, status } = fetchResult;
+  const mime = detectMime(null, contentType);
+  console.log(`   ⚠️ Oversize file: ${bytes} bytes (${(bytes / 1024 / 1024).toFixed(1)} MB)`);
 
-  const fetchResult = await fetchRawBytes(url);
-  if (!fetchResult.success) return fetchFailureResult(url, fetchResult);
+  return {
+    success: true,
+    rawRef: null,
+    contentHash,
+    mime,
+    finalUrl,
+    originalUrl: url,
+    fetchStatus: status,
+    fetchError: null,
+    buffer: null,
+    oversizeBytes: bytes,
+    rawStoreMode: 'none',
+  };
+}
 
-  const { buffer, contentType, finalUrl, status } = fetchResult;
-  const hash = computeHash(buffer);
-
-  const hashBlock = await isBlockedByHash(hash);
-  if (hashBlock.blocked) return hashBlockedResult(url, hash, finalUrl, status, hashBlock.reason);
-
+/** Store content and build success result */
+async function storeAndBuildResult(url, fetchResult) {
+  const { buffer, contentHash, contentType, finalUrl, status } = fetchResult;
   const storeResult = await storeRawContent(buffer, contentType);
 
   return {
     success: storeResult.success,
     rawRef: storeResult.rawRef,
-    contentHash: storeResult.contentHash,
+    contentHash: contentHash || storeResult.contentHash,
     mime: storeResult.mime,
     finalUrl,
     originalUrl: url,
     fetchStatus: status,
     fetchError: storeResult.error,
     buffer: storeResult.success ? buffer : null,
+    oversizeBytes: null,
+    rawStoreMode: storeResult.success ? 'full' : null,
   };
+}
+
+/** Handle oversize file: upsert with mode=none */
+async function handleOversizeFile(url, fetchResult) {
+  const { contentHash, contentType, bytes } = fetchResult;
+  await upsertRawObject({
+    contentHash,
+    rawRef: null,
+    mimeDetected: detectMime(null, contentType),
+    bytes,
+    rawStoreMode: 'none',
+  });
+  return oversizeResult(url, fetchResult);
+}
+
+/**
+ * Fetch content from URL and store raw bytes
+ * Handles oversized files (> 50 MB) by hashing without storing
+ * @param {string} url - URL to fetch
+ */
+export async function fetchAndStoreRaw(url) {
+  const urlBlock = await isBlockedByUrl(url);
+  if (urlBlock.blocked) return blockedResult(url, urlBlock.reason);
+
+  const fetchResult = await fetchWithStreamingHash(url, RAW_STORAGE_MAX_BYTES);
+  if (!fetchResult.success) return fetchFailureResult(url, fetchResult);
+
+  const { contentHash, isOversize, finalUrl, status } = fetchResult;
+
+  const hashBlock = await isBlockedByHash(contentHash);
+  if (hashBlock.blocked)
+    return hashBlockedResult(url, contentHash, finalUrl, status, hashBlock.reason);
+
+  if (isOversize) return handleOversizeFile(url, fetchResult);
+
+  return storeAndBuildResult(url, fetchResult);
 }

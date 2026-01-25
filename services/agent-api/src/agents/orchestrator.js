@@ -48,12 +48,17 @@ function buildRawMetadata(rawResult) {
     fetch_status: rawResult.fetchStatus,
     fetch_error: rawResult.fetchError,
     fetched_at: new Date().toISOString(),
+    oversize_bytes: rawResult.oversizeBytes || null,
+    raw_store_mode: rawResult.rawStoreMode || null,
   };
 }
 
 /** Log raw storage result */
 function logRawStorageResult(rawResult) {
-  if (rawResult.success) {
+  if (rawResult.rawStoreMode === 'none' && rawResult.oversizeBytes) {
+    const mb = (rawResult.oversizeBytes / 1024 / 1024).toFixed(1);
+    console.log(`   ⚠️ Oversize file (${mb} MB) - hash computed, not stored`);
+  } else if (rawResult.success) {
     console.log(`   ✅ Raw content stored: ${rawResult.rawRef}`);
   } else {
     console.log(`   ⚠️ Raw storage failed: ${rawResult.fetchError}`);
