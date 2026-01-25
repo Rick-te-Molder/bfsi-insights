@@ -113,35 +113,34 @@ function getTargetUrl(queueItem) {
   return targetUrl;
 }
 
+function buildRunnerInput(queueItem, options) {
+  return {
+    queueId: queueItem.id,
+    payload: queueItem.payload,
+    pipelineRunId: queueItem.pipelineRunId,
+    promptOverride: options.promptOverride,
+    pipelineStepRunId: options.pipelineStepRunId,
+    skipEnrichmentMeta: options.skipEnrichmentMeta,
+  };
+}
+
+async function executeThumbnailer(targetUrl, context, configText, tools) {
+  const { payload, queueId } = context;
+  const stepTracker = createStepTracker(tools);
+  const config = parseConfig(configText);
+  const ctx = { targetUrl, queueId, supabase: tools.supabase, config, stepTracker };
+
+  console.log(`📸 Generating thumbnail for: ${payload.title}`);
+  const isPdf = isPdfUrl(targetUrl);
+  console.log(`   🔍 isPdfUrl result: ${isPdf}`);
+
+  return isPdf ? processPdf(ctx) : processWebPage(ctx);
+}
+
 /** @param {any} queueItem @param {{ promptOverride?: any; pipelineStepRunId?: string; skipEnrichmentMeta?: boolean }} options */
 export async function runThumbnailer(queueItem, options = {}) {
-  // Extract URL from queue item (column) or payload for backward compatibility
   const targetUrl = getTargetUrl(queueItem);
-
-  return runner.run(
-    {
-      queueId: queueItem.id,
-      payload: queueItem.payload,
-      pipelineRunId: queueItem.pipelineRunId,
-      promptOverride: options.promptOverride,
-      pipelineStepRunId: options.pipelineStepRunId,
-      skipEnrichmentMeta: options.skipEnrichmentMeta,
-    },
-    async (/** @type {any} */ context, /** @type {any} */ configText, /** @type {any} */ tools) => {
-      const { payload, queueId } = context;
-      const stepTracker = createStepTracker(tools);
-      const config = parseConfig(configText);
-      const ctx = { targetUrl, queueId, supabase: tools.supabase, config, stepTracker };
-
-      console.log(`📸 Generating thumbnail for: ${payload.title}`);
-      const isPdf = isPdfUrl(targetUrl);
-      console.log(`   🔍 isPdfUrl result: ${isPdf}`);
-
-      if (isPdf) {
-        console.log(`   📄 Detected PDF URL`);
-        return await processPdf(ctx);
-      }
-      return await processWebPage(ctx);
-    },
+  return runner.run(buildRunnerInput(queueItem, options), (context, configText, tools) =>
+    executeThumbnailer(targetUrl, context, configText, tools),
   );
 }
