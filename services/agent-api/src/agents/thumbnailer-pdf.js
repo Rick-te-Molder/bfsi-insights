@@ -91,10 +91,8 @@ export async function renderPdfFirstPage(pdfBuffer, queueId, config, scriptPath)
   const tempPdfPath = join(tmpdir(), `${queueId}.pdf`);
   const tempImagePath = join(tmpdir(), `${queueId}.jpg`);
   const cleanup = async () => {
-    // eslint-disable-next-line no-empty-function -- intentionally ignore cleanup errors
-    await unlink(tempPdfPath).catch(() => {});
-    // eslint-disable-next-line no-empty-function -- intentionally ignore cleanup errors
-    await unlink(tempImagePath).catch(() => {});
+    await unlink(tempPdfPath).catch(() => undefined);
+    await unlink(tempImagePath).catch(() => undefined);
   };
 
   try {
