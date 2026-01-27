@@ -10,6 +10,7 @@ import {
   shouldSkipFetchFilter,
   getQueueReadyStates,
 } from '../lib/queue-cleanup.js';
+import { resolveStartAt } from '../lib/orchestrator-resume.js';
 import { stepFetch } from './orchestrator-fetch.js';
 
 /** @type {import('@supabase/supabase-js').SupabaseClient | null} */
@@ -73,18 +74,6 @@ function handleRetry(queueItem, currentAttempts, error) {
   return { success: false, error: error.message, permanent: false };
 }
 
-/**
- * @param {any} queueItem
- * @param {boolean} skipFetchFilter
- */
-function getStartAt(queueItem, skipFetchFilter) {
-  if (!skipFetchFilter) return 'summarize';
-  const status = queueItem.status_code;
-  if (status === getStatusCode('TO_TAG')) return 'tag';
-  if (status === getStatusCode('TO_THUMBNAIL')) return 'thumbnail';
-  return 'summarize';
-}
-
 /** @param {any} queueItem @param {any} payload @param {{ includeThumbnail?: boolean; pipelineRunId?: string | null; returnStatus?: number | null; isManual?: boolean; startAt?: 'summarize' | 'tag' | 'thumbnail' }} options */
 async function runEnrichmentSteps(queueItem, payload, options) {
   const {
@@ -145,7 +134,7 @@ async function runEnrichPipeline(ctx) {
     await completePipelineRun(pipelineRunId, 'completed');
     return { success: false, error: reason };
   }
-  const startAt = getStartAt(queueItem, skipFetchFilter);
+  const startAt = resolveStartAt(queueItem, skipFetchFilter);
   await runEnrichmentSteps(queueItem, payload, {
     includeThumbnail,
     pipelineRunId,
