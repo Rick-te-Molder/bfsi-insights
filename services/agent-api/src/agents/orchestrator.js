@@ -1,16 +1,16 @@
-/**
- * Orchestrator: Run full enrichment pipeline on a single item
- * KB-285: Preserve enrichment_meta written by runners
- */
-
+/** Orchestrator: Run full enrichment pipeline on a single item */
 import { runRelevanceFilter } from './screener.js';
-import { fetchContent } from '../lib/content-fetcher.js';
 import { transitionByAgent } from '../lib/queue-update.js';
 import { loadStatusCodes, getStatusCode } from '../lib/status-codes.js';
 import { runEnrichmentAgentsTracked } from './orchestrator-tracking.js';
 import { getSupabaseAdminClient } from '../clients/supabase.js';
 import { ensurePipelineRun, completePipelineRun } from '../lib/pipeline-tracking.js';
-import { fetchAndStoreRaw, getRawContent } from '../lib/raw-storage.js';
+import {
+  resetStuckWorkingStates,
+  shouldSkipFetchFilter,
+  QUEUE_READY_STATES,
+} from '../lib/queue-cleanup.js';
+import { stepFetch } from './orchestrator-fetch.js';
 
 /** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabase = null;
@@ -22,96 +22,6 @@ function getSupabase() {
 }
 
 const MAX_FETCH_ATTEMPTS = 3;
-
-/** @param {any} queueItem @param {any} content */
-function buildFetchPayload(queueItem, content) {
-  return {
-    ...queueItem.payload,
-    url: queueItem.url,
-    title: content.title,
-    description: content.description,
-    textContent: content.textContent,
-    published_at: content.date || null,
-    isPdf: content.isPdf || false,
-    pdfMetadata: content.pdfMetadata || null,
-  };
-}
-
-/** Build raw storage metadata from result */
-function buildRawMetadata(rawResult) {
-  return {
-    raw_ref: rawResult.rawRef,
-    content_hash: rawResult.contentHash,
-    mime: rawResult.mime,
-    final_url: rawResult.finalUrl,
-    original_url: rawResult.originalUrl === rawResult.finalUrl ? null : rawResult.originalUrl,
-    fetch_status: rawResult.fetchStatus,
-    fetch_error: rawResult.fetchError,
-    fetched_at: new Date().toISOString(),
-    oversize_bytes: rawResult.oversizeBytes || null,
-    raw_store_mode: rawResult.rawStoreMode || null,
-  };
-}
-
-/** Log raw storage result */
-function logRawStorageResult(rawResult) {
-  if (rawResult.rawStoreMode === 'none' && rawResult.oversizeBytes) {
-    const mb = (rawResult.oversizeBytes / 1024 / 1024).toFixed(1);
-    console.log(`   ⚠️ Oversize file (${mb} MB) - hash computed, not stored`);
-  } else if (rawResult.success) {
-    console.log(`   ✅ Raw content stored: ${rawResult.rawRef}`);
-  } else {
-    console.log(`   ⚠️ Raw storage failed: ${rawResult.fetchError}`);
-  }
-}
-
-/** Check if item has valid raw_ref for reading from storage */
-function hasStoredContent(queueItem) {
-  return queueItem.raw_ref && !queueItem.storage_deleted_at && queueItem.raw_store_mode !== 'none';
-}
-
-/** Fetch content using storage or URL based on item state */
-async function fetchContentWithSource(queueItem) {
-  if (hasStoredContent(queueItem)) {
-    const result = await getRawContent(queueItem);
-    if (result.buffer) {
-      return { source: result.source, content: await fetchContent(queueItem.url) };
-    }
-  }
-  return { source: 'url', content: await fetchContent(queueItem.url) };
-}
-
-/** @param {any} queueItem */
-async function stepFetch(queueItem) {
-  console.log('   Fetching content...');
-
-  // If raw_ref exists, try to use storage (re-enrichment case)
-  if (hasStoredContent(queueItem)) {
-    console.log('   📦 Reading from storage (re-enrichment)...');
-    const { source, content } = await fetchContentWithSource(queueItem);
-    console.log(`   Source: ${source}`);
-    const payload = buildFetchPayload(queueItem, content);
-    await transitionByAgent(queueItem.id, getStatusCode('TO_SUMMARIZE'), 'orchestrator', {
-      changes: { payload, fetched_at: new Date().toISOString() },
-    });
-    return payload;
-  }
-
-  // New fetch: store raw content first
-  console.log('   Storing raw content...');
-  const rawResult = await fetchAndStoreRaw(queueItem.url);
-  const rawMetadata = buildRawMetadata(rawResult);
-  logRawStorageResult(rawResult);
-
-  const content = await fetchContent(queueItem.url);
-  const payload = buildFetchPayload(queueItem, content);
-
-  await transitionByAgent(queueItem.id, getStatusCode('TO_SUMMARIZE'), 'orchestrator', {
-    changes: { payload, ...rawMetadata },
-  });
-
-  return payload;
-}
 
 /** @param {string} queueId @param {any} payload @param {{ skipRejection?: boolean }} options */
 async function stepFilter(queueId, payload, options = {}) {
@@ -224,31 +134,40 @@ function getEnrichContext(queueItem) {
   };
 }
 
+/** @param {any} ctx */
+async function runEnrichPipeline(ctx) {
+  const { queueItem, skipFetchFilter, skipRejection, includeThumbnail, pipelineRunId } = ctx;
+  const { returnStatus, isManual } = getEnrichContext(queueItem);
+  const { payload, rejected, reason } = await fetchAndFilter(
+    queueItem,
+    skipFetchFilter,
+    skipRejection,
+  );
+  if (rejected) {
+    await completePipelineRun(pipelineRunId, 'completed');
+    return { success: false, error: reason };
+  }
+  await runEnrichmentSteps(queueItem, payload, {
+    includeThumbnail,
+    pipelineRunId,
+    returnStatus,
+    isManual,
+  });
+  await completePipelineRun(pipelineRunId, 'completed');
+  return { success: true };
+}
+
 /** @param {any} queueItem @param {{ includeThumbnail?: boolean; skipRejection?: boolean; skipFetchFilter?: boolean }} options */
 export async function enrichItem(queueItem, options = {}) {
-  const { includeThumbnail = true, skipRejection = false, skipFetchFilter = false } = options;
+  const { includeThumbnail = true, skipRejection = false } = options;
+  const skipFetchFilter = options.skipFetchFilter ?? shouldSkipFetchFilter(queueItem);
   await loadStatusCodes();
-  const { currentAttempts, returnStatus, isManual } = getEnrichContext(queueItem);
+  const { currentAttempts } = getEnrichContext(queueItem);
   const pipelineRunId = await ensurePipelineRun(queueItem);
+  const ctx = { queueItem, skipFetchFilter, skipRejection, includeThumbnail, pipelineRunId };
 
   try {
-    const { payload, rejected, reason } = await fetchAndFilter(
-      queueItem,
-      skipFetchFilter,
-      skipRejection,
-    );
-    if (rejected)
-      return (
-        await completePipelineRun(pipelineRunId, 'completed'),
-        { success: false, error: reason }
-      );
-    await runEnrichmentSteps(queueItem, payload, {
-      includeThumbnail,
-      pipelineRunId,
-      returnStatus,
-      isManual,
-    });
-    return (await completePipelineRun(pipelineRunId, 'completed'), { success: true });
+    return await runEnrichPipeline(ctx);
   } catch (error) {
     await completePipelineRun(pipelineRunId, 'failed');
     return handleEnrichError(queueItem, currentAttempts, error);
@@ -260,7 +179,7 @@ async function fetchQueueItems(limit) {
   const { data: items, error } = await getSupabase()
     .from('ingestion_queue')
     .select('*')
-    .eq('status_code', getStatusCode('PENDING_ENRICHMENT'))
+    .in('status_code', QUEUE_READY_STATES)
     .order('discovered_at', { ascending: true })
     .limit(limit);
   if (error) throw new Error(`Failed to fetch queue: ${error.message}`);
@@ -273,10 +192,16 @@ export async function processQueue(options = {}) {
   await loadStatusCodes();
   console.log('🔄 Processing queue...\n');
 
+  // Reset any items stuck in working states (e.g., 211 summarizing → 210 to_summarize)
+  const resetCount = await resetStuckWorkingStates();
+  if (resetCount > 0) {
+    console.log(`   ✅ Reset ${resetCount} stuck item(s)\n`);
+  }
+
   const items = await fetchQueueItems(limit);
   if (!items?.length) {
     console.log('✅ No items in queue');
-    return { processed: 0, success: 0, failed: 0 };
+    return { processed: 0, success: 0, failed: 0, reset: resetCount };
   }
 
   let success = 0;
@@ -288,5 +213,5 @@ export async function processQueue(options = {}) {
   }
 
   console.log(`\n✨ Queue processed: ${success} succeeded, ${failed} failed`);
-  return { processed: items.length, success, failed };
+  return { processed: items.length, success, failed, reset: resetCount };
 }
