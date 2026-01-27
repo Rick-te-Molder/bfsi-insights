@@ -13,6 +13,7 @@ import improvementRouter from './agents/improvement.js';
 import enrichSingleStepRouter from './agents/enrich-single-step.js';
 import enrichItemRouter from './agents/enrich-item.js';
 import { runPromptEval } from '../lib/prompt-eval.js';
+import { processQueue } from '../agents/orchestrator.js';
 
 const router = express.Router();
 
@@ -33,6 +34,18 @@ router.post('/run/prompt-eval', async (req, res) => {
   } catch (err) {
     console.error('Prompt Eval Error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/process-queue', async (/** @type {any} */ req, /** @type {any} */ res) => {
+  try {
+    const { limit = 20, includeThumbnail = true } = req.body;
+    const result = await processQueue({ limit, includeThumbnail });
+    res.json(result);
+  } catch (err) {
+    console.error('Process Queue Error:', err);
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: message });
   }
 });
 
