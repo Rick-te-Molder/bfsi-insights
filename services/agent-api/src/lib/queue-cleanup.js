@@ -4,6 +4,7 @@
  */
 
 import { getSupabaseAdminClient } from '../clients/supabase.js';
+import { getStatusCode, loadStatusCodes } from './status-codes.js';
 
 /** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let supabase = null;
@@ -14,23 +15,35 @@ function getSupabase() {
   return supabase;
 }
 
-// Working states that may get stuck and need reset (maps to their ready state)
-const STUCK_STATE_RESET_MAP = {
-  211: 210, // summarizing → to_summarize
-  221: 220, // tagging → to_tag
-  231: 230, // thumbnailing → to_thumbnail
-};
+/**
+ * Working states that may get stuck and need reset (maps to their ready state).
+ * Resolved from status_lookup at runtime.
+ */
+async function getStuckStateResetPairs() {
+  await loadStatusCodes();
+  return [
+    { working: getStatusCode('SUMMARIZING'), ready: getStatusCode('TO_SUMMARIZE') },
+    { working: getStatusCode('TAGGING'), ready: getStatusCode('TO_TAG') },
+    { working: getStatusCode('THUMBNAILING'), ready: getStatusCode('TO_THUMBNAIL') },
+  ];
+}
 
 // Items stuck in working state for longer than this are considered stale
 const STALE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes (agents typically complete in <2 min)
 
-// Ready states that processQueue should pick up
-export const QUEUE_READY_STATES = [
-  200, // pending_enrichment (start)
-  210, // to_summarize (after fetch/filter)
-  220, // to_tag (after summarize)
-  230, // to_thumbnail (after tag)
-];
+/**
+ * Ready states that processQueue should pick up.
+ * @returns {Promise<number[]>}
+ */
+export async function getQueueReadyStates() {
+  await loadStatusCodes();
+  return [
+    getStatusCode('PENDING_ENRICHMENT'),
+    getStatusCode('TO_SUMMARIZE'),
+    getStatusCode('TO_TAG'),
+    getStatusCode('TO_THUMBNAIL'),
+  ];
+}
 
 /**
  * Reset items stuck in working states back to their ready state
@@ -40,17 +53,18 @@ export const QUEUE_READY_STATES = [
 export async function resetStuckWorkingStates() {
   const staleThreshold = new Date(Date.now() - STALE_THRESHOLD_MS).toISOString();
   let totalReset = 0;
+  const pairs = await getStuckStateResetPairs();
 
-  for (const [workingCode, readyCode] of Object.entries(STUCK_STATE_RESET_MAP)) {
+  for (const { working, ready } of pairs) {
     const { data, error } = await getSupabase()
       .from('ingestion_queue')
-      .update({ status_code: Number(readyCode) })
-      .eq('status_code', Number(workingCode))
+      .update({ status_code: ready })
+      .eq('status_code', working)
       .lt('updated_at', staleThreshold)
       .select('id');
 
     if (!error && data?.length) {
-      console.log(`   🔄 Reset ${data.length} stuck items from ${workingCode} → ${readyCode}`);
+      console.log(`   🔄 Reset ${data.length} stuck items from ${working} → ${ready}`);
       totalReset += data.length;
     }
   }
@@ -65,6 +79,6 @@ export async function resetStuckWorkingStates() {
  */
 export function shouldSkipFetchFilter(queueItem) {
   const status = queueItem.status_code;
-  // Items at 210+ already have content fetched and filtered
-  return status >= 210 && status < 300;
+  // Items after fetch/filter already have content
+  return status >= getStatusCode('TO_SUMMARIZE') && status < getStatusCode('PENDING_REVIEW');
 }

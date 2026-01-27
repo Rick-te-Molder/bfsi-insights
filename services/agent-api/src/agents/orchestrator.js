@@ -8,7 +8,7 @@ import { ensurePipelineRun, completePipelineRun } from '../lib/pipeline-tracking
 import {
   resetStuckWorkingStates,
   shouldSkipFetchFilter,
-  QUEUE_READY_STATES,
+  getQueueReadyStates,
 } from '../lib/queue-cleanup.js';
 import { stepFetch } from './orchestrator-fetch.js';
 
@@ -74,32 +74,30 @@ function handleRetry(queueItem, currentAttempts, error) {
 }
 
 /**
- * @param {string} queueId
- * @param {any} payload
- * @param {string | null} pipelineRunId
- * @param {boolean} includeThumbnail
+ * @param {any} queueItem
+ * @param {boolean} skipFetchFilter
  */
-async function runEnrichmentAgents(queueId, payload, pipelineRunId, includeThumbnail) {
-  return runEnrichmentAgentsTracked(queueId, payload, pipelineRunId, includeThumbnail);
+function getStartAt(queueItem, skipFetchFilter) {
+  if (!skipFetchFilter) return 'summarize';
+  const status = queueItem.status_code;
+  if (status === getStatusCode('TO_TAG')) return 'tag';
+  if (status === getStatusCode('TO_THUMBNAIL')) return 'thumbnail';
+  return 'summarize';
 }
 
-/** @param {any} queueItem @param {any} payload @param {{ includeThumbnail?: boolean; pipelineRunId?: string | null; returnStatus?: number | null; isManual?: boolean }} options */
+/** @param {any} queueItem @param {any} payload @param {{ includeThumbnail?: boolean; pipelineRunId?: string | null; returnStatus?: number | null; isManual?: boolean; startAt?: 'summarize' | 'tag' | 'thumbnail' }} options */
 async function runEnrichmentSteps(queueItem, payload, options) {
   const {
     includeThumbnail = true,
     pipelineRunId = null,
     returnStatus = null,
     isManual = false,
+    startAt = 'summarize',
   } = options;
-  const finalPayload = await runEnrichmentAgents(
-    queueItem.id,
-    payload,
-    pipelineRunId,
-    includeThumbnail,
-  );
   const targetStatus = returnStatus || getStatusCode('PENDING_REVIEW');
-  await transitionByAgent(queueItem.id, targetStatus, 'orchestrator', {
-    changes: { payload: finalPayload },
+  return runEnrichmentAgentsTracked(queueItem.id, payload, pipelineRunId, includeThumbnail, {
+    startAt,
+    targetStatus,
     isManual,
   });
 }
@@ -147,11 +145,13 @@ async function runEnrichPipeline(ctx) {
     await completePipelineRun(pipelineRunId, 'completed');
     return { success: false, error: reason };
   }
+  const startAt = getStartAt(queueItem, skipFetchFilter);
   await runEnrichmentSteps(queueItem, payload, {
     includeThumbnail,
     pipelineRunId,
     returnStatus,
     isManual,
+    startAt,
   });
   await completePipelineRun(pipelineRunId, 'completed');
   return { success: true };
@@ -160,8 +160,8 @@ async function runEnrichPipeline(ctx) {
 /** @param {any} queueItem @param {{ includeThumbnail?: boolean; skipRejection?: boolean; skipFetchFilter?: boolean }} options */
 export async function enrichItem(queueItem, options = {}) {
   const { includeThumbnail = true, skipRejection = false } = options;
-  const skipFetchFilter = options.skipFetchFilter ?? shouldSkipFetchFilter(queueItem);
   await loadStatusCodes();
+  const skipFetchFilter = options.skipFetchFilter ?? shouldSkipFetchFilter(queueItem);
   const { currentAttempts } = getEnrichContext(queueItem);
   const pipelineRunId = await ensurePipelineRun(queueItem);
   const ctx = { queueItem, skipFetchFilter, skipRejection, includeThumbnail, pipelineRunId };
@@ -176,10 +176,11 @@ export async function enrichItem(queueItem, options = {}) {
 
 /** @param {number} limit */
 async function fetchQueueItems(limit) {
+  const readyStates = await getQueueReadyStates();
   const { data: items, error } = await getSupabase()
     .from('ingestion_queue')
     .select('*')
-    .in('status_code', QUEUE_READY_STATES)
+    .in('status_code', readyStates)
     .order('discovered_at', { ascending: true })
     .limit(limit);
   if (error) throw new Error(`Failed to fetch queue: ${error.message}`);
