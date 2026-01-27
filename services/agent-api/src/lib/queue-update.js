@@ -16,6 +16,21 @@ function getSupabaseClient() {
 }
 
 /**
+ * Log detailed RPC error for debugging
+ * @param {any} error @param {string} queueId @param {number} newStatusCode
+ * @param {string} changedBy @param {boolean} isManual
+ */
+function logRpcError(error, queueId, newStatusCode, changedBy, isManual) {
+  console.error('transition_status RPC error:', {
+    queueId,
+    newStatusCode,
+    changedBy,
+    isManual,
+    error: { message: error.message, code: error.code, details: error.details, hint: error.hint },
+  });
+}
+
+/**
  * Atomically transition an item's status with validation and history logging.
  * Mirrors the DB function signature: transition_status(queue_id, new_status, changed_by, changes, is_manual)
  *
@@ -35,7 +50,6 @@ export async function transitionItemStatus(queueId, newStatusCode, options = {})
   }
 
   const supabase = getSupabaseClient();
-
   const { error } = await supabase.rpc('transition_status', {
     p_queue_id: queueId,
     p_new_status: newStatusCode,
@@ -45,7 +59,7 @@ export async function transitionItemStatus(queueId, newStatusCode, options = {})
   });
 
   if (error) {
-    // Preserve original error context for debugging
+    logRpcError(error, queueId, newStatusCode, changedBy, isManual);
     throw new Error(
       `transition_status failed for item ${queueId} → ${newStatusCode}: ${error.message}`,
     );
