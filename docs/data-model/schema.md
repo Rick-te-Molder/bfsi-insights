@@ -1,7 +1,7 @@
 # Database Schema Reference
 
 > **Auto-generated** by `npm run dump:schema`  
-> **Last updated:** 2026-01-22T13:23:25.329Z
+> **Last updated:** 2026-01-28T11:37:05.255Z
 
 This file is the single source of truth for AI assistants to understand the database structure.
 
@@ -15,12 +15,12 @@ This file is the single source of truth for AI assistants to understand the data
 | `ag_use_case_capability`           | 203  | PK: capability_id  |
 | `ag_vendor`                        | 81   | PK: id             |
 | `agent_jobs`                       | 37   | PK: id             |
-| `agent_run`                        | 3605 | PK: id             |
+| `agent_run`                        | 3740 | PK: id             |
 | `agent_run_metric`                 | 115  | PK: run_id         |
-| `agent_run_step`                   | 3770 | PK: id             |
-| `agent_run_summary`                | 3605 |                    |
+| `agent_run_step`                   | 3934 | PK: id             |
+| `agent_run_summary`                | 3740 |                    |
 | `app_admins`                       | 1    | PK: user_id        |
-| `audit_log`                        | 2771 | PK: id             |
+| `audit_log`                        | 2774 | PK: id             |
 | `bfsi_entity_type`                 | 24   | PK: id             |
 | `bfsi_industry`                    | 53   | PK: id             |
 | `bfsi_industry_pretty`             | 53   |                    |
@@ -34,9 +34,9 @@ This file is the single source of truth for AI assistants to understand the data
 | `eval_golden_set`                  | 24   | PK: id             |
 | `eval_result`                      | 0    | PK: id             |
 | `eval_run`                         | 6    | PK: id             |
-| `ingestion_queue`                  | 2708 | PK: id             |
+| `ingestion_queue`                  | 2709 | PK: id             |
 | `ingestion_queue_archive`          | 0    | PK: id             |
-| `ingestion_queue_with_transitions` | 2708 |                    |
+| `ingestion_queue_with_transitions` | 2709 |                    |
 | `kb_audience`                      | 4    | PK: id             |
 | `kb_category`                      | 9    | PK: id             |
 | `kb_channel`                       | 7    | PK: id             |
@@ -57,7 +57,7 @@ This file is the single source of truth for AI assistants to understand the data
 | `kb_rejection_pattern`             | 7    | PK: id             |
 | `kb_source`                        | 83   | PK: slug           |
 | `kb_topic`                         | 5    | PK: id             |
-| `missed_discovery`                 | 9    | PK: id             |
+| `missed_discovery`                 | 10   | PK: id             |
 | `obligation`                       | 18   | PK: id             |
 | `obligation_pretty`                | 18   |                    |
 | `pending_entity_proposals`         | 2    |                    |
@@ -65,10 +65,10 @@ This file is the single source of truth for AI assistants to understand the data
 | `pipeline_entry_rule`              | 3    | PK: id             |
 | `pipeline_execution`               | 0    | PK: id             |
 | `pipeline_exit_rule`               | 3    | PK: id             |
-| `pipeline_run`                     | 161  | PK: id             |
-| `pipeline_run_costs`               | 50   |                    |
+| `pipeline_run`                     | 185  | PK: id             |
+| `pipeline_run_costs`               | 74   |                    |
 | `pipeline_step`                    | 8    | PK: id             |
-| `pipeline_step_run`                | 110  | PK: id             |
+| `pipeline_step_run`                | 246  | PK: id             |
 | `process_taxonomy_apqc`            | 54   | PK: id             |
 | `process_taxonomy_basel`           | 19   | PK: id             |
 | `process_taxonomy_bian`            | 24   | PK: id             |
@@ -84,6 +84,7 @@ This file is the single source of truth for AI assistants to understand the data
 | `prompt_version`                   | 21   | PK: id             |
 | `proposed_entity`                  | 2    | PK: id             |
 | `publication_edit_history`         | 0    |                    |
+| `raw_object`                       | 0    | PK: content_hash   |
 | `ref_filter_config`                | 8    | PK: column_name    |
 | `regulation`                       | 18   | PK: id             |
 | `regulation_obligations_pretty`    | 46   |                    |
@@ -168,8 +169,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column          | Type                     | Nullable | Default          | Constraints           |
 | --------------- | ------------------------ | -------- | ---------------- | --------------------- |
-| `capability_id` | bigint                   | NO       |                  | PK                    |
 | `capability_id` | bigint                   | NO       |                  | FK → ag_capability.id |
+| `capability_id` | bigint                   | NO       |                  | PK                    |
 | `relation_type` | text                     | NO       | 'required'::text |                       |
 | `weight`        | numeric                  | YES      |                  |                       |
 | `rationale`     | text                     | YES      |                  |                       |
@@ -231,7 +232,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `agent_run`
 
-**Rows:** 3605
+**Rows:** 3740
 
 | Column              | Type                     | Nullable | Default           | Constraints                |
 | ------------------- | ------------------------ | -------- | ----------------- | -------------------------- |
@@ -256,15 +257,15 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column         | Type                     | Nullable | Default | Constraints       |
 | -------------- | ------------------------ | -------- | ------- | ----------------- |
-| `run_id`       | uuid                     | NO       |         | PK                |
 | `run_id`       | uuid                     | NO       |         | FK → agent_run.id |
+| `run_id`       | uuid                     | NO       |         | PK                |
 | `metric_name`  | text                     | NO       |         | PK                |
 | `metric_value` | numeric                  | NO       |         |                   |
 | `created_at`   | timestamp with time zone | NO       | now()   |                   |
 
 ### `agent_run_step`
 
-**Rows:** 3770
+**Rows:** 3934
 
 | Column              | Type                     | Nullable | Default           | Constraints            |
 | ------------------- | ------------------------ | -------- | ----------------- | ---------------------- |
@@ -282,7 +283,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `agent_run_summary`
 
-**Rows:** 3605
+**Rows:** 3740
 
 | Column         | Type                     | Nullable | Default | Constraints |
 | -------------- | ------------------------ | -------- | ------- | ----------- |
@@ -310,7 +311,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `audit_log`
 
-**Rows:** 2771
+**Rows:** 2774
 
 | Column        | Type                     | Nullable | Default           | Constraints    |
 | ------------- | ------------------------ | -------- | ----------------- | -------------- |
@@ -574,7 +575,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `ingestion_queue`
 
-**Rows:** 2708
+**Rows:** 2709
 
 | Column                   | Type                     | Nullable | Default            | Constraints          |
 | ------------------------ | ------------------------ | -------- | ------------------ | -------------------- |
@@ -620,6 +621,15 @@ This file is the single source of truth for AI assistants to understand the data
 | `last_successful_step`   | text                     | YES      |                    |                      |
 | `review_notes`           | text                     | YES      |                    |                      |
 | `review_action`          | text                     | YES      |                    |                      |
+| `mime`                   | text                     | YES      |                    |                      |
+| `final_url`              | text                     | YES      |                    |                      |
+| `original_url`           | text                     | YES      |                    |                      |
+| `fetch_status`           | integer                  | YES      |                    |                      |
+| `fetch_error`            | text                     | YES      |                    |                      |
+| `expires_at`             | timestamp with time zone | YES      |                    |                      |
+| `storage_deleted_at`     | timestamp with time zone | YES      |                    |                      |
+| `deletion_reason`        | text                     | YES      |                    |                      |
+| `oversize_bytes`         | bigint                   | YES      |                    |                      |
 
 ### `ingestion_queue_archive`
 
@@ -654,7 +664,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `ingestion_queue_with_transitions`
 
-**Rows:** 2708
+**Rows:** 2709
 
 | Column                          | Type                     | Nullable | Default | Constraints |
 | ------------------------------- | ------------------------ | -------- | ------- | ----------- |
@@ -793,8 +803,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column           | Type    | Nullable | Default | Constraints            |
 | ---------------- | ------- | -------- | ------- | ---------------------- |
-| `publication_id` | uuid    | NO       |         | PK                     |
 | `publication_id` | uuid    | NO       |         | FK → kb_publication.id |
+| `publication_id` | uuid    | NO       |         | PK                     |
 | `vendor_id`      | uuid    | NO       |         | FK → ag_vendor.id      |
 | `vendor_id`      | uuid    | NO       |         | PK                     |
 | `rank`           | integer | YES      | 0       |                        |
@@ -805,8 +815,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column           | Type    | Nullable | Default | Constraints            |
 | ---------------- | ------- | -------- | ------- | ---------------------- |
-| `publication_id` | uuid    | NO       |         | FK → kb_publication.id |
 | `publication_id` | uuid    | NO       |         | PK                     |
+| `publication_id` | uuid    | NO       |         | FK → kb_publication.id |
 | `industry_code`  | text    | NO       |         | PK                     |
 | `rank`           | integer | YES      | 0       |                        |
 
@@ -816,8 +826,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column            | Type    | Nullable | Default | Constraints               |
 | ----------------- | ------- | -------- | ------- | ------------------------- |
-| `publication_id`  | uuid    | NO       |         | PK                        |
 | `publication_id`  | uuid    | NO       |         | FK → kb_publication.id    |
+| `publication_id`  | uuid    | NO       |         | PK                        |
 | `organization_id` | uuid    | NO       |         | FK → bfsi_organization.id |
 | `organization_id` | uuid    | NO       |         | PK                        |
 | `rank`            | integer | YES      | 0       |                           |
@@ -828,8 +838,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column           | Type                     | Nullable | Default | Constraints            |
 | ---------------- | ------------------------ | -------- | ------- | ---------------------- |
-| `process_code`   | text                     | NO       |         | PK                     |
 | `process_code`   | text                     | NO       |         | FK → bfsi_process.code |
+| `process_code`   | text                     | NO       |         | PK                     |
 | `rank`           | integer                  | YES      | 0       |                        |
 | `confidence`     | numeric                  | YES      |         |                        |
 | `created_at`     | timestamp with time zone | YES      | now()   |                        |
@@ -863,8 +873,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column            | Type | Nullable | Default | Constraints            |
 | ----------------- | ---- | -------- | ------- | ---------------------- |
-| `publication_id`  | uuid | NO       |         | FK → kb_publication.id |
 | `publication_id`  | uuid | NO       |         | PK                     |
+| `publication_id`  | uuid | NO       |         | FK → kb_publication.id |
 | `obligation_code` | text | NO       |         | PK                     |
 | `obligation_code` | text | NO       |         | FK → obligation.code   |
 
@@ -909,8 +919,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column            | Type | Nullable | Default | Constraints            |
 | ----------------- | ---- | -------- | ------- | ---------------------- |
-| `publication_id`  | uuid | NO       |         | PK                     |
 | `publication_id`  | uuid | NO       |         | FK → kb_publication.id |
+| `publication_id`  | uuid | NO       |         | PK                     |
 | `regulation_code` | text | NO       |         | PK                     |
 
 ### `kb_publication_regulator`
@@ -1019,7 +1029,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `missed_discovery`
 
-**Rows:** 9
+**Rows:** 10
 
 | Column                    | Type                     | Nullable | Default           | Constraints             |
 | ------------------------- | ------------------------ | -------- | ----------------- | ----------------------- |
@@ -1123,8 +1133,8 @@ This file is the single source of truth for AI assistants to understand the data
 | ------------------ | -------- | -------- | ----------------- | --------------------------- |
 | `id`               | uuid     | NO       | gen_random_uuid() | PK                          |
 | `pipeline_id`      | uuid     | NO       |                   | FK → pipeline_definition.id |
-| `from_status_code` | smallint | YES      |                   | UNIQUE                      |
 | `from_status_code` | smallint | YES      |                   | FK → status_lookup.code     |
+| `from_status_code` | smallint | YES      |                   | UNIQUE                      |
 | `trigger_type`     | text     | NO       |                   | UNIQUE                      |
 | `priority`         | integer  | YES      | 0                 |                             |
 | `is_active`        | boolean  | YES      | true              |                             |
@@ -1156,17 +1166,17 @@ This file is the single source of truth for AI assistants to understand the data
 | Column                | Type     | Nullable | Default           | Constraints                 |
 | --------------------- | -------- | -------- | ----------------- | --------------------------- |
 | `id`                  | uuid     | NO       | gen_random_uuid() | PK                          |
-| `pipeline_id`         | uuid     | NO       |                   | UNIQUE                      |
 | `pipeline_id`         | uuid     | NO       |                   | FK → pipeline_definition.id |
-| `from_status_code`    | smallint | YES      |                   | UNIQUE                      |
+| `pipeline_id`         | uuid     | NO       |                   | UNIQUE                      |
 | `from_status_code`    | smallint | YES      |                   | FK → status_lookup.code     |
+| `from_status_code`    | smallint | YES      |                   | UNIQUE                      |
 | `exit_status_code`    | smallint | NO       |                   | FK → status_lookup.code     |
 | `is_manual`           | boolean  | YES      | false             |                             |
 | `failure_status_code` | smallint | YES      |                   | FK → status_lookup.code     |
 
 ### `pipeline_run`
 
-**Rows:** 161
+**Rows:** 185
 
 | Column               | Type                     | Nullable | Default           | Constraints             |
 | -------------------- | ------------------------ | -------- | ----------------- | ----------------------- |
@@ -1184,7 +1194,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `pipeline_run_costs`
 
-**Rows:** 50
+**Rows:** 74
 
 | Column               | Type                     | Nullable | Default | Constraints |
 | -------------------- | ------------------------ | -------- | ------- | ----------- |
@@ -1222,7 +1232,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `pipeline_step_run`
 
-**Rows:** 110
+**Rows:** 246
 
 | Column            | Type                     | Nullable | Default           | Constraints          |
 | ----------------- | ------------------------ | -------- | ----------------- | -------------------- |
@@ -1472,6 +1482,19 @@ This file is the single source of truth for AI assistants to understand the data
 | `changed_at`     | timestamp with time zone | YES      |         |             |
 | `queue_id`       | uuid                     | YES      |         |             |
 
+### `raw_object`
+
+**Rows:** 0
+
+| Column           | Type                     | Nullable | Default | Constraints |
+| ---------------- | ------------------------ | -------- | ------- | ----------- |
+| `content_hash`   | text                     | NO       |         | PK          |
+| `raw_ref`        | text                     | NO       |         |             |
+| `first_seen_at`  | timestamp with time zone | NO       | now()   |             |
+| `mime_detected`  | text                     | YES      |         |             |
+| `bytes`          | bigint                   | YES      |         |             |
+| `raw_store_mode` | text                     | YES      |         |             |
+
 ### `ref_filter_config`
 
 **Rows:** 8
@@ -1678,18 +1701,3 @@ This file is the single source of truth for AI assistants to understand the data
 | `last_modified`          | timestamp with time zone | YES      |         |             |
 | `discovered_at`          | timestamp with time zone | YES      |         |             |
 | `fetched_at`             | timestamp with time zone | YES      |         |             |
-| `reviewed_at`            | timestamp with time zone | YES      |         |             |
-| `reviewer`               | uuid                     | YES      |         |             |
-| `rejection_reason`       | text                     | YES      |         |             |
-| `prompt_version`         | text                     | YES      |         |             |
-| `model_id`               | text                     | YES      |         |             |
-| `agent_metadata`         | jsonb                    | YES      |         |             |
-| `stg_id`                 | uuid                     | YES      |         |             |
-| `approved_at`            | timestamp with time zone | YES      |         |             |
-| `relevance_score`        | numeric                  | YES      |         |             |
-| `executive_summary`      | text                     | YES      |         |             |
-| `skip_reason`            | text                     | YES      |         |             |
-| `status_code`            | smallint                 | YES      |         |             |
-| `entry_type`             | text                     | YES      |         |             |
-| `reviewed_by`            | uuid                     | YES      |         |             |
-| `current_run_id`         | uuid                     | YES      |         |             |
