@@ -1,7 +1,7 @@
 # Database Schema Reference
 
 > **Auto-generated** by `npm run dump:schema`  
-> **Last updated:** 2026-01-28T14:00:53.726Z
+> **Last updated:** 2026-01-28T15:21:57.036Z
 
 This file is the single source of truth for AI assistants to understand the database structure.
 
@@ -43,6 +43,7 @@ This file is the single source of truth for AI assistants to understand the data
 | `kb_geography`                     | 30   | PK: id             |
 | `kb_publication`                   | 142  | PK: id             |
 | `kb_publication_ag_vendor`         | 0    | PK: publication_id |
+| `kb_publication_audience`          | 138  | PK: publication_id |
 | `kb_publication_bfsi_industry`     | 176  | PK: publication_id |
 | `kb_publication_bfsi_organization` | 2    | PK: publication_id |
 | `kb_publication_bfsi_process`      | 7    | PK: process_code   |
@@ -305,8 +306,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column       | Type                     | Nullable | Default | Constraints    |
 | ------------ | ------------------------ | -------- | ------- | -------------- |
-| `user_id`    | uuid                     | NO       |         | PK             |
 | `user_id`    | uuid                     | NO       |         | FK → null.null |
+| `user_id`    | uuid                     | NO       |         | PK             |
 | `created_at` | timestamp with time zone | YES      | now()   |                |
 
 ### `audit_log`
@@ -803,11 +804,22 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column           | Type    | Nullable | Default | Constraints            |
 | ---------------- | ------- | -------- | ------- | ---------------------- |
-| `publication_id` | uuid    | NO       |         | FK → kb_publication.id |
 | `publication_id` | uuid    | NO       |         | PK                     |
+| `publication_id` | uuid    | NO       |         | FK → kb_publication.id |
 | `vendor_id`      | uuid    | NO       |         | FK → ag_vendor.id      |
 | `vendor_id`      | uuid    | NO       |         | PK                     |
 | `rank`           | integer | YES      | 0       |                        |
+
+### `kb_publication_audience`
+
+**Rows:** 138
+
+| Column           | Type    | Nullable | Default | Constraints            |
+| ---------------- | ------- | -------- | ------- | ---------------------- |
+| `publication_id` | uuid    | NO       |         | FK → kb_publication.id |
+| `publication_id` | uuid    | NO       |         | PK                     |
+| `audience_code`  | text    | NO       |         | PK                     |
+| `score`          | numeric | YES      | 0.0     |                        |
 
 ### `kb_publication_bfsi_industry`
 
@@ -826,8 +838,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column            | Type    | Nullable | Default | Constraints               |
 | ----------------- | ------- | -------- | ------- | ------------------------- |
-| `publication_id`  | uuid    | NO       |         | FK → kb_publication.id    |
 | `publication_id`  | uuid    | NO       |         | PK                        |
+| `publication_id`  | uuid    | NO       |         | FK → kb_publication.id    |
 | `organization_id` | uuid    | NO       |         | FK → bfsi_organization.id |
 | `organization_id` | uuid    | NO       |         | PK                        |
 | `rank`            | integer | YES      | 0       |                           |
@@ -862,8 +874,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column           | Type    | Nullable | Default | Constraints            |
 | ---------------- | ------- | -------- | ------- | ---------------------- |
-| `publication_id` | uuid    | NO       |         | FK → kb_publication.id |
 | `publication_id` | uuid    | NO       |         | PK                     |
+| `publication_id` | uuid    | NO       |         | FK → kb_publication.id |
 | `topic_code`     | text    | NO       |         | PK                     |
 | `rank`           | integer | YES      | 0       |                        |
 
@@ -901,9 +913,10 @@ This file is the single source of truth for AI assistants to understand the data
 | `summary_medium`   | text                     | YES      |         |             |
 | `summary_long`     | text                     | YES      |         |             |
 | `content_type`     | text                     | YES      |         |             |
-| `audience`         | text                     | YES      |         |             |
 | `geography`        | text                     | YES      |         |             |
 | `status`           | text                     | YES      |         |             |
+| `origin_queue_id`  | uuid                     | YES      |         |             |
+| `audience`         | text                     | YES      |         |             |
 | `industry`         | text                     | YES      |         |             |
 | `topic`            | text                     | YES      |         |             |
 | `industries`       | ARRAY                    | YES      |         |             |
@@ -919,8 +932,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column            | Type | Nullable | Default | Constraints            |
 | ----------------- | ---- | -------- | ------- | ---------------------- |
-| `publication_id`  | uuid | NO       |         | FK → kb_publication.id |
 | `publication_id`  | uuid | NO       |         | PK                     |
+| `publication_id`  | uuid | NO       |         | FK → kb_publication.id |
 | `regulation_code` | text | NO       |         | PK                     |
 
 ### `kb_publication_regulator`
@@ -929,8 +942,8 @@ This file is the single source of truth for AI assistants to understand the data
 
 | Column           | Type | Nullable | Default | Constraints            |
 | ---------------- | ---- | -------- | ------- | ---------------------- |
-| `publication_id` | uuid | NO       |         | PK                     |
 | `publication_id` | uuid | NO       |         | FK → kb_publication.id |
+| `publication_id` | uuid | NO       |         | PK                     |
 | `regulator_code` | text | NO       |         | PK                     |
 
 ### `kb_publication_standard`
@@ -940,8 +953,8 @@ This file is the single source of truth for AI assistants to understand the data
 | Column           | Type                     | Nullable | Default | Constraints      |
 | ---------------- | ------------------------ | -------- | ------- | ---------------- |
 | `resource_id`    | integer                  | NO       |         | PK               |
-| `standard_id`    | bigint                   | NO       |         | PK               |
 | `standard_id`    | bigint                   | NO       |         | FK → standard.id |
+| `standard_id`    | bigint                   | NO       |         | PK               |
 | `rank`           | integer                  | YES      | 0       |                  |
 | `created_at`     | timestamp with time zone | YES      | now()   |                  |
 | `publication_id` | uuid                     | YES      |         |                  |
@@ -1133,8 +1146,8 @@ This file is the single source of truth for AI assistants to understand the data
 | ------------------ | -------- | -------- | ----------------- | --------------------------- |
 | `id`               | uuid     | NO       | gen_random_uuid() | PK                          |
 | `pipeline_id`      | uuid     | NO       |                   | FK → pipeline_definition.id |
-| `from_status_code` | smallint | YES      |                   | FK → status_lookup.code     |
 | `from_status_code` | smallint | YES      |                   | UNIQUE                      |
+| `from_status_code` | smallint | YES      |                   | FK → status_lookup.code     |
 | `trigger_type`     | text     | NO       |                   | UNIQUE                      |
 | `priority`         | integer  | YES      | 0                 |                             |
 | `is_active`        | boolean  | YES      | true              |                             |
@@ -1168,8 +1181,8 @@ This file is the single source of truth for AI assistants to understand the data
 | `id`                  | uuid     | NO       | gen_random_uuid() | PK                          |
 | `pipeline_id`         | uuid     | NO       |                   | FK → pipeline_definition.id |
 | `pipeline_id`         | uuid     | NO       |                   | UNIQUE                      |
-| `from_status_code`    | smallint | YES      |                   | FK → status_lookup.code     |
 | `from_status_code`    | smallint | YES      |                   | UNIQUE                      |
+| `from_status_code`    | smallint | YES      |                   | FK → status_lookup.code     |
 | `exit_status_code`    | smallint | NO       |                   | FK → status_lookup.code     |
 | `is_manual`           | boolean  | YES      | false             |                             |
 | `failure_status_code` | smallint | YES      |                   | FK → status_lookup.code     |
@@ -1220,8 +1233,8 @@ This file is the single source of truth for AI assistants to understand the data
 | `pipeline_id`     | uuid                     | NO       |                   | UNIQUE                      |
 | `pipeline_id`     | uuid                     | NO       |                   | UNIQUE                      |
 | `pipeline_id`     | uuid                     | NO       |                   | FK → pipeline_definition.id |
-| `step_name`       | text                     | NO       |                   | FK → step_registry.name     |
 | `step_name`       | text                     | NO       |                   | UNIQUE                      |
+| `step_name`       | text                     | NO       |                   | FK → step_registry.name     |
 | `step_order`      | integer                  | NO       |                   | UNIQUE                      |
 | `is_required`     | boolean                  | YES      | true              |                             |
 | `timeout_seconds` | integer                  | YES      | 300               |                             |
@@ -1686,18 +1699,13 @@ This file is the single source of truth for AI assistants to understand the data
 
 **Rows:** 55
 
-| Column                   | Type                     | Nullable | Default | Constraints |
-| ------------------------ | ------------------------ | -------- | ------- | ----------- |
-| `id`                     | uuid                     | YES      |         |             |
-| `url`                    | text                     | YES      |         |             |
-| `url_norm`               | text                     | YES      |         |             |
-| `content_hash`           | text                     | YES      |         |             |
-| `content_type`           | text                     | YES      |         |             |
-| `payload`                | jsonb                    | YES      |         |             |
-| `payload_schema_version` | integer                  | YES      |         |             |
-| `raw_ref`                | text                     | YES      |         |             |
-| `thumb_ref`              | text                     | YES      |         |             |
-| `etag`                   | text                     | YES      |         |             |
-| `last_modified`          | timestamp with time zone | YES      |         |             |
-| `discovered_at`          | timestamp with time zone | YES      |         |             |
-| `fetched_at`             | timestamp with time zone | YES      |         |             |
+| Column                   | Type    | Nullable | Default | Constraints |
+| ------------------------ | ------- | -------- | ------- | ----------- |
+| `id`                     | uuid    | YES      |         |             |
+| `url`                    | text    | YES      |         |             |
+| `url_norm`               | text    | YES      |         |             |
+| `content_hash`           | text    | YES      |         |             |
+| `content_type`           | text    | YES      |         |             |
+| `payload`                | jsonb   | YES      |         |             |
+| `payload_schema_version` | integer | YES      |         |             |
+| `raw_ref`                | text    | YES      |         |             |
