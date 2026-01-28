@@ -38,15 +38,11 @@ const items = [...publications]
     };
   });
 
-const feed = rss({
+return rss({
   title: feedTitle,
   description: feedDescription,
   site: new URL('https://www.bfsiinsights.com/'),
   items,
   stylesheet: true,
 });
-
-Astro.response.headers.set('Content-Type', 'application/xml; charset=utf-8');
 ---
-
-{feed}

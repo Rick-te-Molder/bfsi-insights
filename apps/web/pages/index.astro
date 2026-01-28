@@ -208,8 +208,9 @@ const expandItemThumb = (t?: string | null) => {
       });
     }
 
-    if (document.readyState !== 'loading') initAudienceFilter();
-    else window.addEventListener('DOMContentLoaded', initAudienceFilter);
+    if (document.readyState === 'loading')
+      window.addEventListener('DOMContentLoaded', initAudienceFilter);
+    else initAudienceFilter();
   </script>
 
   <!-- Image enhancement -->
@@ -259,8 +260,9 @@ const expandItemThumb = (t?: string | null) => {
       });
     }
 
-    if (document.readyState !== 'loading') enhanceImages();
-    else window.addEventListener('DOMContentLoaded', () => enhanceImages());
+    if (document.readyState === 'loading')
+      window.addEventListener('DOMContentLoaded', () => enhanceImages());
+    else enhanceImages();
   </script>
 
   <!-- Card expand/collapse -->

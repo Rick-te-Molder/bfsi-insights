@@ -43,26 +43,26 @@ const {
 } = Astro.props;
 
 // Flatten specified roots: promote children to L1, remove the root itself
-const flattenItems = (items: TaxonomyItem[], rootsToFlatten: string[]): TaxonomyItem[] => {
-  if (rootsToFlatten.length === 0) return items;
+const flattenItems = (nodes: TaxonomyItem[], rootsToFlatten: string[]): TaxonomyItem[] => {
+  if (rootsToFlatten.length === 0) return nodes;
   const result: TaxonomyItem[] = [];
-  for (const item of items) {
-    if (rootsToFlatten.includes(item.code)) {
+  for (const node of nodes) {
+    if (rootsToFlatten.includes(node.code)) {
       // Promote children to L1 level as siblings, don't keep the root
-      if (item.children && item.children.length > 0) {
-        result.push(...item.children.map((child) => ({ ...child, level: 1, parent_code: null })));
+      if (node.children && node.children.length > 0) {
+        result.push(...node.children.map((child) => ({ ...child, level: 1, parent_code: null })));
       }
     } else {
-      result.push(item);
+      result.push(node);
     }
   }
   return result;
 };
 
 // Hide specified roots completely from the filter UI
-const filterHiddenRoots = (items: TaxonomyItem[], rootsToHide: string[]): TaxonomyItem[] => {
-  if (rootsToHide.length === 0) return items;
-  return items.filter((item) => !rootsToHide.includes(item.code));
+const filterHiddenRoots = (nodes: TaxonomyItem[], rootsToHide: string[]): TaxonomyItem[] => {
+  if (rootsToHide.length === 0) return nodes;
+  return nodes.filter((node) => !rootsToHide.includes(node.code));
 };
 
 const displayItems = filterHiddenRoots(flattenItems(items, flattenRoots), hideRoots);
