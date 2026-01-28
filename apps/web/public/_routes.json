@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "include": ["/*"],
+  "exclude": [
+    "/",
+    "/_astro/*",
+    "/favicon-dark.svg",
+    "/favicon-light.svg",
+    "/safari-pinned-tab.svg",
+    "/scripts/*",
+    "/feed.xml",
+    "/login",
+    "/sources",
+    "/updates.json"
+  ]
+}
