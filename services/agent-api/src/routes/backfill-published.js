@@ -15,6 +15,11 @@
 import express from 'express';
 import { getSupabaseAdminClient } from '../clients/supabase.js';
 import { fetchAndStoreRaw } from '../lib/raw-storage.js';
+import {
+  logRawStoreResult,
+  processItemsInBatches,
+  updateQueueItemWithRawStorage as updateQueueItemWithRawStorageImpl,
+} from '../lib/backfill-helpers.js';
 
 const router = express.Router();
 
@@ -70,24 +75,7 @@ async function getPublishedItemsNeedingBackfill(limit) {
 async function updateQueueItemWithRawStorage(queueId, rawResult) {
   const supabase = getSupabaseAdminClient();
 
-  const { error } = await supabase
-    .from('ingestion_queue')
-    .update({
-      raw_ref: rawResult.rawRef,
-      content_hash: rawResult.contentHash,
-      mime: rawResult.mime,
-      final_url: rawResult.finalUrl,
-      original_url: rawResult.originalUrl === rawResult.finalUrl ? null : rawResult.originalUrl,
-      fetch_status: rawResult.fetchStatus,
-      fetch_error: rawResult.fetchError,
-      fetched_at: new Date().toISOString(),
-      oversize_bytes: rawResult.oversizeBytes || null,
-    })
-    .eq('id', queueId);
-
-  if (error) {
-    throw new Error(`Failed to update queue item: ${error.message}`);
-  }
+  await updateQueueItemWithRawStorageImpl(supabase, queueId, rawResult);
 }
 
 /**
@@ -164,12 +152,7 @@ function buildSuccessResult(item, rawRef) {
 }
 
 function logStoreResult(rawResult) {
-  if (rawResult.rawStoreMode === 'none' && rawResult.oversizeBytes) {
-    const mb = (rawResult.oversizeBytes / 1024 / 1024).toFixed(1);
-    console.log(`  ⚠️  Oversize (${mb} MB) - hash stored, file not stored`);
-    return;
-  }
-  console.log(`  ✅ Stored: ${rawResult.rawRef}`);
+  logRawStoreResult(rawResult);
 }
 
 async function upsertQueueLink(item, rawResult) {
@@ -199,9 +182,8 @@ async function processPublishedItem(item) {
     logStoreResult(rawResult);
     return buildSuccessResult(item, rawResult.rawRef);
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error(`  ❌ Error: ${message}`);
-    return buildFailureResult(item, message);
+    console.error(`  ❌ Error: ${String(err)}`);
+    return buildFailureResult(item, String(err));
   }
 }
 
@@ -209,23 +191,7 @@ async function processPublishedItem(item) {
  * Process items in batches with delay
  */
 async function processBatch(items, batchSize, delayMs) {
-  const results = [];
-
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    console.log(`\nBatch ${Math.floor(i / batchSize) + 1}/${Math.ceil(items.length / batchSize)}`);
-
-    const batchResults = await Promise.all(batch.map((item) => processPublishedItem(item)));
-    results.push(...batchResults);
-
-    // Delay between batches (except for last batch)
-    if (i + batchSize < items.length && delayMs > 0) {
-      console.log(`  Waiting ${delayMs}ms before next batch...`);
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-    }
-  }
-
-  return results;
+  return processItemsInBatches(items, batchSize, delayMs, (item) => processPublishedItem(item));
 }
 
 /**
