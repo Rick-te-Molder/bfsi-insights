@@ -46,6 +46,7 @@ async function updateExistingPublication(
       thumbnail: data.thumbnailUrl,
       thumbnail_bucket: data.thumbnailBucket,
       thumbnail_path: data.thumbnailPath,
+      status: 'published',
       last_edited_at: new Date().toISOString(),
     })
     .eq('id', id);
