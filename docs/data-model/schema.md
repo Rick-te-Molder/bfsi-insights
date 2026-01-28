@@ -1,7 +1,7 @@
 # Database Schema Reference
 
 > **Auto-generated** by `npm run dump:schema`  
-> **Last updated:** 2026-01-28T22:24:16.666Z
+> **Last updated:** 2026-01-28T22:35:03.997Z
 
 This file is the single source of truth for AI assistants to understand the database structure.
 
@@ -69,7 +69,7 @@ This file is the single source of truth for AI assistants to understand the data
 | `pipeline_run`                     | 318  | PK: id             |
 | `pipeline_run_costs`               | 190  |                    |
 | `pipeline_step`                    | 8    | PK: id             |
-| `pipeline_step_run`                | ?    | PK: id             |
+| `pipeline_step_run`                | 618  | PK: id             |
 | `process_taxonomy_apqc`            | 54   | PK: id             |
 | `process_taxonomy_basel`           | 19   | PK: id             |
 | `process_taxonomy_bian`            | 24   | PK: id             |
@@ -83,7 +83,7 @@ This file is the single source of truth for AI assistants to understand the data
 | `prompt_ab_test`                   | 1    | PK: id             |
 | `prompt_ab_test_item`              | 0    | PK: id             |
 | `prompt_version`                   | 21   | PK: id             |
-| `proposed_entity`                  | 2    | PK: id             |
+| `proposed_entity`                  | ?    | PK: id             |
 | `publication_edit_history`         | 0    |                    |
 | `raw_object`                       | 662  | PK: content_hash   |
 | `ref_filter_config`                | 8    | PK: column_name    |
@@ -1245,7 +1245,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `pipeline_step_run`
 
-**Rows:** ?
+**Rows:** 618
 
 | Column            | Type                     | Nullable | Default           | Constraints          |
 | ----------------- | ------------------------ | -------- | ----------------- | -------------------- |
@@ -1464,7 +1464,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `proposed_entity`
 
-**Rows:** 2
+**Rows:** ?
 
 | Column            | Type                     | Nullable | Default           | Constraints             |
 | ----------------- | ------------------------ | -------- | ----------------- | ----------------------- |
