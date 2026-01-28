@@ -10,6 +10,8 @@ import jobsRoutes from './routes/jobs.js';
 import discoveryControlRoutes from './routes/discovery-control.js';
 import evalsRoutes from './routes/evals.js';
 import rawContentRoutes from './routes/raw-content.js';
+import backfillRawStorageRoutes from './routes/backfill-raw-storage.js';
+import backfillPublishedRoutes from './routes/backfill-published.js';
 import { requireApiKey } from './middleware/auth.js';
 import { getSupabaseAdminClient } from './clients/supabase.js';
 import { syncUtilityVersionsToDb } from './lib/utility-versions.js';
@@ -104,6 +106,8 @@ app.use('/api/scheduler', requireApiKey, jobsRoutes);
 app.use('/api/discovery', requireApiKey, discoveryControlRoutes);
 app.use('/api/evals', requireApiKey, evalsRoutes);
 app.use('/api/raw-content', requireApiKey, rawContentRoutes);
+app.use('/api/backfill-raw-storage', requireApiKey, backfillRawStorageRoutes);
+app.use('/api/backfill-published', requireApiKey, backfillPublishedRoutes);
 app.use('/api/agents', requireApiKey, agentRoutes);
 
 app.listen(port, () => {
