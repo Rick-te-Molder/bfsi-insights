@@ -32,7 +32,8 @@ function createMenuController({ menuBtn, menu, overlay }) {
 function wireMobileMenuEvents({ menuBtn, menu, closeBtn, overlay, openMenu, closeMenu }) {
   menuBtn?.addEventListener('click', () => {
     const open = menuBtn.getAttribute('aria-expanded') === 'true';
-    open ? closeMenu() : openMenu();
+    if (open) closeMenu();
+    else openMenu();
   });
 
   closeBtn?.addEventListener('click', closeMenu);

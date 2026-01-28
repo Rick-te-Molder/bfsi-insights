@@ -104,26 +104,26 @@ import Base from '../layouts/Base.astro';
       return { form, emailInput, passwordInput, errorDiv, submitBtn, btnText, btnLoading };
     }
 
-    const makeErrorFns = (/** @type {HTMLDivElement} */ errorDiv) => ({
+    const makeErrorFns = (/** @type {HTMLDivElement} */ errEl) => ({
       show: (/** @type {string} */ message) => {
-        errorDiv.textContent = message;
-        errorDiv.classList.remove('hidden');
+        errEl.textContent = message;
+        errEl.classList.remove('hidden');
       },
       hide: () => {
-        errorDiv.classList.add('hidden');
-        errorDiv.textContent = '';
+        errEl.classList.add('hidden');
+        errEl.textContent = '';
       },
     });
 
     const setLoading = (
-      /** @type {HTMLButtonElement} */ submitBtn,
-      /** @type {HTMLElement} */ btnText,
-      /** @type {HTMLElement} */ btnLoading,
+      /** @type {HTMLButtonElement} */ submitButton,
+      /** @type {HTMLElement} */ buttonText,
+      /** @type {HTMLElement} */ buttonLoading,
       /** @type {boolean} */ isLoading,
     ) => {
-      submitBtn.disabled = isLoading;
-      btnText.classList.toggle('hidden', isLoading);
-      btnLoading.classList.toggle('hidden', !isLoading);
+      submitButton.disabled = isLoading;
+      buttonText.classList.toggle('hidden', isLoading);
+      buttonLoading.classList.toggle('hidden', !isLoading);
     };
 
     const handleSubmit = async (

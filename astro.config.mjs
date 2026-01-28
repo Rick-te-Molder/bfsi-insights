@@ -1,4 +1,5 @@
 import { defineConfig } from 'astro/config';
+import cloudflare from '@astrojs/cloudflare';
 import tailwind from '@astrojs/tailwind';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -24,8 +25,8 @@ export default defineConfig({
   site: 'https://www.bfsiinsights.com',
   srcDir: './apps/web',
   publicDir: './apps/web/public',
-  output: 'static', // Static by default
-  // No adapter needed for pure static
+  output: 'static',
+  adapter: cloudflare(),
   integrations: [tailwind()],
   vite: {
     plugins: [emitHeadersFile()],

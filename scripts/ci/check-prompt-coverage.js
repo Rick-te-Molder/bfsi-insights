@@ -76,9 +76,7 @@ async function main() {
     .select('agent_name, version, stage')
     .eq('stage', 'PRD');
 
-  if (!result1.error) {
-    prompts = result1.data;
-  } else {
+  if (result1.error) {
     // Fall back to prompt_versions (old name) for backwards compatibility
     const result2 = await supabase
       .from('prompt_versions')
@@ -86,6 +84,8 @@ async function main() {
       .eq('stage', 'PRD');
     prompts = result2.data;
     promptError = result2.error;
+  } else {
+    prompts = result1.data;
   }
 
   if (promptError) {
@@ -106,13 +106,19 @@ async function main() {
 
   for (const req of requiredPrompts) {
     const exists = currentPrompts.has(req.agent_name);
-    const icon = exists ? '✓' : req.required ? '✗' : '○';
-    const color = exists ? 'green' : req.required ? 'red' : 'yellow';
-    const status = exists
-      ? `v${currentPrompts.get(req.agent_name).version}`
-      : req.required
-        ? 'MISSING'
-        : 'optional';
+    let icon;
+    if (exists) icon = '✓';
+    else if (req.required) icon = '✗';
+    else icon = '○';
+
+    let color;
+    if (exists) color = 'green';
+    else if (req.required) color = 'red';
+    else color = 'yellow';
+    let status;
+    if (exists) status = `v${currentPrompts.get(req.agent_name).version}`;
+    else if (req.required) status = 'MISSING';
+    else status = 'optional';
 
     log(`  ${icon} ${req.agent_name} (${req.type}): ${status}`, color);
 
