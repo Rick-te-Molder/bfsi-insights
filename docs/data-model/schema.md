@@ -1,7 +1,7 @@
 # Database Schema Reference
 
 > **Auto-generated** by `npm run dump:schema`  
-> **Last updated:** 2026-01-28T16:28:21.391Z
+> **Last updated:** 2026-01-28T16:46:41.422Z
 
 This file is the single source of truth for AI assistants to understand the database structure.
 
@@ -20,7 +20,7 @@ This file is the single source of truth for AI assistants to understand the data
 | `agent_run_step`                   | 4166 | PK: id             |
 | `agent_run_summary`                | 3913 |                    |
 | `app_admins`                       | 1    | PK: user_id        |
-| `audit_log`                        | 3134 | PK: id             |
+| `audit_log`                        | 3138 | PK: id             |
 | `bfsi_entity_type`                 | 24   | PK: id             |
 | `bfsi_industry`                    | 53   | PK: id             |
 | `bfsi_industry_pretty`             | 53   |                    |
@@ -43,7 +43,7 @@ This file is the single source of truth for AI assistants to understand the data
 | `kb_geography`                     | 30   | PK: id             |
 | `kb_publication`                   | 142  | PK: id             |
 | `kb_publication_ag_vendor`         | 0    | PK: publication_id |
-| `kb_publication_audience`          | 154  | PK: publication_id |
+| `kb_publication_audience`          | 158  | PK: publication_id |
 | `kb_publication_bfsi_industry`     | 173  | PK: publication_id |
 | `kb_publication_bfsi_organization` | 2    | PK: publication_id |
 | `kb_publication_bfsi_process`      | 7    | PK: process_code   |
@@ -95,7 +95,7 @@ This file is the single source of truth for AI assistants to understand the data
 | `rejection_analytics`              | 1    | PK: id             |
 | `retry_policy`                     | 5    | PK: step_name      |
 | `retry_queue_ready`                | 0    |                    |
-| `review_queue_ready`               | 46   |                    |
+| `review_queue_ready`               | 44   |                    |
 
 ---
 
@@ -312,7 +312,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `audit_log`
 
-**Rows:** 3134
+**Rows:** 3138
 
 | Column        | Type                     | Nullable | Default           | Constraints    |
 | ------------- | ------------------------ | -------- | ----------------- | -------------- |
@@ -812,7 +812,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `kb_publication_audience`
 
-**Rows:** 154
+**Rows:** 158
 
 | Column           | Type    | Nullable | Default | Constraints            |
 | ---------------- | ------- | -------- | ------- | ---------------------- |
@@ -1697,7 +1697,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `review_queue_ready`
 
-**Rows:** 46
+**Rows:** 44
 
 | Column                   | Type    | Nullable | Default | Constraints |
 | ------------------------ | ------- | -------- | ------- | ----------- |
