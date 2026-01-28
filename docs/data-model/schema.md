@@ -1,7 +1,7 @@
 # Database Schema Reference
 
 > **Auto-generated** by `npm run dump:schema`  
-> **Last updated:** 2026-01-28T22:01:17.766Z
+> **Last updated:** 2026-01-28T22:24:16.666Z
 
 This file is the single source of truth for AI assistants to understand the database structure.
 
@@ -69,7 +69,7 @@ This file is the single source of truth for AI assistants to understand the data
 | `pipeline_run`                     | 318  | PK: id             |
 | `pipeline_run_costs`               | 190  |                    |
 | `pipeline_step`                    | 8    | PK: id             |
-| `pipeline_step_run`                | 618  | PK: id             |
+| `pipeline_step_run`                | ?    | PK: id             |
 | `process_taxonomy_apqc`            | 54   | PK: id             |
 | `process_taxonomy_basel`           | 19   | PK: id             |
 | `process_taxonomy_bian`            | 24   | PK: id             |
@@ -1245,7 +1245,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `pipeline_step_run`
 
-**Rows:** 618
+**Rows:** ?
 
 | Column            | Type                     | Nullable | Default           | Constraints          |
 | ----------------- | ------------------------ | -------- | ----------------- | -------------------- |
