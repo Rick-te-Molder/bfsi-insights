@@ -12,8 +12,8 @@ function setDraggingCursor(isDragging: boolean) {
 }
 
 function createMouseMoveHandler(
-  isDragging: React.MutableRefObject<boolean>,
-  containerRef: React.RefObject<HTMLDivElement | null>,
+  isDragging: { current: boolean },
+  containerRef: { current: HTMLDivElement | null },
   setHeight: (height: number) => void,
   minHeight: number,
   maxOffset: number,
@@ -26,7 +26,7 @@ function createMouseMoveHandler(
   };
 }
 
-function createMouseUpHandler(isDragging: React.MutableRefObject<boolean>) {
+function createMouseUpHandler(isDragging: { current: boolean }) {
   return () => {
     isDragging.current = false;
     setDraggingCursor(false);
@@ -34,8 +34,8 @@ function createMouseUpHandler(isDragging: React.MutableRefObject<boolean>) {
 }
 
 function setupMouseListeners(
-  isDragging: React.MutableRefObject<boolean>,
-  containerRef: React.RefObject<HTMLDivElement | null>,
+  isDragging: { current: boolean },
+  containerRef: { current: HTMLDivElement | null },
   setHeight: (height: number) => void,
   minHeight: number,
   maxOffset: number,
