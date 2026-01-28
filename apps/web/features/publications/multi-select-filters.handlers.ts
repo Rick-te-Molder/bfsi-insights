@@ -1,177 +1,280 @@
 import type { FilterState } from './filter-utils';
-import {
-  applyFilterStateToCheckboxes,
-  getFilterStateFromCheckboxes,
-  initFilterState,
-  saveFilters,
-} from './multi-filters/state';
+import { applyFilterStateToCheckboxes, initFilterState, saveFilters } from './multi-filters/state';
 import { updateFilterChips } from './multi-filters/chips';
-import { closePanel, openPanel, updateDateDisplay } from './multi-filters/ui';
+import { closePanel, updateDateDisplay } from './multi-filters/ui';
+import {
+  handleOpenPanel,
+  handleFilterCheckboxChange,
+  handleApplyFilters,
+  handleClearAll,
+} from './multi-select-filters.helpers';
 
-// Helper: Setup filter panel event handlers
+type StateGetter = () => { filterState: FilterState; searchQuery: string; sortOrder: string };
+type StateSetter = (
+  updates: Partial<{ filterState: FilterState; searchQuery: string; sortOrder: string }>,
+) => void;
+
+interface PanelElements {
+  filterPanel: HTMLElement | null;
+  panelCountNumber: HTMLElement | null;
+  filterCheckboxes: NodeListOf<HTMLInputElement>;
+}
+
+interface FilterContext {
+  applyFilters: (state: FilterState, query: string, resetPage: boolean) => number;
+  getState: StateGetter;
+  setState: StateSetter;
+}
+
+function setupOpenPanelHandler(
+  openPanelBtn: HTMLElement | null,
+  elements: PanelElements,
+  context: FilterContext,
+) {
+  openPanelBtn?.addEventListener('click', () => {
+    const state = context.getState();
+    handleOpenPanel(
+      elements.filterPanel,
+      elements.panelCountNumber,
+      elements.filterCheckboxes,
+      context.applyFilters,
+      state.searchQuery,
+    );
+  });
+}
+
+function setupCloseButton(btn: HTMLElement | null, panel: HTMLElement | null) {
+  btn?.addEventListener('click', () => closePanel(panel));
+}
+
+function setupEscapeKey(panel: HTMLElement | null) {
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && panel && !panel.classList.contains('hidden')) {
+      closePanel(panel);
+    }
+  });
+}
+
+function setupClosePanelHandlers(
+  closeBtn: HTMLElement | null,
+  backdrop: HTMLElement | null,
+  panel: HTMLElement | null,
+) {
+  setupCloseButton(closeBtn, panel);
+  setupCloseButton(backdrop, panel);
+  setupEscapeKey(panel);
+}
+
+function setupFilterCheckboxHandlers(
+  checkboxes: NodeListOf<HTMLInputElement>,
+  countEl: HTMLElement | null,
+  context: FilterContext,
+) {
+  checkboxes.forEach((cb) => {
+    cb.addEventListener('change', () => {
+      const state = context.getState();
+      handleFilterCheckboxChange(checkboxes, countEl, context.applyFilters, state.searchQuery);
+    });
+  });
+}
+
+function setupApplyFiltersHandler(
+  btn: HTMLElement | null,
+  elements: PanelElements,
+  context: FilterContext,
+) {
+  btn?.addEventListener('click', () => {
+    const state = context.getState();
+    handleApplyFilters(
+      elements.filterCheckboxes,
+      elements.filterPanel,
+      context.applyFilters,
+      state.searchQuery,
+      state.sortOrder,
+      context.setState,
+      saveFilters,
+    );
+  });
+}
+
+function setupClearAllHandler(
+  btn: HTMLElement | null,
+  checkboxes: NodeListOf<HTMLInputElement>,
+  countEl: HTMLElement | null,
+  context: FilterContext,
+) {
+  btn?.addEventListener('click', () => {
+    const state = context.getState();
+    handleClearAll(checkboxes, countEl, context.applyFilters, state.searchQuery);
+  });
+}
+
 export function setupFilterPanelHandlers(
   elements: any,
   filterCheckboxes: NodeListOf<HTMLInputElement>,
   applyFilters: (state: FilterState, query: string, resetPage: boolean) => number,
-  getState: () => { filterState: FilterState; searchQuery: string; sortOrder: string },
-  setState: (
-    updates: Partial<{ filterState: FilterState; searchQuery: string; sortOrder: string }>,
-  ) => void,
+  getState: StateGetter,
+  setState: StateSetter,
 ) {
-  const {
-    filterPanel,
-    panelBackdrop,
-    closeFilterPanelBtn,
-    openPanelBtn,
-    clearAllBtn,
-    applyFiltersBtn,
-    panelCountNumber,
-  } = elements;
+  const panelElements: PanelElements = {
+    filterPanel: elements.filterPanel,
+    panelCountNumber: elements.panelCountNumber,
+    filterCheckboxes,
+  };
+  const context: FilterContext = { applyFilters, getState, setState };
 
-  openPanelBtn?.addEventListener('click', () => {
-    const state = getState();
-    const tempState = getFilterStateFromCheckboxes(filterCheckboxes);
-    const count = applyFilters(tempState, state.searchQuery, false);
-    openPanel(filterPanel, panelCountNumber, count);
-  });
+  setupOpenPanelHandler(elements.openPanelBtn, panelElements, context);
+  setupClosePanelHandlers(
+    elements.closeFilterPanelBtn,
+    elements.panelBackdrop,
+    elements.filterPanel,
+  );
+  setupFilterCheckboxHandlers(filterCheckboxes, elements.panelCountNumber, context);
+  setupApplyFiltersHandler(elements.applyFiltersBtn, panelElements, context);
+  setupClearAllHandler(elements.clearAllBtn, filterCheckboxes, elements.panelCountNumber, context);
+}
 
-  closeFilterPanelBtn?.addEventListener('click', () => closePanel(filterPanel));
-  panelBackdrop?.addEventListener('click', () => closePanel(filterPanel));
+function handleSearchInput(qEl: HTMLInputElement, context: FilterContext) {
+  const state = context.getState();
+  const newSearchQuery = qEl.value.trim();
+  context.setState({ searchQuery: newSearchQuery });
+  context.applyFilters(state.filterState, newSearchQuery, true);
+  saveFilters(state.filterState, newSearchQuery, state.sortOrder);
+}
 
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && filterPanel && !filterPanel.classList.contains('hidden')) {
-      closePanel(filterPanel);
-    }
-  });
-
-  filterCheckboxes.forEach((cb) => {
-    cb.addEventListener('change', () => {
-      const state = getState();
-      const tempState = getFilterStateFromCheckboxes(filterCheckboxes);
-      const count = applyFilters(tempState, state.searchQuery, true);
-      if (panelCountNumber) panelCountNumber.textContent = String(count);
-    });
-  });
-
-  applyFiltersBtn?.addEventListener('click', () => {
-    const state = getState();
-    const newFilterState = getFilterStateFromCheckboxes(filterCheckboxes);
-    setState({ filterState: newFilterState });
-    applyFilters(newFilterState, state.searchQuery, true);
-    saveFilters(newFilterState, state.searchQuery, state.sortOrder);
-    closePanel(filterPanel);
-  });
-
-  clearAllBtn?.addEventListener('click', () => {
-    const state = getState();
-    filterCheckboxes.forEach((cb) => (cb.checked = false));
-    const tempState = getFilterStateFromCheckboxes(filterCheckboxes);
-    const count = applyFilters(tempState, state.searchQuery, true);
-    if (panelCountNumber) panelCountNumber.textContent = String(count);
+function setupSearchHandler(
+  qEl: HTMLInputElement | null,
+  context: FilterContext,
+  debounced: (fn: () => void) => void,
+) {
+  qEl?.addEventListener('input', () => {
+    debounced(() => handleSearchInput(qEl, context));
   });
 }
 
-// Helper: Setup search and sort handlers
+function handleSortChange(sortSelect: HTMLSelectElement, context: FilterContext) {
+  const state = context.getState();
+  const newSortOrder = sortSelect.value;
+  context.setState({ sortOrder: newSortOrder });
+  context.applyFilters(state.filterState, state.searchQuery, true);
+  updateDateDisplay(newSortOrder);
+  saveFilters(state.filterState, state.searchQuery, newSortOrder);
+}
+
+function setupSortHandler(sortSelect: HTMLSelectElement | null, context: FilterContext) {
+  sortSelect?.addEventListener('change', () => {
+    handleSortChange(sortSelect, context);
+  });
+}
+
 export function setupSearchAndSortHandlers(
   elements: any,
   applyFilters: (state: FilterState, query: string, resetPage: boolean) => number,
-  getState: () => { filterState: FilterState; searchQuery: string; sortOrder: string },
-  setState: (
-    updates: Partial<{ filterState: FilterState; searchQuery: string; sortOrder: string }>,
-  ) => void,
+  getState: StateGetter,
+  setState: StateSetter,
   debounced: (fn: () => void) => void,
 ) {
   const { qEl, sortSelect } = elements;
+  const context: FilterContext = { applyFilters, getState, setState };
+  setupSearchHandler(qEl, context, debounced);
+  setupSortHandler(sortSelect, context);
+}
 
-  qEl?.addEventListener('input', () => {
-    debounced(() => {
-      const state = getState();
-      const newSearchQuery = qEl.value.trim();
-      setState({ searchQuery: newSearchQuery });
-      applyFilters(state.filterState, newSearchQuery, true);
-      saveFilters(state.filterState, newSearchQuery, state.sortOrder);
-    });
-  });
+function handleClearFilters(checkboxes: NodeListOf<HTMLInputElement>, context: FilterContext) {
+  const state = context.getState();
+  checkboxes.forEach((cb) => (cb.checked = false));
+  const newFilterState = initFilterState(checkboxes);
+  context.setState({ filterState: newFilterState });
+  context.applyFilters(newFilterState, state.searchQuery, true);
+  saveFilters(newFilterState, state.searchQuery, state.sortOrder);
+}
 
-  sortSelect?.addEventListener('change', () => {
-    const state = getState();
-    const newSortOrder = sortSelect.value;
-    setState({ sortOrder: newSortOrder });
-    applyFilters(state.filterState, state.searchQuery, true);
-    updateDateDisplay(newSortOrder);
-    saveFilters(state.filterState, state.searchQuery, newSortOrder);
+function setupClearFiltersHandler(
+  btn: HTMLElement | null,
+  checkboxes: NodeListOf<HTMLInputElement>,
+  context: FilterContext,
+) {
+  btn?.addEventListener('click', () => {
+    handleClearFilters(checkboxes, context);
   });
 }
 
-// Helper: Setup empty state handlers
+function handleClearSearch(qEl: HTMLInputElement, context: FilterContext) {
+  const state = context.getState();
+  qEl.value = '';
+  context.setState({ searchQuery: '' });
+  context.applyFilters(state.filterState, '', true);
+  saveFilters(state.filterState, '', state.sortOrder);
+}
+
+function setupClearSearchHandler(
+  btn: HTMLElement | null,
+  qEl: HTMLInputElement | null,
+  context: FilterContext,
+) {
+  btn?.addEventListener('click', () => {
+    if (qEl) handleClearSearch(qEl, context);
+  });
+}
+
 export function setupEmptyStateHandlers(
   elements: any,
   filterCheckboxes: NodeListOf<HTMLInputElement>,
   applyFilters: (state: FilterState, query: string, resetPage: boolean) => number,
-  getState: () => { filterState: FilterState; searchQuery: string; sortOrder: string },
-  setState: (
-    updates: Partial<{ filterState: FilterState; searchQuery: string; sortOrder: string }>,
-  ) => void,
+  getState: StateGetter,
+  setState: StateSetter,
 ) {
   const { emptyClearFilters, emptyClearSearch, qEl } = elements;
-
-  emptyClearFilters?.addEventListener('click', () => {
-    const state = getState();
-    filterCheckboxes.forEach((cb) => (cb.checked = false));
-    const newFilterState = initFilterState(filterCheckboxes);
-    setState({ filterState: newFilterState });
-    applyFilters(newFilterState, state.searchQuery, true);
-    saveFilters(newFilterState, state.searchQuery, state.sortOrder);
-  });
-
-  emptyClearSearch?.addEventListener('click', () => {
-    const state = getState();
-    if (qEl) {
-      qEl.value = '';
-      setState({ searchQuery: '' });
-      applyFilters(state.filterState, '', true);
-      saveFilters(state.filterState, '', state.sortOrder);
-    }
-  });
+  const context: FilterContext = { applyFilters, getState, setState };
+  setupClearFiltersHandler(emptyClearFilters, filterCheckboxes, context);
+  setupClearSearchHandler(emptyClearSearch, qEl, context);
 }
 
-// Helper: Create callback creators
-export function createCallbackCreators({
-  filterState,
-  searchQuery,
-  sortOrder,
-  filterCheckboxes,
-  filterChipsEl,
-  filtersExpanded,
-}: {
+interface CallbackCreatorParams {
   filterState: FilterState;
   searchQuery: string;
   sortOrder: string;
   filterCheckboxes: NodeListOf<HTMLInputElement>;
   filterChipsEl: HTMLElement | null;
   filtersExpanded: boolean;
-}) {
-  const createFilterStateCallback = (s: FilterState) =>
-    applyFilterStateToCheckboxes(s, filterCheckboxes);
+}
 
-  const createSaveFiltersCallback = () => saveFilters(filterState, searchQuery, sortOrder);
+function createFilterStateCallback(checkboxes: NodeListOf<HTMLInputElement>) {
+  return (s: FilterState) => applyFilterStateToCheckboxes(s, checkboxes);
+}
 
-  const createInitFilterStateCallback = () => initFilterState(filterCheckboxes);
+function createSaveCallback(state: FilterState, query: string, sort: string) {
+  return () => saveFilters(state, query, sort);
+}
 
-  const createUpdateFilterChipsCallback = (s: FilterState, q: string) =>
+function createInitCallback(checkboxes: NodeListOf<HTMLInputElement>) {
+  return () => initFilterState(checkboxes);
+}
+
+function createChipsCallback(chipsEl: HTMLElement | null, expanded: boolean) {
+  return (s: FilterState, q: string) =>
     updateFilterChips(
       s,
       q,
-      filterChipsEl,
-      filtersExpanded,
+      chipsEl,
+      expanded,
       () => {},
       () => {},
     );
+}
 
+export function createCallbackCreators(params: CallbackCreatorParams) {
   return {
-    createFilterStateCallback,
-    createSaveFiltersCallback,
-    createInitFilterStateCallback,
-    createUpdateFilterChipsCallback,
+    createFilterStateCallback: createFilterStateCallback(params.filterCheckboxes),
+    createSaveFiltersCallback: createSaveCallback(
+      params.filterState,
+      params.searchQuery,
+      params.sortOrder,
+    ),
+    createInitFilterStateCallback: createInitCallback(params.filterCheckboxes),
+    createUpdateFilterChipsCallback: createChipsCallback(
+      params.filterChipsEl,
+      params.filtersExpanded,
+    ),
   };
 }
