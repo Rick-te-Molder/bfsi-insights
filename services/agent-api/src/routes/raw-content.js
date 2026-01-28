@@ -11,9 +11,9 @@
 import express from 'express';
 import { getSupabaseAdminClient } from '../clients/supabase.js';
 import { takedownByHash, takedownByQueueId } from '../lib/raw-storage.js';
+import { handleGetSignedUrl, handleTakedown } from '../lib/raw-content-handlers.js';
 
 const router = express.Router();
-const SIGNED_URL_EXPIRY = 3600; // 1 hour
 
 /** Get Supabase client */
 function getSupabase() {
@@ -46,45 +46,19 @@ async function getRawRefByHash(hash) {
   return { item: { raw_ref: data?.storage_key, storage_deleted_at: data?.deleted_at } };
 }
 
-/** Create signed URL for raw content */
-async function createSignedUrl(rawRef) {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.storage
-    .from('kb-raw')
-    .createSignedUrl(rawRef, SIGNED_URL_EXPIRY);
-
-  if (error) return { signedUrl: null, error: error.message };
-  return { signedUrl: data?.signedUrl };
-}
-
 /**
  * GET /by-queue/:queueId
  * Get signed URL for raw content by queue ID
  */
 router.get('/by-queue/:queueId', async (req, res) => {
   const { queueId } = req.params;
-
   const { item, error: fetchError } = await getQueueItem(queueId);
 
-  if (fetchError || !item) {
+  if (fetchError) {
     return res.status(404).json({ error: 'Queue item not found' });
   }
 
-  if (!item.raw_ref) {
-    return res.status(404).json({ error: 'Original not stored' });
-  }
-
-  if (item.storage_deleted_at) {
-    return res.status(410).json({ error: 'Original was deleted' });
-  }
-
-  const { signedUrl, error: urlError } = await createSignedUrl(item.raw_ref);
-
-  if (urlError || !signedUrl) {
-    return res.status(500).json({ error: 'Failed to create signed URL' });
-  }
-
-  return res.json({ signedUrl });
+  return handleGetSignedUrl(item, res, 'Queue item not found');
 });
 
 /**
@@ -93,28 +67,13 @@ router.get('/by-queue/:queueId', async (req, res) => {
  */
 router.get('/by-hash/:hash', async (req, res) => {
   const { hash } = req.params;
-
   const { item, error: fetchError } = await getRawRefByHash(hash);
 
-  if (fetchError || !item) {
+  if (fetchError) {
     return res.status(404).json({ error: 'Content not found' });
   }
 
-  if (!item.raw_ref) {
-    return res.status(404).json({ error: 'Original not stored' });
-  }
-
-  if (item.storage_deleted_at) {
-    return res.status(410).json({ error: 'Original was deleted' });
-  }
-
-  const { signedUrl, error: urlError } = await createSignedUrl(item.raw_ref);
-
-  if (urlError || !signedUrl) {
-    return res.status(500).json({ error: 'Failed to create signed URL' });
-  }
-
-  return res.json({ signedUrl });
+  return handleGetSignedUrl(item, res, 'Content not found');
 });
 
 /**
@@ -123,20 +82,7 @@ router.get('/by-hash/:hash', async (req, res) => {
  */
 router.delete('/by-queue/:queueId', async (req, res) => {
   const { queueId } = req.params;
-  const { reason, requestedBy } = req.body;
-
-  if (!reason || !requestedBy) {
-    return res.status(400).json({ error: 'Missing required fields: reason, requestedBy' });
-  }
-
-  const result = await takedownByQueueId(queueId, reason, requestedBy);
-
-  if (!result.success) {
-    const status = result.error === 'Content not found' ? 404 : 500;
-    return res.status(status).json({ error: result.error });
-  }
-
-  return res.json({ success: true, rowsAffected: result.rowsAffected });
+  return handleTakedown(takedownByQueueId, queueId, req.body, res);
 });
 
 /**
@@ -145,20 +91,7 @@ router.delete('/by-queue/:queueId', async (req, res) => {
  */
 router.delete('/by-hash/:hash', async (req, res) => {
   const { hash } = req.params;
-  const { reason, requestedBy } = req.body;
-
-  if (!reason || !requestedBy) {
-    return res.status(400).json({ error: 'Missing required fields: reason, requestedBy' });
-  }
-
-  const result = await takedownByHash(hash, reason, requestedBy);
-
-  if (!result.success) {
-    const status = result.error === 'Content not found' ? 404 : 500;
-    return res.status(status).json({ error: result.error });
-  }
-
-  return res.json({ success: true, rowsAffected: result.rowsAffected });
+  return handleTakedown(takedownByHash, hash, req.body, res);
 });
 
 export default router;
