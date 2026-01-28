@@ -403,6 +403,6 @@ CREATE TABLE discovery_metrics (
 ## Next Steps
 
 1. Review and refine this document
-2. Create Linear issues for each phase
+2. Create issues for each phase
 3. Start with Phase 1 (Relevance Agent)
 4. Measure impact before proceeding to Phase 2

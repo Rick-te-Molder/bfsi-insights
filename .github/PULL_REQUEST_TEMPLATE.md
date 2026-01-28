@@ -117,7 +117,7 @@ Write this like a short human summary.
 
 ## PR Reference
 
-<!-- Auto-filled by GitHub, but include for Linear/tracking -->
+<!-- Auto-filled by GitHub, but include for issue tracking -->
 
 **PR**: #<!-- PR number will be auto-filled -->
 **Link**: <!-- https://github.com/Rick-te-Molder/bfsi-insights/pull/XXX -->

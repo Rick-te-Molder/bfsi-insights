@@ -57,4 +57,4 @@ WHERE agent_name = 'taxonomy-tagger' AND is_current = true;
 | `model_id`    | Target model (e.g., `gpt-4o-mini`)                |
 | `stage`       | `production`, `staging`, or `development`         |
 | `is_current`  | `true` for active version, `false` for historical |
-| `notes`       | Linear issue ref + description                    |
+| `notes`       | Issue reference + description                     |
