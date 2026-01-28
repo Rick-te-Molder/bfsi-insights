@@ -139,7 +139,21 @@ async function searchQueueByTitle(searchQuery: string, statusCodes: StatusCodes)
     searchPublicationsByTitle(supabase, searchQuery),
   ]);
   const pubItems = mapPublicationsToQueueItems(pubRows, getPublishedStatusCode(statusCodes));
-  return { items: [...queueItems, ...pubItems], sources: [] };
+
+  // Deduplicate by URL: prefer published items over queue items
+  const urlMap = new Map<string, QueueItem>();
+
+  // Add queue items first
+  for (const item of queueItems) {
+    urlMap.set(item.url, item);
+  }
+
+  // Override with published items (they take precedence)
+  for (const item of pubItems) {
+    urlMap.set(item.url, item);
+  }
+
+  return { items: Array.from(urlMap.values()), sources: [] };
 }
 
 async function getPublishedItems(statusCodes: StatusCodes) {
