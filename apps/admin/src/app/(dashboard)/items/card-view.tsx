@@ -58,7 +58,12 @@ function CardHeader({
 function ExpandedContent({
   summary,
   payload,
-}: Readonly<{ summary: { medium?: string }; payload: Record<string, unknown> }>) {
+  taxonomyConfig,
+}: Readonly<{
+  summary: { medium?: string };
+  payload: Record<string, unknown>;
+  taxonomyConfig: TaxonomyConfig[];
+}>) {
   return (
     <>
       <div className="mt-2 max-h-48 overflow-y-auto rounded-md border border-neutral-800 bg-neutral-800/40 p-3">
@@ -68,7 +73,7 @@ function ExpandedContent({
           <p className="text-sm text-neutral-500 italic">No summary available</p>
         )}
       </div>
-      <ExpandedTags payload={payload} />
+      <ExpandedTags payload={payload} taxonomyConfig={taxonomyConfig} />
     </>
   );
 }
@@ -79,12 +84,14 @@ function CollapsedContent({
   summary,
   payload,
   onToggle,
+  taxonomyConfig,
 }: Readonly<{
   thumbnailUrl?: string;
   sourceName: string;
   summary: { short?: string };
   payload: Record<string, unknown>;
   onToggle: () => void;
+  taxonomyConfig: TaxonomyConfig[];
 }>) {
   return (
     <>
@@ -92,7 +99,7 @@ function CollapsedContent({
       {summary.short && (
         <p className="mt-2 text-sm text-neutral-300 line-clamp-2">{summary.short}</p>
       )}
-      <CollapsedTags payload={payload} onToggle={onToggle} />
+      <CollapsedTags payload={payload} onToggle={onToggle} taxonomyConfig={taxonomyConfig} />
     </>
   );
 }
@@ -114,6 +121,7 @@ interface CardBodyProps {
   sourceName: string;
   isExpanded: boolean;
   onToggle: () => void;
+  taxonomyConfig: TaxonomyConfig[];
 }
 
 function CardBody({
@@ -123,16 +131,15 @@ function CardBody({
   sourceName,
   isExpanded,
   onToggle,
+  taxonomyConfig,
 }: Readonly<CardBodyProps>) {
+  const title = (payload.title as string) || 'Untitled';
+  const publishedAt = payload.published_at as string | undefined;
   return (
     <div className="relative z-10 pointer-events-none">
-      <CardHeader
-        title={(payload.title as string) || 'Untitled'}
-        publishedAt={payload.published_at as string | undefined}
-        sourceName={sourceName}
-      />
+      <CardHeader title={title} publishedAt={publishedAt} sourceName={sourceName} />
       {isExpanded ? (
-        <ExpandedContent summary={summary} payload={payload} />
+        <ExpandedContent summary={summary} payload={payload} taxonomyConfig={taxonomyConfig} />
       ) : (
         <CollapsedContent
           thumbnailUrl={thumbnailUrl}
@@ -140,25 +147,31 @@ function CardBody({
           summary={summary}
           payload={payload}
           onToggle={onToggle}
+          taxonomyConfig={taxonomyConfig}
         />
       )}
     </div>
   );
 }
 
-function ItemCard({
-  item,
-  isExpanded,
-  onToggle,
-  status,
-}: Readonly<{ item: QueueItem; isExpanded: boolean; onToggle: () => void; status: string }>) {
+const CARD_STYLES =
+  'rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition-all hover:border-neutral-700 hover:ring-neutral-700 hover:bg-neutral-900 relative';
+
+interface ItemCardProps {
+  item: QueueItem;
+  isExpanded: boolean;
+  onToggle: () => void;
+  status: string;
+  taxonomyConfig: TaxonomyConfig[];
+}
+
+function ItemCard({ item, isExpanded, onToggle, status, taxonomyConfig }: Readonly<ItemCardProps>) {
   const { payload, summary, thumbnailUrl, sourceName } = useCardData(item);
+  const title = (payload.title as string) || 'Untitled';
+  const detailUrl = `/items/${item.id}?view=card&status=${status}`;
   return (
-    <li className="rounded-2xl border border-neutral-800 bg-neutral-900/60 p-5 shadow-sm ring-1 ring-neutral-800/40 transition-all hover:border-neutral-700 hover:ring-neutral-700 hover:bg-neutral-900 relative">
-      <CardLink
-        detailUrl={`/items/${item.id}?view=card&status=${status}`}
-        title={(payload.title as string) || 'Untitled'}
-      />
+    <li className={CARD_STYLES}>
+      <CardLink detailUrl={detailUrl} title={title} />
       <CardStatusBadge statusCode={item.status_code} />
       <CardBody
         payload={payload}
@@ -167,12 +180,13 @@ function ItemCard({
         sourceName={sourceName}
         isExpanded={isExpanded}
         onToggle={onToggle}
+        taxonomyConfig={taxonomyConfig}
       />
     </li>
   );
 }
 
-export default function CardView({ items, status }: Readonly<CardViewProps>) {
+export default function CardView({ items, status, taxonomyConfig }: Readonly<CardViewProps>) {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   const toggleCard = (id: string) => {
@@ -196,6 +210,7 @@ export default function CardView({ items, status }: Readonly<CardViewProps>) {
           isExpanded={expandedCards.has(item.id)}
           onToggle={() => toggleCard(item.id)}
           status={status}
+          taxonomyConfig={taxonomyConfig}
         />
       ))}
     </ul>

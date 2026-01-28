@@ -1,36 +1,50 @@
 import { TagBadge } from './TagBadge';
-import { extractCodes } from './utils';
+import type { TagType } from './TagBadge';
+import type { TagPayload, TaxonomyConfig } from '@/components/tags';
+import {
+  getPayloadValue,
+  extractCodes as extractCodesFromPayload,
+} from '@/components/tags/tag-utils';
 
 interface ExpandedTagsProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  payload: any;
+  payload: TagPayload;
+  taxonomyConfig: TaxonomyConfig[];
 }
 
-function renderAudienceTags(scores: Record<string, number> | undefined) {
-  if (!scores) return null;
-  return Object.entries(scores)
-    .filter(([, score]) => score >= 0.5)
-    .map(([code]) => <TagBadge key={code} code={code} type="audience" />);
+function renderAudienceTags(payload: TagPayload, configs: TaxonomyConfig[]) {
+  return configs
+    .map((config) => {
+      const score = getPayloadValue(payload, config.payload_field);
+      if (typeof score === 'number' && score >= 0.5) {
+        const code = config.payload_field.split('.').pop();
+        if (code) return <TagBadge key={code} code={code} type="audience" />;
+      }
+      return null;
+    })
+    .filter(Boolean);
 }
 
-function renderCodeTags(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  codes: any[],
-  type: 'geography' | 'industry' | 'topic' | 'regulator' | 'regulation' | 'process',
-) {
-  return extractCodes(codes).map((code: string) => <TagBadge key={code} code={code} type={type} />);
+function renderTaxonomyTags(payload: TagPayload, configs: TaxonomyConfig[]) {
+  return configs.flatMap((config) => {
+    const value = getPayloadValue(payload, config.payload_field);
+    const codes = extractCodesFromPayload(value);
+    return codes.map((code) => (
+      <TagBadge key={`${config.slug}-${code}`} code={code} type={config.slug as TagType} />
+    ));
+  });
 }
 
-export function ExpandedTags({ payload }: Readonly<ExpandedTagsProps>) {
+export function ExpandedTags({ payload, taxonomyConfig }: Readonly<ExpandedTagsProps>) {
+  const audienceConfigs = taxonomyConfig.filter(
+    (c) => c.behavior_type === 'scoring' && c.score_parent_slug === 'audience',
+  );
+  const nonAudienceConfigs = taxonomyConfig.filter(
+    (c) => !(c.behavior_type === 'scoring' && c.score_parent_slug === 'audience'),
+  );
   return (
     <div className="mt-3 flex flex-wrap gap-1.5">
-      {renderAudienceTags(payload.audience_scores)}
-      {renderCodeTags(payload.geography_codes, 'geography')}
-      {renderCodeTags(payload.industry_codes, 'industry')}
-      {renderCodeTags(payload.topic_codes, 'topic')}
-      {renderCodeTags(payload.regulator_codes, 'regulator')}
-      {renderCodeTags(payload.regulation_codes, 'regulation')}
-      {renderCodeTags(payload.process_codes, 'process')}
+      {renderAudienceTags(payload, audienceConfigs)}
+      {renderTaxonomyTags(payload, nonAudienceConfigs)}
     </div>
   );
 }
