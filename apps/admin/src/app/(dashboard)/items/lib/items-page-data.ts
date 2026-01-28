@@ -163,6 +163,7 @@ async function getPublishedItems(statusCodes: StatusCodes) {
     .select(
       'id, source_url, title, summary_short, summary_medium, summary_long, source_name, published_at, added_at, thumbnail',
     )
+    .eq('status', 'published')
     .order('added_at', { ascending: false })
     .limit(500)
     .returns<PublicationRow[]>();
