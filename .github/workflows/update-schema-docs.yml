@@ -8,7 +8,8 @@ on:
 jobs:
   update-schema-docs:
     runs-on: ubuntu-latest
-    continue-on-error: true  # Don't fail if schema update fails
+    permissions:
+      contents: write  # Allow pushing schema updates
     
     steps:
       - name: Checkout repository
