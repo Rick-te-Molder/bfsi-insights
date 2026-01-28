@@ -1,22 +1,22 @@
 import { TagBadge } from './TagBadge';
-import type { TaxonomyConfig } from '@/components/tags';
+import type { TagType } from './TagBadge';
+import type { TagPayload, TaxonomyConfig } from '@/components/tags';
 import {
   getPayloadValue,
   extractCodes as extractCodesFromPayload,
 } from '@/components/tags/tag-utils';
 
 interface CollapsedTagsProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  payload: any;
+  payload: TagPayload;
   onToggle: () => void;
   taxonomyConfig: TaxonomyConfig[];
 }
 
-function extractAudienceCodes(payload: any, configs: TaxonomyConfig[]): string[] {
+function extractAudienceCodes(payload: TagPayload, configs: TaxonomyConfig[]): string[] {
   const audiences: string[] = [];
   for (const config of configs) {
-    const score = getPayloadValue(payload, config.payload_field) as number;
-    if (score && score >= 0.5) {
+    const score = getPayloadValue(payload, config.payload_field);
+    if (typeof score === 'number' && score >= 0.5) {
       const code = config.payload_field.split('.').pop();
       if (code) audiences.push(code);
     }
@@ -24,7 +24,10 @@ function extractAudienceCodes(payload: any, configs: TaxonomyConfig[]): string[]
   return audiences;
 }
 
-function extractNonAudienceCodes(payload: any, configs: TaxonomyConfig[]) {
+function extractNonAudienceCodes(
+  payload: TagPayload,
+  configs: TaxonomyConfig[],
+): Record<string, string[]> {
   const codesBySlug: Record<string, string[]> = {};
   for (const config of configs) {
     const value = getPayloadValue(payload, config.payload_field);
@@ -34,8 +37,7 @@ function extractNonAudienceCodes(payload: any, configs: TaxonomyConfig[]) {
   return codesBySlug;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractAllCodes(payload: any, taxonomyConfig: TaxonomyConfig[]) {
+function extractAllCodes(payload: TagPayload, taxonomyConfig: TaxonomyConfig[]) {
   const audienceConfigs = taxonomyConfig.filter(
     (c) => c.behavior_type === 'scoring' && c.score_parent_slug === 'audience',
   );
@@ -68,14 +70,13 @@ function computeTagCounts(codes: ReturnType<typeof extractAllCodes>) {
     sumLengths(
       Object.entries(codesBySlug)
         .slice(1)
-        .map(([, codes]) => codes),
+        .map(([, codeList]) => codeList),
     );
 
   return { totalTags, extraTagCount };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function useTagData(payload: any, taxonomyConfig: TaxonomyConfig[]) {
+function useTagData(payload: TagPayload, taxonomyConfig: TaxonomyConfig[]) {
   const codes = extractAllCodes(payload, taxonomyConfig);
   const { totalTags, extraTagCount } = computeTagCounts(codes);
   const firstOtherSlug = Object.keys(codes.codesBySlug)[0];
@@ -87,19 +88,22 @@ function useTagData(payload: any, taxonomyConfig: TaxonomyConfig[]) {
   return {
     audiences: codes.audiences,
     firstOtherCode,
-    firstOtherType: firstOtherConfig?.slug as any,
+    firstOtherType: (firstOtherConfig?.slug as TagType | undefined) ?? null,
     totalTags,
     extraTagCount,
   };
 }
 
-function MoreButton({ count, onToggle }: Readonly<{ count: number; onToggle: () => void }>) {
+function MoreButton({
+  count,
+  onToggleCallback,
+}: Readonly<{ count: number; onToggleCallback: () => void }>) {
   return (
     <button
       type="button"
       onClick={(e) => {
         e.stopPropagation();
-        onToggle();
+        onToggleCallback();
       }}
       className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-700/50 text-neutral-400 ring-1 ring-inset ring-neutral-600/30 hover:bg-neutral-600/50 hover:text-neutral-300 transition-colors pointer-events-auto"
     >
@@ -126,7 +130,7 @@ export function CollapsedTags({ payload, onToggle, taxonomyConfig }: Readonly<Co
     <div className="mt-2 flex flex-wrap items-center gap-1.5">
       {audiences[0] && <TagBadge code={audiences[0]} type="audience" />}
       {firstOtherCode && firstOtherType && <TagBadge code={firstOtherCode} type={firstOtherType} />}
-      {extraTagCount > 0 && <MoreButton count={extraTagCount} onToggle={onToggle} />}
+      {extraTagCount > 0 && <MoreButton count={extraTagCount} onToggleCallback={onToggle} />}
     </div>
   );
 }

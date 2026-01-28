@@ -11,6 +11,8 @@ interface TagBadgeProps {
     | 'obligation';
 }
 
+export type TagType = TagBadgeProps['type'];
+
 const TAG_STYLES = {
   audience: 'bg-amber-500/10 text-amber-300 ring-amber-500/20',
   geography: 'bg-teal-500/10 text-teal-300 ring-teal-500/20',

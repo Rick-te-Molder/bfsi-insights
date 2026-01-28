@@ -1,21 +1,21 @@
 import { TagBadge } from './TagBadge';
-import type { TaxonomyConfig } from '@/components/tags';
+import type { TagType } from './TagBadge';
+import type { TagPayload, TaxonomyConfig } from '@/components/tags';
 import {
   getPayloadValue,
   extractCodes as extractCodesFromPayload,
 } from '@/components/tags/tag-utils';
 
 interface ExpandedTagsProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  payload: any;
+  payload: TagPayload;
   taxonomyConfig: TaxonomyConfig[];
 }
 
-function renderAudienceTags(payload: any, configs: TaxonomyConfig[]) {
+function renderAudienceTags(payload: TagPayload, configs: TaxonomyConfig[]) {
   return configs
     .map((config) => {
-      const score = getPayloadValue(payload, config.payload_field) as number;
-      if (score && score >= 0.5) {
+      const score = getPayloadValue(payload, config.payload_field);
+      if (typeof score === 'number' && score >= 0.5) {
         const code = config.payload_field.split('.').pop();
         if (code) return <TagBadge key={code} code={code} type="audience" />;
       }
@@ -24,12 +24,12 @@ function renderAudienceTags(payload: any, configs: TaxonomyConfig[]) {
     .filter(Boolean);
 }
 
-function renderTaxonomyTags(payload: any, configs: TaxonomyConfig[]) {
+function renderTaxonomyTags(payload: TagPayload, configs: TaxonomyConfig[]) {
   return configs.flatMap((config) => {
     const value = getPayloadValue(payload, config.payload_field);
     const codes = extractCodesFromPayload(value);
     return codes.map((code) => (
-      <TagBadge key={`${config.slug}-${code}`} code={code} type={config.slug as any} />
+      <TagBadge key={`${config.slug}-${code}`} code={code} type={config.slug as TagType} />
     ));
   });
 }
