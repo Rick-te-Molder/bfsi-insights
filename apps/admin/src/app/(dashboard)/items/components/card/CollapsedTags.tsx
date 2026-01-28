@@ -1,31 +1,51 @@
 import { TagBadge } from './TagBadge';
-import { extractCodes } from './utils';
+import type { TaxonomyConfig } from '@/components/tags';
+import {
+  getPayloadValue,
+  extractCodes as extractCodesFromPayload,
+} from '@/components/tags/tag-utils';
 
 interface CollapsedTagsProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payload: any;
   onToggle: () => void;
+  taxonomyConfig: TaxonomyConfig[];
 }
 
-function extractAudiences(scores: Record<string, number> | null | undefined): string[] {
-  return scores
-    ? Object.entries(scores)
-        .filter(([, s]) => s >= 0.5)
-        .map(([c]) => c)
-    : [];
+function extractAudienceCodes(payload: any, configs: TaxonomyConfig[]): string[] {
+  const audiences: string[] = [];
+  for (const config of configs) {
+    const score = getPayloadValue(payload, config.payload_field) as number;
+    if (score && score >= 0.5) {
+      const code = config.payload_field.split('.').pop();
+      if (code) audiences.push(code);
+    }
+  }
+  return audiences;
+}
+
+function extractNonAudienceCodes(payload: any, configs: TaxonomyConfig[]) {
+  const codesBySlug: Record<string, string[]> = {};
+  for (const config of configs) {
+    const value = getPayloadValue(payload, config.payload_field);
+    const codes = extractCodesFromPayload(value);
+    if (codes.length > 0) codesBySlug[config.slug] = codes;
+  }
+  return codesBySlug;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractAllCodes(payload: any) {
+function extractAllCodes(payload: any, taxonomyConfig: TaxonomyConfig[]) {
+  const audienceConfigs = taxonomyConfig.filter(
+    (c) => c.behavior_type === 'scoring' && c.score_parent_slug === 'audience',
+  );
+  const nonAudienceConfigs = taxonomyConfig.filter(
+    (c) => !(c.behavior_type === 'scoring' && c.score_parent_slug === 'audience'),
+  );
   return {
-    audiences: extractAudiences(payload.audience_scores),
-    geographies: extractCodes(payload.geography_codes),
-    topics: extractCodes(payload.topic_codes),
-    industries: extractCodes(payload.industry_codes),
-    regulators: extractCodes(payload.regulator_codes),
-    regulations: extractCodes(payload.regulation_codes),
-    obligations: extractCodes(payload.obligation_codes),
-    processes: extractCodes(payload.process_codes),
+    audiences: extractAudienceCodes(payload, audienceConfigs),
+    codesBySlug: extractNonAudienceCodes(payload, nonAudienceConfigs),
+    nonAudienceConfigs,
   };
 }
 
@@ -34,39 +54,43 @@ function sumLengths(arrs: string[][]): number {
 }
 
 function computeTagCounts(codes: ReturnType<typeof extractAllCodes>) {
-  const {
-    audiences,
-    geographies,
-    topics,
-    industries,
-    regulators,
-    regulations,
-    obligations,
-    processes,
-  } = codes;
-  const allCodes = [
-    audiences,
-    geographies,
-    topics,
-    industries,
-    regulators,
-    regulations,
-    obligations,
-    processes,
-  ];
-  const totalTags = sumLengths(allCodes);
+  const { audiences, codesBySlug } = codes;
+  const allCodeArrays = Object.values(codesBySlug);
+  const totalTags = audiences.length + sumLengths(allCodeArrays);
+
+  // Count extra tags (beyond first audience and first other tag)
+  const firstOtherSlug = Object.keys(codesBySlug)[0];
+  const firstOtherCount = firstOtherSlug ? codesBySlug[firstOtherSlug].length : 0;
+
   const extraTagCount =
     Math.max(0, audiences.length - 1) +
-    Math.max(0, geographies.length - 1) +
-    sumLengths([topics, industries, regulators, regulations, obligations, processes]);
+    Math.max(0, firstOtherCount - 1) +
+    sumLengths(
+      Object.entries(codesBySlug)
+        .slice(1)
+        .map(([, codes]) => codes),
+    );
+
   return { totalTags, extraTagCount };
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function useTagData(payload: any) {
-  const codes = extractAllCodes(payload);
+function useTagData(payload: any, taxonomyConfig: TaxonomyConfig[]) {
+  const codes = extractAllCodes(payload, taxonomyConfig);
   const { totalTags, extraTagCount } = computeTagCounts(codes);
-  return { audiences: codes.audiences, geographies: codes.geographies, totalTags, extraTagCount };
+  const firstOtherSlug = Object.keys(codes.codesBySlug)[0];
+  const firstOtherCode = firstOtherSlug ? codes.codesBySlug[firstOtherSlug][0] : null;
+  const firstOtherConfig = firstOtherSlug
+    ? codes.nonAudienceConfigs.find((c) => c.slug === firstOtherSlug)
+    : null;
+
+  return {
+    audiences: codes.audiences,
+    firstOtherCode,
+    firstOtherType: firstOtherConfig?.slug as any,
+    totalTags,
+    extraTagCount,
+  };
 }
 
 function MoreButton({ count, onToggle }: Readonly<{ count: number; onToggle: () => void }>) {
@@ -92,13 +116,16 @@ function NoTagsMessage() {
   );
 }
 
-export function CollapsedTags({ payload, onToggle }: Readonly<CollapsedTagsProps>) {
-  const { audiences, geographies, totalTags, extraTagCount } = useTagData(payload);
+export function CollapsedTags({ payload, onToggle, taxonomyConfig }: Readonly<CollapsedTagsProps>) {
+  const { audiences, firstOtherCode, firstOtherType, totalTags, extraTagCount } = useTagData(
+    payload,
+    taxonomyConfig,
+  );
   if (totalTags === 0) return <NoTagsMessage />;
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5">
       {audiences[0] && <TagBadge code={audiences[0]} type="audience" />}
-      {geographies[0] && <TagBadge code={geographies[0]} type="geography" />}
+      {firstOtherCode && firstOtherType && <TagBadge code={firstOtherCode} type={firstOtherType} />}
       {extraTagCount > 0 && <MoreButton count={extraTagCount} onToggle={onToggle} />}
     </div>
   );
