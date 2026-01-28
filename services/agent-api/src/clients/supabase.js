@@ -14,6 +14,7 @@ export function getSupabaseAdminClient() {
     throw new Error('Missing Supabase environment variables');
   }
 
+  console.log('[Supabase] Initializing admin client with URL:', env.SUPABASE_URL);
   adminClient = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_KEY);
   return adminClient;
 }
