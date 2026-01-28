@@ -21,43 +21,55 @@ export function addToSearchHistory(query: string) {
   } catch {}
 }
 
-export function renderSearchHistory(
-  container: HTMLElement | null,
-  onSelect: (query: string) => void,
-) {
-  if (!container) return;
-  const history = getSearchHistory();
-  if (history.length === 0) {
-    container.innerHTML = `
-      <div class="px-3 py-2 text-xs text-neutral-500">No recent searches</div>
-    `;
-    return;
-  }
-  container.innerHTML = `
-    <div class="px-3 py-1.5 text-xs text-neutral-500 border-b border-neutral-800">Recent searches</div>
-    ${history
-      .map(
-        (q) => `
-      <button
-        type="button"
-        class="w-full px-3 py-2 text-left text-sm text-neutral-200 hover:bg-neutral-800 flex items-center gap-2 search-history-item"
-        data-query="${q.replaceAll('"', '&quot;')}"
-      >
-        <svg class="h-3.5 w-3.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-        </svg>
-        ${q}
-      </button>
-    `,
-      )
-      .join('')}
+function generateEmptyHistoryHTML() {
+  return '<div class="px-3 py-2 text-xs text-neutral-500">No recent searches</div>';
+}
+
+function generateHistoryItemHTML(query: string) {
+  return `
+    <button
+      type="button"
+      class="w-full px-3 py-2 text-left text-sm text-neutral-200 hover:bg-neutral-800 flex items-center gap-2 search-history-item"
+      data-query="${query.replaceAll('"', '&quot;')}"
+    >
+      <svg class="h-3.5 w-3.5 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      ${query}
+    </button>
   `;
+}
+
+function generateHistoryHTML(history: string[]) {
+  const header =
+    '<div class="px-3 py-1.5 text-xs text-neutral-500 border-b border-neutral-800">Recent searches</div>';
+  const items = history.map(generateHistoryItemHTML).join('');
+  return header + items;
+}
+
+function attachHistoryClickHandlers(container: HTMLElement, onSelect: (query: string) => void) {
   container.querySelectorAll('.search-history-item').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       const query = (e.currentTarget as HTMLElement).dataset.query || '';
       onSelect(query);
     });
   });
+}
+
+export function renderSearchHistory(
+  container: HTMLElement | null,
+  onSelect: (query: string) => void,
+) {
+  if (!container) return;
+  const history = getSearchHistory();
+
+  if (history.length === 0) {
+    container.innerHTML = generateEmptyHistoryHTML();
+    return;
+  }
+
+  container.innerHTML = generateHistoryHTML(history);
+  attachHistoryClickHandlers(container, onSelect);
 }
 
 export function syncSearchInputs(

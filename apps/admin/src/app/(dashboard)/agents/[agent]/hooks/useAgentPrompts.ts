@@ -2,6 +2,28 @@ import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { PromptVersion } from '@/types/database';
 
+function sortPromptsByVersion(prompts: PromptVersion[]) {
+  return prompts.sort((a, b) => b.version.localeCompare(a.version));
+}
+
+function findCurrentPrompt(prompts: PromptVersion[]) {
+  return prompts.find((p) => p.stage === 'PRD');
+}
+
+function updatePromptState(
+  data: PromptVersion[] | null,
+  setPrompts: (prompts: PromptVersion[]) => void,
+  setSelectedVersion: (version: PromptVersion | null) => void,
+  selectedVersion: PromptVersion | null,
+) {
+  const sorted = sortPromptsByVersion(data || []);
+  setPrompts(sorted);
+  const current = findCurrentPrompt(sorted);
+  if (current && !selectedVersion) {
+    setSelectedVersion(current);
+  }
+}
+
 export function useAgentPrompts(agentName: string) {
   const [prompts, setPrompts] = useState<PromptVersion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,12 +40,7 @@ export function useAgentPrompts(agentName: string) {
     if (error) {
       console.error('Error loading prompts:', error);
     } else {
-      const sorted = (data || []).sort((a, b) => b.version.localeCompare(a.version));
-      setPrompts(sorted);
-      const current = sorted.find((p) => p.stage === 'PRD');
-      if (current && !selectedVersion) {
-        setSelectedVersion(current);
-      }
+      updatePromptState(data, setPrompts, setSelectedVersion, selectedVersion);
     }
     setLoading(false);
   }, [supabase, agentName, selectedVersion]);
@@ -32,7 +49,7 @@ export function useAgentPrompts(agentName: string) {
     loadPrompts();
   }, [loadPrompts]);
 
-  const currentPrompt = prompts.find((p) => p.stage === 'PRD');
+  const currentPrompt = findCurrentPrompt(prompts);
 
   return { prompts, loading, selectedVersion, setSelectedVersion, currentPrompt, loadPrompts };
 }

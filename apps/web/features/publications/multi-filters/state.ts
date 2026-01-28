@@ -50,42 +50,51 @@ export function saveFilters(filterState: FilterState, searchQuery: string, sortO
   );
 }
 
+function parseFilterState(filters: any): FilterState {
+  const state: FilterState = {};
+  if (!filters) return state;
+
+  for (const [key, values] of Object.entries(filters)) {
+    if (Array.isArray(values)) {
+      state[key] = new Set(values);
+    }
+  }
+  return state;
+}
+
+function applySearchQuery(search: string | undefined, qEl: HTMLInputElement | null) {
+  if (search && qEl) {
+    qEl.value = search;
+    return search;
+  }
+  return '';
+}
+
+function applySortOrder(sort: string | undefined, sortSelect: HTMLSelectElement | null) {
+  if (sort && sortSelect) {
+    sortSelect.value = sort;
+    return sort;
+  }
+  return 'date_added_desc';
+}
+
 export function loadFilters(
   qEl: HTMLInputElement | null,
   sortSelect: HTMLSelectElement | null,
 ): { filterState: FilterState; searchQuery: string; sortOrder: string } {
-  let filterState: FilterState = {};
-  let searchQuery = '';
-  let sortOrder = 'date_added_desc';
-
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (!stored) return { filterState, searchQuery, sortOrder };
+    if (!stored) return { filterState: {}, searchQuery: '', sortOrder: 'date_added_desc' };
 
     const { filters, search, sort } = JSON.parse(stored);
+    const filterState = parseFilterState(filters);
+    const searchQuery = applySearchQuery(search, qEl);
+    const sortOrder = applySortOrder(sort, sortSelect);
 
-    if (filters) {
-      for (const [key, values] of Object.entries(filters)) {
-        if (Array.isArray(values)) {
-          filterState[key] = new Set(values);
-        }
-      }
-    }
-
-    if (search && qEl) {
-      qEl.value = search;
-      searchQuery = search;
-    }
-
-    if (sort && sortSelect) {
-      sortOrder = sort;
-      sortSelect.value = sort;
-    }
+    return { filterState, searchQuery, sortOrder };
   } catch {
-    // Ignore corrupted data
+    return { filterState: {}, searchQuery: '', sortOrder: 'date_added_desc' };
   }
-
-  return { filterState, searchQuery, sortOrder };
 }
 
 export function updateFabBadge(state: FilterState, fabFilterCount: HTMLElement | null) {
