@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 function calculateConstrainedHeight(newHeight: number, minHeight: number, maxOffset: number) {
-  return Math.max(minHeight, Math.min(newHeight, window.innerHeight - maxOffset));
+  return Math.max(minHeight, Math.min(newHeight, globalThis.innerHeight - maxOffset));
 }
 
 function setDraggingCursor(isDragging: boolean) {
-  document.body.style.cursor = isDragging ? 'row-resize' : '';
-  document.body.style.userSelect = isDragging ? 'none' : '';
+  globalThis.document.body.style.cursor = isDragging ? 'row-resize' : '';
+  globalThis.document.body.style.userSelect = isDragging ? 'none' : '';
 }
 
 function createMouseMoveHandler(
@@ -48,11 +48,11 @@ function setupMouseListeners(
     maxOffset,
   );
   const handleMouseUp = createMouseUpHandler(isDragging);
-  document.addEventListener('mousemove', handleMouseMove);
-  document.addEventListener('mouseup', handleMouseUp);
+  globalThis.document.addEventListener('mousemove', handleMouseMove);
+  globalThis.document.addEventListener('mouseup', handleMouseUp);
   return () => {
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
+    globalThis.document.removeEventListener('mousemove', handleMouseMove);
+    globalThis.document.removeEventListener('mouseup', handleMouseUp);
   };
 }
 

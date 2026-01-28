@@ -2,11 +2,12 @@
 
 ---
 
-**Version**: 1.27.0  
-**Last updated**: 2026-01-25  
+**Version**: 1.28.0  
+**Last updated**: 2026-01-28  
 **Quality System Control**: C7 (Static analysis)  
 **Change history**:
 
+- 1.28.0 (2026-01-28): Added S1874 (deprecated APIs should not be used - use globalThis).
 - 1.27.0 (2026-01-25): Added S2699 (tests should include assertions).
 - 1.26.0 (2026-01-25): Added S6564 (remove redundant type aliases).
 - 1.25.0 (2026-01-25): Added S8571 (remove redundant union type constituents) and S7780 (use String.raw for escaped backslashes).
@@ -93,6 +94,7 @@ When you see a SonarCloud issue, extract the Rule ID and find the matching lesso
 | S8571   | [Remove redundant union type constituents](./lessons/remove-redundant-union-type-constituents.md)                                                                                 | `lessons/remove-redundant-union-type-constituents.md`                                         |
 | S7780   | [Use String.raw for escaped backslashes](./lessons/use-string-raw-for-escaped-backslashes.md)                                                                                     | `lessons/use-string-raw-for-escaped-backslashes.md`                                           |
 | S2699   | [Tests should include assertions](./lessons/tests-should-include-assertions.md)                                                                                                   | `lessons/tests-should-include-assertions.md`                                                  |
+| S1874   | [Use globalThis instead of deprecated global APIs](./lessons/use-globalthis-instead-of-deprecated-global-apis.md)                                                                 | `lessons/use-globalthis-instead-of-deprecated-global-apis.md`                                 |
 
 ---
 
@@ -170,6 +172,7 @@ Quick checks before committing. If you're about to write any of these patterns, 
 - [ ] **Remove redundant union constituents** — Don't mix string literals with `string` type (e.g., `'all' | string` → `string`)
 - [ ] **Use String.raw for backslashes** — Replace escaped backslashes `\\` with `String.raw` template literals
 - [ ] **Tests must have assertions** — Every test case must include at least one assertion (expect, assert, etc.)
+- [ ] **Use globalThis for global APIs** — Replace direct `document`, `window` references with `globalThis.document`, `globalThis.innerHeight`
 
 ---
 
@@ -448,5 +451,9 @@ Rules we've encountered. Links to authoritative SonarSource documentation.
 ---
 
 ## [Tests should include assertions](./rules/2699_tests-should-include-assertions.md)
+
+---
+
+## [Deprecated APIs should not be used](./rules/1874_deprecated-apis-should-not-be-used.md)
 
 ---
