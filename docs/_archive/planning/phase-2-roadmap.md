@@ -365,7 +365,7 @@ GET /api/metrics/agents/:agent_name?window=24h
 
 1. **Approve this roadmap** - Review and confirm timeline/scope
 2. **Assign team members** - Identify Backend 1, Backend 2, Frontend
-3. **Create Linear issues** - Break down tasks into trackable issues
+3. **Create issues** - Break down tasks into trackable issues
 4. **Kick off Week 1** - Start with Task 1.1 (State Machine)
 5. **Weekly check-ins** - Review progress, adjust plan as needed
 

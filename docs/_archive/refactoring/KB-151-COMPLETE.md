@@ -2,7 +2,7 @@
 
 **Status:** ✅ Closed  
 **Completed:** January 1, 2026  
-**Historical Reference:** KB-151 (Linear issue, no longer tracked in Linear)
+**Historical Reference:** KB-151 (archived issue)
 
 ## Summary
 

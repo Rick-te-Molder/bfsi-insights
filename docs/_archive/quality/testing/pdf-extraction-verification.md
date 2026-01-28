@@ -291,7 +291,7 @@ Add "Re-fetch" action to UI for items that need content re-fetching:
 
 1. Run through tests 1-5 in order
 2. Document results in this file
-3. Create Linear issue for UI gap (re-fetch action)
+3. Create issue for UI gap (re-fetch action)
 4. If summary quality is poor, investigate summarizer prompt
 5. If PDF extraction fails, check Python dependencies
 

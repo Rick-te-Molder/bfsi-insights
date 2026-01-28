@@ -114,3 +114,10 @@ Write this like a short human summary.
 ## Remaining risks / unverified
 
 <!-- List any untested scenarios or known limitations, or "none" -->
+
+## PR Reference
+
+<!-- Auto-filled by GitHub, but include for issue tracking -->
+
+**PR**: #<!-- PR number will be auto-filled -->
+**Link**: <!-- https://github.com/Rick-te-Molder/bfsi-insights/pull/XXX -->

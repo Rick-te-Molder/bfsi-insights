@@ -25,49 +25,57 @@
 </button>
 
 <script>
+  const SHOW_THRESHOLD = 400;
+
+  function updateButtonVisibility(
+    btn: HTMLButtonElement,
+    shouldShow: boolean,
+    currentlyVisible: boolean,
+  ) {
+    if (shouldShow === currentlyVisible) return currentlyVisible;
+    btn.classList.toggle('opacity-0', !shouldShow);
+    btn.classList.toggle('pointer-events-none', !shouldShow);
+    btn.classList.toggle('opacity-100', shouldShow);
+    btn.classList.toggle('pointer-events-auto', shouldShow);
+    return shouldShow;
+  }
+
+  function easeInOutCubic(t: number) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  function animateScrollToTop(startPos: number, dist: number, dur: number) {
+    let startTime: number | null = null;
+    const animate = (currentTime: number) => {
+      if (startTime === null) startTime = currentTime;
+      const elapsed = currentTime - (startTime ?? currentTime);
+      const progress = Math.min(elapsed / dur, 1);
+      const eased = easeInOutCubic(progress);
+      window.scrollTo(0, startPos - dist * eased);
+      if (progress < 1) requestAnimationFrame(animate);
+    };
+    requestAnimationFrame(animate);
+  }
+
+  function setupScrollToTop(_btn: HTMLButtonElement) {
+    const startPosition = window.scrollY;
+    const distance = startPosition;
+    const duration = Math.min(800, Math.max(300, distance / 3));
+    animateScrollToTop(startPosition, distance, duration);
+  }
+
   const backToTopBtn = document.getElementById('back-to-top');
 
   if (backToTopBtn instanceof HTMLButtonElement) {
     let isVisible = false;
-    const SHOW_THRESHOLD = 400;
 
     const toggleVisibility = () => {
       const shouldShow = window.scrollY > SHOW_THRESHOLD;
-      if (shouldShow !== isVisible) {
-        isVisible = shouldShow;
-        backToTopBtn.classList.toggle('opacity-0', !isVisible);
-        backToTopBtn.classList.toggle('pointer-events-none', !isVisible);
-        backToTopBtn.classList.toggle('opacity-100', isVisible);
-        backToTopBtn.classList.toggle('pointer-events-auto', isVisible);
-      }
+      isVisible = updateButtonVisibility(backToTopBtn, shouldShow, isVisible);
     };
 
     window.addEventListener('scroll', toggleVisibility, { passive: true });
-
-    backToTopBtn.addEventListener('click', () => {
-      const startPosition = window.scrollY;
-      const distance = startPosition;
-      const duration = Math.min(800, Math.max(300, distance / 3));
-      let startTime: number | null = null;
-
-      const easeInOutCubic = (t: number) =>
-        t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-
-      const animateScroll = (currentTime: number) => {
-        if (startTime === null) startTime = currentTime;
-
-        const elapsed = currentTime - (startTime ?? currentTime);
-        const progress = Math.min(elapsed / duration, 1);
-        const eased = easeInOutCubic(progress);
-
-        window.scrollTo(0, startPosition - distance * eased);
-
-        if (progress < 1) requestAnimationFrame(animateScroll);
-      };
-
-      requestAnimationFrame(animateScroll);
-    });
-
+    backToTopBtn.addEventListener('click', () => setupScrollToTop(backToTopBtn));
     toggleVisibility();
   }
 </script>
