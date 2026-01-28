@@ -6,20 +6,7 @@ Functions exceeding size limits (source: 30 lines, test: 50 lines)
 
 ## Summary
 
-- **Total large functions:** 8
-- **Files affected:** 8
+- **Total large functions:** 0
+- **Files affected:** 0
 
-## Functions
-
-```text
-LINES  FUNCTION               FILE
------  ---------------------  --------------------------------------------------------------------------------
-   43  if()                   apps/web/components/BackToTopButton.astro
-   38  renderSearchHistory()  apps/web/features/publications/filters/search.ts
-   38  runRelevanceFilter()   services/agent-api/src/agents/screener.js
-   37  useDetailPanelData()   …s/admin/src/app/(dashboard)/items/components/detail-panel/useDetailPanelData.ts
-   37  loadFilters()          apps/web/features/publications/multi-filters/state.ts
-   36  useResizablePanel()    apps/admin/src/app/(dashboard)/agents/hooks/useResizablePanel.ts
-   36  POST()                 apps/admin/src/app/api/evals/llm-judge/route.ts
-   34  useAgentPrompts()      apps/admin/src/app/(dashboard)/agents/[agent]/hooks/useAgentPrompts.ts
-```
+✅ No functions exceed size limits!
