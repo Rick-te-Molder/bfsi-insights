@@ -12,16 +12,16 @@ interface ExpandedTagsProps {
 }
 
 function renderAudienceTags(payload: TagPayload, configs: TaxonomyConfig[]) {
-  return configs
+  const topAudiences = configs
     .map((config) => {
       const score = getPayloadValue(payload, config.payload_field);
-      if (typeof score === 'number' && score >= 0.5) {
-        const code = config.payload_field.split('.').pop();
-        if (code) return <TagBadge key={code} code={code} type="audience" />;
-      }
-      return null;
+      const code = config.payload_field.split('.').pop();
+      return typeof score === 'number' && score >= 0.5 && code ? { code, score } : null;
     })
-    .filter(Boolean);
+    .filter((v): v is { code: string; score: number } => v !== null)
+    .sort((a, b) => b.score - a.score);
+
+  return topAudiences.map(({ code }) => <TagBadge key={code} code={code} type="audience" />);
 }
 
 function renderTaxonomyTags(payload: TagPayload, configs: TaxonomyConfig[]) {

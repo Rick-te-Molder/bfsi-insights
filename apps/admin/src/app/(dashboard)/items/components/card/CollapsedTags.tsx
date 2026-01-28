@@ -13,15 +13,15 @@ interface CollapsedTagsProps {
 }
 
 function extractAudienceCodes(payload: TagPayload, configs: TaxonomyConfig[]): string[] {
-  const audiences: string[] = [];
-  for (const config of configs) {
-    const score = getPayloadValue(payload, config.payload_field);
-    if (typeof score === 'number' && score >= 0.5) {
+  return configs
+    .map((config) => {
+      const score = getPayloadValue(payload, config.payload_field);
       const code = config.payload_field.split('.').pop();
-      if (code) audiences.push(code);
-    }
-  }
-  return audiences;
+      return typeof score === 'number' && score >= 0.5 && code ? { code, score } : null;
+    })
+    .filter((v): v is { code: string; score: number } => v !== null)
+    .sort((a, b) => b.score - a.score)
+    .map((v) => v.code);
 }
 
 function extractNonAudienceCodes(
