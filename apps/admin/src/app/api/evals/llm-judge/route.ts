@@ -4,7 +4,12 @@ export const dynamic = 'force-dynamic';
 
 const AGENT_API_URL = process.env.AGENT_API_URL || 'https://bfsi-insights.onrender.com';
 
-function validateRequest(body: any) {
+interface RequestBody {
+  promptVersionId?: string;
+  criteria?: string;
+}
+
+function validateRequest(body: RequestBody) {
   if (!body.promptVersionId) {
     return NextResponse.json({ error: 'Missing promptVersionId' }, { status: 400 });
   }
@@ -44,12 +49,12 @@ function handleError(error: unknown) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body = (await request.json()) as RequestBody;
     const validationError = validateRequest(body);
     if (validationError) return validationError;
 
     const { promptVersionId, criteria } = body;
-    const response = await callAgentAPI(promptVersionId, criteria);
+    const response = await callAgentAPI(promptVersionId!, criteria);
     return handleAPIResponse(response);
   } catch (error) {
     return handleError(error);

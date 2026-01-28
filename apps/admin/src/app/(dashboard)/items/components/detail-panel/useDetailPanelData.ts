@@ -16,14 +16,19 @@ async function fetchItemData(itemId: string) {
   return res.json();
 }
 
+interface FetchResponse {
+  item?: QueueItem;
+  lookups?: Lookups;
+}
+
 function handleFetchSuccess(
-  data: any,
+  data: FetchResponse,
   setItem: (item: QueueItem | null) => void,
   setLookups: (lookups: Lookups | null) => void,
 ) {
   if (data.item) {
     setItem(data.item);
-    setLookups(data.lookups);
+    setLookups(data.lookups || null);
   } else {
     console.error('API returned no item:', data);
     setItem(null);
