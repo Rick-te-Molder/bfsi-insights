@@ -13,6 +13,9 @@ function emitHeadersFile() {
       const content = `/*
   Cache-Control: public, max-age=300, must-revalidate
 
+/publications
+  Cache-Control: public, max-age=0, must-revalidate
+
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 `;
