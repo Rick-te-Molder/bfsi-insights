@@ -1,7 +1,7 @@
 # Database Schema Reference
 
 > **Auto-generated** by `npm run dump:schema`  
-> **Last updated:** 2026-01-28T15:21:57.036Z
+> **Last updated:** 2026-01-28T15:30:22.714Z
 
 This file is the single source of truth for AI assistants to understand the database structure.
 
