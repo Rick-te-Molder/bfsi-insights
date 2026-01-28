@@ -25,6 +25,7 @@ export const SummarySchema = z.object({
           ),
       }),
     )
+    .nullable()
     .describe('Authors with evidence of relevance and authority'),
 
   // Structured summary - CHARACTER counts for UI display
@@ -99,7 +100,7 @@ Output a JSON object with this exact structure:
 {
   "title": "string - cleaned-up professional title",
   "published_at": "string|null - YYYY-MM-DD if day known, YYYY-MM if only month/year, or null",
-  "authors": [{"name": "string", "role": "string|null", "authority": "string|null"}],
+  "authors": [{"name": "string", "role": "string|null", "authority": "string|null"}]|null,
   "summary": {
     "short": "string - 1-2 sentences, 120-150 characters total (for cards)",
     "medium": "string - 2-3 sentences, 250-300 characters total (for modals)", 
