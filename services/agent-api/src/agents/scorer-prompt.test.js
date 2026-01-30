@@ -1,81 +1,91 @@
-import { describe, it, expect, vi } from 'vitest';
-import { buildScorerPrompt } from './scorer-prompt.js';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getSystemPrompt, getAudiences, getRejectionPatterns } from './scorer-prompt.js';
 
-vi.mock('../lib/llm.js', () => ({
-  getOpenAIClient: vi.fn(() => ({ apiKey: 'test-key' })),
+vi.mock('../clients/supabase.js', () => ({
+  getSupabaseAdminClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({
+        order: vi.fn(() => ({
+          data: [
+            {
+              code: 'executive',
+              name: 'Executive',
+              description: 'C-suite',
+              cares_about: 'ROI',
+              doesnt_care_about: 'Code',
+              scoring_guide: 'Focus on business impact',
+            },
+          ],
+          error: null,
+        })),
+        eq: vi.fn(() => ({
+          order: vi.fn(() => ({
+            data: [],
+            error: null,
+          })),
+        })),
+      })),
+    })),
+  })),
 }));
 
 describe('scorer-prompt', () => {
-  describe('buildScorerPrompt', () => {
-    it('should build prompt with all audiences', () => {
-      const item = {
-        url: 'https://example.com/article',
-        title: 'Test Article',
-        textContent: 'This is test content about banking and AI.',
-      };
-      const audiences = ['executive', 'engineer', 'researcher'];
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-      const result = buildScorerPrompt(item, audiences);
+  describe('getSystemPrompt', () => {
+    it('should generate system prompt from database', async () => {
+      const prompt = await getSystemPrompt();
 
-      expect(result).toContain('executive');
-      expect(result).toContain('engineer');
-      expect(result).toContain('researcher');
-      expect(result).toContain('Test Article');
-      expect(result).toContain('https://example.com/article');
+      expect(prompt).toBeDefined();
+      expect(typeof prompt).toBe('string');
+      expect(prompt).toContain('Executive');
+      expect(prompt).toContain('SCORING GUIDELINES');
+      expect(prompt).toContain('RESPONSE FORMAT');
     });
 
-    it('should handle single audience', () => {
-      const item = {
-        url: 'https://example.com/article',
-        title: 'Test Article',
-        textContent: 'Content',
-      };
-      const audiences = ['executive'];
+    it('should include audience information in prompt', async () => {
+      const prompt = await getSystemPrompt();
 
-      const result = buildScorerPrompt(item, audiences);
-
-      expect(result).toContain('executive');
-      expect(result).not.toContain('engineer');
+      expect(prompt).toContain('executive');
+      expect(prompt).toContain('C-suite');
     });
 
-    it('should include text content in prompt', () => {
-      const item = {
-        url: 'https://example.com/article',
-        title: 'Test Article',
-        textContent: 'Specific content about machine learning',
-      };
-      const audiences = ['researcher'];
+    it('should include scoring guidelines', async () => {
+      const prompt = await getSystemPrompt();
 
-      const result = buildScorerPrompt(item, audiences);
-
-      expect(result).toContain('machine learning');
+      expect(prompt).toContain('Score 8-10');
+      expect(prompt).toContain('Score 5-7');
+      expect(prompt).toContain('Score 3-4');
+      expect(prompt).toContain('Score 1-2');
     });
 
-    it('should handle empty audiences array', () => {
-      const item = {
-        url: 'https://example.com/article',
-        title: 'Test Article',
-        textContent: 'Content',
-      };
-      const audiences = [];
+    it('should include response format', async () => {
+      const prompt = await getSystemPrompt();
 
-      const result = buildScorerPrompt(item, audiences);
-
-      expect(result).toBeDefined();
-      expect(typeof result).toBe('string');
+      expect(prompt).toContain('relevance_scores');
+      expect(prompt).toContain('primary_audience');
+      expect(prompt).toContain('executive_summary');
     });
+  });
 
-    it('should include URL in prompt', () => {
-      const item = {
-        url: 'https://specific-domain.com/path/to/article',
-        title: 'Test',
-        textContent: 'Content',
-      };
-      const audiences = ['executive'];
+  describe('getAudiences', () => {
+    it('should load audiences from database', async () => {
+      const audiences = await getAudiences();
 
-      const result = buildScorerPrompt(item, audiences);
+      expect(audiences).toBeDefined();
+      expect(Array.isArray(audiences)).toBe(true);
+      expect(audiences.length).toBeGreaterThan(0);
+    });
+  });
 
-      expect(result).toContain('specific-domain.com');
+  describe('getRejectionPatterns', () => {
+    it('should load rejection patterns from database', async () => {
+      const patterns = await getRejectionPatterns();
+
+      expect(patterns).toBeDefined();
+      expect(Array.isArray(patterns)).toBe(true);
     });
   });
 });
