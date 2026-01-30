@@ -1,6 +1,6 @@
 import { TagBadge } from './TagBadge';
 import type { TagType } from './TagBadge';
-import type { TagPayload, TaxonomyConfig } from '@/components/tags';
+import type { TagPayload, TaxonomyConfig, TaxonomyData } from '@/components/tags';
 import {
   getPayloadValue,
   extractCodes as extractCodesFromPayload,
@@ -10,6 +10,7 @@ interface CollapsedTagsProps {
   payload: TagPayload;
   onToggle: () => void;
   taxonomyConfig: TaxonomyConfig[];
+  taxonomyData: TaxonomyData;
 }
 
 function extractAudienceCodes(payload: TagPayload, configs: TaxonomyConfig[]): string[] {
@@ -120,7 +121,12 @@ function NoTagsMessage() {
   );
 }
 
-export function CollapsedTags({ payload, onToggle, taxonomyConfig }: Readonly<CollapsedTagsProps>) {
+export function CollapsedTags({
+  payload,
+  onToggle,
+  taxonomyConfig,
+  taxonomyData,
+}: Readonly<CollapsedTagsProps>) {
   const { audiences, firstOtherCode, firstOtherType, totalTags, extraTagCount } = useTagData(
     payload,
     taxonomyConfig,
@@ -128,8 +134,10 @@ export function CollapsedTags({ payload, onToggle, taxonomyConfig }: Readonly<Co
   if (totalTags === 0) return <NoTagsMessage />;
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5">
-      {audiences[0] && <TagBadge code={audiences[0]} type="audience" />}
-      {firstOtherCode && firstOtherType && <TagBadge code={firstOtherCode} type={firstOtherType} />}
+      {audiences[0] && <TagBadge code={audiences[0]} type="audience" taxonomyData={taxonomyData} />}
+      {firstOtherCode && firstOtherType && (
+        <TagBadge code={firstOtherCode} type={firstOtherType} taxonomyData={taxonomyData} />
+      )}
       {extraTagCount > 0 && <MoreButton count={extraTagCount} onToggleCallback={onToggle} />}
     </div>
   );

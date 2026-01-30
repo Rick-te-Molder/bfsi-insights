@@ -1,3 +1,5 @@
+import type { TaxonomyData } from '@/components/tags';
+
 interface TagBadgeProps {
   code: string;
   type:
@@ -9,6 +11,7 @@ interface TagBadgeProps {
     | 'regulation'
     | 'process'
     | 'obligation';
+  taxonomyData: TaxonomyData;
 }
 
 export type TagType = TagBadgeProps['type'];
@@ -56,14 +59,20 @@ function TagIcon({ type }: Readonly<{ type: TagBadgeProps['type'] }>) {
   return null;
 }
 
-export function TagBadge({ code, type }: Readonly<TagBadgeProps>) {
+export function TagBadge({ code, type, taxonomyData }: Readonly<TagBadgeProps>) {
   const showIcon = type === 'audience' || type === 'geography';
+  
+  // Look up the human-readable name from taxonomyData
+  const lookupData = taxonomyData[type];
+  const item = lookupData?.find((i) => i.code === code);
+  const displayName = item?.name || code;
+  
   return (
     <span
       className={`inline-flex items-center ${showIcon ? 'gap-1' : ''} px-2 py-0.5 rounded-full text-xs font-medium ring-1 ring-inset ${TAG_STYLES[type]}`}
     >
       <TagIcon type={type} />
-      {code}
+      {displayName}
     </span>
   );
 }

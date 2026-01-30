@@ -1,6 +1,6 @@
 import { TagBadge } from './TagBadge';
 import type { TagType } from './TagBadge';
-import type { TagPayload, TaxonomyConfig } from '@/components/tags';
+import type { TagPayload, TaxonomyConfig, TaxonomyData } from '@/components/tags';
 import {
   getPayloadValue,
   extractCodes as extractCodesFromPayload,
@@ -9,9 +9,14 @@ import {
 interface ExpandedTagsProps {
   payload: TagPayload;
   taxonomyConfig: TaxonomyConfig[];
+  taxonomyData: TaxonomyData;
 }
 
-function renderAudienceTags(payload: TagPayload, configs: TaxonomyConfig[]) {
+function renderAudienceTags(
+  payload: TagPayload,
+  configs: TaxonomyConfig[],
+  taxonomyData: TaxonomyData,
+) {
   const topAudiences = configs
     .map((config) => {
       const score = getPayloadValue(payload, config.payload_field);
@@ -21,20 +26,35 @@ function renderAudienceTags(payload: TagPayload, configs: TaxonomyConfig[]) {
     .filter((v): v is { code: string; score: number } => v !== null)
     .sort((a, b) => b.score - a.score);
 
-  return topAudiences.map(({ code }) => <TagBadge key={code} code={code} type="audience" />);
+  return topAudiences.map(({ code }) => (
+    <TagBadge key={code} code={code} type="audience" taxonomyData={taxonomyData} />
+  ));
 }
 
-function renderTaxonomyTags(payload: TagPayload, configs: TaxonomyConfig[]) {
+function renderTaxonomyTags(
+  payload: TagPayload,
+  configs: TaxonomyConfig[],
+  taxonomyData: TaxonomyData,
+) {
   return configs.flatMap((config) => {
     const value = getPayloadValue(payload, config.payload_field);
     const codes = extractCodesFromPayload(value);
     return codes.map((code) => (
-      <TagBadge key={`${config.slug}-${code}`} code={code} type={config.slug as TagType} />
+      <TagBadge
+        key={`${config.slug}-${code}`}
+        code={code}
+        type={config.slug as TagType}
+        taxonomyData={taxonomyData}
+      />
     ));
   });
 }
 
-export function ExpandedTags({ payload, taxonomyConfig }: Readonly<ExpandedTagsProps>) {
+export function ExpandedTags({
+  payload,
+  taxonomyConfig,
+  taxonomyData,
+}: Readonly<ExpandedTagsProps>) {
   const audienceConfigs = taxonomyConfig.filter(
     (c) => c.behavior_type === 'scoring' && c.score_parent_slug === 'audience',
   );
@@ -43,8 +63,8 @@ export function ExpandedTags({ payload, taxonomyConfig }: Readonly<ExpandedTagsP
   );
   return (
     <div className="mt-3 flex flex-wrap gap-1.5">
-      {renderAudienceTags(payload, audienceConfigs)}
-      {renderTaxonomyTags(payload, nonAudienceConfigs)}
+      {renderAudienceTags(payload, audienceConfigs, taxonomyData)}
+      {renderTaxonomyTags(payload, nonAudienceConfigs, taxonomyData)}
     </div>
   );
 }
