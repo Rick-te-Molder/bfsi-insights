@@ -1,7 +1,7 @@
 # Database Schema Reference
 
 > **Auto-generated** by `npm run dump:schema`  
-> **Last updated:** 2026-01-30T10:08:36.694Z
+> **Last updated:** 2026-01-30T10:31:31.138Z
 
 This file is the single source of truth for AI assistants to understand the database structure.
 
@@ -20,7 +20,7 @@ This file is the single source of truth for AI assistants to understand the data
 | `agent_run_step`                   | 4569 | PK: id             |
 | `agent_run_summary`                | 4259 |                    |
 | `app_admins`                       | 1    | PK: user_id        |
-| `audit_log`                        | 3904 | PK: id             |
+| `audit_log`                        | 3905 | PK: id             |
 | `bfsi_entity_type`                 | 24   | PK: id             |
 | `bfsi_industry`                    | 53   | PK: id             |
 | `bfsi_industry_pretty`             | 53   |                    |
@@ -312,7 +312,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `audit_log`
 
-**Rows:** 3904
+**Rows:** 3905
 
 | Column        | Type                     | Nullable | Default           | Constraints    |
 | ------------- | ------------------------ | -------- | ----------------- | -------------- |
