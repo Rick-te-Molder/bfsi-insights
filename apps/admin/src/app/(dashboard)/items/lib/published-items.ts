@@ -24,6 +24,88 @@ type QueueItemsResult = {
 
 const EMPTY_RESULT: QueueItemsResult = { items: [], sources: [] };
 
+type TagData = {
+  audience_scores?: Record<string, number>;
+  industry_codes?: string[];
+  topic_codes?: string[];
+  geography_codes?: string[];
+  regulator_codes?: string[];
+  regulation_codes?: string[];
+  process_codes?: string[];
+};
+
+function initTagMap(pubIds: string[]): Map<string, TagData> {
+  const map = new Map<string, TagData>();
+  for (const id of pubIds) map.set(id, {});
+  return map;
+}
+
+type AudienceRow = { publication_id: string; audience_code: string; score: number | null };
+type CodeRow = {
+  publication_id: string;
+  industry_code?: string;
+  topic_code?: string;
+  geography_code?: string;
+};
+
+function populateAudienceScores(map: Map<string, TagData>, rows: AudienceRow[]) {
+  for (const row of rows) {
+    const tags = map.get(row.publication_id)!;
+    tags.audience_scores = tags.audience_scores || {};
+    tags.audience_scores[row.audience_code] = row.score ?? 0;
+  }
+}
+
+function populateCodeArray(map: Map<string, TagData>, rows: CodeRow[], field: keyof TagData) {
+  for (const row of rows) {
+    const tags = map.get(row.publication_id)!;
+    const code = row.industry_code ?? row.topic_code ?? row.geography_code;
+    if (code) {
+      (tags[field] as string[]) = (tags[field] as string[]) || [];
+      (tags[field] as string[]).push(code);
+    }
+  }
+}
+
+function queryJunctionTables(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  pubIds: string[],
+) {
+  return Promise.all([
+    supabase
+      .from('kb_publication_audience')
+      .select('publication_id, audience_code, score')
+      .in('publication_id', pubIds),
+    supabase
+      .from('kb_publication_bfsi_industry')
+      .select('publication_id, industry_code')
+      .in('publication_id', pubIds),
+    supabase
+      .from('kb_publication_bfsi_topic')
+      .select('publication_id, topic_code')
+      .in('publication_id', pubIds),
+    supabase
+      .from('kb_publication_geography')
+      .select('publication_id, geography_code')
+      .in('publication_id', pubIds),
+  ]);
+}
+
+async function fetchTagsFromJunctionTables(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  pubIds: string[],
+): Promise<Map<string, TagData>> {
+  if (pubIds.length === 0) return new Map();
+
+  const [audiences, industries, topics, geographies] = await queryJunctionTables(supabase, pubIds);
+  const map = initTagMap(pubIds);
+  populateAudienceScores(map, (audiences.data ?? []) as AudienceRow[]);
+  populateCodeArray(map, (industries.data ?? []) as CodeRow[], 'industry_codes');
+  populateCodeArray(map, (topics.data ?? []) as CodeRow[], 'topic_codes');
+  populateCodeArray(map, (geographies.data ?? []) as CodeRow[], 'geography_codes');
+  return map;
+}
+
 async function fetchPayloadsForQueueIds(
   supabase: ReturnType<typeof createServiceRoleClient>,
   queueIds: string[],
@@ -78,26 +160,50 @@ export function mapPublicationsToQueueItems(
   return (rows ?? []).map((pub) => mapPublicationToQueueItem(pub, publishedStatusCode));
 }
 
-export async function getPublishedItems(statusCodes: StatusCodes): Promise<QueueItemsResult> {
-  const supabase = createServiceRoleClient();
-  const { data, error } = await supabase
+const PUB_SELECT_FIELDS =
+  'id, source_url, title, summary_short, summary_medium, summary_long, source_name, published_at, added_at, thumbnail, origin_queue_id';
+
+async function fetchPublishedPublications(supabase: ReturnType<typeof createServiceRoleClient>) {
+  return supabase
     .from('kb_publication')
-    .select(
-      'id, source_url, title, summary_short, summary_medium, summary_long, source_name, published_at, added_at, thumbnail, origin_queue_id',
-    )
+    .select(PUB_SELECT_FIELDS)
     .eq('status', 'published')
     .order('added_at', { ascending: false })
     .limit(500)
     .returns<PublicationRow[]>();
+}
 
+async function fetchAllTagPayloads(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  pubs: PublicationRow[],
+): Promise<{ queueMap: Map<string, Record<string, unknown>>; junctionMap: Map<string, TagData> }> {
+  const queueIds = pubs
+    .filter((p) => p.origin_queue_id)
+    .map((p) => p.origin_queue_id!)
+    .filter(Boolean);
+  const pubIdsWithoutQueue = pubs.filter((p) => !p.origin_queue_id).map((p) => p.id);
+
+  const [queueMap, junctionMap] = await Promise.all([
+    fetchPayloadsForQueueIds(supabase, queueIds),
+    fetchTagsFromJunctionTables(supabase, pubIdsWithoutQueue),
+  ]);
+  return { queueMap, junctionMap };
+}
+
+export async function getPublishedItems(statusCodes: StatusCodes): Promise<QueueItemsResult> {
+  const supabase = createServiceRoleClient();
+  const { data, error } = await fetchPublishedPublications(supabase);
   if (error) return EMPTY_RESULT;
 
-  const queueIds = (data ?? []).map((p) => p.origin_queue_id).filter((id): id is string => !!id);
-  const payloadMap = await fetchPayloadsForQueueIds(supabase, queueIds);
+  const publications = data ?? [];
+  const { queueMap, junctionMap } = await fetchAllTagPayloads(supabase, publications);
+  const statusCode = getPublishedStatusCode(statusCodes);
 
-  const publishedStatusCode = getPublishedStatusCode(statusCodes);
-  const items = (data ?? []).map((pub) =>
-    mapPublicationToQueueItem(pub, publishedStatusCode, payloadMap.get(pub.origin_queue_id ?? '')),
-  );
+  const items = publications.map((pub) => {
+    const payload = pub.origin_queue_id
+      ? queueMap.get(pub.origin_queue_id)
+      : junctionMap.get(pub.id);
+    return mapPublicationToQueueItem(pub, statusCode, payload);
+  });
   return { items, sources: [] };
 }
