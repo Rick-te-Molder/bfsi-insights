@@ -53,10 +53,15 @@ const audienceOptions = (
 const validAudiences = audienceOptions.map((a) => a.value);
 
 // Get 6 most recent from each audience
-// Note: uses p.audience (new) with fallback to (p as any).role (legacy)
+// Note: uses p.audiences array (primary) with fallback to p.audience (singular)
 const byAudience = validAudiences.reduce<Record<string, Publication[]>>((acc, audience) => {
   acc[audience] = allPublications
-    .filter((p) => (p.audience || (p as any).role) === audience)
+    .filter((p) => {
+      // Check if audience is in audiences array, or matches singular audience field
+      const audiences = p.audiences || [];
+      const primaryAudience = p.audience || (p as any).role;
+      return audiences.includes(audience) || primaryAudience === audience;
+    })
     .slice(0, 6);
   return acc;
 }, {});
