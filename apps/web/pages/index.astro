@@ -193,8 +193,10 @@ const expandItemThumb = (t?: string | null) => {
       /** @type {HTMLElement[]} */
       const cards = Array.from(gridEl.children).filter((child) => child instanceof HTMLElement);
       cards.forEach((card) => {
-        const cardAudience = card.getAttribute('data-audience');
-        card.style.display = audience === 'all' || cardAudience === audience ? '' : 'none';
+        const audiencesAttr = card.getAttribute('data-audiences') || '';
+        const cardAudiences = audiencesAttr ? audiencesAttr.split(',') : [];
+        const matches = audience === 'all' || cardAudiences.includes(audience);
+        card.style.display = matches ? '' : 'none';
       });
     }
 
