@@ -1,20 +1,13 @@
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import type { QueueItem } from '@bfsi/types';
+import {
+  getPublishedItems,
+  getPublishedStatusCode,
+  mapPublicationsToQueueItems,
+  type PublicationRow,
+} from './published-items';
 
 type StatusCodes = Record<string, number>;
-
-type PublicationRow = {
-  id: string;
-  source_url: string;
-  title: string;
-  summary_short: string | null;
-  summary_medium: string | null;
-  summary_long: string | null;
-  source_name: string | null;
-  published_at: string | null;
-  added_at: string | null;
-  thumbnail: string | null;
-};
 
 type QueueItemsResult = {
   items: QueueItem[];
@@ -43,39 +36,6 @@ export async function loadStatusCodes(): Promise<StatusCodes> {
     codes[row.name] = row.code;
   }
   return codes;
-}
-
-function getPublishedStatusCode(statusCodes: StatusCodes) {
-  const code = statusCodes.published;
-  if (!code) throw new Error('CRITICAL: status_lookup missing code for "published"');
-  return code;
-}
-
-function mapPublicationToQueueItem(pub: PublicationRow, publishedStatusCode: number): QueueItem {
-  return {
-    id: pub.id,
-    url: pub.source_url,
-    status_code: publishedStatusCode,
-    discovered_at: pub.added_at || '',
-    payload: {
-      title: pub.title,
-      source_name: pub.source_name ?? undefined,
-      published_at: pub.published_at ?? undefined,
-      thumbnail_url: pub.thumbnail ?? undefined,
-      summary: {
-        short: pub.summary_short ?? undefined,
-        medium: pub.summary_medium ?? undefined,
-        long: pub.summary_long ?? undefined,
-      },
-    },
-  };
-}
-
-function mapPublicationsToQueueItems(
-  rows: PublicationRow[] | null | undefined,
-  publishedStatusCode: number,
-): QueueItem[] {
-  return (rows ?? []).map((pub) => mapPublicationToQueueItem(pub, publishedStatusCode));
 }
 
 async function searchIngestionQueueByTitle(
@@ -154,24 +114,6 @@ async function searchQueueByTitle(searchQuery: string, statusCodes: StatusCodes)
   }
 
   return { items: Array.from(urlMap.values()), sources: [] };
-}
-
-async function getPublishedItems(statusCodes: StatusCodes) {
-  const supabase = createServiceRoleClient();
-  const { data, error } = await supabase
-    .from('kb_publication')
-    .select(
-      'id, source_url, title, summary_short, summary_medium, summary_long, source_name, published_at, added_at, thumbnail',
-    )
-    .eq('status', 'published')
-    .order('added_at', { ascending: false })
-    .limit(500)
-    .returns<PublicationRow[]>();
-
-  if (error) return EMPTY_QUEUE_ITEMS_RESULT;
-  const publishedStatusCode = getPublishedStatusCode(statusCodes);
-  const items = (data ?? []).map((pub) => mapPublicationToQueueItem(pub, publishedStatusCode));
-  return { items, sources: [] };
 }
 
 function extractSources(items: QueueItem[]) {
