@@ -215,7 +215,20 @@ const candidates = supabaseUrl ? [supabaseUrl] : expandItemThumb(item.thumbnail)
     <div class="mt-auto pt-3 flex items-end justify-between gap-2">
       <div class="flex flex-wrap items-center gap-1.5">
         {
-          audience && (
+          audiences.length > 0 &&
+            audiences
+              .slice(0, 1)
+              .map((aud: string) => (
+                <CardTag
+                  label={aud}
+                  ariaLabel={`Audience: ${aud}`}
+                  variant="audience"
+                  icon="user"
+                />
+              ))
+        }
+        {
+          audiences.length === 0 && audience && (
             <CardTag
               label={audience}
               ariaLabel={`Audience: ${audience}`}
