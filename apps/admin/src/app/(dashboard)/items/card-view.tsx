@@ -59,10 +59,12 @@ function ExpandedContent({
   summary,
   payload,
   taxonomyConfig,
+  taxonomyData,
 }: Readonly<{
   summary: { medium?: string };
   payload: Record<string, unknown>;
   taxonomyConfig: TaxonomyConfig[];
+  taxonomyData: TaxonomyData;
 }>) {
   return (
     <>
@@ -73,7 +75,7 @@ function ExpandedContent({
           <p className="text-sm text-neutral-500 italic">No summary available</p>
         )}
       </div>
-      <ExpandedTags payload={payload} taxonomyConfig={taxonomyConfig} />
+      <ExpandedTags payload={payload} taxonomyConfig={taxonomyConfig} taxonomyData={taxonomyData} />
     </>
   );
 }
@@ -85,6 +87,7 @@ function CollapsedContent({
   payload,
   onToggle,
   taxonomyConfig,
+  taxonomyData,
 }: Readonly<{
   thumbnailUrl?: string;
   sourceName: string;
@@ -92,6 +95,7 @@ function CollapsedContent({
   payload: Record<string, unknown>;
   onToggle: () => void;
   taxonomyConfig: TaxonomyConfig[];
+  taxonomyData: TaxonomyData;
 }>) {
   return (
     <>
@@ -99,7 +103,12 @@ function CollapsedContent({
       {summary.short && (
         <p className="mt-2 text-sm text-neutral-300 line-clamp-2">{summary.short}</p>
       )}
-      <CollapsedTags payload={payload} onToggle={onToggle} taxonomyConfig={taxonomyConfig} />
+      <CollapsedTags
+        payload={payload}
+        onToggle={onToggle}
+        taxonomyConfig={taxonomyConfig}
+        taxonomyData={taxonomyData}
+      />
     </>
   );
 }
@@ -122,6 +131,7 @@ interface CardBodyProps {
   isExpanded: boolean;
   onToggle: () => void;
   taxonomyConfig: TaxonomyConfig[];
+  taxonomyData: TaxonomyData;
 }
 
 function CardBody({
@@ -132,6 +142,7 @@ function CardBody({
   isExpanded,
   onToggle,
   taxonomyConfig,
+  taxonomyData,
 }: Readonly<CardBodyProps>) {
   const title = (payload.title as string) || 'Untitled';
   const publishedAt = payload.published_at as string | undefined;
@@ -139,7 +150,12 @@ function CardBody({
     <div className="relative z-10 pointer-events-none">
       <CardHeader title={title} publishedAt={publishedAt} sourceName={sourceName} />
       {isExpanded ? (
-        <ExpandedContent summary={summary} payload={payload} taxonomyConfig={taxonomyConfig} />
+        <ExpandedContent
+          summary={summary}
+          payload={payload}
+          taxonomyConfig={taxonomyConfig}
+          taxonomyData={taxonomyData}
+        />
       ) : (
         <CollapsedContent
           thumbnailUrl={thumbnailUrl}
@@ -148,6 +164,7 @@ function CardBody({
           payload={payload}
           onToggle={onToggle}
           taxonomyConfig={taxonomyConfig}
+          taxonomyData={taxonomyData}
         />
       )}
     </div>
@@ -163,9 +180,17 @@ interface ItemCardProps {
   onToggle: () => void;
   status: string;
   taxonomyConfig: TaxonomyConfig[];
+  taxonomyData: TaxonomyData;
 }
 
-function ItemCard({ item, isExpanded, onToggle, status, taxonomyConfig }: Readonly<ItemCardProps>) {
+function ItemCard({
+  item,
+  isExpanded,
+  onToggle,
+  status,
+  taxonomyConfig,
+  taxonomyData,
+}: Readonly<ItemCardProps>) {
   const { payload, summary, thumbnailUrl, sourceName } = useCardData(item);
   const title = (payload.title as string) || 'Untitled';
   const detailUrl = `/items/${item.id}?view=card&status=${status}`;
@@ -181,12 +206,18 @@ function ItemCard({ item, isExpanded, onToggle, status, taxonomyConfig }: Readon
         isExpanded={isExpanded}
         onToggle={onToggle}
         taxonomyConfig={taxonomyConfig}
+        taxonomyData={taxonomyData}
       />
     </li>
   );
 }
 
-export default function CardView({ items, status, taxonomyConfig }: Readonly<CardViewProps>) {
+export default function CardView({
+  items,
+  status,
+  taxonomyConfig,
+  taxonomyData,
+}: Readonly<CardViewProps>) {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   const toggleCard = (id: string) => {
@@ -211,6 +242,7 @@ export default function CardView({ items, status, taxonomyConfig }: Readonly<Car
           onToggle={() => toggleCard(item.id)}
           status={status}
           taxonomyConfig={taxonomyConfig}
+          taxonomyData={taxonomyData}
         />
       ))}
     </ul>
