@@ -74,19 +74,10 @@ function sortFilterValues(field: keyof Publication, values: FilterValue[]) {
   });
 }
 
-/** Convert snake_case code to Title Case display label */
-function toDisplayLabel(code: string): string {
-  return code
-    .split('_')
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
-
 /** @param {Map<string, number>} counts */
 function toFilterValues(counts: Map<string, number>) {
   return Array.from(counts.entries()).map(([value, count]) => {
-    const displayValue = toDisplayLabel(value);
-    return { value, count, label: `${displayValue} (${count})` };
+    return { value, count, label: `${value} (${count})` };
   });
 }
 
@@ -113,7 +104,7 @@ function emptyPublicationsData() {
 async function fetchTaxonomyAndFilterData(
   supabase: NonNullable<ReturnType<typeof getSupabaseClient>>,
 ) {
-  const [filterConfigRes, industryRes, processRes, geographyRes] = await Promise.all([
+  const [filterConfigRes, industryRes, processRes, geographyRes, audienceRes] = await Promise.all([
     supabase
       .from('ref_filter_config')
       .select('column_name, display_label, sort_order')
@@ -131,8 +122,9 @@ async function fetchTaxonomyAndFilterData(
       .from('kb_geography')
       .select('code, name, level, parent_code, sort_order')
       .order('sort_order'),
+    supabase.from('kb_audience').select('code, name, sort_order').order('sort_order'),
   ]);
-  return { filterConfigRes, industryRes, processRes, geographyRes };
+  return { filterConfigRes, industryRes, processRes, geographyRes, audienceRes };
 }
 
 /** @param {Publication[]} publications */
@@ -162,27 +154,53 @@ function buildValues(filters: FilterConfig[], publications: Publication[]) {
   return values;
 }
 
+/** Decorate audience filter values with names from kb_audience */
+function decorateAudienceLabels(
+  values: Record<string, FilterValue[]>,
+  audienceData: { code: string; name: string }[] | null,
+) {
+  if (!Array.isArray(values.audience)) return;
+  const nameByCode = new Map((audienceData || []).map((a) => [a.code, a.name]));
+  values.audience = values.audience.map((v) => ({
+    ...v,
+    label: `${nameByCode.get(v.value) || v.value} (${v.count})`,
+  }));
+}
+
+/** Build taxonomy hierarchies with counts */
+function buildTaxonomyWithCounts(
+  publications: Publication[],
+  taxonomyData: { industryRes: any; processRes: any; geographyRes: any },
+) {
+  const { countByIndustry, countByProcess, countByGeography } = buildTaxonomyCounts(publications);
+  return {
+    industryWithCounts: addCounts(buildHierarchy(taxonomyData.industryRes.data), countByIndustry),
+    processWithCounts: addCounts(buildHierarchy(taxonomyData.processRes.data), countByProcess),
+    geographyWithCounts: addCounts(
+      buildHierarchy(taxonomyData.geographyRes.data),
+      countByGeography,
+    ),
+  };
+}
+
 export async function loadPublicationsData() {
   const supabase = getSupabaseClient();
   if (!supabase) return emptyPublicationsData();
+
   const publications = await getAllPublications();
-  const { filterConfigRes, industryRes, processRes, geographyRes } =
+  const { filterConfigRes, industryRes, processRes, geographyRes, audienceRes } =
     await fetchTaxonomyAndFilterData(supabase);
+
   const filters = (filterConfigRes.data || []) as FilterConfig[];
   const flatFilters = filters.filter((f) => !['industry', 'geography'].includes(f.column_name));
-
-  const industryHierarchy = buildHierarchy(industryRes.data as TaxonomyItem[] | null);
-  const processHierarchy = buildHierarchy(processRes.data as TaxonomyItem[] | null);
-  const geographyHierarchy = buildHierarchy(geographyRes.data as TaxonomyItem[] | null);
-  const { countByIndustry, countByProcess, countByGeography } = buildTaxonomyCounts(publications);
+  const values = buildValues(filters, publications);
+  decorateAudienceLabels(values, audienceRes.data as { code: string; name: string }[] | null);
 
   return {
     publications,
     filters,
     flatFilters,
-    values: buildValues(filters, publications),
-    industryWithCounts: addCounts(industryHierarchy, countByIndustry),
-    processWithCounts: addCounts(processHierarchy, countByProcess),
-    geographyWithCounts: addCounts(geographyHierarchy, countByGeography),
+    values,
+    ...buildTaxonomyWithCounts(publications, { industryRes, processRes, geographyRes }),
   };
 }

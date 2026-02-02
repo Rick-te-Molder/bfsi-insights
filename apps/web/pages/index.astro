@@ -49,12 +49,9 @@ const audienceOptions = (
 
 const validAudiences = audienceOptions.map((a) => a.value);
 
-// Get publications per audience with full counts
-// Note: uses p.audiences array (primary) with fallback to p.audience (singular)
+// Get publications per audience (1 audience per publication on website)
 const audienceFilterFn = (audience: string) => (p: Publication) => {
-  const audiences = p.audiences || [];
-  const primaryAudience = p.audience || (p as any).role;
-  return audiences.includes(audience) || primaryAudience === audience;
+  return p.audience === audience;
 };
 
 // Full counts for display
@@ -196,9 +193,8 @@ const expandItemThumb = (t?: string | null) => {
       /** @type {HTMLElement[]} */
       const cards = Array.from(gridEl.children).filter((child) => child instanceof HTMLElement);
       cards.forEach((card) => {
-        const audiencesAttr = card.getAttribute('data-audiences') || '';
-        const cardAudiences = audiencesAttr ? audiencesAttr.split(',') : [];
-        const matches = audience === 'all' || cardAudiences.includes(audience);
+        const cardAudience = card.getAttribute('data-audience') || '';
+        const matches = audience === 'all' || cardAudience === audience;
         card.style.display = matches ? '' : 'none';
       });
     }
