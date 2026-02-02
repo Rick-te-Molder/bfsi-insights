@@ -54,21 +54,16 @@ const audienceFilterFn = (audience: string) => (p: Publication) => {
   return p.audience === audience;
 };
 
-// Full counts for display
-const audienceCounts = validAudiences.reduce<Record<string, number>>((acc, audience) => {
-  acc[audience] = allPublications.filter(audienceFilterFn(audience)).length;
-  return acc;
-}, {});
-
 // Sliced to 6 for card display
 const byAudience = validAudiences.reduce<Record<string, Publication[]>>((acc, audience) => {
   acc[audience] = allPublications.filter(audienceFilterFn(audience)).slice(0, 6);
   return acc;
 }, {});
 
+// Use byAudience length (max 6) for dropdown counts, not total DB counts
 const audienceOptionsWithCounts = audienceOptions.map((option) => ({
   ...option,
-  count: audienceCounts[option.value] ?? 0,
+  count: byAudience[option.value]?.length ?? 0,
 }));
 
 // Combine all, dedupe
