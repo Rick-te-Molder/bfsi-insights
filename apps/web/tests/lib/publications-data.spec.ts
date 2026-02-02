@@ -229,7 +229,7 @@ describe('createValuesWithCounts', () => {
   it('generates correct label format', () => {
     const publications = [{ audience: 'executive' }, { audience: 'executive' }] as any[];
     const result = createValuesWithCounts(publications, 'audience');
-    expect(result[0].label).toBe('Executive (2)');
+    expect(result[0].label).toBe('executive (2)');
   });
 
   it('handles empty publications array', () => {
