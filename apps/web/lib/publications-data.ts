@@ -74,10 +74,18 @@ function sortFilterValues(field: keyof Publication, values: FilterValue[]) {
   });
 }
 
+/** Convert snake_case code to Title Case display label */
+function toDisplayLabel(code: string): string {
+  return code
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 /** @param {Map<string, number>} counts */
 function toFilterValues(counts: Map<string, number>) {
   return Array.from(counts.entries()).map(([value, count]) => {
-    const displayValue = value === 'functional_specialist' ? 'Functional Specialist' : value;
+    const displayValue = toDisplayLabel(value);
     return { value, count, label: `${displayValue} (${count})` };
   });
 }

@@ -17,10 +17,7 @@ const publicSupabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL;
 
 // Load audience types from kb_audience (with fallback for pre-migration builds)
 const { data: audienceData, error: audienceError } = supabase
-  ? await supabase
-      .from('kb_audience')
-      .select('value, label')
-      .order('sort_order', { ascending: true })
+  ? await supabase.from('kb_audience').select('code, name').order('sort_order', { ascending: true })
   : { data: null, error: new Error('Missing Supabase env vars') };
 
 // Fallback values if table doesn't exist yet (pre-migration) or returns empty
@@ -37,7 +34,7 @@ if (audienceError || !audienceData || audienceData.length === 0) {
   if (supabase) {
     const { data: legacyData } = await supabase
       .from('kb_role')
-      .select('value, label')
+      .select('code, name')
       .order('sort_order', { ascending: true });
     finalAudienceData = legacyData;
   }
@@ -46,29 +43,35 @@ if (audienceError || !audienceData || audienceData.length === 0) {
 const audienceOptions = (
   finalAudienceData && finalAudienceData.length > 0 ? finalAudienceData : fallbackAudiences
 ).map((a) => ({
-  value: a.value,
-  label: a.label,
+  value: (a as any).code || (a as any).value,
+  label: (a as any).name || (a as any).label,
 }));
 
 const validAudiences = audienceOptions.map((a) => a.value);
 
-// Get 6 most recent from each audience
+// Get publications per audience with full counts
 // Note: uses p.audiences array (primary) with fallback to p.audience (singular)
+const audienceFilterFn = (audience: string) => (p: Publication) => {
+  const audiences = p.audiences || [];
+  const primaryAudience = p.audience || (p as any).role;
+  return audiences.includes(audience) || primaryAudience === audience;
+};
+
+// Full counts for display
+const audienceCounts = validAudiences.reduce<Record<string, number>>((acc, audience) => {
+  acc[audience] = allPublications.filter(audienceFilterFn(audience)).length;
+  return acc;
+}, {});
+
+// Sliced to 6 for card display
 const byAudience = validAudiences.reduce<Record<string, Publication[]>>((acc, audience) => {
-  acc[audience] = allPublications
-    .filter((p) => {
-      // Check if audience is in audiences array, or matches singular audience field
-      const audiences = p.audiences || [];
-      const primaryAudience = p.audience || (p as any).role;
-      return audiences.includes(audience) || primaryAudience === audience;
-    })
-    .slice(0, 6);
+  acc[audience] = allPublications.filter(audienceFilterFn(audience)).slice(0, 6);
   return acc;
 }, {});
 
 const audienceOptionsWithCounts = audienceOptions.map((option) => ({
   ...option,
-  count: byAudience[option.value]?.length ?? 0,
+  count: audienceCounts[option.value] ?? 0,
 }));
 
 // Combine all, dedupe
