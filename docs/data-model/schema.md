@@ -1,7 +1,7 @@
 # Database Schema Reference
 
 > **Auto-generated** by `npm run dump:schema`  
-> **Last updated:** 2026-01-30T10:40:40.664Z
+> **Last updated:** 2026-02-02T13:04:41.222Z
 
 This file is the single source of truth for AI assistants to understand the database structure.
 
@@ -15,12 +15,12 @@ This file is the single source of truth for AI assistants to understand the data
 | `ag_use_case_capability`           | 203  | PK: capability_id  |
 | `ag_vendor`                        | 81   | PK: id             |
 | `agent_jobs`                       | 37   | PK: id             |
-| `agent_run`                        | 4259 | PK: id             |
+| `agent_run`                        | 4437 | PK: id             |
 | `agent_run_metric`                 | 115  | PK: run_id         |
-| `agent_run_step`                   | 4569 | PK: id             |
-| `agent_run_summary`                | 4259 |                    |
+| `agent_run_step`                   | 4805 | PK: id             |
+| `agent_run_summary`                | 4437 |                    |
 | `app_admins`                       | 1    | PK: user_id        |
-| `audit_log`                        | 3905 | PK: id             |
+| `audit_log`                        | 4260 | PK: id             |
 | `bfsi_entity_type`                 | 24   | PK: id             |
 | `bfsi_industry`                    | 53   | PK: id             |
 | `bfsi_industry_pretty`             | 53   |                    |
@@ -66,10 +66,10 @@ This file is the single source of truth for AI assistants to understand the data
 | `pipeline_entry_rule`              | 3    | PK: id             |
 | `pipeline_execution`               | 0    | PK: id             |
 | `pipeline_exit_rule`               | 3    | PK: id             |
-| `pipeline_run`                     | 391  | PK: id             |
-| `pipeline_run_costs`               | 256  |                    |
+| `pipeline_run`                     | 451  | PK: id             |
+| `pipeline_run_costs`               | 316  |                    |
 | `pipeline_step`                    | 8    | PK: id             |
-| `pipeline_step_run`                | 808  | PK: id             |
+| `pipeline_step_run`                | 986  | PK: id             |
 | `process_taxonomy_apqc`            | 54   | PK: id             |
 | `process_taxonomy_basel`           | 19   | PK: id             |
 | `process_taxonomy_bian`            | 24   | PK: id             |
@@ -95,7 +95,7 @@ This file is the single source of truth for AI assistants to understand the data
 | `rejection_analytics`              | 1    | PK: id             |
 | `retry_policy`                     | 5    | PK: step_name      |
 | `retry_queue_ready`                | 0    |                    |
-| `review_queue_ready`               | 147  |                    |
+| `review_queue_ready`               | 206  |                    |
 
 ---
 
@@ -233,7 +233,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `agent_run`
 
-**Rows:** 4259
+**Rows:** 4437
 
 | Column              | Type                     | Nullable | Default           | Constraints                |
 | ------------------- | ------------------------ | -------- | ----------------- | -------------------------- |
@@ -266,7 +266,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `agent_run_step`
 
-**Rows:** 4569
+**Rows:** 4805
 
 | Column              | Type                     | Nullable | Default           | Constraints            |
 | ------------------- | ------------------------ | -------- | ----------------- | ---------------------- |
@@ -284,7 +284,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `agent_run_summary`
 
-**Rows:** 4259
+**Rows:** 4437
 
 | Column         | Type                     | Nullable | Default | Constraints |
 | -------------- | ------------------------ | -------- | ------- | ----------- |
@@ -312,7 +312,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `audit_log`
 
-**Rows:** 3905
+**Rows:** 4260
 
 | Column        | Type                     | Nullable | Default           | Constraints    |
 | ------------- | ------------------------ | -------- | ----------------- | -------------- |
@@ -917,10 +917,10 @@ This file is the single source of truth for AI assistants to understand the data
 | `status`           | text                     | YES      |         |             |
 | `origin_queue_id`  | uuid                     | YES      |         |             |
 | `audience`         | text                     | YES      |         |             |
-| `audiences`        | ARRAY                    | YES      |         |             |
 | `industry`         | text                     | YES      |         |             |
-| `industries`       | ARRAY                    | YES      |         |             |
 | `topic`            | text                     | YES      |         |             |
+| `audiences`        | ARRAY                    | YES      |         |             |
+| `industries`       | ARRAY                    | YES      |         |             |
 | `topics`           | ARRAY                    | YES      |         |             |
 | `regulators`       | ARRAY                    | YES      |         |             |
 | `regulations`      | ARRAY                    | YES      |         |             |
@@ -1190,7 +1190,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `pipeline_run`
 
-**Rows:** 391
+**Rows:** 451
 
 | Column               | Type                     | Nullable | Default           | Constraints             |
 | -------------------- | ------------------------ | -------- | ----------------- | ----------------------- |
@@ -1208,7 +1208,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `pipeline_run_costs`
 
-**Rows:** 256
+**Rows:** 316
 
 | Column               | Type                     | Nullable | Default | Constraints |
 | -------------------- | ------------------------ | -------- | ------- | ----------- |
@@ -1246,7 +1246,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `pipeline_step_run`
 
-**Rows:** 808
+**Rows:** 986
 
 | Column            | Type                     | Nullable | Default           | Constraints          |
 | ----------------- | ------------------------ | -------- | ----------------- | -------------------- |
@@ -1698,7 +1698,7 @@ This file is the single source of truth for AI assistants to understand the data
 
 ### `review_queue_ready`
 
-**Rows:** 147
+**Rows:** 206
 
 | Column                   | Type    | Nullable | Default | Constraints |
 | ------------------------ | ------- | -------- | ------- | ----------- |
