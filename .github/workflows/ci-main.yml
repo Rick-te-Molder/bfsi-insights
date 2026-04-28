@@ -86,7 +86,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Supabase CLI
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v2
 
       - name: Link Supabase project
         working-directory: infra/supabase
