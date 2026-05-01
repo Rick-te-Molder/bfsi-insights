@@ -1,6 +1,6 @@
 # High Parameter Count Report
 
-> Auto-generated on 2026-04-30 by nightly quality workflow
+> Auto-generated on 2026-05-01 by nightly quality workflow
 
 Functions with >=6 parameters (blocking threshold)
 
