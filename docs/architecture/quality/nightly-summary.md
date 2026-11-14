@@ -1,6 +1,6 @@
 # Quality Metrics Summary
 
-> Auto-generated on 2026-11-13 by nightly quality workflow
+> Auto-generated on 2026-11-14 by nightly quality workflow
 
 ## Overview
 
